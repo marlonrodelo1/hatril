@@ -139,10 +139,22 @@
 
   --font-sans: var(--font-jakarta), system-ui, sans-serif;
 
-  --radius-sm: calc(var(--radius) - 2px);
-  --radius-md: var(--radius);
-  --radius-lg: 0.75rem; /* 12px — tarjetas */
-  --radius-xl: 1rem;
+  /*
+   * Radios: 8 botones e inputs · 12 tarjetas · full badges.
+   *
+   * Ojo con el nombre: los componentes de shadcn usan `rounded-lg` para
+   * botones e inputs, así que `--radius-lg` TIENE que valer 8, no 12. La
+   * primera versión puso 12 aquí pensando en las tarjetas y el resultado fue
+   * que todos los botones salían redondeados de más — no se vio leyendo el
+   * CSS, se vio midiendo el botón en el navegador.
+   *
+   * Las tarjetas usan `rounded-xl`. Y la regla del sistema: nunca se anidan dos
+   * radios de 12, dentro de una tarjeta todo baja a 8.
+   */
+  --radius-sm: calc(var(--radius) - 2px); /* 6px */
+  --radius-md: var(--radius); /* 8px */
+  --radius-lg: var(--radius); /* 8px — botones, inputs, selects */
+  --radius-xl: 0.75rem; /* 12px — tarjetas y paneles */
 
   /* Escala tipográfica del sistema. Tailwind no trae 15/17/11.5px. */
   --text-micro: 0.71875rem; /* 11.5px */
@@ -172,6 +184,56 @@
   a:hover {
     color: var(--hatril-accent-hover);
     text-decoration: underline;
+  }
+
+  /*
+   * Casilla nativa con el estilo del diseño.
+   *
+   * Nativa y no la de shadcn porque estas viajan dentro del FormData de una
+   * server action; las de Radix/Base UI guardan el valor en estado de React y
+   * exigen un input oculto de por medio. Para el consentimiento del art. 9,
+   * que es el dato que hay que poder demostrar, cuanto menos intermediario
+   * mejor.
+   */
+  input[type='checkbox'] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 17px;
+    height: 17px;
+    flex: none;
+    border: 1.5px solid #c9bfaf;
+    border-radius: 4px;
+    background: var(--hatril-surface-alt);
+    cursor: pointer;
+    margin: 0;
+    display: grid;
+    place-content: center;
+  }
+
+  input[type='checkbox']:checked {
+    background: var(--hatril-accent);
+    border-color: var(--hatril-accent);
+  }
+
+  input[type='checkbox']:checked::after {
+    content: '';
+    width: 9px;
+    height: 5px;
+    border: 2px solid #fff;
+    border-top: 0;
+    border-right: 0;
+    transform: rotate(-45deg) translate(0, -1px);
+  }
+
+  input[type='checkbox']:focus-visible {
+    outline: 3px solid rgb(189 71 21 / 0.16);
+    outline-offset: 1px;
+  }
+
+  input[type='checkbox']:disabled {
+    background: var(--hatril-disabled-bg);
+    border-color: var(--hatril-disabled-border);
+    cursor: not-allowed;
   }
 }
 

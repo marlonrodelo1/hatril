@@ -40,6 +40,8 @@ export type UserContext = {
     id: string;
     slug: string;
     nombre: string;
+    ciudad: string | null;
+    pais: string;
     timezone: string;
     moneda: string;
     plan: string;
@@ -79,6 +81,8 @@ export async function getCurrentUserContext(): Promise<UserContext | null> {
       iglesiaId: iglesias.id,
       slug: iglesias.slug,
       nombre: iglesias.nombre,
+      ciudad: iglesias.ciudad,
+      pais: iglesias.pais,
       timezone: iglesias.timezone,
       moneda: iglesias.moneda,
       plan: iglesias.plan,
@@ -126,6 +130,8 @@ export async function getCurrentUserContext(): Promise<UserContext | null> {
       id: fila.iglesiaId,
       slug: fila.slug,
       nombre: fila.nombre,
+      ciudad: fila.ciudad,
+      pais: fila.pais,
       timezone: fila.timezone,
       moneda: fila.moneda,
       plan: fila.plan,

@@ -3,101 +3,114 @@
  *
  * POR QUÉ EXISTE
  * --------------
- * El teléfono es la CLAVE con la que se reconoce a un cliente: hay un índice
- * único `(salon_id, telefono)` y todos los flujos de reserva buscan por él
- * antes de crear la ficha. Pero ese índice compara TEXTO EXACTO, y cada sitio
- * guardaba lo que el cliente hubiera tecleado. Resultado real medido sobre la
- * base de datos: de 333 teléfonos solo 33 estaban en un formato consistente, y
- * 16 personas tenían DOS fichas —"667008500" y "667 008 500"— con su historial
- * partido entre las dos.
+ * El teléfono es como se localiza a una persona, y cada cual lo escribe a su
+ * manera. En Gonper se midió sobre datos reales: de 333 teléfonos solo 33
+ * estaban en un formato consistente, y 16 personas tenían DOS fichas
+ * —«667008500» y «667 008 500»— con su historial partido entre las dos.
  *
- * Por eso todo lo que escriba un teléfono en `clientes` pasa por aquí antes,
- * tanto para BUSCAR como para INSERTAR. Si un solo camino se lo salta, vuelven
- * los duplicados.
+ * Aquí el riesgo es el mismo: un pastor apunta a alguien el domingo y otro
+ * líder lo vuelve a apuntar el miércoles escribiendo el número con espacios.
  *
- * FORMATO CANÓNICO: E.164 sin espacios → `+34667008500`.
+ * DOS PAÍSES, NO UNO
+ * ------------------
+ * La versión de Gonper daba por hecho España: nueve dígitos y +34 a fuego. En
+ * Colombia son diez dígitos y +57, así que un número colombiano perfectamente
+ * válido salía rechazado. Por eso el país es un parámetro, y sale de la ficha
+ * de la iglesia (`iglesias.pais`), no de una constante.
  *
- * Es deliberadamente compatible con `normalizarTelefonoWhatsapp`
- * (src/lib/whatsapp/twilio.ts): lo que sale de aquí siempre empieza por `+`,
- * que es la primera rama que esa función acepta. Los envíos de WhatsApp siguen
- * funcionando igual, y de hecho mejoran, porque dejan de recibir cadenas con
- * espacios.
+ * FORMATO CANÓNICO: E.164 sin espacios → `+573001234567`, `+34667008500`.
  */
 
-/** Longitud de un número nacional español (móvil o fijo), sin prefijo de país. */
-const DIGITOS_ES = 9;
+type Pais = 'CO' | 'ES';
 
-/** Prefijos válidos de un número español: 6 y 7 móviles, 8 y 9 fijos. */
-const INICIO_ES = /^[6789]/;
+const REGLAS: Record<
+  Pais,
+  { prefijo: string; digitos: number; empiezaPor: RegExp }
+> = {
+  // Colombia: móviles de 10 dígitos que empiezan por 3; fijos también de 10
+  // desde la unificación de 2022, empezando por 60.
+  CO: { prefijo: '57', digitos: 10, empiezaPor: /^[36]/ },
+  // España: 9 dígitos. 6 y 7 móviles, 8 y 9 fijos.
+  ES: { prefijo: '34', digitos: 9, empiezaPor: /^[6789]/ },
+};
 
 /**
- * Pasa un teléfono a E.164 (`+34667008500`), o devuelve null si no es un
- * número utilizable.
+ * Devuelve el número en E.164, o `null` si está vacío.
  *
- * Acepta lo que la gente escribe de verdad: "667 008 500", "+34 667 008 500",
- * "0034667008500", "667-008-500", "(+34) 667008500".
- *
- * Cuando no hay prefijo de país se asume España, que es el único mercado por
- * ahora. Un número extranjero hay que escribirlo con su `+` delante; si no,
- * no hay forma de distinguirlo de uno mal escrito.
+ * Si no reconoce el formato, devuelve lo que escribió la persona con los
+ * espacios quitados en vez de descartarlo. Es deliberado: un número raro pero
+ * anotado sirve para llamar; un campo vacío porque la validación lo rechazó no
+ * sirve para nada, y encima el pastor no se entera de que se perdió.
  */
-export function normalizarTelefono(raw: string | null | undefined): string | null {
+export function normalizarTelefono(
+  raw: string | null | undefined,
+  pais: string = 'CO',
+): string | null {
   if (!raw) return null;
 
-  // Nos quedamos con dígitos y con un único '+' si venía al principio. Un '+'
-  // en medio ("34+667…") es un error de tecleo, no un prefijo.
-  const bruto = String(raw).trim();
-  const empiezaConMas = bruto.startsWith('+');
-  const digitos = bruto.replace(/\D/g, '');
+  const limpio = raw.trim();
+  if (!limpio) return null;
+
+  // Se conserva el `+` inicial y se tiran el resto de adornos: espacios,
+  // guiones, puntos y paréntesis del prefijo.
+  const tieneMas = limpio.startsWith('+');
+  const digitos = limpio.replace(/\D/g, '');
+
   if (!digitos) return null;
 
-  let internacional: string;
+  // Ya venía en internacional: se respeta tal cual.
+  if (tieneMas) return `+${digitos}`;
 
-  if (empiezaConMas) {
-    internacional = digitos;
-  } else if (digitos.startsWith('00')) {
-    // Prefijo internacional a la europea: 0034… → 34…
-    internacional = digitos.slice(2);
-  } else if (digitos.length === DIGITOS_ES && INICIO_ES.test(digitos)) {
-    // Número español escrito a secas.
-    internacional = `34${digitos}`;
-  } else if (digitos.startsWith('34') && digitos.length === DIGITOS_ES + 2) {
-    // "34667008500" sin '+' ni '00'.
-    internacional = digitos;
-  } else {
-    // Cualquier otra cosa sin prefijo: o está incompleta o no sabemos de qué
-    // país es. Preferimos rechazarla a inventarnos un +34 que no llegue.
-    return null;
+  // Prefijo internacional escrito con ceros: 0057…, 0034…
+  if (digitos.startsWith('00')) return `+${digitos.slice(2)}`;
+
+  const regla = REGLAS[(pais as Pais) in REGLAS ? (pais as Pais) : 'CO'];
+
+  // Nacional sin prefijo.
+  if (digitos.length === regla.digitos && regla.empiezaPor.test(digitos)) {
+    return `+${regla.prefijo}${digitos}`;
   }
 
-  // Rango de E.164: entre 8 y 15 dígitos contando el código de país, y nunca
-  // empezando por 0. Esto es lo que descarta los "6584911" de 7 dígitos que
-  // había guardados y a los que WhatsApp nunca llegó.
-  if (internacional.length < 8 || internacional.length > 15) return null;
-  if (internacional.startsWith('0')) return null;
+  // Con el prefijo del país pero sin el `+`.
+  if (
+    digitos.startsWith(regla.prefijo) &&
+    digitos.length === regla.prefijo.length + regla.digitos
+  ) {
+    return `+${digitos}`;
+  }
 
-  return `+${internacional}`;
+  // No encaja en ningún patrón conocido: se guarda sin espacios y se sigue.
+  return digitos;
 }
 
-/** ¿Es un teléfono con el que se puede contactar al cliente? */
-export function telefonoEsValido(raw: string | null | undefined): boolean {
-  return normalizarTelefono(raw) !== null;
+/** ¿Es un número reconocible para este país? Para avisar, nunca para bloquear. */
+export function telefonoEsValido(
+  raw: string | null | undefined,
+  pais: string = 'CO',
+): boolean {
+  const normalizado = normalizarTelefono(raw, pais);
+  return Boolean(normalizado && normalizado.startsWith('+'));
 }
 
 /**
- * Versión legible para pantalla: `+34 667 008 500`.
+ * Para mostrar: agrupa los dígitos de forma legible.
  *
- * Solo agrupa los españoles, que son los que se leen de un vistazo en tríos.
- * Para el resto se devuelve el E.164 tal cual, porque cada país agrupa a su
- * manera y agrupar mal se lee peor que no agrupar.
+ * `+573001234567` → `+57 300 123 4567`
+ * `+34667008500`  → `+34 667 00 85 00`
  */
 export function formatearTelefono(raw: string | null | undefined): string {
-  const e164 = normalizarTelefono(raw);
-  if (!e164) return (raw ?? '').trim();
+  if (!raw) return '';
+  if (!raw.startsWith('+')) return raw;
 
-  if (e164.startsWith('+34') && e164.length === 12) {
-    const n = e164.slice(3);
-    return `+34 ${n.slice(0, 3)} ${n.slice(3, 6)} ${n.slice(6)}`;
+  if (raw.startsWith('+57') && raw.length === 13) {
+    const n = raw.slice(3);
+    return `+57 ${n.slice(0, 3)} ${n.slice(3, 6)} ${n.slice(6)}`;
   }
-  return e164;
+
+  if (raw.startsWith('+34') && raw.length === 12) {
+    const n = raw.slice(3);
+    return `+34 ${n.slice(0, 3)} ${n.slice(3, 5)} ${n.slice(5, 7)} ${n.slice(7)}`;
+  }
+
+  return raw;
 }

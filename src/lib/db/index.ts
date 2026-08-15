@@ -10,6 +10,6 @@
  * El porqué está explicado en `./client.ts`.
  */
 
-export { client, dbAdmin } from './client';
+export { dbAdmin } from './client';
 export { withUser, withAnon } from './with-tenant';
 export * from './schema';

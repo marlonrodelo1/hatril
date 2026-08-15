@@ -1,4 +1,4 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
 
@@ -22,47 +22,76 @@ import * as schema from './schema';
  * Aquí hay dos puertas y hay que elegir una explícitamente:
  *
  *   - `dbAdmin`  → salta la RLS. Crons, webhooks, super admin y el alta de
- *                  iglesia (que ocurre antes de que exista membresía alguna).
+ *                  iglesia (que ocurre antes de que exista membresía).
  *   - `withUser` → la puerta normal, en `./with-tenant`. Aplica la RLS.
  *
  * Al no existir un `db` neutro, elegir mal exige escribir `dbAdmin`, que se ve
  * en cualquier revisión y se encuentra con un grep.
+ *
+ * POR QUÉ LA CONEXIÓN SE CREA PEREZOSAMENTE
+ * -----------------------------------------
+ * La primera versión comprobaba `DATABASE_URL` al cargar el módulo y lanzaba
+ * ahí mismo. Parecía lo correcto —fallar pronto— y rompía el `next build`: para
+ * recolectar los datos de cada página, Next IMPORTA los módulos del servidor
+ * sin ejecutar ninguna consulta. Una página que solo importa `dbAdmin` no
+ * necesita base de datos para compilarse, y con la comprobación arriba el build
+ * entero se caía por una variable que en ese momento no hace falta.
+ *
+ * Así que la conexión se abre en el primer acceso de verdad. El error sigue
+ * llegando claro y con el mensaje entero, pero cuando alguien consulta.
  */
 
-const connectionString = process.env.DATABASE_URL;
+let instancia: PostgresJsDatabase<typeof schema> | undefined;
 
-if (!connectionString) {
-  // Un `!` silencioso aquí produce el error incomprensible de postgres-js sobre
-  // una URL vacía, tres capas más abajo y sin pista del origen.
-  throw new Error(
-    'Falta DATABASE_URL. Cópiala de Supabase → Project Settings → Database.',
-  );
-}
-
-// Singleton: evita agotar el pool con el HMR de desarrollo y con cada
-// invocación serverless.
+// Singleton en `globalThis`: evita agotar el pool con el HMR de desarrollo,
+// que recarga los módulos en cada guardado.
 const globalForDb = globalThis as unknown as {
   hatrilClient?: ReturnType<typeof postgres>;
 };
 
-export const client =
-  globalForDb.hatrilClient ??
-  postgres(connectionString, {
-    // Obligatorio con el pooler en modo transacción de Supabase: las sentencias
-    // preparadas no sobreviven al cambio de conexión entre transacciones.
-    prepare: false,
-    ssl: 'require',
-    max: 10,
-    idle_timeout: 20,
-    connect_timeout: 10,
-  });
+function conectar(): PostgresJsDatabase<typeof schema> {
+  if (instancia) return instancia;
 
-if (process.env.NODE_ENV !== 'production') globalForDb.hatrilClient = client;
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    throw new Error(
+      'Falta DATABASE_URL. Cópiala de Supabase → Project Settings → Database ' +
+        '(Connection string, pooler en modo transacción) y ponla en .env.local.',
+    );
+  }
+
+  const client =
+    globalForDb.hatrilClient ??
+    postgres(connectionString, {
+      // Obligatorio con el pooler en modo transacción de Supabase: las
+      // sentencias preparadas no sobreviven al cambio de conexión entre
+      // transacciones.
+      prepare: false,
+      ssl: 'require',
+      max: 10,
+      idle_timeout: 20,
+      connect_timeout: 10,
+    });
+
+  if (process.env.NODE_ENV !== 'production') globalForDb.hatrilClient = client;
+
+  instancia = drizzle(client, { schema });
+  return instancia;
+}
 
 /**
  * Conexión que SALTA la RLS. Usar solo cuando no hay usuario que suplantar.
  *
- * Si estás escribiendo una consulta a petición de alguien que ha iniciado
- * sesión, esta no es la puerta: es `withUser`.
+ * Es un Proxy para que importar este módulo no abra ninguna conexión: la
+ * primera propiedad que se lea (`.select`, `.transaction`…) es la que conecta.
+ * Desde fuera se usa igual que un objeto normal.
  */
-export const dbAdmin = drizzle(client, { schema });
+export const dbAdmin: PostgresJsDatabase<typeof schema> = new Proxy(
+  {} as PostgresJsDatabase<typeof schema>,
+  {
+    get(_destino, propiedad, receptor) {
+      return Reflect.get(conectar(), propiedad, receptor);
+    },
+  },
+);
