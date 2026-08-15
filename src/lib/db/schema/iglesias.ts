@@ -24,6 +24,22 @@ import {
 } from './enums';
 
 /**
+ * Una fila del cuadro de horarios de la web pública.
+ *
+ * `destacado` marca la reunión a la que se dirige a quien viene por primera
+ * vez. Es la pregunta que trae a alguien a la web de una iglesia —«¿cuándo y
+ * dónde os reunís?»— y con cuatro horarios seguidos sin jerarquía no se
+ * responde.
+ */
+export type HorarioSemanal = {
+  dia: string;
+  hora: string;
+  nombre: string;
+  detalle?: string;
+  destacado?: boolean;
+};
+
+/**
  * La iglesia. Es el tenant: todo dato de negocio cuelga de aquí.
  */
 export const iglesias = pgTable(
@@ -63,6 +79,48 @@ export const iglesias = pgTable(
 
     logoUrl: text('logo_url'),
     bannerUrl: text('banner_url'),
+
+    // --- Contenido de la web pública (`/i/[slug]`) ---------------------------
+
+    /**
+     * ¿Está publicada la web de la iglesia?
+     *
+     * Separado de `visible_en_directorio`: tener página propia y salir en el
+     * buscador de Hatril son dos decisiones distintas. Una congregación puede
+     * querer una web que enseñar a quien pregunta sin aparecer en un listado.
+     */
+    webPublica: boolean('web_publica').notNull().default(false),
+
+    /** El «quiénes somos». Texto largo, en párrafos separados por líneas en blanco. */
+    historia: text('historia'),
+
+    /**
+     * Horarios semanales.
+     *
+     * En jsonb y no en una tabla propia: son cuatro o cinco filas de contenido
+     * de página, no una entidad del dominio con la que nadie va a cruzar datos.
+     * Una tabla obligaría a una consulta más en cada visita y a un CRUD entero
+     * para algo que se edita dos veces al año.
+     *
+     * Los eventos con fecha SÍ serán una tabla; eso es otra cosa y llega en v2.
+     */
+    horarios: jsonb('horarios')
+      .$type<HorarioSemanal[]>()
+      .notNull()
+      .default([]),
+
+    /**
+     * Cuenta para donativos, tal como la publica la iglesia.
+     *
+     * Es un dato que las congregaciones ya ponen en su web y en el boletín. Se
+     * guarda como texto porque hay IBAN, Nequi, Daviplata y cuentas de ahorros
+     * según el país, y validar formatos aquí solo serviría para rechazar los
+     * que no conocemos.
+     *
+     * Hatril NO cobra ni intermedia: solo muestra el número.
+     */
+    cuentaDonativos: text('cuenta_donativos'),
+    titularDonativos: text('titular_donativos'),
 
     /**
      * Dominio propio de la iglesia. `src/proxy.ts` lo resuelve a `/i/[slug]`.

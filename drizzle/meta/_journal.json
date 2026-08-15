@@ -29,6 +29,13 @@
       "when": 1786829485940,
       "tag": "0003_cerrar_rpc_por_defecto",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786836610090,
+      "tag": "0004_web_publica",
+      "breakpoints": true
     }
   ]
 }

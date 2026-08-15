@@ -1,0 +1,386 @@
+import Link from 'next/link';
+import type { Metadata } from 'next';
+import { eq } from 'drizzle-orm';
+import { ExternalLink } from 'lucide-react';
+
+import { requirePastor } from '@/lib/auth/guard-panel';
+import { withUser } from '@/lib/db';
+import { iglesias } from '@/lib/db/schema';
+import { Aviso } from '@/components/aviso';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  cambiarVisibilidadDirectorio,
+  guardarDatosIglesia,
+  guardarWebPublica,
+} from './actions';
+import { FILAS_HORARIO } from './constantes';
+
+export const metadata: Metadata = { title: 'Ajustes' };
+
+const CONFIRMACIONES: Record<string, string> = {
+  datos: 'Datos de la iglesia guardados.',
+  web: 'Web pública guardada.',
+  directorio: 'Preferencias del directorio guardadas.',
+};
+
+export default async function AjustesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; guardado?: string }>;
+}) {
+  const ctx = await requirePastor();
+  const { error, guardado } = await searchParams;
+
+  const [iglesia] = await withUser(ctx.user.id, (tx) =>
+    tx.select().from(iglesias).where(eq(iglesias.id, ctx.iglesia.id)).limit(1),
+  );
+
+  if (!iglesia) throw new Error('No se pudo cargar la iglesia.');
+
+  const horarios = iglesia.horarios;
+  const indiceDestacado = horarios.findIndex((h) => h.destacado);
+
+  return (
+    <>
+      <header className="border-b border-border bg-surface px-5 py-4 md:px-8">
+        <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
+          Ajustes
+        </h1>
+        <p className="text-[13px] text-muted-foreground">
+          Datos de la iglesia y su página pública
+        </p>
+      </header>
+
+      <div className="flex w-full max-w-[760px] flex-col gap-8 px-5 pb-16 pt-6 md:px-8">
+        {error && <Aviso>{error}</Aviso>}
+        {guardado && CONFIRMACIONES[guardado] && (
+          <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
+        )}
+
+        {/* ---------- Datos de la iglesia ---------- */}
+        <form action={guardarDatosIglesia}>
+          <Seccion
+            titulo="Datos de la iglesia"
+            nota="Aparecen en el panel y en tu página pública."
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Campo etiqueta="Nombre" nombre="nombre" requerido>
+                <Input id="nombre" name="nombre" required maxLength={120} defaultValue={iglesia.nombre} />
+              </Campo>
+
+              <Campo etiqueta="Denominación" nombre="denominacion">
+                <Input
+                  id="denominacion"
+                  name="denominacion"
+                  maxLength={120}
+                  defaultValue={iglesia.denominacion ?? ''}
+                  placeholder="Cuadrangular, bautista…"
+                />
+              </Campo>
+
+              <Campo etiqueta="Ciudad" nombre="ciudad">
+                <Input id="ciudad" name="ciudad" maxLength={120} defaultValue={iglesia.ciudad ?? ''} />
+              </Campo>
+
+              <Campo etiqueta="Dirección" nombre="direccion">
+                <Input id="direccion" name="direccion" maxLength={240} defaultValue={iglesia.direccion ?? ''} />
+              </Campo>
+
+              <Campo etiqueta="Teléfono" nombre="telefono">
+                <Input id="telefono" name="telefono" type="tel" maxLength={40} defaultValue={iglesia.telefono ?? ''} />
+              </Campo>
+
+              <Campo etiqueta="Correo" nombre="email">
+                <Input id="email" name="email" type="email" defaultValue={iglesia.email ?? ''} />
+              </Campo>
+            </div>
+
+            <Campo
+              etiqueta="En una frase"
+              nombre="descripcion"
+              ayuda="Es el primer párrafo que lee alguien que no os conoce. Cuéntalo como se lo contarías a un vecino."
+            >
+              <textarea
+                id="descripcion"
+                name="descripcion"
+                rows={3}
+                maxLength={400}
+                defaultValue={iglesia.descripcion ?? ''}
+                placeholder="Somos una iglesia de barrio. Unas ciento ochenta personas de todas las edades que se acompañan durante la semana."
+                className="rounded-lg border border-input bg-surface-alt px-3 py-2.5 text-[15px] leading-relaxed outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
+              />
+            </Campo>
+
+            <Button type="submit" className="w-fit">
+              Guardar los datos
+            </Button>
+          </Seccion>
+        </form>
+
+        {/* ---------- Web pública ---------- */}
+        <form action={guardarWebPublica}>
+          <Seccion
+            titulo="Página pública"
+            nota={`Tu iglesia en hatril.app/i/${iglesia.slug}`}
+            accion={
+              iglesia.webPublica ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  render={<Link href={`/i/${iglesia.slug}`} target="_blank" />}
+                >
+                  Verla
+                  <ExternalLink strokeWidth={1.7} />
+                </Button>
+              ) : undefined
+            }
+          >
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5">
+              <input
+                type="checkbox"
+                name="webPublica"
+                defaultChecked={iglesia.webPublica}
+                className="mt-0.5"
+              />
+              <span className="flex flex-col gap-1">
+                <span className="text-[15px] font-medium">
+                  Publicar la página
+                </span>
+                <span className="text-[13px] leading-snug text-muted-foreground">
+                  Mientras esté sin marcar, la dirección no muestra nada. Puedes
+                  ir rellenando esto con calma y publicarla cuando esté lista.
+                </span>
+              </span>
+            </label>
+
+            <Campo
+              etiqueta="Quiénes sois"
+              nombre="historia"
+              ayuda="Separa los párrafos dejando una línea en blanco."
+            >
+              <textarea
+                id="historia"
+                name="historia"
+                rows={7}
+                maxLength={4000}
+                defaultValue={iglesia.historia ?? ''}
+                placeholder={
+                  'Empezamos en 2004 en un local pequeño, siendo veinte personas.\n\nNo somos una iglesia grande y no pretendemos serlo. Lo que sí intentamos es que nadie que entre por la puerta un domingo se vaya sin que alguien sepa su nombre.'
+                }
+                className="rounded-lg border border-input bg-surface-alt px-3 py-2.5 text-[15px] leading-relaxed outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
+              />
+            </Campo>
+
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="t-label">Horarios de la semana</span>
+                <p className="text-[13px] leading-snug text-muted-foreground">
+                  Lo primero que busca quien entra en la web de una iglesia.
+                  Marca a la izquierda la reunión a la que dirigir a quien viene
+                  por primera vez. Las filas que dejes en blanco no se publican.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {Array.from({ length: FILAS_HORARIO }, (_, i) => {
+                  const h = horarios[i];
+
+                  return (
+                    <div
+                      key={i}
+                      className="flex flex-col gap-2 rounded-lg border border-border bg-surface-alt p-3 sm:flex-row sm:items-center"
+                    >
+                      <label
+                        className="flex flex-none items-center gap-2 text-[12.5px] text-muted-foreground sm:w-8 sm:justify-center"
+                        title="Dirigir aquí a quien viene por primera vez"
+                      >
+                        <input
+                          type="radio"
+                          name="horarioDestacado"
+                          value={i}
+                          defaultChecked={indiceDestacado === i}
+                          className="size-[17px] flex-none cursor-pointer accent-[#BD4715]"
+                        />
+                        <span className="sm:hidden">
+                          Dirigir aquí a quien viene por primera vez
+                        </span>
+                      </label>
+
+                      <Input
+                        name={`horario-${i}-dia`}
+                        defaultValue={h?.dia ?? ''}
+                        placeholder="Domingo"
+                        maxLength={40}
+                        aria-label={`Día del horario ${i + 1}`}
+                        className="sm:w-32"
+                      />
+                      <Input
+                        name={`horario-${i}-hora`}
+                        defaultValue={h?.hora ?? ''}
+                        placeholder="11:00"
+                        maxLength={20}
+                        aria-label={`Hora del horario ${i + 1}`}
+                        className="sm:w-24"
+                      />
+                      <Input
+                        name={`horario-${i}-nombre`}
+                        defaultValue={h?.nombre ?? ''}
+                        placeholder="Culto"
+                        maxLength={80}
+                        aria-label={`Nombre del horario ${i + 1}`}
+                        className="sm:w-40"
+                      />
+                      <Input
+                        name={`horario-${i}-detalle`}
+                        defaultValue={h?.detalle ?? ''}
+                        placeholder="Hora y media. Los niños tienen su clase a la vez."
+                        maxLength={200}
+                        aria-label={`Detalle del horario ${i + 1}`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Campo
+                etiqueta="Cuenta para donativos"
+                nombre="cuentaDonativos"
+                ayuda="Solo se muestra. Hatril no cobra ni intermedia."
+              >
+                <Input
+                  id="cuentaDonativos"
+                  name="cuentaDonativos"
+                  maxLength={80}
+                  defaultValue={iglesia.cuentaDonativos ?? ''}
+                  placeholder="Nequi, Bancolombia, IBAN…"
+                />
+              </Campo>
+
+              <Campo etiqueta="Titular de la cuenta" nombre="titularDonativos">
+                <Input
+                  id="titularDonativos"
+                  name="titularDonativos"
+                  maxLength={160}
+                  defaultValue={iglesia.titularDonativos ?? ''}
+                />
+              </Campo>
+            </div>
+
+            <Button type="submit" className="w-fit">
+              Guardar la página
+            </Button>
+          </Seccion>
+        </form>
+
+        {/* ---------- Directorio ---------- */}
+        <form action={cambiarVisibilidadDirectorio}>
+          <Seccion
+            titulo="Directorio de Hatril"
+            nota="Cómo os encuentra alguien que busca una iglesia."
+          >
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5">
+              <input
+                type="checkbox"
+                name="visibleEnDirectorio"
+                defaultChecked={iglesia.visibleEnDirectorio}
+                className="mt-0.5"
+              />
+              <span className="flex flex-col gap-1">
+                <span className="text-[15px] font-medium">
+                  Aparecer en el buscador de iglesias
+                </span>
+                <span className="text-[13px] leading-snug text-muted-foreground">
+                  Cualquiera que busque una iglesia en {iglesia.ciudad ?? 'tu ciudad'} os
+                  verá en la lista. Sin marcar, vuestra página sigue funcionando
+                  para quien tenga la dirección.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5">
+              <input
+                type="checkbox"
+                name="aceptaSolicitudes"
+                defaultChecked={iglesia.aceptaSolicitudes}
+                className="mt-0.5"
+              />
+              <span className="flex flex-col gap-1">
+                <span className="text-[15px] font-medium">
+                  Aceptar solicitudes para unirse
+                </span>
+                <span className="text-[13px] leading-snug text-muted-foreground">
+                  Quien os encuentre podrá pedir entrar. Nadie ve nada de la
+                  congregación hasta que alguien del equipo lo apruebe.
+                </span>
+              </span>
+            </label>
+
+            <Button type="submit" className="w-fit">
+              Guardar
+            </Button>
+          </Seccion>
+        </form>
+      </div>
+    </>
+  );
+}
+
+function Seccion({
+  titulo,
+  nota,
+  accion,
+  children,
+}: {
+  titulo: string;
+  nota?: string;
+  accion?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 className="t-subtitulo">{titulo}</h2>
+          {nota && (
+            <p className="text-[13px] text-muted-foreground">{nota}</p>
+          )}
+        </div>
+        {accion}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Campo({
+  etiqueta,
+  nombre,
+  ayuda,
+  requerido,
+  children,
+}: {
+  etiqueta: string;
+  nombre: string;
+  ayuda?: string;
+  requerido?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={nombre}>
+        {etiqueta}
+        {!requerido && (
+          <span className="ml-1.5 font-normal text-muted-foreground">
+            (opcional)
+          </span>
+        )}
+      </Label>
+      {children}
+      {ayuda && <p className="t-label text-muted-foreground">{ayuda}</p>}
+    </div>
+  );
+}
