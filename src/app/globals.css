@@ -1,26 +1,225 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * Sistema de diseño de Hatril.
+ *
+ * Extraído de `Sistema de diseño.dc.html` (Claude Design, proyecto
+ * 107021c4-dd85-485d-9cc7-34ef639d92ae). Base crema y naranja quemado, estética
+ * plana y cálida.
+ *
+ * Tres reglas que el propio sistema declara innegociables:
+ *   1. Un solo botón naranja por pantalla. Si todo es naranja, nada destaca.
+ *   2. `accent` y `danger` nunca se tocan. Los errores llevan icono, no solo color.
+ *   3. Sin degradados ni sombras. La profundidad se hace con bordes de 1px.
+ *
+ * MODO CLARO ÚNICAMENTE. El diseño no define paleta oscura y no se inventa una:
+ * un modo oscuro improvisado rompería el contraste comprobado de #6B645C.
+ */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* --- Tokens crudos del sistema de diseño (12 tokens, un único acento) --- */
+
+  /* Superficies y estructura */
+  --hatril-bg-base: #f0ece3; /* fondo de la aplicación */
+  --hatril-surface: #faf7f2; /* tarjetas y paneles */
+  --hatril-surface-alt: #ffffff; /* inputs y tablas */
+  --hatril-border: #e2dbd0; /* bordes y separadores */
+
+  /* Texto. #6B645C da 5.4:1 sobre bg-base y 5.9:1 sobre surface (AA).
+     No existe un gris más claro en el sistema: no bajar de aquí. */
+  --hatril-text-primary: #1a1a1a;
+  --hatril-text-secondary: #6b645c;
+
+  /* Marca y estado */
+  --hatril-accent: #bd4715;
+  --hatril-accent-hover: #9c3a11;
+  --hatril-accent-active: #83300e;
+  --hatril-accent-soft: #f7e4da;
+  --hatril-support: #2f5d50;
+  --hatril-support-hover: #26493f;
+  --hatril-support-active: #1e3b33;
+  --hatril-warning: #b58a2b;
+  --hatril-danger: #93231f;
+
+  /* Deshabilitado */
+  --hatril-disabled-bg: #e6ddd2;
+  --hatril-disabled-fg: #9a9188;
+  --hatril-disabled-border: #e9e3da;
+  --hatril-disabled-surface: #fbf9f5;
+  --hatril-disabled-text: #a79e93;
+
+  /* Tonos de badge: fondo suave + texto del color de estado */
+  --hatril-badge-success-bg: #e4ede9;
+  --hatril-badge-success-fg: #2f5d50;
+  --hatril-badge-warning-bg: #f6edd9;
+  --hatril-badge-warning-fg: #7e5f13;
+  --hatril-badge-accent-bg: #f7e4da;
+  --hatril-badge-accent-fg: #bd4715;
+  --hatril-badge-neutral-bg: #ede8df;
+  --hatril-badge-neutral-fg: #6b645c;
+  --hatril-badge-danger-bg: #f3dedd;
+  --hatril-badge-danger-fg: #93231f;
+
+  /* Contorno del botón destructivo (no se rellena hasta pulsarlo) */
+  --hatril-danger-border: #e0c4c2;
+  --hatril-danger-soft: #f7eceb;
+
+  /* --- Mapeo a los nombres que espera shadcn/ui --- */
+  --background: var(--hatril-bg-base);
+  --foreground: var(--hatril-text-primary);
+  --card: var(--hatril-surface);
+  --card-foreground: var(--hatril-text-primary);
+  --popover: var(--hatril-surface);
+  --popover-foreground: var(--hatril-text-primary);
+  --primary: var(--hatril-accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--hatril-support);
+  --secondary-foreground: #ffffff;
+  --muted: var(--hatril-badge-neutral-bg);
+  --muted-foreground: var(--hatril-text-secondary);
+  /* Ojo: el `accent` de shadcn es el fondo sutil de hover/activo, no el naranja
+     de marca. Por eso apunta a accent-soft. El naranja es `primary`. */
+  --accent: var(--hatril-accent-soft);
+  --accent-foreground: var(--hatril-accent);
+  --destructive: var(--hatril-danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--hatril-border);
+  --input: var(--hatril-border);
+  --ring: var(--hatril-accent);
+
+  /* Radios: 12 tarjetas · 8 botones · full badges.
+     Nunca se anidan dos radios de 12px: dentro de una tarjeta todo baja a 8px. */
+  --radius: 0.5rem;
+
+  /* Gráficas (Informes, v2). Derivadas de la paleta, sin colores nuevos. */
+  --chart-1: var(--hatril-accent);
+  --chart-2: var(--hatril-support);
+  --chart-3: var(--hatril-warning);
+  --chart-4: var(--hatril-accent-hover);
+  --chart-5: var(--hatril-text-secondary);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Tokens de Hatril expuestos como utilidades: bg-surface-alt, text-support… */
+  --color-surface: var(--hatril-surface);
+  --color-surface-alt: var(--hatril-surface-alt);
+  --color-accent-brand: var(--hatril-accent);
+  --color-accent-hover: var(--hatril-accent-hover);
+  --color-accent-soft: var(--hatril-accent-soft);
+  --color-support: var(--hatril-support);
+  --color-support-hover: var(--hatril-support-hover);
+  --color-warning: var(--hatril-warning);
+  --color-danger: var(--hatril-danger);
+
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: 0.75rem; /* 12px — tarjetas */
+  --radius-xl: 1rem;
+
+  /* Escala tipográfica del sistema. Tailwind no trae 15/17/11.5px. */
+  --text-micro: 0.71875rem; /* 11.5px */
+  --text-label: 0.8125rem; /* 13px */
+  --text-body: 0.9375rem; /* 15px — cuerpo mínimo */
+  --text-subtitle: 1.0625rem; /* 17px */
+  --text-title: 1.5rem; /* 24px */
+  --text-figure: 2.125rem; /* 34px */
+  --text-display: 2.875rem; /* 46px */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/30;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: var(--text-body);
+    line-height: 1.5;
+  }
+
+  a {
+    color: var(--hatril-accent);
+  }
+
+  a:hover {
+    color: var(--hatril-accent-hover);
+    text-decoration: underline;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /*
+   * Escala tipográfica nombrada. Se usa `.t-display`, `.t-titulo`… en lugar de
+   * repetir cinco utilidades cada vez, para que un cambio de escala sea un solo
+   * sitio y no un grep por todo el repo.
+   */
+  .t-display {
+    font-size: var(--text-display);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+  }
+
+  .t-cifra {
+    font-size: var(--text-figure);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  .t-titulo {
+    font-size: var(--text-title);
+    font-weight: 700;
+    letter-spacing: -0.022em;
+    line-height: 1.1;
+  }
+
+  .t-subtitulo {
+    font-size: var(--text-subtitle);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+  }
+
+  .t-label {
+    font-size: var(--text-label);
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .t-micro {
+    font-size: var(--text-micro);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--hatril-text-secondary);
+  }
 }
