@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
  * claro que estás operando como soporte. Es SOLO un flag de UI — la auth real
  * es la sesión Supabase del dueño creada por verifyOtp en /auth/impersonar.
  */
-export const COOKIE_MODO_SOPORTE = 'gonper_modo_soporte';
+export const COOKIE_MODO_SOPORTE = 'hatril_modo_soporte';
 
 /**
  * Si la sesión actual está en modo soporte, devuelve el nombre del salón

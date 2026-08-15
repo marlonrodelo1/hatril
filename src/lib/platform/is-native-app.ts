@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 /**
  * Detección server-side de si la petición viene de la app nativa (Capacitor).
  *
- * Capacitor añade el sufijo `GonperApp/<version>` al User-Agent del WebView
+ * Capacitor añade el sufijo `HatrilApp/<version>` al User-Agent del WebView
  * vía `android.appendUserAgent` en `capacitor.config.ts` (Bloque A). Leerlo
  * en el servidor nos permite aplicar gating fiable sin confiar en el cliente:
  *   - En la APP: el registro/login es obligatorio.
@@ -15,5 +15,5 @@ import { headers } from 'next/headers';
 export async function isNativeApp(): Promise<boolean> {
   const h = await headers();
   const ua = h.get('user-agent') ?? '';
-  return ua.includes('GonperApp/');
+  return ua.includes('HatrilApp/');
 }

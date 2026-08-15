@@ -1,0 +1,74 @@
+# CI desde el primer commit.
+#
+# Pidoo estuvo NUEVE DÍAS con producción rota por una función usada sin
+# importar en `RestauranteDetalle.jsx`. Solo reventaba en restaurantes que ya
+# tenían pedidos, así que pasó todas las pruebas manuales. Un `tsc --noEmit` lo
+# habría cazado en el push. Ninguno de los dos proyectos anteriores tiene CI.
+#
+# Tres comprobaciones baratas, en el orden en que fallan más rápido.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Tipos
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # El build necesita que las variables existan, no que sean válidas: en
+      # esta fase nada se conecta a nada. Los valores de mentira evitan tener
+      # que dar secretos reales a CI solo para compilar.
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ejemplo.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci
+          SUPABASE_SERVICE_ROLE_KEY: ci
+          DATABASE_URL: postgres://ci:ci@localhost:5432/ci
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
+  # La prueba de aislamiento entre iglesias necesita una base de datos real, así
+  # que solo corre si hay una configurada. Es la comprobación que no puede
+  # fallar nunca: si una congregación alcanza los datos de otra, eso es una
+  # brecha de datos de categoría especial, no un bug.
+  #
+  # Para activarla: añade el secreto DATABASE_URL_TEST apuntando a una rama de
+  # Supabase, NUNCA a producción.
+  aislamiento:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Aislamiento entre iglesias
+        if: ${{ env.DATABASE_URL != '' }}
+        run: npm run test:aislamiento
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}

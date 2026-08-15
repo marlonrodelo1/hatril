@@ -5,7 +5,7 @@ import { cookies, headers } from 'next/headers';
  * Royce, categorías con imagen…) en vez de la web normal?
  *
  * Es true si:
- *   - El User-Agent trae `GonperApp/` (la app nativa Capacitor lo inyecta), o
+ *   - El User-Agent trae `HatrilApp/` (la app nativa Capacitor lo inyecta), o
  *   - Existe la cookie `app_shell=1` (para PREVISUALIZAR el modo app en el
  *     navegador durante el desarrollo, sin tener que compilar la app).
  *
@@ -14,6 +14,6 @@ import { cookies, headers } from 'next/headers';
 export async function isAppShell(): Promise<boolean> {
   const [h, c] = await Promise.all([headers(), cookies()]);
   const ua = h.get('user-agent') ?? '';
-  if (ua.includes('GonperApp/')) return true;
+  if (ua.includes('HatrilApp/')) return true;
   return c.get('app_shell')?.value === '1';
 }

@@ -1,184 +1,233 @@
-import type { RolUsuario } from '@/lib/auth/user-context';
-
 /**
- * Qué puede hacer cada persona dentro de un salón.
+ * Qué puede hacer cada persona dentro de una iglesia.
  *
- * POR QUÉ EXISTE
- * --------------
- * Hasta ahora el único predicado era `esDueno()`: o mandabas en todo o solo
- * podías mirar. Con el plan Plus y varios usuarios en el mismo negocio eso no
- * llega — el dueño necesita poder decir "a Ana sí le dejo cerrar sus tardes,
- * pero el fichero de clientes no lo toca".
+ * Adaptado de `gonper/src/lib/auth/permisos.ts`, que lleva meses en producción.
+ * La estructura se conserva entera porque resuelve bien el problema; lo que
+ * cambia son los roles, las capacidades y —esto sí es nuevo— el segundo eje de
+ * abajo.
  *
  * DOS PREDICADOS, NO UNO
  * ----------------------
- *   - `esAdmin(ctx)`  → administración del salón: configuración, catálogo,
- *     equipo, cobros, marketing. NO es delegable: no hay permiso que se lo dé a
- *     un empleado. Es lo que `esDueno()` ya comprobaba y por eso ese helper se
- *     queda como está, con sus 20 usos intactos.
- *   - `puede(ctx, permiso)` → las cuatro capacidades que el dueño SÍ reparte.
+ *   - `esPastor(ctx)`  → gobierno de la iglesia: ajustes, equipo, facturación,
+ *     bajas. NO es delegable: no hay permiso que se lo dé a nadie más.
+ *   - `puede(ctx, p)`  → las cinco capacidades que el pastor SÍ reparte.
  *
  * DÓNDE SE GUARDAN
  * ----------------
- * En `usuarios_salon.permisos`, un jsonb que contiene SOLO EXCEPCIONES: lo que
- * el dueño ha cambiado respecto al valor por defecto del rol. Se eligió así
- * porque:
- *   - Añadir un permiso nuevo no cuesta migración, solo una clave en el
- *     catálogo de aquí abajo.
- *   - No hay que rellenar nada al desplegar: `{}` ya significa "los defectos".
- *   - Un empleado que se salga de la norma es un UPDATE de una fila.
+ * En `iglesia_usuarios.permisos`, un jsonb con SOLO LAS EXCEPCIONES al valor
+ * por defecto del rol. Se eligió así porque añadir un permiso nuevo no cuesta
+ * migración, `{}` ya significa «los defectos», y sacar a alguien de la norma es
+ * un UPDATE de una fila.
  *
- * Y sobre todo: **`dueno` y `admin` IGNORAN el jsonb por completo**. Un UPDATE
- * mal hecho no puede dejar al dueño fuera de su propio negocio.
+ * Y sobre todo: **`pastor` IGNORA el jsonb por completo**. Un UPDATE mal hecho
+ * no puede dejar al pastor fuera de su propia iglesia.
  *
- * EL DINERO NO SE DELEGA
- * ----------------------
- * `ver_agenda_completa` cambia lo que se VE, nunca lo que se CUENTA. Un empleado
- * con la agenda entera del salón sigue viendo solo SU facturación. De ahí que
- * `ambitoAgenda` y `ambitoCaja` sean dos funciones distintas: si el dinero se
- * derivara de la lista de citas, dar "ver toda la agenda" abriría la caja del
- * negocio por la puerta de atrás.
+ * LOS DOS EJES NO SE CRUZAN
+ * -------------------------
+ * En Gonper la regla era «el dinero no se delega»: ver toda la agenda no abría
+ * la caja. Aquí el equivalente es más importante todavía, porque hablamos de
+ * datos del art. 9 del RGPD:
+ *
+ *   `ver_todos_los_miembros` amplía las FILAS que se ven.
+ *   `ver_datos_sensibles`    amplía las COLUMNAS que se ven.
+ *
+ * Son ejes independientes a propósito. Un líder de alabanza puede necesitar la
+ * lista entera de la congregación para invitar gente a su ministerio, y eso no
+ * tiene por qué darle la dirección, la fecha de nacimiento ni las notas de cada
+ * persona. Si un solo permiso hiciera las dos cosas, dar el primero regalaría
+ * el segundo por la puerta de atrás.
  */
 
+/** Rol dentro de una iglesia. Coincide con `rol_iglesia_enum` en Postgres. */
+export type RolIglesia =
+  | 'pastor'
+  | 'lider'
+  | 'tesorero'
+  | 'secretaria'
+  | 'miembro';
+
 export const PERMISOS = [
-  /** Ver la agenda del salón entero, no solo sus propias citas. */
-  'ver_agenda_completa',
-  /** Bloquear sus propias franjas y vacaciones sin pedírselo al dueño. */
-  'cerrar_franjas',
-  /** Entrar al fichero de clientes, con teléfonos e historial. */
-  'ver_clientes',
-  /** Confirmar, cancelar o marcar no-show en citas de otro profesional. */
-  'tocar_citas_ajenas',
+  /** Ver la congregación entera, no solo los miembros de sus ministerios. */
+  'ver_todos_los_miembros',
+  /** Dar de alta personas, editar sus fichas y darlas de baja. */
+  'editar_miembros',
+  /** Crear ministerios, editarlos y asignarles gente. */
+  'gestionar_ministerios',
+  /** Aceptar o rechazar a quien pide entrar desde el directorio. */
+  'aprobar_solicitudes',
+  /** Ver fecha de nacimiento, dirección, estado civil y notas. */
+  'ver_datos_sensibles',
 ] as const;
 
 export type Permiso = (typeof PERMISOS)[number];
 export type MapaPermisos = Record<Permiso, boolean>;
 
 /**
- * Cómo se le cuenta cada permiso al dueño en la pantalla de Equipo.
+ * Cómo se le cuenta cada permiso al pastor en la pantalla de Equipo.
  *
  * Vive aquí, pegado al catálogo, para que añadir un permiso obligue a escribir
  * su texto en el mismo sitio: `Record<Permiso, …>` no compila si falta uno.
  *
- * Está redactado en segunda persona y desde lo que el dueño teme —el fichero de
- * clientes, el depósito que se devuelve al cancelar— porque de eso va la
- * decisión que está tomando, no de cómo se llama la clave en base de datos.
+ * Redactado desde lo que el pastor está decidiendo de verdad —quién ve la
+ * dirección de las familias, quién puede dar de baja a alguien— y no desde cómo
+ * se llama la clave en base de datos.
  */
 export const ETIQUETAS_PERMISOS: Record<
   Permiso,
   { titulo: string; descripcion: string }
 > = {
-  ver_agenda_completa: {
-    titulo: 'Ver la agenda del salón entera',
-    // El teléfono se nombra aquí porque viaja dentro de cada cita listada, no
-    // por el fichero de clientes: un dueño que solo lee el título da esto por
-    // «que vea los huecos» y acaba repartiendo los teléfonos de su cartera.
+  ver_todos_los_miembros: {
+    titulo: 'Ver la congregación entera',
     descripcion:
-      'Ve las citas de sus compañeros con nombre y teléfono del cliente, aunque no le des el fichero. Su facturación sigue siendo solo la suya.',
+      'Ve a todas las personas de la iglesia, no solo a las de sus ministerios. No incluye sus datos personales: eso es el permiso de abajo.',
   },
-  cerrar_franjas: {
-    titulo: 'Cerrarse horas y vacaciones',
+  editar_miembros: {
+    titulo: 'Dar de alta y editar personas',
     descripcion:
-      'Bloquea sus propias franjas sin pedírtelo. Solo las suyas: el salón no se cierra.',
+      'Crea fichas nuevas, corrige las existentes y da de baja. La baja no borra el histórico de ministerios.',
   },
-  ver_clientes: {
-    titulo: 'Entrar al fichero de clientes',
-    descripcion: 'Teléfonos, email e historial de cada cliente del salón.',
-  },
-  tocar_citas_ajenas: {
-    // El título hablaba solo de "tocar" citas que ya existen, y este permiso
-    // también decide si puede CREARLAS a nombre de otro — es lo que hace que en
-    // "nueva cita" le salga el equipo entero en vez de solo él. Sin decirlo, un
-    // dueño que quiere que su recepcionista reparta las citas del día no
-    // encuentra el interruptor que se lo da, porque no busca "tocar".
-    titulo: 'Dar y tocar citas de compañeros',
+  gestionar_ministerios: {
+    titulo: 'Gestionar los ministerios',
     descripcion:
-      'Reserva a nombre de cualquiera del equipo, no solo del suyo. Y confirma, cancela o marca que no vino en citas que no son suyas. Cancelar devuelve el depósito.',
+      'Crea y edita ministerios, nombra líderes y mueve gente de uno a otro.',
+  },
+  aprobar_solicitudes: {
+    titulo: 'Aceptar a quien pide entrar',
+    descripcion:
+      'Revisa las solicitudes que llegan desde el directorio. Quien apruebe pasa a ver el contenido interno de la iglesia.',
+  },
+  ver_datos_sensibles: {
+    // Se nombra el dato concreto porque «datos sensibles» suena a jerga legal y
+    // un pastor que solo lea el título lo da por «datos de contacto» y acaba
+    // repartiendo las direcciones de las familias de su congregación.
+    titulo: 'Ver dirección, fecha de nacimiento y notas',
+    descripcion:
+      'Datos especialmente protegidos por la ley. Dáselo solo a quien lo necesite para su trabajo: cada consulta queda registrada con su nombre.',
   },
 };
 
 /**
- * Lo que puede un empleado recién invitado: nada más que lo suyo. Se empieza
- * cerrado y el dueño abre lo que quiera, no al revés.
+ * Lo que puede alguien recién aceptado: nada más que lo suyo. Se empieza
+ * cerrado y el pastor abre lo que quiera, no al revés.
  */
-export const PERMISOS_EMPLEADO_DEFECTO: MapaPermisos = {
-  ver_agenda_completa: false,
-  cerrar_franjas: false,
-  ver_clientes: false,
-  tocar_citas_ajenas: false,
+const NINGUNO: MapaPermisos = {
+  ver_todos_los_miembros: false,
+  editar_miembros: false,
+  gestionar_ministerios: false,
+  aprobar_solicitudes: false,
+  ver_datos_sensibles: false,
 };
 
-const TODOS_CONCEDIDOS: MapaPermisos = {
-  ver_agenda_completa: true,
-  cerrar_franjas: true,
-  ver_clientes: true,
-  tocar_citas_ajenas: true,
+const TODOS: MapaPermisos = {
+  ver_todos_los_miembros: true,
+  editar_miembros: true,
+  gestionar_ministerios: true,
+  aprobar_solicitudes: true,
+  ver_datos_sensibles: true,
 };
 
-/** ¿Manda en el salón? Configuración, catálogo, equipo, cobros y marketing. */
-export function esAdmin(ctx: { rol: RolUsuario }): boolean {
-  return ctx.rol === 'dueno' || ctx.rol === 'admin';
+/**
+ * Defectos por rol.
+ *
+ * `secretaria` nace con casi todo porque es literalmente quien lleva el fichero
+ * de la iglesia: si hubiera que concederle cada permiso a mano, el pastor
+ * pasaría por la pantalla de equipo antes de poder delegar nada, y acabaría
+ * dándole el rol de pastor «para que funcione».
+ *
+ * `lider` nace cerrado: ve su ministerio por ámbito (ver `ambitoMiembros`), que
+ * no es un permiso sino la consecuencia de a qué ministerios pertenece.
+ *
+ * `tesorero` no toca personas. En la v1 no hay finanzas todavía, así que el rol
+ * existe sin capacidades: reservarlo ahora evita tener que migrar filas cuando
+ * llegue el módulo.
+ */
+const DEFECTOS_POR_ROL: Record<RolIglesia, MapaPermisos> = {
+  pastor: TODOS,
+  secretaria: {
+    ...NINGUNO,
+    ver_todos_los_miembros: true,
+    editar_miembros: true,
+    aprobar_solicitudes: true,
+    ver_datos_sensibles: true,
+  },
+  lider: NINGUNO,
+  tesorero: NINGUNO,
+  miembro: NINGUNO,
+};
+
+/** ¿Gobierna la iglesia? Ajustes, equipo, facturación y bajas. */
+export function esPastor(ctx: { rol: RolIglesia }): boolean {
+  return ctx.rol === 'pastor';
 }
 
 /**
  * Mapa de permisos efectivo.
  *
- * Para `dueno`/`admin` devuelve todo concedido SIN mirar lo guardado — ver el
- * comentario de cabecera. Para `empleado`, los defectos con las excepciones
- * encima; las claves que no estén en el catálogo se ignoran, así que un permiso
- * mal escrito en base de datos es inerte y no concede nada por accidente.
+ * Para `pastor` devuelve todo concedido SIN mirar lo guardado — ver la cabecera.
+ * Para el resto, los defectos de su rol con las excepciones encima. Las claves
+ * que no estén en el catálogo se ignoran, así que un permiso mal escrito en
+ * base de datos es inerte y no concede nada por accidente.
  */
 export function resolverPermisos(
-  rol: RolUsuario,
+  rol: RolIglesia,
   guardados: unknown,
 ): MapaPermisos {
-  if (esAdmin({ rol })) return { ...TODOS_CONCEDIDOS };
+  if (esPastor({ rol })) return { ...TODOS };
 
-  const mapa = { ...PERMISOS_EMPLEADO_DEFECTO };
+  const mapa = { ...(DEFECTOS_POR_ROL[rol] ?? NINGUNO) };
+
   if (guardados && typeof guardados === 'object' && !Array.isArray(guardados)) {
     const obj = guardados as Record<string, unknown>;
     for (const p of PERMISOS) {
-      if (typeof obj[p] === 'boolean') mapa[p] = obj[p] as boolean;
+      if (typeof obj[p] === 'boolean') mapa[p] = obj[p];
     }
   }
+
   return mapa;
 }
 
 /**
- * El inverso de `resolverPermisos`: de lo que el dueño ha dejado marcado en el
+ * El inverso de `resolverPermisos`: de lo que el pastor dejó marcado en el
  * formulario al jsonb mínimo que se guarda.
  *
- * Vive aquí, pegado a su inverso, porque las dos mitades tienen que estar de
- * acuerdo sobre qué es "el defecto"; separadas, cambiar un defecto arreglaría
- * la lectura y dejaría la escritura guardando el valor viejo.
+ * Vive pegado a su inverso porque las dos mitades tienen que estar de acuerdo
+ * sobre qué es «el defecto»; separadas, cambiar un defecto arreglaría la
+ * lectura y dejaría la escritura guardando el valor viejo.
  *
  * Recibe un predicado y no un mapa ya montado para que quien llama no tenga que
- * recorrer el catálogo por su cuenta —recorrerlo es justo lo que impide que una
- * casilla sin marcar (que no viaja en el FormData) se lea como "no lo toques".
+ * recorrer el catálogo por su cuenta — recorrerlo es justo lo que impide que
+ * una casilla desmarcada, que no viaja en el FormData, se lea como «no la
+ * toques».
  */
 export function excepcionesSobreDefecto(
+  rol: RolIglesia,
   estaMarcado: (permiso: Permiso) => boolean,
 ): Partial<Record<Permiso, boolean>> {
+  const defectos = DEFECTOS_POR_ROL[rol] ?? NINGUNO;
   const excepciones: Partial<Record<Permiso, boolean>> = {};
+
   for (const permiso of PERMISOS) {
     const valor = estaMarcado(permiso);
-    if (valor !== PERMISOS_EMPLEADO_DEFECTO[permiso]) {
-      excepciones[permiso] = valor;
-    }
+    if (valor !== defectos[permiso]) excepciones[permiso] = valor;
   }
+
   return excepciones;
 }
 
 /**
- * Lo mínimo que necesita cualquier comprobación de permisos. Es estructural a
- * propósito: tanto `SalonBearerContext` (app, Bearer) como `UserContext` (web,
- * cookies) lo cumplen sin herencia ni adaptadores, y así la regla se escribe
- * una vez para las dos superficies.
+ * Lo mínimo que necesita cualquier comprobación de permisos.
+ *
+ * Es estructural a propósito: lo cumple `UserContext` sin herencia ni
+ * adaptadores, y cualquier contexto futuro (una API con Bearer para la app
+ * móvil) lo cumplirá igual escribiendo los tres campos.
  */
 export interface ContextoPermisos {
-  rol: RolUsuario;
+  rol: RolIglesia;
   permisos: MapaPermisos;
-  profesionalId: string | null;
+  /** Ficha de miembro de esta persona, si la tiene. */
+  miembroId: string | null;
+  /** Ministerios en los que sirve. Define su ámbito cuando no ve la iglesia entera. */
+  ministerioIds: string[];
 }
 
 export function puede(ctx: ContextoPermisos, permiso: Permiso): boolean {
@@ -186,63 +235,56 @@ export function puede(ctx: ContextoPermisos, permiso: Permiso): boolean {
 }
 
 /**
- * Qué citas puede VER esta persona.
+ * A QUIÉN puede ver esta persona.
  *
- * `ninguno` es el caso raro pero real: una cuenta de empleado cuya ficha de
- * profesional se borró o se desvinculó (revocar y volver a invitar rompe el
- * vínculo). Se devuelve explícitamente en vez de caer a `salon`, porque fallar
- * abierto aquí significaría enseñarle la agenda entera del negocio a alguien
- * que ya no debería estar.
+ * `ninguno` es el caso raro pero real: una cuenta activa cuya ficha de miembro
+ * se borró, o un líder al que sacaron de todos sus ministerios. Se devuelve
+ * explícitamente en vez de caer a `iglesia`, porque fallar abierto aquí
+ * significaría enseñar la congregación entera a alguien que ya no debería
+ * verla.
  */
-export type AmbitoCitas =
-  | { tipo: 'salon' }
-  | { tipo: 'propio'; profesionalId: string }
+export type AmbitoMiembros =
+  | { tipo: 'iglesia' }
+  | { tipo: 'ministerios'; ministerioIds: string[] }
+  | { tipo: 'propio'; miembroId: string }
   | { tipo: 'ninguno' };
 
-export function ambitoAgenda(ctx: ContextoPermisos): AmbitoCitas {
-  if (esAdmin(ctx)) return { tipo: 'salon' };
-  if (puede(ctx, 'ver_agenda_completa')) return { tipo: 'salon' };
-  if (ctx.profesionalId) return { tipo: 'propio', profesionalId: ctx.profesionalId };
+export function ambitoMiembros(ctx: ContextoPermisos): AmbitoMiembros {
+  if (esPastor(ctx)) return { tipo: 'iglesia' };
+  if (puede(ctx, 'ver_todos_los_miembros')) return { tipo: 'iglesia' };
+  if (ctx.ministerioIds.length > 0) {
+    return { tipo: 'ministerios', ministerioIds: ctx.ministerioIds };
+  }
+  if (ctx.miembroId) return { tipo: 'propio', miembroId: ctx.miembroId };
   return { tipo: 'ninguno' };
 }
 
 /**
- * Sobre qué citas se suman los EUROS.
+ * QUÉ CAMPOS de una ficha puede ver.
  *
- * Deliberadamente NO mira ningún permiso: la caja del negocio es del dueño y no
- * se delega. Un empleado ve lo que ha pasado por sus manos, tenga o no acceso a
- * la agenda completa.
+ * Deliberadamente NO mira el ámbito: son los dos ejes de la cabecera. Ampliar a
+ * cuánta gente ve alguien nunca amplía cuántos datos ve de cada persona.
  */
-export function ambitoCaja(ctx: ContextoPermisos): AmbitoCitas {
-  if (esAdmin(ctx)) return { tipo: 'salon' };
-  if (ctx.profesionalId) return { tipo: 'propio', profesionalId: ctx.profesionalId };
-  return { tipo: 'ninguno' };
+export function puedeVerDatosSensibles(ctx: ContextoPermisos): boolean {
+  return esPastor(ctx) || puede(ctx, 'ver_datos_sensibles');
 }
 
 /**
- * ¿Puede tocar ESTA cita? Vale tanto para cambiarle el estado (confirmar,
- * cancelar, no-show) como para crearla a nombre de un profesional.
+ * ¿Puede tocar ESTA ficha?
  *
- * Cancelar dispara la devolución del depósito en Stripe, así que es de lo más
- * caro que puede hacer un empleado por error.
+ * Sin ficha propia no se toca nada, ni con `editar_miembros` puesto: es la
+ * misma cuenta a la que `ambitoMiembros` devuelve 'ninguno'. La comprobación va
+ * ANTES del permiso y no después, porque colocada al revés alguien que ya no
+ * puede ni ver la congregación podría seguir editando fichas sabiendo solo el
+ * id — y los ids viajan en las URL del panel.
  */
-export function puedeTocarCita(
+export function puedeEditarMiembro(
   ctx: ContextoPermisos,
-  profesionalIdDeLaCita: string | null,
+  miembroId: string,
 ): boolean {
-  if (esAdmin(ctx)) return true;
-  // Sin ficha de profesional no se toca NADA, ni con `tocar_citas_ajenas`
-  // puesto. Es la misma cuenta a la que `ambitoAgenda` le devuelve 'ninguno':
-  // la ficha se borró o se desvinculó. Con la comprobación colocada DESPUÉS del
-  // permiso, alguien que ya no puede ni ver la agenda podía aun así cancelar
-  // cualquier cita del salón —y cancelar devuelve el depósito por Stripe—
-  // sabiendo solo el id, que viaja en los avisos push.
-  //
-  // Va aquí y no en cada endpoint porque el descuido era el mismo en los tres
-  // sitios que llaman a esta función (estado de la cita, alta de cita desde la
-  // app y las acciones del panel web).
-  if (!ctx.profesionalId) return false;
-  if (puede(ctx, 'tocar_citas_ajenas')) return true;
-  if (!profesionalIdDeLaCita) return false;
-  return ctx.profesionalId === profesionalIdDeLaCita;
+  if (esPastor(ctx)) return true;
+  if (!ctx.miembroId) return false;
+  // Cada cual puede corregir su propia ficha siempre.
+  if (ctx.miembroId === miembroId) return true;
+  return puede(ctx, 'editar_miembros');
 }

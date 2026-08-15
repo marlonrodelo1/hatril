@@ -1,7 +1,11 @@
 import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 
-import { db } from '@/lib/db';
+// `dbAdmin` y no `withUser`: `admin_users` es una tabla de plataforma, con RLS
+// activada y sin ninguna policy. Justo por eso no se llega a ella desde el rol
+// de la aplicación, y comprobar si alguien es super admin no puede depender de
+// una policy que ese mismo super admin todavía no ha demostrado cumplir.
+import { dbAdmin } from '@/lib/db';
 import { adminUsers } from '@/lib/db/schema';
 import { createClient } from '@/lib/supabase/server';
 
@@ -22,7 +26,7 @@ export async function getCurrentSuperAdmin(): Promise<SuperAdminContext | null> 
   } = await supabase.auth.getUser();
   if (!user || !user.email) return null;
 
-  const rows = await db
+  const rows = await dbAdmin
     .select({ authUserId: adminUsers.authUserId })
     .from(adminUsers)
     .where(eq(adminUsers.authUserId, user.id))
@@ -51,7 +55,7 @@ export async function requireSuperAdmin(): Promise<SuperAdminContext> {
     redirect('/login?error=' + encodeURIComponent('Sesión inválida'));
   }
 
-  const rows = await db
+  const rows = await dbAdmin
     .select({ authUserId: adminUsers.authUserId })
     .from(adminUsers)
     .where(eq(adminUsers.authUserId, user.id))

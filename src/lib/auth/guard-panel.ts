@@ -6,80 +6,76 @@ import {
   getCurrentUserContext,
   type UserContext,
 } from '@/lib/auth/user-context';
-import { esAdmin, puede, type Permiso } from '@/lib/auth/permisos';
+import { esPastor, puede, type Permiso } from '@/lib/auth/permisos';
 
 /**
- * Guardas de autorización del panel web.
- *
- * POR QUÉ EXISTE
- * --------------
- * El panel web llevaba sin control de rol prácticamente desde el principio:
- * solo dos `requireDueno()` en todo `src/app/panel/`, y CERO comprobaciones en
- * los 16 ficheros de server actions. Un empleado que escribiera la URL a mano
- * entraba a Finanzas, Métricas y fichas de clientes, y podía ejecutar cualquier
- * acción — incluida la de cambiarle el plan de suscripción al dueño. El propio
- * código lo reconocía en `panel/config/equipo/actions.ts`: *"En esta fase el
- * trabajador ve TODO el panel. Las restricciones se aplican en la Fase 2"*.
- * Esa Fase 2 es esto.
- *
- * La raíz del problema era que `getCurrentSalon()` devuelve la fila del salón
- * SIN el rol: el helper que todo el mundo tenía a mano no ofrecía nada que
- * comprobar, así que nadie comprobaba. Por eso aquí no se sustituye —seguiría
- * compilando en sus 40+ usos— sino que se le pone un hermano que sí lo trae.
+ * Guardas de autorización del panel.
  *
  * DOS SABORES, Y NO ES CAPRICHO
  * -----------------------------
- * Una PÁGINA puede `redirect()` al fallar: el usuario acaba en un sitio con
+ * Una PÁGINA puede `redirect()` al fallar: la persona acaba en un sitio con
  * sentido. Una ACTION que redirige al fallar es indistinguible del éxito para
- * quien la invoca a pelo, así que se redirige con `?error=` — que además es la
- * convención que el repo ya usa para los errores de action.
+ * quien la invoca a pelo, así que se redirige con `?error=`, que además es la
+ * convención de errores de action en todo el repo.
+ *
+ * DÓNDE PONERLOS
+ * --------------
+ * En el `layout.tsx` de la sección, no en cada página. Así queda cubierta la
+ * carpeta entera incluidas las rutas dinámicas, que es justo donde se cuelan
+ * los huecos: en Gonper `/panel/clientes` estaba guardado y
+ * `/panel/clientes/[id]` no.
  *
  * QUÉ NO PROTEGE ESTO
  * -------------------
- * El aislamiento entre salones (que el salón A no vea al B) ya lo garantiza
- * `getCurrentUserContext`, que resuelve el salón desde `usuarios_salon` y nunca
- * desde un parámetro del cliente. Aquí solo se decide QUÉ puede hacer alguien
- * dentro de SU salón.
+ * El aislamiento entre iglesias. Eso lo garantizan las policies de RLS y
+ * `withUser()`, y `getCurrentUserContext` resolviendo la iglesia desde
+ * `iglesia_usuarios` y nunca desde un parámetro del cliente. Aquí solo se
+ * decide QUÉ puede hacer alguien dentro de SU congregación.
+ *
+ * Y tampoco es la única capa: que un guard falte no abre los datos de otra
+ * iglesia, solo una pantalla que no le tocaba dentro de la suya. Esa diferencia
+ * es la razón de haber puesto el aislamiento en la base de datos.
  */
 
-const MENSAJE_SOLO_DUENO =
-  'Solo el dueño del salón puede acceder a esta sección.';
+const MENSAJE_SOLO_PASTOR =
+  'Solo el pastor de la iglesia puede entrar en esta sección.';
 
-/** Igual que `getCurrentUserContext`, con nombre explícito para el panel. */
-export async function getCurrentSalonCtx(): Promise<UserContext | null> {
-  return getCurrentUserContext();
-}
+const MENSAJE_SIN_PERMISO = 'No tienes acceso a esta sección.';
 
 // ============================================
 // PÁGINAS (server components / layouts)
 // ============================================
 
 /**
- * Exige mandar en el salón. Para páginas y layouts de administración:
- * configuración, catálogo, finanzas, marketing.
+ * Exige sesión con iglesia activa. El guard mínimo de todo `/panel`.
  *
- * Ponerlo en un `layout.tsx` cubre la carpeta entera, incluidas las rutas
- * dinámicas — que es justo donde se colaban los huecos: `/panel/clientes`
- * estaba guardado pero `/panel/clientes/[id]` no.
+ * Distingue tres situaciones que la persona vive de forma muy distinta: sin
+ * sesión, con solicitud en revisión, y sin iglesia ninguna.
  */
-export async function requireAdminSalon(): Promise<UserContext> {
-  const ctx = await getCurrentSalonCtx();
-  if (!ctx) redirect('/login');
-  if (!esAdmin(ctx)) {
-    redirect('/panel/hoy?error=' + encodeURIComponent(MENSAJE_SOLO_DUENO));
+export async function requireIglesia(): Promise<UserContext> {
+  const ctx = await getCurrentUserContext();
+  if (!ctx) redirect('/acceso');
+  return ctx;
+}
+
+/**
+ * Exige ser pastor. Para ajustes, equipo, facturación y bajas.
+ */
+export async function requirePastor(): Promise<UserContext> {
+  const ctx = await getCurrentUserContext();
+  if (!ctx) redirect('/acceso');
+  if (!esPastor(ctx)) {
+    redirect('/panel/hoy?error=' + encodeURIComponent(MENSAJE_SOLO_PASTOR));
   }
   return ctx;
 }
 
-/** Exige un permiso concreto. Los dueños pasan siempre. */
+/** Exige un permiso concreto. El pastor pasa siempre. */
 export async function requirePermiso(permiso: Permiso): Promise<UserContext> {
-  const ctx = await getCurrentSalonCtx();
-  if (!ctx) redirect('/login');
-  if (!esAdmin(ctx) && !puede(ctx, permiso)) {
-    redirect(
-      '/panel/hoy?error=' +
-        encodeURIComponent('No tienes acceso a esta sección.'),
-    );
+  const ctx = await getCurrentUserContext();
+  if (!ctx) redirect('/acceso');
+  if (!esPastor(ctx) && !puede(ctx, permiso)) {
+    redirect('/panel/hoy?error=' + encodeURIComponent(MENSAJE_SIN_PERMISO));
   }
   return ctx;
 }
@@ -89,37 +85,36 @@ export async function requirePermiso(permiso: Permiso): Promise<UserContext> {
 // ============================================
 
 /**
- * Exige mandar en el salón, desde una server action.
+ * Exige sesión con iglesia activa desde una server action.
  *
- * La mayoría de ficheros de actions ya tienen un helper local
- * (`requireSalon()` / `requireSalonId()`) por el que pasan TODAS sus actions:
- * metiendo esta llamada ahí dentro se cubre el fichero entero con una sola
- * edición, en vez de tocar sesenta funciones.
- *
- * `destinoError` permite devolver al usuario a la pantalla desde la que
- * disparó la action; por defecto va a Hoy.
+ * No lleva `destinoError` como sus hermanas: si no hay sesión, el único destino
+ * con sentido es identificarse, no volver a una pantalla del panel que también
+ * va a rebotar.
  */
-export async function requireAdminAccion(
+export async function requireIglesiaAccion(): Promise<UserContext> {
+  const ctx = await getCurrentUserContext();
+  if (!ctx) redirect('/acceso');
+  return ctx;
+}
+
+export async function requirePastorAccion(
   destinoError = '/panel/hoy',
 ): Promise<UserContext> {
-  const ctx = await getCurrentSalonCtx();
-  if (!ctx) redirect('/login');
-  if (!esAdmin(ctx)) {
-    redirect(
-      `${destinoError}?error=` + encodeURIComponent(MENSAJE_SOLO_DUENO),
-    );
+  const ctx = await getCurrentUserContext();
+  if (!ctx) redirect('/acceso');
+  if (!esPastor(ctx)) {
+    redirect(`${destinoError}?error=` + encodeURIComponent(MENSAJE_SOLO_PASTOR));
   }
   return ctx;
 }
 
-/** Exige un permiso concreto desde una server action. */
 export async function requirePermisoAccion(
   permiso: Permiso,
   destinoError = '/panel/hoy',
 ): Promise<UserContext> {
-  const ctx = await getCurrentSalonCtx();
-  if (!ctx) redirect('/login');
-  if (!esAdmin(ctx) && !puede(ctx, permiso)) {
+  const ctx = await getCurrentUserContext();
+  if (!ctx) redirect('/acceso');
+  if (!esPastor(ctx) && !puede(ctx, permiso)) {
     redirect(
       `${destinoError}?error=` +
         encodeURIComponent('No tienes permiso para hacer eso.'),
