@@ -14,6 +14,7 @@ import {
   solicitudesIngreso,
 } from '@/lib/db/schema';
 import { VERSION_POLITICA_PRIVACIDAD } from '@/lib/rgpd/consentimiento';
+import { campo } from '@/lib/api/formulario';
 
 /**
  * Aprobar o rechazar quien pide entrar en la iglesia.
@@ -132,7 +133,7 @@ export async function rechazarSolicitud(
 
   const parsed = EsquemaRechazo.safeParse({
     solicitudId,
-    motivo: formData.get('motivo'),
+    motivo: campo(formData, 'motivo'),
   });
 
   if (!parsed.success) redirect('/panel/solicitudes');

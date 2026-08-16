@@ -10,6 +10,7 @@ import { withUser } from '@/lib/db';
 import { miembros, ministerioMiembros } from '@/lib/db/schema';
 import { ESTADOS_ELEGIBLES } from '@/lib/miembros/estados';
 import { normalizarTelefono } from '@/lib/telefono/normalizar';
+import { campo, campoObligatorio, campos, casilla } from '@/lib/api/formulario';
 
 /**
  * Alta, edición y baja de personas.
@@ -51,20 +52,22 @@ function oNulo(v: string | undefined): string | null {
 
 function leerFormulario(formData: FormData) {
   return EsquemaMiembro.safeParse({
-    nombre: formData.get('nombre'),
-    apellidos: formData.get('apellidos'),
-    email: formData.get('email'),
-    telefono: formData.get('telefono'),
-    estado: formData.get('estado'),
-    fechaNacimiento: formData.get('fechaNacimiento'),
-    fechaIngreso: formData.get('fechaIngreso'),
-    direccion: formData.get('direccion'),
-    ciudad: formData.get('ciudad'),
-    estadoCivil: formData.get('estadoCivil'),
-    notas: formData.get('notas'),
-    bautizado: formData.get('bautizado') ?? undefined,
-    ministerios: formData.getAll('ministerios').map(String).filter(Boolean),
-    fechaBautismo: formData.get('fechaBautismo'),
+    nombre: campoObligatorio(formData, 'nombre'),
+    apellidos: campo(formData, 'apellidos'),
+    email: campo(formData, 'email'),
+    telefono: campo(formData, 'telefono'),
+    estado: campoObligatorio(formData, 'estado'),
+    // Estos cuatro NO se pintan a quien no tiene `ver_datos_sensibles`, asi que
+    // llegan ausentes: es justo el caso que devolvia null y tumbaba el guardado.
+    fechaNacimiento: campo(formData, 'fechaNacimiento'),
+    fechaIngreso: campo(formData, 'fechaIngreso'),
+    direccion: campo(formData, 'direccion'),
+    ciudad: campo(formData, 'ciudad'),
+    estadoCivil: campo(formData, 'estadoCivil'),
+    notas: campo(formData, 'notas'),
+    bautizado: casilla(formData, 'bautizado') ? 'on' : undefined,
+    ministerios: campos(formData, 'ministerios'),
+    fechaBautismo: campo(formData, 'fechaBautismo'),
   });
 }
 

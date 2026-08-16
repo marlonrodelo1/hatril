@@ -13,6 +13,7 @@ import { isUniqueViolation } from '@/lib/db/error';
 import { checkRateLimit, getClientIp } from '@/lib/api/rate-limit';
 import { validarPassword, traducirErrorAuth } from '@/lib/auth/password';
 import { normalizarTelefono } from '@/lib/telefono/normalizar';
+import { campo, campoObligatorio } from '@/lib/api/formulario';
 
 /**
  * Crear cuenta personal y pedir entrar en una iglesia.
@@ -49,10 +50,10 @@ const EsquemaSolicitud = z.object({
 
 export async function solicitarIngreso(formData: FormData) {
   const parsed = EsquemaSolicitud.safeParse({
-    slug: formData.get('slug'),
-    nombre: formData.get('nombre'),
-    telefono: formData.get('telefono'),
-    mensaje: formData.get('mensaje'),
+    slug: campoObligatorio(formData, 'slug'),
+    nombre: campoObligatorio(formData, 'nombre'),
+    telefono: campo(formData, 'telefono'),
+    mensaje: campo(formData, 'mensaje'),
     consentimiento: formData.get('consentimiento'),
   });
 
@@ -150,10 +151,10 @@ const EsquemaCuenta = z.object({
 
 export async function crearCuentaPersonal(formData: FormData) {
   const parsed = EsquemaCuenta.safeParse({
-    nombre: formData.get('nombre'),
-    email: formData.get('email'),
-    password: formData.get('password'),
-    next: formData.get('next'),
+    nombre: campoObligatorio(formData, 'nombre'),
+    email: campoObligatorio(formData, 'email'),
+    password: String(formData.get('password') ?? ''),
+    next: campo(formData, 'next'),
   });
 
   if (!parsed.success) {

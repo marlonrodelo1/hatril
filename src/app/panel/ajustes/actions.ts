@@ -10,6 +10,7 @@ import { withUser } from '@/lib/db';
 import { iglesias, type HorarioSemanal } from '@/lib/db/schema';
 import { normalizarTelefono } from '@/lib/telefono/normalizar';
 import { FILAS_HORARIO } from './constantes';
+import { campo, campoObligatorio, casilla } from '@/lib/api/formulario';
 
 /**
  * Ajustes de la iglesia.
@@ -43,14 +44,14 @@ export async function guardarDatosIglesia(formData: FormData) {
   const ctx = await requirePastorAccion('/panel/ajustes');
 
   const parsed = EsquemaDatos.safeParse({
-    nombre: formData.get('nombre'),
-    denominacion: formData.get('denominacion'),
-    ciudad: formData.get('ciudad'),
-    direccion: formData.get('direccion'),
-    telefono: formData.get('telefono'),
-    email: formData.get('email'),
-    web: formData.get('web'),
-    descripcion: formData.get('descripcion'),
+    nombre: campoObligatorio(formData, 'nombre'),
+    denominacion: campo(formData, 'denominacion'),
+    ciudad: campo(formData, 'ciudad'),
+    direccion: campo(formData, 'direccion'),
+    telefono: campo(formData, 'telefono'),
+    email: campo(formData, 'email'),
+    web: campo(formData, 'web'),
+    descripcion: campo(formData, 'descripcion'),
   });
 
   if (!parsed.success) {
@@ -94,10 +95,10 @@ export async function guardarWebPublica(formData: FormData) {
   const ctx = await requirePastorAccion('/panel/ajustes');
 
   const parsed = EsquemaWeb.safeParse({
-    webPublica: formData.get('webPublica') ?? undefined,
-    historia: formData.get('historia'),
-    cuentaDonativos: formData.get('cuentaDonativos'),
-    titularDonativos: formData.get('titularDonativos'),
+    webPublica: casilla(formData, 'webPublica') ? 'on' : undefined,
+    historia: campo(formData, 'historia'),
+    cuentaDonativos: campo(formData, 'cuentaDonativos'),
+    titularDonativos: campo(formData, 'titularDonativos'),
   });
 
   if (!parsed.success) {
@@ -159,8 +160,8 @@ export async function guardarWebPublica(formData: FormData) {
 export async function cambiarVisibilidadDirectorio(formData: FormData) {
   const ctx = await requirePastorAccion('/panel/ajustes');
 
-  const visible = formData.get('visibleEnDirectorio') === 'on';
-  const aceptaSolicitudes = formData.get('aceptaSolicitudes') === 'on';
+  const visible = casilla(formData, 'visibleEnDirectorio');
+  const aceptaSolicitudes = casilla(formData, 'aceptaSolicitudes');
 
   await withUser(ctx.user.id, (tx) =>
     tx

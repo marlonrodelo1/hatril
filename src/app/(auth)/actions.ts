@@ -10,6 +10,7 @@ import { crearIglesiaConSeeds } from '@/lib/onboarding/crear-iglesia';
 import { checkRateLimit, getClientIp } from '@/lib/api/rate-limit';
 import { validarPassword, traducirErrorAuth } from '@/lib/auth/password';
 import { getOrigin } from '@/lib/auth/get-origin';
+import { campo, campoObligatorio } from '@/lib/api/formulario';
 
 /**
  * Acciones de acceso, registro y recuperación.
@@ -37,9 +38,11 @@ const EsquemaAcceso = z.object({
 
 export async function acceder(formData: FormData) {
   const parsed = EsquemaAcceso.safeParse({
-    email: formData.get('email'),
-    password: formData.get('password'),
-    next: formData.get('next'),
+    email: campoObligatorio(formData, 'email'),
+    // La contraseña NO pasa por `campo`: recortarla la cambia, y una que
+    // termine en espacio dejaria de funcionar sin que nadie entienda por que.
+    password: String(formData.get('password') ?? ''),
+    next: campo(formData, 'next'),
   });
 
   if (!parsed.success) {
@@ -92,12 +95,12 @@ const EsquemaRegistro = z.object({
 
 export async function registrar(formData: FormData) {
   const parsed = EsquemaRegistro.safeParse({
-    nombreIglesia: formData.get('nombreIglesia'),
-    nombrePastor: formData.get('nombrePastor'),
-    email: formData.get('email'),
-    password: formData.get('password'),
-    pais: formData.get('pais'),
-    ciudad: formData.get('ciudad') || undefined,
+    nombreIglesia: campoObligatorio(formData, 'nombreIglesia'),
+    nombrePastor: campoObligatorio(formData, 'nombrePastor'),
+    email: campoObligatorio(formData, 'email'),
+    password: String(formData.get('password') ?? ''),
+    pais: campoObligatorio(formData, 'pais'),
+    ciudad: campo(formData, 'ciudad'),
     consentimiento: formData.get('consentimiento'),
   });
 
@@ -190,7 +193,9 @@ const EsquemaRecuperar = z.object({
 });
 
 export async function pedirRecuperacion(formData: FormData) {
-  const parsed = EsquemaRecuperar.safeParse({ email: formData.get('email') });
+  const parsed = EsquemaRecuperar.safeParse({
+    email: campoObligatorio(formData, 'email'),
+  });
 
   if (!parsed.success) {
     volverCon('/recuperar', parsed.error.issues[0]!.message);
@@ -221,8 +226,8 @@ const EsquemaNuevaPassword = z.object({
 
 export async function cambiarPassword(formData: FormData) {
   const parsed = EsquemaNuevaPassword.safeParse({
-    password: formData.get('password'),
-    repetir: formData.get('repetir'),
+    password: String(formData.get('password') ?? ''),
+    repetir: String(formData.get('repetir') ?? ''),
   });
 
   if (!parsed.success) {

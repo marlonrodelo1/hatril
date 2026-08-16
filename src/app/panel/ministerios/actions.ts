@@ -10,6 +10,7 @@ import { withUser } from '@/lib/db';
 import { ministerioMiembros, ministerios } from '@/lib/db/schema';
 import { isUniqueViolation } from '@/lib/db/error';
 import { COLORES_MINISTERIO } from '@/lib/ministerios/colores';
+import { campo, campoObligatorio, campos } from '@/lib/api/formulario';
 
 const HEX_VALIDOS = COLORES_MINISTERIO.map((c) => c.hex) as [string, ...string[]];
 
@@ -34,10 +35,10 @@ function oNulo(v: string | undefined): string | null {
 
 function leer(formData: FormData) {
   return EsquemaMinisterio.safeParse({
-    nombre: formData.get('nombre'),
-    descripcion: formData.get('descripcion'),
-    colorHex: formData.get('colorHex'),
-    liderMiembroId: formData.get('liderMiembroId'),
+    nombre: campoObligatorio(formData, 'nombre'),
+    descripcion: campo(formData, 'descripcion'),
+    colorHex: campoObligatorio(formData, 'colorHex'),
+    liderMiembroId: campo(formData, 'liderMiembroId'),
   });
 }
 
@@ -153,7 +154,7 @@ export async function asignarAlMinisterio(
 
   const ids = z
     .array(z.string().uuid())
-    .safeParse(formData.getAll('miembros').map(String).filter(Boolean));
+    .safeParse(campos(formData, 'miembros'));
 
   if (!ids.success || ids.data.length === 0) {
     redirect(`/panel/ministerios/${ministerioId}`);
