@@ -7,6 +7,7 @@ import {
   type UserContext,
 } from '@/lib/auth/user-context';
 import { esPastor, puede, type Permiso } from '@/lib/auth/permisos';
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * Guardas de autorización del panel.
@@ -42,6 +43,33 @@ const MENSAJE_SOLO_PASTOR =
 
 const MENSAJE_SIN_PERMISO = 'No tienes acceso a esta sección.';
 
+/**
+ * A dónde va quien no tiene contexto de iglesia.
+ *
+ * SIN ESTO HABÍA UN BUCLE
+ * -----------------------
+ * `getCurrentUserContext()` devuelve null en DOS situaciones que no son la
+ * misma: no hay sesión, o hay sesión pero sin membresía activa —quien acaba de
+ * pedir entrar en una iglesia y espera aprobación—.
+ *
+ * Mandar los dos casos a `/acceso` funcionaba mientras la única forma de tener
+ * cuenta era fundando una iglesia. En cuanto existen las solicitudes de
+ * ingreso, la segunda situación es real y produce un bucle: el guard manda a
+ * `/acceso`, la persona ya tiene sesión, se identifica, vuelve al panel, y el
+ * guard la vuelve a echar. Sin mensaje y sin salida.
+ *
+ * Así que se distingue: sin sesión, a identificarse; con sesión y sin iglesia,
+ * a `/mi`, que le cuenta en qué punto está su solicitud.
+ */
+async function rebotar(): Promise<never> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  redirect(user ? '/mi' : '/acceso');
+}
+
 // ============================================
 // PÁGINAS (server components / layouts)
 // ============================================
@@ -54,7 +82,7 @@ const MENSAJE_SIN_PERMISO = 'No tienes acceso a esta sección.';
  */
 export async function requireIglesia(): Promise<UserContext> {
   const ctx = await getCurrentUserContext();
-  if (!ctx) redirect('/acceso');
+  if (!ctx) return rebotar();
   return ctx;
 }
 
@@ -63,7 +91,7 @@ export async function requireIglesia(): Promise<UserContext> {
  */
 export async function requirePastor(): Promise<UserContext> {
   const ctx = await getCurrentUserContext();
-  if (!ctx) redirect('/acceso');
+  if (!ctx) return rebotar();
   if (!esPastor(ctx)) {
     redirect('/panel/hoy?error=' + encodeURIComponent(MENSAJE_SOLO_PASTOR));
   }
@@ -73,7 +101,7 @@ export async function requirePastor(): Promise<UserContext> {
 /** Exige un permiso concreto. El pastor pasa siempre. */
 export async function requirePermiso(permiso: Permiso): Promise<UserContext> {
   const ctx = await getCurrentUserContext();
-  if (!ctx) redirect('/acceso');
+  if (!ctx) return rebotar();
   if (!esPastor(ctx) && !puede(ctx, permiso)) {
     redirect('/panel/hoy?error=' + encodeURIComponent(MENSAJE_SIN_PERMISO));
   }
@@ -93,7 +121,7 @@ export async function requirePermiso(permiso: Permiso): Promise<UserContext> {
  */
 export async function requireIglesiaAccion(): Promise<UserContext> {
   const ctx = await getCurrentUserContext();
-  if (!ctx) redirect('/acceso');
+  if (!ctx) return rebotar();
   return ctx;
 }
 
@@ -101,7 +129,7 @@ export async function requirePastorAccion(
   destinoError = '/panel/hoy',
 ): Promise<UserContext> {
   const ctx = await getCurrentUserContext();
-  if (!ctx) redirect('/acceso');
+  if (!ctx) return rebotar();
   if (!esPastor(ctx)) {
     redirect(`${destinoError}?error=` + encodeURIComponent(MENSAJE_SOLO_PASTOR));
   }
@@ -113,7 +141,7 @@ export async function requirePermisoAccion(
   destinoError = '/panel/hoy',
 ): Promise<UserContext> {
   const ctx = await getCurrentUserContext();
-  if (!ctx) redirect('/acceso');
+  if (!ctx) return rebotar();
   if (!esPastor(ctx) && !puede(ctx, permiso)) {
     redirect(
       `${destinoError}?error=` +

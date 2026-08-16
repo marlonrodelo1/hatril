@@ -1,4 +1,6 @@
 import { requireIglesia } from '@/lib/auth/guard-panel';
+import { esPastor, puede } from '@/lib/auth/permisos';
+import { contarSolicitudesPendientes } from '@/lib/solicitudes/consultas';
 import { PanelSidebar } from './_components/sidebar';
 
 /**
@@ -18,6 +20,16 @@ export default async function PanelLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const ctx = await requireIglesia();
 
+  const puedeVerSolicitudes =
+    esPastor(ctx) || puede(ctx, 'aprobar_solicitudes');
+
+  // El contador solo se pide si esta persona va a ver la sección. Para un líder
+  // de alabanza sería una consulta en cada carga del panel para un número que
+  // no se pinta.
+  const solicitudesPendientes = puedeVerSolicitudes
+    ? await contarSolicitudesPendientes(ctx)
+    : 0;
+
   return (
     <div className="flex min-h-dvh bg-background">
       <PanelSidebar
@@ -31,6 +43,9 @@ export default async function PanelLayout({
           'Tu cuenta'
         }
         rol={ctx.rol}
+        solicitudesPendientes={solicitudesPendientes}
+        puedeVerSolicitudes={puedeVerSolicitudes}
+        esPastorDeLaIglesia={esPastor(ctx)}
       />
 
       <main className="flex min-w-0 flex-1 flex-col">{children}</main>
