@@ -66,17 +66,24 @@ begin
          (IGL_B, 'Amparo', 'Calle Sion 9');
 
   -- --- Numeración correlativa, que la asigna un trigger ---
-  select numero_miembro into n from public.miembros where nombre = 'Ruben';
-  r := r || format('  %s numeracion correlativa por iglesia (Ruben=%s)\\n',
+  -- Acotado a la iglesia de la prueba. Buscar solo por nombre cogia a la
+  -- persona equivocada en cuanto la base tuvo datos de demostracion con
+  -- nombres repetidos, y el test fallaba por su culpa, no por la del producto.
+  select numero_miembro into n from public.miembros
+   where nombre = 'Ruben' and iglesia_id = IGL_A;
+  r := r || format(E'  %s numeracion correlativa por iglesia (Ruben=%s)\\n',
                    case when n = 2 then 'OK  ' else 'FALLO' end, n);
 
-  select numero_miembro into n from public.miembros where nombre = 'Amparo';
-  r := r || format('  %s la numeracion reinicia en otra iglesia (Amparo=%s)\\n',
+  select numero_miembro into n from public.miembros
+   where nombre = 'Amparo' and iglesia_id = IGL_B;
+  r := r || format(E'  %s la numeracion reinicia en otra iglesia (Amparo=%s)\\n',
                    case when n = 1 then 'OK  ' else 'FALLO' end, n);
 
   -- --- La auditoría se escribe sola ---
-  select count(*) into n from public.auditoria;
-  r := r || format('  %s la auditoria se escribe sola (%s filas)\\n',
+  -- Acotado a las iglesias de esta prueba: contar la tabla entera daba un
+  -- falso fallo en cuanto la base tuvo datos de demostracion.
+  select count(*) into n from public.auditoria where iglesia_id in (IGL_A, IGL_B);
+  r := r || format(E'  %s la auditoria se escribe sola (%s filas)\\n',
                    case when n = 6 then 'OK  ' else 'FALLO' end, n);
 
   -- --- Aislamiento: pastor de Betania ---
@@ -85,15 +92,15 @@ begin
   execute 'set local role hatril_app';
 
   select count(*) into n from public.miembros;
-  r := r || format('  %s pastor de Betania ve SUS 2 miembros (%s)\\n',
+  r := r || format(E'  %s pastor de Betania ve SUS 2 miembros (%s)\\n',
                    case when n = 2 then 'OK  ' else 'FALLO' end, n);
 
   select count(*) into n from public.miembros where iglesia_id = IGL_B;
-  r := r || format('  %s no alcanza los de Sion ni pidiendolos (%s)\\n',
+  r := r || format(E'  %s no alcanza los de Sion ni pidiendolos (%s)\\n',
                    case when n = 0 then 'OK  ' else 'FALLO' end, n);
 
-  select count(*) into n from public.iglesias;
-  r := r || format('  %s solo ve su iglesia y el directorio (%s)\\n',
+  select count(*) into n from public.iglesias where id in (IGL_A, IGL_B);
+  r := r || format(E'  %s solo ve su iglesia y el directorio (%s)\\n',
                    case when n = 1 then 'OK  ' else 'FALLO' end, n);
 
   -- --- Aislamiento: pastor de Sion, en el sentido contrario ---
@@ -103,7 +110,7 @@ begin
   execute 'set local role hatril_app';
 
   select count(*) into n from public.miembros;
-  r := r || format('  %s pastor de Sion ve SU 1 miembro (%s)\\n',
+  r := r || format(E'  %s pastor de Sion ve SU 1 miembro (%s)\\n',
                    case when n = 1 then 'OK  ' else 'FALLO' end, n);
 
   -- --- Solicitud pendiente: el requisito del art. 9 ---
@@ -113,7 +120,7 @@ begin
   execute 'set local role hatril_app';
 
   select count(*) into n from public.miembros;
-  r := r || format('  %s solicitud PENDIENTE no ve la congregacion (%s)\\n',
+  r := r || format(E'  %s solicitud PENDIENTE no ve la congregacion (%s)\\n',
                    case when n = 0 then 'OK  ' else 'FALLO' end, n);
 
   -- --- Escalada de privilegios ---
@@ -124,9 +131,9 @@ begin
 
   begin
     update public.iglesia_usuarios set rol = 'miembro' where auth_user_id = USR_A;
-    r := r || '  FALLO el pastor puede auto-degradarse\\n';
+    r := r || E'  FALLO el pastor puede auto-degradarse\\n';
   exception when others then
-    r := r || format('  %s auto-degradacion bloqueada (%s)\\n',
+    r := r || format(E'  %s auto-degradacion bloqueada (%s)\\n',
                      case when sqlerrm like 'HT101%' then 'OK  ' else 'FALLO' end,
                      left(sqlerrm, 40));
   end;
@@ -134,9 +141,9 @@ begin
   begin
     update public.iglesia_usuarios set permisos = '{"ver_datos_sensibles":true}'::jsonb
      where auth_user_id = USR_A;
-    r := r || '  FALLO el pastor puede auto-editarse los permisos\\n';
+    r := r || E'  FALLO el pastor puede auto-editarse los permisos\\n';
   exception when others then
-    r := r || format('  %s auto-edicion de permisos bloqueada\\n',
+    r := r || format(E'  %s auto-edicion de permisos bloqueada\\n',
                      case when sqlerrm like 'HT101%' then 'OK  ' else 'FALLO' end);
   end;
 
@@ -144,7 +151,7 @@ begin
   update public.iglesia_usuarios set estado = 'activo', aprobado_por = USR_A
    where auth_user_id = USR_C;
   get diagnostics n = row_count;
-  r := r || format('  %s el pastor SI puede aprobar a otro (%s fila)\\n',
+  r := r || format(E'  %s el pastor SI puede aprobar a otro (%s fila)\\n',
                    case when n = 1 then 'OK  ' else 'FALLO' end, n);
 
   execute 'reset role';
@@ -154,7 +161,7 @@ begin
 
   update public.iglesia_usuarios set rol = 'pastor' where auth_user_id = USR_C;
   get diagnostics n = row_count;
-  r := r || format('  %s un miembro no puede ascenderse (%s filas tocadas)\\n',
+  r := r || format(E'  %s un miembro no puede ascenderse (%s filas tocadas)\\n',
                    case when n = 0 then 'OK  ' else 'FALLO' end, n);
 
   -- --- anon ---
@@ -163,20 +170,20 @@ begin
 
   begin
     select count(*) into n from public.miembros;
-    r := r || format('  FALLO anon lee la tabla de miembros (%s filas)\\n', n);
+    r := r || format(E'  FALLO anon lee la tabla de miembros (%s filas)\\n', n);
   exception when others then
-    r := r || '  OK   anon no llega a la tabla de miembros\\n';
+    r := r || E'  OK   anon no llega a la tabla de miembros\\n';
   end;
 
-  select count(*) into n from public.iglesias;
-  r := r || format('  %s anon ve solo el directorio publicado (%s)\\n',
+  select count(*) into n from public.iglesias where id in (IGL_A, IGL_B);
+  r := r || format(E'  %s anon ve solo el directorio publicado (%s)\\n',
                    case when n = 1 then 'OK  ' else 'FALLO' end, n);
 
   begin
     perform stripe_customer_id from public.iglesias limit 1;
-    r := r || '  FALLO anon lee columnas de facturacion\\n';
+    r := r || E'  FALLO anon lee columnas de facturacion\\n';
   exception when others then
-    r := r || '  OK   anon no ve columnas de facturacion\\n';
+    r := r || E'  OK   anon no ve columnas de facturacion\\n';
   end;
 
   execute 'reset role';
