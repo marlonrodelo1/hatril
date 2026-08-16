@@ -43,6 +43,12 @@ export async function withUser<T>(
   fn: (tx: Tx) => Promise<T>,
 ): Promise<T> {
   return dbAdmin.transaction(async (tx) => {
+    /*
+     * El `role` del claim se queda en `authenticated` a propósito, aunque el
+     * rol de Postgres sea otro. Es lo que leen las funciones de Supabase —
+     * `auth.role()` y `_escritor_confiable()` — y lo que dice la verdad sobre
+     * quién pide: una persona identificada, no el service role.
+     */
     const claims = JSON.stringify({
       sub: authUserId,
       role: 'authenticated',
@@ -51,7 +57,7 @@ export async function withUser<T>(
     await tx.execute(
       sql`select set_config('request.jwt.claims', ${claims}, true)`,
     );
-    await tx.execute(sql`set local role authenticated`);
+    await tx.execute(sql`set local role hatril_app`);
 
     return fn(tx);
   });

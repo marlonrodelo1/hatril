@@ -24,6 +24,9 @@
 
 import postgres from 'postgres';
 
+// La aplicación de verdad. Ver `comprobarWithUser` más abajo.
+import { withUser } from '../src/lib/db/with-tenant';
+
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
@@ -193,6 +196,58 @@ begin
 end $$;
 `;
 
+/**
+ * Comprueba que `withUser()` —la función que usa la aplicación— entra con el
+ * rol que las policies esperan.
+ *
+ * POR QUÉ EXISTE ESTA COMPROBACIÓN
+ * --------------------------------
+ * El bloque de arriba hace `set local role hatril_app` en SQL a mano. Eso
+ * verifica que las policies están bien escritas, pero NO que la aplicación las
+ * use: son dos cosas distintas y durante un tiempo no coincidieron.
+ *
+ * `with-tenant.ts` se quedó poniendo `set local role authenticated`, que era lo
+ * del plan original antes de crear el rol propio. Las policies iban todas
+ * `TO hatril_app` y a `authenticated` se le había revocado todo a propósito, así
+ * que NINGUNA pantalla del panel podía funcionar. El test seguía en verde,
+ * porque probaba el diseño y no el código.
+ *
+ * Solo se descubrió al desplegar y abrir el panel: quince comprobaciones en
+ * verde y todas las páginas dando 500.
+ *
+ * De ahí esta segunda fase, que llama a la función real.
+ */
+async function comprobarWithUser(): Promise<string[]> {
+  const lineas: string[] = [];
+  const USR_A = 'a0000000-0000-4000-8000-00000000000a';
+
+  try {
+    const rol = await withUser(USR_A, async (tx) => {
+      const filas = await tx.execute<{ actual: string }>(
+        `select current_user as actual`,
+      );
+      const fila =
+        (filas as unknown as { rows?: { actual: string }[] }).rows?.[0] ??
+        (filas as unknown as Array<{ actual: string }>)[0];
+      return fila?.actual ?? '(desconocido)';
+    });
+
+    lineas.push(
+      `  ${rol === 'hatril_app' ? 'OK  ' : 'FALLO'} withUser() entra como ${rol} (esperado hatril_app)`,
+    );
+
+    // Y que con ese rol se puede consultar de verdad. Si los GRANT faltaran,
+    // aquí saltaría un 42501 aunque el rol fuera el correcto.
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from miembros limit 1`));
+    lineas.push('  OK   withUser() puede consultar miembros');
+  } catch (err) {
+    const e = err as { message?: string };
+    lineas.push(`  FALLO withUser(): ${(e.message ?? String(err)).slice(0, 90)}`);
+  }
+
+  return lineas;
+}
+
 async function main() {
   let informe: string;
 
@@ -212,6 +267,14 @@ async function main() {
 
   console.log('\nAislamiento entre iglesias\n');
   console.log(informe.trim());
+
+  // Segunda fase: se llama a la función que usa la aplicación, no a SQL escrito
+  // a mano. Es la comprobación que faltaba cuando el panel entero daba 500 con
+  // este informe en verde.
+  const desdeLaApp = await comprobarWithUser();
+  console.log('\nLa aplicación usa lo anterior\n');
+  console.log(desdeLaApp.join('\n'));
+  informe += '\n' + desdeLaApp.join('\n');
 
   if (informe.includes('FALLO')) {
     console.error(
