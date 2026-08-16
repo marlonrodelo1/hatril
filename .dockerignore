@@ -1,0 +1,36 @@
+# Lo que NO se manda al contexto de build.
+#
+# Sin esto, Docker sube al demonio la carpeta entera —incluidos `node_modules`
+# y `.next` locales, que son cientos de megas— antes siquiera de empezar. En un
+# VPS con la subida de casa por medio, la diferencia son minutos en cada
+# despliegue.
+#
+# Y sobre todo: `.env*` fuera. Un fichero de entorno colado en el contexto
+# acaba dentro de una capa de la imagen, y de ahí no se borra aunque se
+# sobrescriba después.
+
+node_modules
+.next
+out
+build
+
+.env
+.env.*
+!.env.example
+
+.git
+.github
+.claude
+
+drizzle
+scripts
+
+README.md
+CLAUDE.md
+AGENTS.md
+Dockerfile
+.dockerignore
+
+npm-debug.log*
+*.tsbuildinfo
+.DS_Store

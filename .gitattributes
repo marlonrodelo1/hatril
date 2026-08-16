@@ -1,0 +1,21 @@
+# Finales de línea LF en todo el repo, también en Windows.
+#
+# No es cosmético. Drizzle decide si una migración ya se aplicó comparando el
+# SHA-256 del CONTENIDO del fichero .sql. Si Git convierte los saltos de línea a
+# CRLF al hacer checkout en Windows y los deja en LF en el servidor, el mismo
+# fichero produce dos hashes distintos: en un sitio la migración consta como
+# aplicada y en el otro se vuelve a ejecutar.
+#
+# De paso desaparecen los cientos de avisos de «LF will be replaced by CRLF».
+* text=auto eol=lf
+
+# Binarios, sin tocar.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary

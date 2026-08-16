@@ -1,6 +1,19 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  /*
+   * Salida autocontenida para el contenedor de producción.
+   *
+   * Next copia a `.next/standalone` un `server.js` con SOLO los módulos de
+   * `node_modules` que la aplicación usa de verdad. La imagen final pasa de
+   * arrastrar el árbol entero de dependencias (~1 GB, con drizzle-kit, eslint,
+   * typescript y todo lo de desarrollo dentro) a unos 150 MB.
+   *
+   * No es solo tamaño: en el VPS, cada despliegue descarga y guarda esa imagen,
+   * y las capas viejas se acumulan hasta llenar el disco.
+   */
+  output: 'standalone',
+
   // Sin esto, Turbopack busca la raíz del proyecto hacia arriba y encuentra el
   // `package.json` de otra carpeta del escritorio. Fijarla evita el aviso y que
   // resuelva módulos desde el sitio equivocado.
