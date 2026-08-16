@@ -56,17 +56,23 @@ function conectar(): PostgresJsDatabase<typeof schema> {
 
   if (!connectionString) {
     throw new Error(
-      'Falta DATABASE_URL. Cópiala de Supabase → Project Settings → Database ' +
-        '(Connection string, pooler en modo transacción) y ponla en .env.local.',
+      'Falta DATABASE_URL. Cópiala del botón «Connect» del panel de Supabase ' +
+        '(Session pooler, puerto 5432) y ponla en .env.local.',
     );
   }
 
   const client =
     globalForDb.hatrilClient ??
     postgres(connectionString, {
-      // Obligatorio con el pooler en modo transacción de Supabase: las
-      // sentencias preparadas no sobreviven al cambio de conexión entre
-      // transacciones.
+      /*
+       * Sin sentencias preparadas.
+       *
+       * En modo sesión (5432), que es el que usamos, funcionarían. Se dejan
+       * apagadas igualmente para que la aplicación siga funcionando si algún
+       * día se cambia al pooler en modo transacción (6543), donde no
+       * sobreviven al cambio de conexión entre transacciones. El coste es
+       * despreciable y evita un fallo que solo aparecería en producción.
+       */
       prepare: false,
       ssl: 'require',
       max: 10,
