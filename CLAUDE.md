@@ -44,13 +44,25 @@ No existe un `db` a secas. Hay que elegir, y elegir mal se ve en la revisión.
 ocurre antes de que exista membresía) y `getCurrentUserContext` (que resuelve la
 tabla que las policies consultan). Nada más.
 
-### Antes de dar por buena una migración
+### Antes de dar por bueno cualquier cambio
 
 ```bash
 npm run test:aislamiento
 ```
 
 Y `get_advisors` de Supabase, tipo `security`, sin ningún WARN.
+
+Pero eso **no basta**, y conviene saber por qué. En este proyecto llegaron a
+convivir seis tandas de trabajo con typecheck, lint, build y test de aislamiento
+los cuatro en verde y dos fallos que impedían usar el producto entero: las ocho
+rutas del panel devolvían 500, y nadie podía iniciar sesión.
+
+El test no los cazó porque hacía `set local role hatril_app` en SQL escrito a
+mano: probaba que las policies estuvieran bien, no que la aplicación las usara.
+Por eso ahora tiene una segunda fase que llama a `withUser()` de verdad.
+
+La regla que sale de ahí: **abrir la pantalla y pulsar el botón**. Un cambio que
+no se ha ejecutado no está verificado, por muchos verdes que haya.
 
 ### Al crear una función en Postgres
 
@@ -90,6 +102,9 @@ sirve como autorización, solo como comprobación optimista.
   quedan cubiertas las rutas dinámicas, que es donde se cuelan los huecos.
 - **Comentar el porqué, no el qué.** Lo valioso de este repo es saber qué falló
   antes; el código ya dice lo que hace.
+- **Nunca `formData.get()` directo hacia Zod.** Devuelve `null` cuando el campo
+  no viaja, y `z.string().optional()` no acepta `null`: la validación entera se
+  cae con un error en inglés. Usar `src/lib/api/formulario.ts`.
 
 ### Migraciones
 
@@ -129,15 +144,9 @@ iglesias, área del miembro y todas las vistas móviles.
 
 ## Estado
 
-Hecho: schema y RLS aplicados y verificados · núcleo de auth (permisos, guards,
-contexto) · alta de iglesia · proxy · Stripe con precios en variables de entorno ·
-CI.
-
-Siguiente: pantallas de acceso, panel de miembros, panel de ministerios,
-solicitudes de ingreso, dashboard, web pública, checkout.
-
-Fuera de la v1: eventos, finanzas, seguimiento pastoral, informes, feed de
-comunidad, notificaciones push, app compilada, multi-sede.
+**Está en `ESTADO.md`**, y se actualiza al cerrar cada sesión: qué funciona, qué
+falta, dónde está desplegado y las trampas que ya han costado tiempo. Mirarlo
+antes de empezar.
 
 ---
 
