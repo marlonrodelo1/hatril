@@ -2,11 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { House, Users, HandHeart, Inbox, Settings, LogOut } from 'lucide-react';
+import {
+  House,
+  Users,
+  HandHeart,
+  Inbox,
+  Settings,
+  ShieldCheck,
+  BookOpen,
+  LogOut,
+} from 'lucide-react';
 
 import { salir } from '@/app/(auth)/actions';
 import { iniciales } from '@/lib/format/iniciales';
-import type { RolIglesia } from '@/lib/auth/permisos';
+import { ETIQUETAS_ROLES, type RolIglesia } from '@/lib/auth/permisos';
 
 /**
  * Barra lateral del panel. 260px, fija, con la iglesia arriba y la persona
@@ -24,13 +33,11 @@ import type { RolIglesia } from '@/lib/auth/permisos';
  * con «no tienes acceso» parece un fallo del producto, no un permiso que falta.
  */
 
-const ETIQUETAS_ROL: Record<RolIglesia, string> = {
-  pastor: 'Pastor',
-  lider: 'Líder',
-  tesorero: 'Tesorero',
-  secretaria: 'Secretaría',
-  miembro: 'Miembro',
-};
+/*
+ * Aquí había una copia de los nombres de los roles. Se fue a `permisos.ts`, con
+ * el catálogo: la pantalla de Equipo necesita los mismos textos y con dos listas
+ * separadas se acaba llamando «Secretaría» en un sitio y «Secretaria» en otro.
+ */
 
 export function PanelSidebar({
   iglesiaNombre,
@@ -39,6 +46,7 @@ export function PanelSidebar({
   rol,
   solicitudesPendientes,
   puedeVerSolicitudes,
+  puedeEscribirDevocionales,
   esPastorDeLaIglesia,
 }: {
   iglesiaNombre: string;
@@ -47,6 +55,7 @@ export function PanelSidebar({
   rol: RolIglesia;
   solicitudesPendientes: number;
   puedeVerSolicitudes: boolean;
+  puedeEscribirDevocionales: boolean;
   esPastorDeLaIglesia: boolean;
 }) {
   const pathname = usePathname();
@@ -63,6 +72,16 @@ export function PanelSidebar({
       Icono: HandHeart,
       aviso: 0,
     },
+    ...(puedeEscribirDevocionales
+      ? [
+          {
+            href: '/panel/devocionales',
+            etiqueta: 'Devocionales',
+            Icono: BookOpen,
+            aviso: 0,
+          },
+        ]
+      : []),
     ...(puedeVerSolicitudes
       ? [
           {
@@ -75,6 +94,15 @@ export function PanelSidebar({
       : []),
     ...(esPastorDeLaIglesia
       ? [
+          // `ShieldCheck` y no `Users`: `Users` ya es Miembros, y dos iconos de
+          // personas seguidos en el mismo menú se confunden a la primera. Esta
+          // sección va de quién puede qué, no de cuánta gente hay.
+          {
+            href: '/panel/lideres',
+            etiqueta: 'Líderes',
+            Icono: ShieldCheck,
+            aviso: 0,
+          },
           {
             href: '/panel/ajustes',
             etiqueta: 'Ajustes',
@@ -148,7 +176,7 @@ export function PanelSidebar({
             {personaNombre}
           </span>
           <span className="text-[12px] text-muted-foreground">
-            {ETIQUETAS_ROL[rol]}
+            {ETIQUETAS_ROLES[rol].titulo}
           </span>
         </div>
         <form action={salir}>

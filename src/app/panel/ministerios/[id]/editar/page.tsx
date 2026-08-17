@@ -3,11 +3,9 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Archive, ChevronLeft } from 'lucide-react';
 
-import { requirePermiso } from '@/lib/auth/guard-panel';
-import {
-  obtenerMinisterio,
-  integrantesParaLider,
-} from '@/lib/ministerios/consultas';
+import { requireGestionMinisterio } from '@/lib/auth/guard-panel';
+import { esPastor, puede } from '@/lib/auth/permisos';
+import { obtenerMinisterio } from '@/lib/ministerios/consultas';
 import { archivarMinisterio, editarMinisterio } from '../../actions';
 import { FormularioMinisterio } from '../../_components/formulario';
 import { Button } from '@/components/ui/button';
@@ -21,19 +19,23 @@ export default async function EditarMinisterioPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  const ctx = await requirePermiso('gestionar_ministerios');
+  // El id se resuelve ANTES del guard, porque el guard lo necesita: aquí ya no
+  // basta con «¿tiene el permiso?», hay que preguntar «¿sobre este ministerio?».
   const { id } = await params;
   const { error } = await searchParams;
 
-  const [ministerio, integrantes] = await Promise.all([
-    obtenerMinisterio(ctx, id),
-    integrantesParaLider(ctx, id),
-  ]);
+  const ctx = await requireGestionMinisterio(id);
 
+  const ministerio = await obtenerMinisterio(ctx, id);
   if (!ministerio) notFound();
 
   const guardar = editarMinisterio.bind(null, ministerio.id);
   const archivar = archivarMinisterio.bind(null, ministerio.id);
+
+  // Cerrar un ministerio sigue siendo del permiso global: un líder puede llevar
+  // el suyo, no borrarlo del panel de la iglesia. Sin esto vería un botón rojo
+  // que solo le devolvería «no tienes permiso».
+  const puedeArchivar = esPastor(ctx) || puede(ctx, 'gestionar_ministerios');
 
   return (
     <>
@@ -54,10 +56,10 @@ export default async function EditarMinisterioPage({
         <FormularioMinisterio
           accion={guardar}
           ministerio={ministerio}
-          integrantes={integrantes}
           error={error}
         />
 
+        {puedeArchivar && (
         <section className="flex flex-col gap-3 rounded-xl border border-[#E0C4C2] bg-surface p-5">
           <div className="flex flex-col gap-1.5">
             <h2 className="t-subtitulo">Cerrar el ministerio</h2>
@@ -81,6 +83,7 @@ export default async function EditarMinisterioPage({
             </Button>
           </form>
         </section>
+        )}
       </div>
     </>
   );

@@ -1,6 +1,7 @@
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { esPastor, puede } from '@/lib/auth/permisos';
 import { contarSolicitudesPendientes } from '@/lib/solicitudes/consultas';
+import { misTurnosPendientes } from '@/lib/devocionales/consultas';
 import { PanelSidebar } from './_components/sidebar';
 
 /**
@@ -22,6 +23,14 @@ export default async function PanelLayout({
 
   const puedeVerSolicitudes =
     esPastor(ctx) || puede(ctx, 'aprobar_solicitudes');
+
+  // Con el permiso, o simplemente teniendo un turno asignado: a quien le toca
+  // el jueves tiene que poder llegar a escribirlo sin que nadie le configure
+  // nada más.
+  const puedeEscribirDevocionales =
+    esPastor(ctx) ||
+    puede(ctx, 'escribir_devocionales') ||
+    (await misTurnosPendientes(ctx)).length > 0;
 
   // El contador solo se pide si esta persona va a ver la sección. Para un líder
   // de alabanza sería una consulta en cada carga del panel para un número que
@@ -45,6 +54,7 @@ export default async function PanelLayout({
         rol={ctx.rol}
         solicitudesPendientes={solicitudesPendientes}
         puedeVerSolicitudes={puedeVerSolicitudes}
+        puedeEscribirDevocionales={puedeEscribirDevocionales}
         esPastorDeLaIglesia={esPastor(ctx)}
       />
 

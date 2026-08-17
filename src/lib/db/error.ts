@@ -41,3 +41,25 @@ export function isUniqueViolation(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
   return /duplicate key value violates unique constraint/i.test(msg);
 }
+
+/** Los guards propios que lanzan los triggers, con su código en el mensaje. */
+export type GuardHatril = 'HT101' | 'HT102' | 'HT104' | 'HT105';
+
+/**
+ * ¿Es este error uno de nuestros triggers guard?
+ *
+ * Se mira el MENSAJE y no el SQLSTATE, y no es pereza: HT101 y HT104 se lanzan
+ * con `insufficient_privilege` (42501), que es también el código de un
+ * `permission denied` corriente de Postgres. Traducir por SQLSTATE convertiría
+ * un fallo de permisos de verdad —el síntoma exacto de que alguien cambió el rol
+ * de `withUser`, que ya costó días una vez— en un mensaje tranquilizador sobre
+ * ministerios.
+ */
+export function esGuardHatril(err: unknown, codigo: GuardHatril): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  const causa =
+    err && typeof err === 'object'
+      ? String((err as { cause?: { message?: unknown } }).cause?.message ?? '')
+      : '';
+  return msg.includes(codigo) || causa.includes(codigo);
+}

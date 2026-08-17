@@ -10,12 +10,21 @@ import {
 } from '@/lib/ministerios/consultas';
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { iniciales } from '@/lib/format/iniciales';
+import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = { title: 'Ministerios' };
 
-export default async function MinisteriosPage() {
+export default async function MinisteriosPage({
+  searchParams,
+}: {
+  // Esta pantalla es el destino de rebote de `requireGestionMinisterio`: quien
+  // entra a mano en el ministerio de otro acaba aquí. Sin leer el `?error=`
+  // rebotaba en silencio, que se lee como que el enlace está roto.
+  searchParams: Promise<{ error?: string }>;
+}) {
   const ctx = await requireIglesia();
+  const { error } = await searchParams;
 
   const [ministerios, resumen] = await Promise.all([
     listarMinisteriosConEquipo(ctx),
@@ -49,7 +58,9 @@ export default async function MinisteriosPage() {
         )}
       </header>
 
-      <div className="w-full max-w-[1400px] flex-1 px-5 pb-10 pt-6 md:px-8">
+      <div className="flex w-full max-w-[1400px] flex-1 flex-col gap-5 px-5 pb-10 pt-6 md:px-8">
+        {error && <Aviso>{error}</Aviso>}
+
         {ministerios.length === 0 ? (
           <EstadoVacio puedeGestionar={puedeGestionar} />
         ) : (

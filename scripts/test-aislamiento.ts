@@ -52,6 +52,13 @@ declare
   USR_A constant uuid := 'a0000000-0000-4000-8000-00000000000a';
   USR_B constant uuid := 'b0000000-0000-4000-8000-00000000000b';
   USR_C constant uuid := 'c0000000-0000-4000-8000-00000000000c';
+  MIN_A constant uuid := 'e0000000-0000-4000-8000-00000000000a';
+  MIN_B constant uuid := 'e0000000-0000-4000-8000-00000000000b';
+  MIE_A1 uuid;
+  MIE_A2 uuid;
+  MIE_B1 uuid;
+  VIN_A1 uuid;
+  VIN_A2 uuid;
 begin
   -- Montaje: dos iglesias, dos pastores y una solicitud sin aprobar.
   insert into public.iglesias (id, slug, nombre, ciudad, visible_en_directorio)
@@ -67,6 +74,26 @@ begin
   values (IGL_A, 'Lucia',  'Calle Betania 1'),
          (IGL_A, 'Ruben',  'Calle Betania 2'),
          (IGL_B, 'Amparo', 'Calle Sion 9');
+
+  select id into MIE_A1 from public.miembros where nombre = 'Lucia'  and iglesia_id = IGL_A;
+  select id into MIE_A2 from public.miembros where nombre = 'Ruben'  and iglesia_id = IGL_A;
+  select id into MIE_B1 from public.miembros where nombre = 'Amparo' and iglesia_id = IGL_B;
+
+  -- Un ministerio en cada iglesia. IGL_A esta publicada y IGL_B no: es justo la
+  -- diferencia que explotaba la fuga de "ministerios_select_publico".
+  insert into public.ministerios (id, iglesia_id, nombre)
+  values (MIN_A, IGL_A, 'Alabanza test'),
+         (MIN_B, IGL_B, 'Alabanza Sion');
+
+  insert into public.ministerio_miembros (iglesia_id, ministerio_id, miembro_id)
+  values (IGL_A, MIN_A, MIE_A1),
+         (IGL_A, MIN_A, MIE_A2),
+         (IGL_B, MIN_B, MIE_B1);
+
+  select id into VIN_A1 from public.ministerio_miembros
+   where ministerio_id = MIN_A and miembro_id = MIE_A1;
+  select id into VIN_A2 from public.ministerio_miembros
+   where ministerio_id = MIN_A and miembro_id = MIE_A2;
 
   -- --- Numeración correlativa, que la asigna un trigger ---
   -- Acotado a la iglesia de la prueba. Buscar solo por nombre cogia a la
@@ -85,9 +112,23 @@ begin
   -- --- La auditoría se escribe sola ---
   -- Acotado a las iglesias de esta prueba: contar la tabla entera daba un
   -- falso fallo en cuanto la base tuvo datos de demostracion.
-  select count(*) into n from public.auditoria where iglesia_id in (IGL_A, IGL_B);
+  --
+  -- Y acotado tambien POR ENTIDAD. Antes se contaban todas las filas y se
+  -- esperaban 6, asi que auditar una tabla mas ponia el test en rojo por
+  -- contabilidad y no por seguridad: exactamente lo que paso al enganchar
+  -- "ministerio_miembros" a la auditoria en la migracion 0005.
+  select count(*) into n from public.auditoria
+   where iglesia_id in (IGL_A, IGL_B)
+     and entidad in ('miembros', 'iglesia_usuarios');
   r := r || format(E'  %s la auditoria se escribe sola (%s filas)\\n',
                    case when n = 6 then 'OK  ' else 'FALLO' end, n);
+
+  -- Quien nombro lider a quien tambien queda registrado. Antes lo cubria la
+  -- auditoria de "ministerios", porque el liderazgo era una columna suya.
+  select count(*) into n from public.auditoria
+   where iglesia_id in (IGL_A, IGL_B) and entidad = 'ministerio_miembros';
+  r := r || format(E'  %s los cambios de equipo se auditan (%s filas)\\n',
+                   case when n = 3 then 'OK  ' else 'FALLO' end, n);
 
   -- --- Aislamiento: pastor de Betania ---
   perform set_config('request.jwt.claims',
@@ -115,6 +156,33 @@ begin
   select count(*) into n from public.miembros;
   r := r || format(E'  %s pastor de Sion ve SU 1 miembro (%s)\\n',
                    case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  -- --- LAS DOS FUGAS QUE CERRO LA MIGRACION 0005 ---
+  --
+  -- Sion NO esta en el directorio; Betania SI. Las policies del visitante se
+  -- habian concedido tambien a "hatril_app", y como las policies se suman con OR
+  -- y el recorte por columnas solo alcanza a "anon", el pastor de Sion leia
+  -- filas enteras de Betania. Se prueba desde Sion y no al reves justamente por
+  -- eso: en el otro sentido no se ve nada aunque la fuga siga abierta.
+  select count(*) into n from public.ministerios where id in (MIN_A, MIN_B);
+  r := r || format(E'  %s pastor de Sion no ve ministerios de Betania (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    perform stripe_customer_id from public.iglesias where id = IGL_A;
+    get diagnostics n = row_count;
+    r := r || format(E'  %s no alcanza la facturacion de otra iglesia (%s)\\n',
+                     case when n = 0 then 'OK  ' else 'FALLO' end, n);
+  exception when others then
+    r := r || E'  OK   no alcanza la facturacion de otra iglesia\\n';
+  end;
+
+  -- Y tampoco puede escribir en el equipo de otra congregacion. Es el camino
+  -- que abre la pantalla de Equipo, y hasta ahora nadie lo ejercitaba.
+  update public.iglesia_usuarios set rol = 'miembro' where iglesia_id = IGL_A;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s no puede cambiar roles de otra iglesia (%s filas)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
 
   -- --- Solicitud pendiente: el requisito del art. 9 ---
   execute 'reset role';
@@ -151,11 +219,62 @@ begin
   end;
 
   -- Lo que SI tiene que funcionar: aprobar a otra persona.
-  update public.iglesia_usuarios set estado = 'activo', aprobado_por = USR_A
+  -- Se le engancha ademas su ficha, que es lo que hace la pantalla de
+  -- solicitudes de verdad y lo que permite probar HT104 mas abajo.
+  update public.iglesia_usuarios
+     set estado = 'activo', aprobado_por = USR_A, miembro_id = MIE_A2
    where auth_user_id = USR_C;
   get diagnostics n = row_count;
   r := r || format(E'  %s el pastor SI puede aprobar a otro (%s fila)\\n',
                    case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  -- --- Un solo responsable por ministerio, y lo dice la base ---
+  update public.ministerio_miembros set rol_equipo = 'responsable' where id = VIN_A1;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s el pastor SI puede nombrar responsable (%s fila)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    update public.ministerio_miembros set rol_equipo = 'responsable' where id = VIN_A2;
+    r := r || E'  FALLO dos responsables activos en el mismo ministerio\\n';
+  exception when unique_violation then
+    r := r || E'  OK   no caben dos responsables en un ministerio\\n';
+  end;
+
+  -- --- La colision por reactivacion ---
+  --
+  -- Este test existe por "asignarAlMinisterio": reactiva vinculos viejos con un
+  -- update, y si esa fila conservaba 'responsable' mientras otra persona ya lo
+  -- era, el boton «Asignar miembros» reventaba con un 23505 sin capturar. Por eso
+  -- la action resetea a 'voluntario'. Si alguien deshace ese reseteo, salta aqui.
+  update public.ministerio_miembros set activo = false, hasta = current_date
+   where id = VIN_A1;
+  update public.ministerio_miembros set rol_equipo = 'responsable' where id = VIN_A2;
+
+  begin
+    update public.ministerio_miembros set activo = true, hasta = null where id = VIN_A1;
+    r := r || E'  FALLO reactivar a un ex-responsable duplica el mando\\n';
+  exception when unique_violation then
+    r := r || E'  OK   reactivar sin resetear el rol choca (por eso se resetea)\\n';
+  end;
+
+  -- Se deja a Ruben de voluntario para la prueba de HT104 de mas abajo. Sin
+  -- esto, su intento de ascenderse no seria un ascenso —ya seria responsable— y
+  -- el trigger lo dejaria pasar con razon, dando un FALLO enganoso.
+  update public.ministerio_miembros set rol_equipo = 'voluntario' where id = VIN_A2;
+
+  -- --- HT102 sobre el liderazgo ---
+  -- La validacion de coherencia que "lider_miembro_id" nunca tuvo, y que ahora
+  -- se hereda por estar el liderazgo en la pivote.
+  begin
+    insert into public.ministerio_miembros (iglesia_id, ministerio_id, miembro_id, rol_equipo)
+    values (IGL_A, MIN_A, MIE_B1, 'colider');
+    r := r || E'  FALLO un miembro de otra iglesia entra en el equipo\\n';
+  exception when others then
+    r := r || format(E'  %s un miembro de otra iglesia no entra (%s)\\n',
+                     case when sqlerrm like 'HT102%' then 'OK  ' else 'FALLO' end,
+                     left(sqlerrm, 30));
+  end;
 
   execute 'reset role';
   perform set_config('request.jwt.claims',
@@ -166,6 +285,22 @@ begin
   get diagnostics n = row_count;
   r := r || format(E'  %s un miembro no puede ascenderse (%s filas tocadas)\\n',
                    case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  -- --- HT104: ni ascenderse dentro de su ministerio ---
+  --
+  -- Hermano de HT101. La policy de "ministerio_miembros" es una sola, "for all"
+  -- a cualquiera de la iglesia, y "rol_equipo" lleva privilegio desde que existe
+  -- "gestionar_su_ministerio": sin este guard, cualquier voluntario con acceso al
+  -- panel se nombraba responsable de su equipo y con ello se daba permiso de
+  -- escritura sobre el.
+  begin
+    update public.ministerio_miembros set rol_equipo = 'responsable' where id = VIN_A2;
+    r := r || E'  FALLO un voluntario se nombra responsable a si mismo\\n';
+  exception when others then
+    r := r || format(E'  %s no puede nombrarse lider a si mismo (%s)\\n',
+                     case when sqlerrm like 'HT104%' then 'OK  ' else 'FALLO' end,
+                     left(sqlerrm, 30));
+  end;
 
   -- --- anon ---
   execute 'reset role';
@@ -187,6 +322,22 @@ begin
     r := r || E'  FALLO anon lee columnas de facturacion\\n';
   exception when others then
     r := r || E'  OK   anon no ve columnas de facturacion\\n';
+  end;
+
+  -- La web publica de una iglesia lista sus grupos. Cerrar la fuga NO puede
+  -- haber roto esto: la policy sigue existiendo, solo que ya no se le concede
+  -- ademas al rol de la aplicacion.
+  select count(*) into n from public.ministerios where id in (MIN_A, MIN_B);
+  r := r || format(E'  %s anon sigue viendo los grupos publicados (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  -- Pero no quien esta en cada equipo. Servir en el ministerio de una iglesia
+  -- revela la confesion religiosa de una persona con nombre y apellidos.
+  begin
+    select count(*) into n from public.ministerio_miembros;
+    r := r || format(E'  FALLO anon lee quien sirve en cada equipo (%s)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a la composicion de los equipos\\n';
   end;
 
   execute 'reset role';
@@ -240,6 +391,37 @@ async function comprobarWithUser(): Promise<string[]> {
     // aquí saltaría un 42501 aunque el rol fuera el correcto.
     await withUser(USR_A, (tx) => tx.execute(`select 1 from miembros limit 1`));
     lineas.push('  OK   withUser() puede consultar miembros');
+
+    // Que la columna existe. Caza el «se me olvidó `npm run db:migrate`» aquí y
+    // no en la primera pantalla que se abra.
+    await withUser(USR_A, (tx) =>
+      tx.execute(`select rol_equipo from ministerio_miembros limit 1`),
+    );
+    lineas.push('  OK   withUser() ve la columna rol_equipo');
+
+    // LA FUGA, CAZADA POR LA FUNCIÓN QUE USA LA APLICACIÓN.
+    //
+    // `USR_A` aquí no es el de la fase de arriba: aquella transacción se revirtió
+    // entera, así que este uuid no pertenece a ninguna iglesia. La cuenta correcta
+    // es 0. Con `ministerios_select_publico` concedida a `hatril_app` devolvía los
+    // ministerios de toda iglesia publicada — y `seed-demo` publica Betania.
+    //
+    // Caveat honesto: contra una base sin ninguna iglesia publicada esta línea
+    // pasa en verde sin probar nada. La autoritativa es la de la fase SQL, que se
+    // fabrica su propia iglesia publicada.
+    const ajenos = await withUser(USR_A, async (tx) => {
+      const filas = await tx.execute<{ total: string }>(
+        `select count(*)::text as total from ministerios`,
+      );
+      const fila =
+        (filas as unknown as { rows?: { total: string }[] }).rows?.[0] ??
+        (filas as unknown as Array<{ total: string }>)[0];
+      return Number(fila?.total ?? -1);
+    });
+
+    lineas.push(
+      `  ${ajenos === 0 ? 'OK  ' : 'FALLO'} withUser() sin iglesia no ve ningun ministerio (${ajenos})`,
+    );
   } catch (err) {
     const e = err as { message?: string };
     lineas.push(`  FALLO withUser(): ${(e.message ?? String(err)).slice(0, 90)}`);

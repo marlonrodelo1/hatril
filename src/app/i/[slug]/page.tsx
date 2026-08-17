@@ -1,13 +1,19 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Mail, MapPin, Phone } from 'lucide-react';
 
 import { obtenerIglesiaPublica } from '@/lib/iglesias/publica';
-import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { iniciales } from '@/lib/format/iniciales';
 import { formatearTelefono } from '@/lib/telefono/normalizar';
 import { Button } from '@/components/ui/button';
+import { CarruselIglesia } from './_components/carrusel';
+import { NavSecciones } from './_components/nav-secciones';
+import { GruposApilados } from './_components/grupos-apilados';
+import { proximaReunion } from '@/lib/iglesias/proxima-reunion';
+import { devocionalPublico } from '@/lib/devocionales/consultas';
+import { formatearFechaLarga } from '@/lib/fecha/hoy';
 
 /**
  * La web pública de una iglesia.
@@ -59,7 +65,7 @@ export async function generateMetadata({
       title: iglesia.nombre,
       description: descripcion,
       type: 'website',
-      images: iglesia.bannerUrl ? [iglesia.bannerUrl] : undefined,
+      images: iglesia.imagenes[0] ? [iglesia.imagenes[0]] : undefined,
     },
   };
 }
@@ -75,6 +81,8 @@ export default async function WebIglesiaPage({
   if (!iglesia) notFound();
 
   const destacado = iglesia.horarios.find((h) => h.destacado);
+  const proxima = proximaReunion(iglesia.horarios, iglesia.timezone);
+  const devocional = await devocionalPublico(iglesia.id, iglesia.timezone);
   const tieneContacto = Boolean(
     iglesia.direccion || iglesia.telefono || iglesia.email,
   );
@@ -87,11 +95,17 @@ export default async function WebIglesiaPage({
   if (iglesia.horarios.length > 0) {
     secciones.push({ href: '#horarios', texto: 'Horarios' });
   }
-  if (parrafos.length > 0) {
-    secciones.push({ href: '#quienes', texto: 'Quiénes somos' });
+  if (devocional) {
+    secciones.push({ href: '#devocional', texto: 'Devocional' });
   }
+  // El orden de este array es el del menú, y tiene que ser el mismo en el que
+  // aparecen las secciones al bajar. Si discrepan, los enlaces saltan hacia
+  // arriba y hacia abajo y la página parece desordenada.
   if (iglesia.grupos.length > 0) {
     secciones.push({ href: '#grupos', texto: 'Grupos' });
+  }
+  if (parrafos.length > 0) {
+    secciones.push({ href: '#quienes', texto: 'Quiénes somos' });
   }
   if (tieneContacto) {
     secciones.push({ href: '#contacto', texto: 'Contacto' });
@@ -99,12 +113,35 @@ export default async function WebIglesiaPage({
 
   return (
     <div className="bg-background">
-      <header className="sticky top-0 z-20 border-b border-border bg-surface">
+      {/*
+       * Cabecera de cristal.
+       *
+       * Es el único sitio de la página donde el efecto SIGNIFICA algo: está
+       * fija y el contenido le pasa por debajo, así que el desenfoque enseña que
+       * hay algo detrás en lugar de taparlo con una banda opaca.
+       *
+       * `supports-[backdrop-filter]` deja el fondo sólido en los navegadores que
+       * no lo soportan. Sin ese respaldo, ahí se vería el texto de la página
+       * cruzando por encima del nombre de la iglesia.
+       */}
+      <header className="sticky top-0 z-20 border-b border-border bg-surface supports-[backdrop-filter]:bg-surface/75 supports-[backdrop-filter]:backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1180px] items-center gap-6 px-5 py-3.5 md:px-10">
           <span className="flex flex-none items-center gap-[11px]">
-            <span className="flex size-[38px] flex-none items-center justify-center rounded-[10px] bg-primary text-[14px] font-bold tracking-[-0.02em] text-primary-foreground">
-              {iniciales(iglesia.nombre)}
-            </span>
+            {/* El logo si lo han subido; si no, las iniciales de siempre. Nunca
+                un hueco: una cabecera con un cuadro vacío parece rota. */}
+            {iglesia.logoUrl ? (
+              <Image
+                src={iglesia.logoUrl}
+                alt={iglesia.nombre}
+                width={38}
+                height={38}
+                className="size-[38px] flex-none rounded-[10px] border border-border object-cover"
+              />
+            ) : (
+              <span className="flex size-[38px] flex-none items-center justify-center rounded-[10px] bg-primary text-[14px] font-bold tracking-[-0.02em] text-primary-foreground">
+                {iniciales(iglesia.nombre)}
+              </span>
+            )}
             <span className="flex flex-col">
               <span className="text-[15.5px] font-bold tracking-[-0.018em]">
                 {iglesia.nombre}
@@ -117,19 +154,11 @@ export default async function WebIglesiaPage({
             </span>
           </span>
 
-          <nav className="hidden flex-1 items-center gap-6 lg:flex">
-            {/* El menú solo lista las secciones que existen. Un ancla a una
-                sección que no se ha pintado deja al visitante en el mismo
-                sitio sin que pase nada, y parece que la web está rota. */}
-            {secciones.map((s) => (
-              <a
-                key={s.href}
-                href={s.href}
-                className="text-[14.5px] font-medium text-muted-foreground no-underline hover:text-foreground hover:no-underline"
-              >
-                {s.texto}
-              </a>
-            ))}
+          {/* El menú solo lista las secciones que existen. Un ancla a una
+              sección que no se ha pintado deja al visitante en el mismo sitio
+              sin que pase nada, y parece que la web está rota. */}
+          <nav className="hidden flex-1 justify-center lg:flex">
+            <NavSecciones secciones={secciones} />
           </nav>
 
           <span className="flex-1 lg:hidden" />
@@ -146,85 +175,340 @@ export default async function WebIglesiaPage({
       </header>
 
       {/* --- Hero --- */}
-      <section className="mx-auto max-w-[1180px] px-5 pt-12 md:px-10 md:pt-14">
-        <div className="flex flex-col gap-6 md:max-w-[720px]">
-          {destacado && (
-            <span className="inline-flex w-fit items-center gap-2.5 rounded-full bg-accent py-1.5 pl-2.5 pr-3.5 text-[13px] font-semibold text-accent-foreground">
-              <span className="size-[7px] rounded-full bg-primary" />
-              Nos reunimos {destacado.dia.toLowerCase()} a las {destacado.hora}
-            </span>
-          )}
+      {/*
+       * El texto va DENTRO del carrusel, sobre las fotos.
+       *
+       * Eso obliga a un velo oscuro encima de cada imagen para que se lea, que
+       * es una capa que el sistema de diseño no usa en ningún otro sitio. Es una
+       * excepción a propósito y solo aquí: es la primera pantalla que ve alguien
+       * que no conoce la iglesia, y ahí manda la foto del sitio.
+       *
+       * Cuando NO hay fotos, se pinta el mismo contenido sin carrusel y con los
+       * colores normales. Una iglesia recién dada de alta no tiene ninguna, y
+       * su página no puede verse rota por eso.
+       */}
+      {iglesia.imagenes.length > 0 ? (
+        <section className="mx-auto max-w-[1180px] px-5 pt-6 md:px-10 md:pt-8">
+          <CarruselIglesia imagenes={iglesia.imagenes} nombre={iglesia.nombre}>
+            <div className="mx-auto flex max-w-[1180px] flex-col gap-6 md:max-w-[760px] md:px-2">
+              {destacado && (
+                <span className="inline-flex w-fit items-center gap-2.5 rounded-full bg-white/15 py-1.5 pl-2.5 pr-3.5 text-[13px] font-semibold text-white backdrop-blur-sm">
+                  <span className="size-[7px] rounded-full bg-white" />
+                  Nos reunimos {destacado.dia.toLowerCase()} a las{' '}
+                  {destacado.hora}
+                </span>
+              )}
 
-          <h1 className="text-pretty text-[40px] font-extrabold leading-[1.03] tracking-[-0.04em] md:text-[58px]">
-            {iglesia.descripcion ? 'Puedes venir tal como estás' : iglesia.nombre}
-          </h1>
+              <h1 className="text-pretty text-[40px] font-extrabold leading-[1.03] tracking-[-0.04em] text-white md:text-[58px]">
+                {iglesia.descripcion
+                  ? 'Puedes venir tal como estás'
+                  : iglesia.nombre}
+              </h1>
 
-          {iglesia.descripcion && (
-            <p className="max-w-[560px] text-pretty text-[17px] leading-relaxed text-muted-foreground md:text-[19px]">
-              {iglesia.descripcion}
-            </p>
-          )}
+              {iglesia.descripcion && (
+                <p className="max-w-[560px] text-pretty text-[17px] leading-relaxed text-white/85 md:text-[19px]">
+                  {iglesia.descripcion}
+                </p>
+              )}
 
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            {tieneContacto && (
-              <Button size="lg" render={<a href="#contacto" />}>
-                <MapPin strokeWidth={1.8} />
-                Cómo llegar
-              </Button>
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                {tieneContacto && (
+                  <Button size="lg" render={<a href="#contacto" />}>
+                    <MapPin strokeWidth={1.8} />
+                    Cómo llegar
+                  </Button>
+                )}
+                {iglesia.horarios.length > 0 && (
+                  // Sobre la foto, el secundario va en cristal en vez de blanco
+                  // opaco: así se ve la imagen a través y los dos botones no
+                  // parecen dos parches pegados encima.
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-white/30 bg-white/10 text-white backdrop-blur-md hover:bg-white/20 active:bg-white/25"
+                    render={<a href="#horarios" />}
+                  >
+                    Ver los horarios
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CarruselIglesia>
+        </section>
+      ) : (
+        <section className="mx-auto max-w-[1180px] px-5 pt-12 md:px-10 md:pt-14">
+          <div className="flex flex-col gap-6 md:max-w-[720px]">
+            {destacado && (
+              <span className="inline-flex w-fit items-center gap-2.5 rounded-full bg-accent py-1.5 pl-2.5 pr-3.5 text-[13px] font-semibold text-accent-foreground">
+                <span className="size-[7px] rounded-full bg-primary" />
+                Nos reunimos {destacado.dia.toLowerCase()} a las {destacado.hora}
+              </span>
             )}
-            {iglesia.horarios.length > 0 && (
-              <Button size="lg" variant="outline" render={<a href="#horarios" />}>
-                Ver los horarios
-              </Button>
+
+            <h1 className="text-pretty text-[40px] font-extrabold leading-[1.03] tracking-[-0.04em] md:text-[58px]">
+              {iglesia.descripcion
+                ? 'Puedes venir tal como estás'
+                : iglesia.nombre}
+            </h1>
+
+            {iglesia.descripcion && (
+              <p className="max-w-[560px] text-pretty text-[17px] leading-relaxed text-muted-foreground md:text-[19px]">
+                {iglesia.descripcion}
+              </p>
             )}
+
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              {tieneContacto && (
+                <Button size="lg" render={<a href="#contacto" />}>
+                  <MapPin strokeWidth={1.8} />
+                  Cómo llegar
+                </Button>
+              )}
+              {iglesia.horarios.length > 0 && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  render={<a href="#horarios" />}
+                >
+                  Ver los horarios
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* --- Horarios --- */}
       {iglesia.horarios.length > 0 && (
         <section id="horarios" className="mx-auto max-w-[1180px] px-5 py-14 md:px-10">
-          <div className="overflow-hidden rounded-xl border border-border bg-surface p-6 md:p-9">
-            <div className="flex flex-col gap-1.5 pb-6">
-              <span className="t-micro text-[#9C3A11]">Cuándo nos vemos</span>
-              <h2 className="text-[28px] font-bold leading-tight tracking-[-0.03em] md:text-[30px]">
-                Horarios de la semana
-              </h2>
-            </div>
+          <div className="mb-8 flex flex-col gap-3">
+            <span className="t-micro text-[#9C3A11]">Cuándo nos vemos</span>
+            <h2 className="max-w-[600px] text-pretty text-[30px] font-extrabold leading-[1.06] tracking-[-0.035em] md:text-[38px]">
+              Horarios de la semana
+            </h2>
+          </div>
 
-            <div className="flex flex-col">
-              {iglesia.horarios.map((h, i) => (
+          {/* Lo próximo, arriba y en grande. Es la pregunta que trae a alguien
+              aquí, y hasta ahora había que deducirla mirando la lista. */}
+          {proxima && (
+            <div className="mb-6 flex flex-col gap-5 rounded-2xl border border-border bg-support p-6 text-white md:flex-row md:items-center md:justify-between md:p-8">
+              <div className="flex min-w-0 flex-col gap-2">
+                <span className="t-micro text-white/70">Lo próximo</span>
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="text-[26px] font-extrabold leading-tight tracking-[-0.03em] md:text-[32px]">
+                    {proxima.horario.nombre}
+                  </span>
+                  <span className="text-[17px] font-semibold text-white/80">
+                    {proxima.cuando} a las {proxima.horario.hora}
+                  </span>
+                </div>
+                {proxima.horario.detalle && (
+                  <p className="max-w-[520px] text-pretty text-[14.5px] leading-relaxed text-white/75">
+                    {proxima.horario.detalle}
+                  </p>
+                )}
+              </div>
+
+              {tieneContacto && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="flex-none"
+                  render={<a href="#contacto" />}
+                >
+                  <MapPin strokeWidth={1.8} />
+                  Cómo llegar
+                </Button>
+              )}
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {iglesia.horarios.map((h, i) => {
+              const esLaProxima = proxima?.horario === h;
+
+              return (
                 <div
                   key={`${h.dia}-${h.hora}-${i}`}
-                  className="flex flex-col gap-2 border-b border-border py-4 last:border-b-0 sm:flex-row sm:items-center sm:gap-4"
+                  className={
+                    'flex flex-col gap-3 rounded-xl border bg-surface-alt p-5 ' +
+                    // La próxima lleva el borde de color en vez de repetir la
+                    // tarjeta grande: se reconoce sin duplicar la información.
+                    (esLaProxima ? 'border-support' : 'border-border')
+                  }
                 >
-                  <div className="flex w-24 flex-none flex-col">
-                    <span className="text-[15px] font-bold tracking-[-0.01em]">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-[13px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
                       {h.dia}
                     </span>
-                    <span className="text-[14px] text-muted-foreground">
-                      {h.hora}
-                    </span>
-                  </div>
-
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="text-[15.5px] font-semibold">{h.nombre}</span>
-                    {h.detalle && (
-                      <span className="text-[13.5px] leading-snug text-muted-foreground">
-                        {h.detalle}
+                    {h.destacado && (
+                      <span className="whitespace-nowrap rounded-full bg-accent px-2.5 py-[4px] text-[11.5px] font-bold text-accent-foreground">
+                        Ven aquí
                       </span>
                     )}
                   </div>
 
-                  {h.destacado && (
-                    <span className="w-fit flex-none whitespace-nowrap rounded-full bg-accent px-2.5 py-[5px] text-[12px] font-semibold text-accent-foreground">
-                      Si vienes, ven aquí
+                  <span className="text-[34px] font-extrabold leading-none tracking-[-0.03em] tabular-nums">
+                    {h.hora}
+                  </span>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[16px] font-bold tracking-[-0.015em]">
+                      {h.nombre}
                     </span>
-                  )}
+                    {h.detalle && (
+                      <span className="text-pretty text-[13.5px] leading-relaxed text-muted-foreground">
+                        {h.detalle}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
+        </section>
+      )}
+
+      {/* --- Devocional --- */}
+      {devocional && (
+        <section
+          id="devocional"
+          className="mx-auto max-w-[1180px] px-5 py-14 md:px-10 md:py-16"
+        >
+          {/*
+           * Con imagen, el devocional se lee sobre un panel de cristal encima de
+           * la foto. Es el sitio donde el glaseado se gana el sueldo: hay una
+           * imagen detrás de verdad, así que difuminarla deja el texto legible
+           * sin tapar la foto con un rectángulo opaco.
+           *
+           * Sin imagen se pinta plano, como antes. El efecto sobre un fondo liso
+           * no aporta nada.
+           */}
+          <article
+            className={
+              'relative overflow-hidden rounded-2xl border border-border ' +
+              (devocional.imagenUrl ? '' : 'bg-surface')
+            }
+          >
+            {devocional.imagenUrl && (
+              <>
+                <Image
+                  src={devocional.imagenUrl}
+                  alt=""
+                  fill
+                  sizes="(max-width: 768px) 100vw, 1180px"
+                  className="object-cover"
+                />
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 bg-[#1A1A1A]/45"
+                />
+              </>
+            )}
+
+            <div
+              className={
+                'relative flex flex-col gap-6 p-7 md:p-12 ' +
+                (devocional.imagenUrl
+                  ? 'supports-[backdrop-filter]:backdrop-blur-md text-white'
+                  : '')
+              }
+            >
+            <div className="flex flex-wrap items-center gap-3">
+              <span
+                className={
+                  't-micro ' +
+                  (devocional.imagenUrl ? '!text-white/70' : 'text-[#9C3A11]')
+                }
+              >
+                {devocional.esDeHoy ? 'Devocional de hoy' : 'Último devocional'}
+              </span>
+              {!devocional.esDeHoy && (
+                <span className="text-[13px] text-muted-foreground">
+                  {formatearFechaLarga(devocional.fecha)}
+                </span>
+              )}
+            </div>
+
+            {devocional.versiculo && (
+              // El versículo va en grande y el comentario debajo: es lo que la
+              // gente comparte por WhatsApp, y lo que se lee aunque no se lea
+              // nada más.
+              <blockquote
+                className={
+                  'flex flex-col gap-3 border-l-2 pl-5 md:pl-7 ' +
+                  (devocional.imagenUrl ? 'border-white/60' : 'border-support')
+                }
+              >
+                <p className="text-pretty text-[22px] font-semibold leading-[1.4] tracking-[-0.02em] md:text-[28px]">
+                  {devocional.versiculo}
+                </p>
+                {devocional.referencia && (
+                  <cite
+                    className={
+                      'text-[14.5px] font-semibold not-italic ' +
+                      (devocional.imagenUrl ? 'text-white/80' : 'text-support')
+                    }
+                  >
+                    {devocional.referencia}
+                  </cite>
+                )}
+              </blockquote>
+            )}
+
+            {devocional.titulo && (
+              <h2 className="text-pretty text-[24px] font-extrabold leading-tight tracking-[-0.03em] md:text-[30px]">
+                {devocional.titulo}
+              </h2>
+            )}
+
+            <div className="flex max-w-[68ch] flex-col gap-4">
+              {devocional.cuerpo
+                .split(/\n\s*\n/)
+                .map((p) => p.trim())
+                .filter(Boolean)
+                .map((p, i) => (
+                  <p
+                    key={i}
+                    className={
+                      'text-pretty text-[16.5px] leading-[1.75] ' +
+                      (devocional.imagenUrl ? 'text-white/90' : 'text-foreground')
+                    }
+                  >
+                    {p}
+                  </p>
+                ))}
+            </div>
+
+            {devocional.autorNombre && (
+              <span
+                className={
+                  'text-[14px] ' +
+                  (devocional.imagenUrl ? 'text-white/70' : 'text-muted-foreground')
+                }
+              >
+                {devocional.autorNombre}
+              </span>
+            )}
+            </div>
+          </article>
+        </section>
+      )}
+
+      {/* --- Grupos: los ministerios reales --- */}
+      {iglesia.grupos.length > 0 && (
+        <section id="grupos" className="mx-auto max-w-[1180px] px-5 py-14 md:px-10 md:py-16">
+          <div className="mb-9 flex flex-col gap-3">
+            <span className="t-micro text-[#9C3A11]">Grupos y ministerios</span>
+            <h2 className="max-w-[600px] text-pretty text-[30px] font-extrabold leading-[1.06] tracking-[-0.035em] md:text-[38px]">
+              Puedes sumarte a cualquiera
+            </h2>
+            <p className="max-w-[520px] text-[15px] leading-relaxed text-muted-foreground">
+              Se entra probando, sin compromiso.
+            </p>
+          </div>
+
+          <GruposApilados grupos={iglesia.grupos} />
         </section>
       )}
 
@@ -254,49 +538,6 @@ export default async function WebIglesiaPage({
                 </p>
               ))}
             </div>
-          </div>
-        </section>
-      )}
-
-      {/* --- Grupos: los ministerios reales --- */}
-      {iglesia.grupos.length > 0 && (
-        <section id="grupos" className="mx-auto max-w-[1180px] px-5 py-14 md:px-10 md:py-16">
-          <div className="mb-9 flex flex-col gap-3">
-            <span className="t-micro text-[#9C3A11]">Grupos y ministerios</span>
-            <h2 className="max-w-[600px] text-pretty text-[30px] font-extrabold leading-[1.06] tracking-[-0.035em] md:text-[38px]">
-              Puedes sumarte a cualquiera
-            </h2>
-            <p className="max-w-[520px] text-[15px] leading-relaxed text-muted-foreground">
-              Se entra probando, sin compromiso.
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {iglesia.grupos.map((g) => {
-              const color = colorDeMinisterio(g.colorHex);
-
-              return (
-                <div
-                  key={g.id}
-                  className="flex flex-col gap-3 rounded-xl border border-border bg-surface-alt p-6"
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="size-3.5 flex-none rounded"
-                      style={{ background: color.hex }}
-                    />
-                    <span className="text-[18px] font-bold tracking-[-0.02em]">
-                      {g.nombre}
-                    </span>
-                  </div>
-                  {g.descripcion && (
-                    <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
-                      {g.descripcion}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
           </div>
         </section>
       )}

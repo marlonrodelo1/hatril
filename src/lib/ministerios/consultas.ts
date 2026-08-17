@@ -1,9 +1,23 @@
 import 'server-only';
 
-import { and, asc, count, eq, ilike, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  ilike,
+  inArray,
+  isNull,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
 import { withUser } from '@/lib/db';
 import { miembros, ministerioMiembros, ministerios } from '@/lib/db/schema';
+import type { RolEquipo } from '@/lib/db/schema/enums';
 import type { UserContext } from '@/lib/auth/user-context';
 import type { EstadoMiembro } from '@/lib/miembros/estados';
 
@@ -38,6 +52,13 @@ export async function listarMinisteriosConEquipo(
     // Un LEFT JOIN con la ficha del líder y una subconsulta para el recuento.
     // Contar en la misma pasada evita una consulta por tarjeta: con seis
     // ministerios serían seis viajes de ida y vuelta a Irlanda por cada carga.
+    //
+    // El responsable se alcanza por la pivote con un alias, y no por la tabla a
+    // secas, porque la subconsulta del recuento también la nombra: sin alias, el
+    // `where` de dentro se resolvería contra la fila ya unida de fuera y contaría
+    // uno por ministerio.
+    const responsable = alias(ministerioMiembros, 'responsable');
+
     const filas = await tx
       .select({
         id: ministerios.id,
@@ -45,6 +66,7 @@ export async function listarMinisteriosConEquipo(
         descripcion: ministerios.descripcion,
         colorHex: ministerios.colorHex,
         orden: ministerios.orden,
+        fotoUrl: ministerios.fotoUrl,
         liderId: miembros.id,
         liderNombre: miembros.nombre,
         liderApellidos: miembros.apellidos,
@@ -55,7 +77,15 @@ export async function listarMinisteriosConEquipo(
         )`,
       })
       .from(ministerios)
-      .leftJoin(miembros, eq(miembros.id, ministerios.liderMiembroId))
+      .leftJoin(
+        responsable,
+        and(
+          eq(responsable.ministerioId, ministerios.id),
+          eq(responsable.rolEquipo, 'responsable'),
+          eq(responsable.activo, true),
+        ),
+      )
+      .leftJoin(miembros, eq(miembros.id, responsable.miembroId))
       .where(
         and(
           eq(ministerios.iglesiaId, ctx.iglesia.id),
@@ -85,13 +115,24 @@ export type IntegranteEquipo = {
   vinculoId: string;
   miembroId: string;
   nombre: string;
+  /** Qué HACE: "Vocalista", "Guitarra". Texto libre. */
   rolEnMinisterio: string | null;
+  /** Qué MANDA. El otro eje, y el que lleva permisos detrás. */
+  rolEquipo: RolEquipo;
   desde: string | null;
-  esLider: boolean;
   estado: EstadoMiembro;
 };
 
+/** Responsable primero, luego colíderes, luego el resto. */
+const ORDEN_ROL_EQUIPO: Record<RolEquipo, number> = {
+  responsable: 0,
+  colider: 1,
+  voluntario: 2,
+};
+
 export type MinisterioDetalle = MinisterioResumen & {
+  /** La foto que sale en la web pública. Solo hace falta en el detalle. */
+  fotoUrl: string | null;
   equipo: IntegranteEquipo[];
 };
 
@@ -100,6 +141,9 @@ export async function obtenerMinisterio(
   ministerioId: string,
 ): Promise<MinisterioDetalle | null> {
   return withUser(ctx.user.id, async (tx) => {
+    // Sin unión con la ficha del líder: el responsable es una fila más del
+    // equipo, que ya se pide justo debajo. Antes hacía falta porque el liderazgo
+    // vivía en una columna de esta tabla.
     const filas = await tx
       .select({
         id: ministerios.id,
@@ -107,12 +151,9 @@ export async function obtenerMinisterio(
         descripcion: ministerios.descripcion,
         colorHex: ministerios.colorHex,
         orden: ministerios.orden,
-        liderMiembroId: ministerios.liderMiembroId,
-        liderNombre: miembros.nombre,
-        liderApellidos: miembros.apellidos,
+        fotoUrl: ministerios.fotoUrl,
       })
       .from(ministerios)
-      .leftJoin(miembros, eq(miembros.id, ministerios.liderMiembroId))
       .where(
         and(
           eq(ministerios.id, ministerioId),
@@ -132,6 +173,7 @@ export async function obtenerMinisterio(
         apellidos: miembros.apellidos,
         estado: miembros.estado,
         rolEnMinisterio: ministerioMiembros.rolEnMinisterio,
+        rolEquipo: ministerioMiembros.rolEquipo,
         desde: ministerioMiembros.desde,
       })
       .from(ministerioMiembros)
@@ -144,32 +186,37 @@ export async function obtenerMinisterio(
       )
       .orderBy(asc(miembros.nombre));
 
+    const integrantes: IntegranteEquipo[] = equipo
+      .map((p) => ({
+        vinculoId: p.vinculoId,
+        miembroId: p.miembroId,
+        nombre: [p.nombre, p.apellidos].filter(Boolean).join(' '),
+        rolEnMinisterio: p.rolEnMinisterio,
+        rolEquipo: p.rolEquipo,
+        desde: p.desde,
+        estado: p.estado,
+      }))
+      // El responsable primero y los colíderes detrás. Son a quienes se busca al
+      // abrir esta pantalla, y ordenar solo por nombre los dejaría enterrados en
+      // la mitad de la lista.
+      .sort(
+        (a, b) => ORDEN_ROL_EQUIPO[a.rolEquipo] - ORDEN_ROL_EQUIPO[b.rolEquipo],
+      );
+
+    const responsable = integrantes.find((p) => p.rolEquipo === 'responsable');
+
     return {
       id: m.id,
       nombre: m.nombre,
       descripcion: m.descripcion,
       colorHex: m.colorHex,
       orden: m.orden,
-      voluntarios: equipo.length,
-      lider: m.liderMiembroId
-        ? {
-            id: m.liderMiembroId,
-            nombre: [m.liderNombre, m.liderApellidos].filter(Boolean).join(' '),
-          }
+      fotoUrl: m.fotoUrl,
+      voluntarios: integrantes.length,
+      lider: responsable
+        ? { id: responsable.miembroId, nombre: responsable.nombre }
         : null,
-      equipo: equipo
-        .map((p) => ({
-          vinculoId: p.vinculoId,
-          miembroId: p.miembroId,
-          nombre: [p.nombre, p.apellidos].filter(Boolean).join(' '),
-          rolEnMinisterio: p.rolEnMinisterio,
-          desde: p.desde,
-          estado: p.estado,
-          esLider: p.miembroId === m.liderMiembroId,
-        }))
-        // El responsable primero. Es a quien se busca cuando se abre esta
-        // pantalla, y ordenar por nombre lo dejaría enterrado en la mitad.
-        .sort((a, b) => Number(b.esLider) - Number(a.esLider)),
+      equipo: integrantes,
     };
   });
 }
@@ -247,27 +294,88 @@ export async function candidatosParaMinisterio(
   });
 }
 
-/** Miembros del equipo, para elegir responsable en el formulario. */
-export async function integrantesParaLider(
+/*
+ * Aquí vivía `integrantesParaLider`, que llenaba un desplegable de «responsable»
+ * en el formulario de editar. Con el liderazgo en la pivote ya no hace falta: el
+ * responsable se nombra desde la propia lista del equipo, donde la gente ya está
+ * y con su cara delante.
+ */
+
+/**
+ * Qué ministerios lidera cada una de estas personas.
+ *
+ * Para la pantalla de Equipo. Una sola consulta para toda la iglesia en vez de
+ * una por fila: con quince cuentas serían quince viajes para pintar una columna.
+ */
+export async function lideresDeMinisterios(
   ctx: UserContext,
-  ministerioId: string,
-) {
+  miembroIds: string[],
+): Promise<Map<string, { id: string; nombre: string }[]>> {
+  const mapa = new Map<string, { id: string; nombre: string }[]>();
+  if (miembroIds.length === 0) return mapa;
+
+  const filas = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({
+        miembroId: ministerioMiembros.miembroId,
+        ministerioId: ministerios.id,
+        nombre: ministerios.nombre,
+      })
+      .from(ministerioMiembros)
+      .innerJoin(ministerios, eq(ministerios.id, ministerioMiembros.ministerioId))
+      .where(
+        and(
+          eq(ministerioMiembros.iglesiaId, ctx.iglesia.id),
+          inArray(ministerioMiembros.miembroId, miembroIds),
+          eq(ministerioMiembros.activo, true),
+          ne(ministerioMiembros.rolEquipo, 'voluntario'),
+          eq(ministerios.activo, true),
+        ),
+      )
+      .orderBy(asc(ministerios.nombre)),
+  );
+
+  for (const f of filas) {
+    const lista = mapa.get(f.miembroId) ?? [];
+    lista.push({ id: f.ministerioId, nombre: f.nombre });
+    mapa.set(f.miembroId, lista);
+  }
+
+  return mapa;
+}
+
+/**
+ * Equipos activos que se han quedado sin responsable.
+ *
+ * Para el panel de inicio. Un ministerio sin nadie al frente no da error ni
+ * aparece distinto en la rejilla: simplemente pone «Sin responsable asignado» y
+ * ahí se queda meses. Sacarlo a la primera pantalla es la diferencia entre un
+ * hueco que alguien tapa y un hueco que nadie ve.
+ */
+export async function ministeriosSinResponsable(
+  ctx: UserContext,
+): Promise<{ id: string; nombre: string; colorHex: string }[]> {
   return withUser(ctx.user.id, (tx) =>
     tx
       .select({
-        id: miembros.id,
-        nombre: miembros.nombre,
-        apellidos: miembros.apellidos,
+        id: ministerios.id,
+        nombre: ministerios.nombre,
+        colorHex: ministerios.colorHex,
       })
-      .from(ministerioMiembros)
-      .innerJoin(miembros, eq(miembros.id, ministerioMiembros.miembroId))
+      .from(ministerios)
       .where(
         and(
-          eq(ministerioMiembros.ministerioId, ministerioId),
-          eq(ministerioMiembros.activo, true),
+          eq(ministerios.iglesiaId, ctx.iglesia.id),
+          eq(ministerios.activo, true),
+          sql`not exists (
+            select 1 from ${ministerioMiembros}
+             where ${ministerioMiembros.ministerioId} = ${ministerios.id}
+               and ${ministerioMiembros.rolEquipo} = 'responsable'
+               and ${ministerioMiembros.activo} = true
+          )`,
         ),
       )
-      .orderBy(asc(miembros.nombre)),
+      .orderBy(asc(ministerios.orden), asc(ministerios.nombre)),
   );
 }
 

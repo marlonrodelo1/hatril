@@ -48,6 +48,25 @@ export const estadoMembresiaEnum = pgEnum('estado_membresia_enum', [
 ]);
 
 /**
+ * Autoridad dentro de un ministerio.
+ *
+ * NO confundir con `ministerio_miembros.rol_en_ministerio`, que es texto libre y
+ * describe la FUNCIÓN («Vocalista», «Clase de 3 a 6 años»). Son los dos ejes de
+ * siempre: uno dice qué hace la persona y el otro qué manda.
+ *
+ * `responsable` es único por ministerio, y lo garantiza un índice parcial, no la
+ * aplicación. `colider` existe porque un ministerio de niños con cuarenta críos
+ * lo llevan tres personas, y hasta la migración `0005` solo cabía una.
+ */
+export const rolEquipoEnum = pgEnum('rol_equipo_enum', [
+  'responsable',
+  'colider',
+  'voluntario',
+]);
+
+export type RolEquipo = (typeof rolEquipoEnum.enumValues)[number];
+
+/**
  * Situación de una persona respecto a la congregación.
  *
  * Los valores salen literalmente de los badges del sistema de diseño

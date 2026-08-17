@@ -25,6 +25,15 @@ import { cn } from '@/lib/utils';
  * aquí no existe:
  *
  *     <Button render={<Link href="/panel/miembros/nuevo" />}>Añadir</Button>
+ *
+ * PENDIENTE: cada botón-enlace suelta un aviso de Base UI por consola («expected
+ * a native <button> because the `nativeButton` prop is true»), y le deja a un
+ * `<a>` la semántica de botón, que es lo que anuncia un lector de pantalla. El
+ * propio aviso sugiere `nativeButton={false}`. Se intentó y no se pudo comprobar
+ * si surtía efecto: el navegador de las herramientas devuelve el historial de
+ * avisos de toda la sesión, así que no se distingue uno nuevo de uno viejo. Se
+ * dejó sin tocar antes que dar por arreglado algo sin verlo funcionar.
+ * Comprobar en un Chrome de verdad, con la consola limpia y una sola página.
  */
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg border border-transparent font-semibold whitespace-nowrap no-underline transition-colors outline-none select-none hover:no-underline focus-visible:ring-3 focus-visible:ring-ring/20 active:translate-y-px disabled:pointer-events-none disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[18px]",

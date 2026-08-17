@@ -6,7 +6,12 @@ import {
   getCurrentUserContext,
   type UserContext,
 } from '@/lib/auth/user-context';
-import { esPastor, puede, type Permiso } from '@/lib/auth/permisos';
+import {
+  esPastor,
+  puede,
+  puedeGestionarMinisterio,
+  type Permiso,
+} from '@/lib/auth/permisos';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -108,6 +113,26 @@ export async function requirePermiso(permiso: Permiso): Promise<UserContext> {
   return ctx;
 }
 
+/**
+ * Exige poder gestionar ESTE ministerio.
+ *
+ * A diferencia de `requirePermiso`, no basta con mirar el mapa de permisos: hay
+ * que cruzarlo con qué ministerios lidera esta persona. Ver
+ * `puedeGestionarMinisterio`.
+ *
+ * Rebota a `/panel/ministerios` y no a `/panel/hoy`: quien llega aquí venía de
+ * la rejilla de ministerios, y devolverlo al inicio le hace perder el sitio.
+ */
+export async function requireGestionMinisterio(
+  ministerioId: string,
+): Promise<UserContext> {
+  const ctx = await requireIglesia();
+  if (!puedeGestionarMinisterio(ctx, ministerioId)) {
+    redirect('/panel/ministerios?error=' + encodeURIComponent(MENSAJE_SIN_PERMISO));
+  }
+  return ctx;
+}
+
 // ============================================
 // SERVER ACTIONS
 // ============================================
@@ -143,6 +168,21 @@ export async function requirePermisoAccion(
   const ctx = await getCurrentUserContext();
   if (!ctx) return rebotar();
   if (!esPastor(ctx) && !puede(ctx, permiso)) {
+    redirect(
+      `${destinoError}?error=` +
+        encodeURIComponent('No tienes permiso para hacer eso.'),
+    );
+  }
+  return ctx;
+}
+
+/** La versión para actions de `requireGestionMinisterio`. */
+export async function requireGestionMinisterioAccion(
+  ministerioId: string,
+  destinoError = '/panel/ministerios',
+): Promise<UserContext> {
+  const ctx = await requireIglesiaAccion();
+  if (!puedeGestionarMinisterio(ctx, ministerioId)) {
     redirect(
       `${destinoError}?error=` +
         encodeURIComponent('No tienes permiso para hacer eso.'),

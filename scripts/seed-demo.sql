@@ -12,7 +12,9 @@
 --   pastor@hatril.test        Pastor de Betania. Lo ve y lo toca todo.
 --   secretaria@hatril.test    Secretaría. Ficha de miembros y solicitudes,
 --                             pero no ajustes ni facturación.
---   lider@hatril.test         Líder de Alabanza. Ve solo su ministerio.
+--   lider@hatril.test         Responsable de Alabanza. Es la cuenta con la que
+--                             se prueba `gestionar_su_ministerio`: edita y mueve
+--                             gente en Alabanza y en ningún otro equipo.
 --   miembro@hatril.test       Miembro. Solo su propia ficha.
 --   visita@hatril.test        Sin iglesia, con solicitud pendiente. Para ver
 --                             /mi y la bandeja del panel.
@@ -155,24 +157,31 @@ insert into public.solicitudes_ingreso (iglesia_id, auth_user_id, nombre, email,
 values ('aaaaaaaa-1111-4111-8111-000000000001','11111111-1111-4111-8111-000000000005','Nuria Cabrera Ledo','visita@hatril.test','+573001234576','Vengo los domingos desde marzo, me presentó Marta. Me gustaría estar al día de lo que hacéis.')
 on conflict do nothing;
 
-insert into public.ministerios (id, iglesia_id, nombre, descripcion, color_hex, lider_miembro_id, orden)
+insert into public.ministerios (id, iglesia_id, nombre, descripcion, color_hex, orden)
 values
- ('eeeeeeee-0000-4000-8000-000000000001','aaaaaaaa-1111-4111-8111-000000000001','Alabanza','El equipo de música del domingo. Voces, teclado, guitarra, batería y sonido.','#BD4715','cccccccc-0000-4000-8000-000000000003',1),
- ('eeeeeeee-0000-4000-8000-000000000002','aaaaaaaa-1111-4111-8111-000000000001','Jóvenes','De 15 a 30 años. Grupo semanal, salidas y un retiro al año.','#2F5D50',null,2),
- ('eeeeeeee-0000-4000-8000-000000000003','aaaaaaaa-1111-4111-8111-000000000001','Niños','Clases por edades mientras los padres están en el culto.','#B58A2B','cccccccc-0000-4000-8000-000000000008',3),
- ('eeeeeeee-0000-4000-8000-000000000004','aaaaaaaa-1111-4111-8111-000000000001','Intercesión','Oración por la iglesia y por quien está pasando un mal momento.','#6B645C','cccccccc-0000-4000-8000-000000000007',4)
+ ('eeeeeeee-0000-4000-8000-000000000001','aaaaaaaa-1111-4111-8111-000000000001','Alabanza','El equipo de música del domingo. Voces, teclado, guitarra, batería y sonido.','#BD4715',1),
+ ('eeeeeeee-0000-4000-8000-000000000002','aaaaaaaa-1111-4111-8111-000000000001','Jóvenes','De 15 a 30 años. Grupo semanal, salidas y un retiro al año.','#2F5D50',2),
+ ('eeeeeeee-0000-4000-8000-000000000003','aaaaaaaa-1111-4111-8111-000000000001','Niños','Clases por edades mientras los padres están en el culto.','#B58A2B',3),
+ ('eeeeeeee-0000-4000-8000-000000000004','aaaaaaaa-1111-4111-8111-000000000001','Intercesión','Oración por la iglesia y por quien está pasando un mal momento.','#6B645C',4)
 on conflict (id) do nothing;
 
-insert into public.ministerio_miembros (iglesia_id, ministerio_id, miembro_id, rol_en_ministerio, desde)
+-- El liderazgo vive aquí desde la migración `0005`, no en una columna de
+-- `ministerios`. Y `rol_equipo` (quién manda) es un eje distinto de
+-- `rol_en_ministerio` (qué hace), por eso Marta sale como responsable de Niños Y
+-- como «Voz» en Alabanza sin contradicción.
+--
+-- Niños lleva a propósito responsable Y colíder: es el caso que la columna vieja
+-- no podía representar, y sin él la demostración no enseñaría lo que cambió.
+insert into public.ministerio_miembros (iglesia_id, ministerio_id, miembro_id, rol_en_ministerio, rol_equipo, desde)
 values
- ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000001','cccccccc-0000-4000-8000-000000000003','Responsable','2022-10-03'),
- ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000001','cccccccc-0000-4000-8000-000000000004','Voz y teclado','2021-06-06'),
- ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000001','cccccccc-0000-4000-8000-000000000008','Voz','2020-02-07'),
- ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000002','cccccccc-0000-4000-8000-000000000004','Apoyo','2024-02-01'),
- ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000002','cccccccc-0000-4000-8000-000000000006','Apoyo','2026-08-02'),
- ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000003','cccccccc-0000-4000-8000-000000000008','Responsable','2020-02-07'),
- ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000003','cccccccc-0000-4000-8000-000000000007','Clase de 3 a 6','2016-01-04'),
- ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000004','cccccccc-0000-4000-8000-000000000007','Responsable','2016-01-04')
+ ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000001','cccccccc-0000-4000-8000-000000000003','Guitarra y voz','responsable','2022-10-03'),
+ ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000001','cccccccc-0000-4000-8000-000000000004','Voz y teclado','voluntario','2021-06-06'),
+ ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000001','cccccccc-0000-4000-8000-000000000008','Voz','voluntario','2020-02-07'),
+ ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000002','cccccccc-0000-4000-8000-000000000004','Apoyo','voluntario','2024-02-01'),
+ ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000002','cccccccc-0000-4000-8000-000000000006','Apoyo','voluntario','2026-08-02'),
+ ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000003','cccccccc-0000-4000-8000-000000000008','Clase de 7 a 11','responsable','2020-02-07'),
+ ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000003','cccccccc-0000-4000-8000-000000000007','Clase de 3 a 6','colider','2016-01-04'),
+ ('aaaaaaaa-1111-4111-8111-000000000001','eeeeeeee-0000-4000-8000-000000000004','cccccccc-0000-4000-8000-000000000007',null,'responsable','2016-01-04')
 on conflict do nothing;
 
 insert into public.consentimientos (iglesia_id, miembro_id, tipo, version_texto)

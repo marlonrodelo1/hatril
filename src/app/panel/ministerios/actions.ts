@@ -5,11 +5,19 @@ import { revalidatePath } from 'next/cache';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { requirePermisoAccion } from '@/lib/auth/guard-panel';
+import {
+  requireGestionMinisterioAccion,
+  requirePermisoAccion,
+} from '@/lib/auth/guard-panel';
+import { esPastor, puede } from '@/lib/auth/permisos';
 import { withUser } from '@/lib/db';
 import { ministerioMiembros, ministerios } from '@/lib/db/schema';
-import { isUniqueViolation } from '@/lib/db/error';
+import { esGuardHatril, isUniqueViolation } from '@/lib/db/error';
 import { COLORES_MINISTERIO } from '@/lib/ministerios/colores';
+import {
+  borrarImagenAnterior,
+  subirImagenIglesia,
+} from '@/lib/iglesias/imagenes';
 import { campo, campoObligatorio, campos } from '@/lib/api/formulario';
 
 const HEX_VALIDOS = COLORES_MINISTERIO.map((c) => c.hex) as [string, ...string[]];
@@ -25,7 +33,6 @@ const EsquemaMinisterio = z.object({
   // únicamente esos no basta: una server action es un endpoint y se le puede
   // mandar cualquier cosa.
   colorHex: z.enum(HEX_VALIDOS),
-  liderMiembroId: z.string().uuid().optional().or(z.literal('')),
 });
 
 function oNulo(v: string | undefined): string | null {
@@ -38,7 +45,6 @@ function leer(formData: FormData) {
     nombre: campoObligatorio(formData, 'nombre'),
     descripcion: campo(formData, 'descripcion'),
     colorHex: campoObligatorio(formData, 'colorHex'),
-    liderMiembroId: campo(formData, 'liderMiembroId'),
   });
 }
 
@@ -97,10 +103,9 @@ export async function editarMinisterio(
   ministerioId: string,
   formData: FormData,
 ) {
-  const ctx = await requirePermisoAccion(
-    'gestionar_ministerios',
-    '/panel/ministerios',
-  );
+  // Acotado: el responsable de alabanza edita alabanza. Crear y archivar siguen
+  // pidiendo el permiso global, porque son decisiones de la iglesia entera.
+  const ctx = await requireGestionMinisterioAccion(ministerioId);
 
   const parsed = leer(formData);
   if (!parsed.success) {
@@ -120,7 +125,6 @@ export async function editarMinisterio(
           nombre: d.nombre,
           descripcion: oNulo(d.descripcion),
           colorHex: d.colorHex,
-          liderMiembroId: oNulo(d.liderMiembroId),
         })
         .where(
           and(
@@ -147,10 +151,7 @@ export async function asignarAlMinisterio(
   ministerioId: string,
   formData: FormData,
 ) {
-  const ctx = await requirePermisoAccion(
-    'gestionar_ministerios',
-    '/panel/ministerios',
-  );
+  const ctx = await requireGestionMinisterioAccion(ministerioId);
 
   const ids = z
     .array(z.string().uuid())
@@ -183,7 +184,14 @@ export async function asignarAlMinisterio(
     if (previos.length > 0) {
       await tx
         .update(ministerioMiembros)
-        .set({ activo: true, desde: hoy, hasta: null })
+        // `rolEquipo` vuelve a 'voluntario', y no es un detalle: si esta persona
+        // fue responsable, salió, y mientras tanto se nombró a otra, reactivar
+        // su fila tal cual chocaría contra `uq_ministerio_responsable_activo`
+        // con un 23505 en la cara de quien solo pulsó «Asignar miembros».
+        //
+        // Quien vuelve, vuelve como uno más. Si tiene que volver a mandar, se le
+        // nombra a propósito.
+        .set({ activo: true, desde: hoy, hasta: null, rolEquipo: 'voluntario' })
         .where(
           inArray(
             ministerioMiembros.id,
@@ -214,15 +222,18 @@ export async function quitarDelMinisterio(
   ministerioId: string,
   miembroId: string,
 ) {
-  const ctx = await requirePermisoAccion(
-    'gestionar_ministerios',
-    '/panel/ministerios',
-  );
+  const ctx = await requireGestionMinisterioAccion(ministerioId);
 
-  await withUser(ctx.user.id, async (tx) => {
-    // Se desactiva, no se borra: que alguien sirvió en alabanza tres años es
-    // justo lo que un pastor quiere poder mirar dentro de dos.
-    await tx
+  // Se desactiva, no se borra: que alguien sirvió en alabanza tres años es justo
+  // lo que un pastor quiere poder mirar dentro de dos.
+  //
+  // Y aquí había un segundo UPDATE que limpiaba `ministerios.lider_miembro_id`
+  // si esta persona era la responsable. Ya no hace falta: al poner
+  // `activo = false` la fila sale del predicado del índice parcial, así que deja
+  // de ser la responsable en la misma sentencia. Es la simplificación que compró
+  // mudar el liderazgo a esta tabla.
+  await withUser(ctx.user.id, (tx) =>
+    tx
       .update(ministerioMiembros)
       .set({ activo: false, hasta: new Date().toISOString().slice(0, 10) })
       .where(
@@ -231,25 +242,207 @@ export async function quitarDelMinisterio(
           eq(ministerioMiembros.miembroId, miembroId),
           eq(ministerioMiembros.activo, true),
         ),
-      );
+      ),
+  );
 
-    // Si era el responsable, el ministerio se queda sin responsable. Dejar
-    // apuntando a alguien que ya no está en el equipo es peor que el hueco: la
-    // pantalla enseñaría un nombre que nadie puede localizar ahí.
-    await tx
-      .update(ministerios)
-      .set({ liderMiembroId: null })
+  revalidatePath(`/panel/ministerios/${ministerioId}`);
+  redirect(`/panel/ministerios/${ministerioId}`);
+}
+
+const EsquemaRolEquipo = z.object({
+  rolEquipo: z.enum(['responsable', 'colider', 'voluntario']),
+});
+
+/**
+ * Cambiar qué manda alguien dentro de un equipo.
+ *
+ * DOS GUARDS Y NO UNO. `requireGestionMinisterioAccion` contesta «puedes tocar
+ * este ministerio», que no es lo mismo que «puedes decidir quién lo dirige».
+ * Nombrar responsable se queda en el pastor y en quien tenga el permiso global:
+ * a un líder acotado se le deja traer colíderes, no traspasar el mando y salir
+ * por la puerta.
+ */
+export async function cambiarRolEnEquipo(
+  ministerioId: string,
+  miembroId: string,
+  formData: FormData,
+) {
+  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const destino = `/panel/ministerios/${ministerioId}`;
+
+  const parsed = EsquemaRolEquipo.safeParse({
+    rolEquipo: campoObligatorio(formData, 'rolEquipo'),
+  });
+  if (!parsed.success) {
+    redirect(`${destino}?error=` + encodeURIComponent('Ese rol no existe.'));
+  }
+
+  const nuevo = parsed.data.rolEquipo;
+
+  if (
+    nuevo === 'responsable' &&
+    !esPastor(ctx) &&
+    !puede(ctx, 'gestionar_ministerios')
+  ) {
+    redirect(
+      `${destino}?error=` +
+        encodeURIComponent(
+          'Solo el pastor puede decidir quién es el responsable de un ministerio.',
+        ),
+    );
+  }
+
+  try {
+    await withUser(ctx.user.id, async (tx) => {
+      // Degradar al anterior ANTES de ascender al nuevo. En el otro orden hay un
+      // instante con dos responsables activos y el índice único aborta la
+      // transacción entera.
+      if (nuevo === 'responsable') {
+        await tx
+          .update(ministerioMiembros)
+          .set({ rolEquipo: 'colider' })
+          .where(
+            and(
+              eq(ministerioMiembros.ministerioId, ministerioId),
+              eq(ministerioMiembros.rolEquipo, 'responsable'),
+              eq(ministerioMiembros.activo, true),
+            ),
+          );
+      }
+
+      await tx
+        .update(ministerioMiembros)
+        .set({ rolEquipo: nuevo })
+        .where(
+          and(
+            eq(ministerioMiembros.ministerioId, ministerioId),
+            eq(ministerioMiembros.miembroId, miembroId),
+            eq(ministerioMiembros.activo, true),
+          ),
+        );
+    });
+  } catch (err) {
+    // Dos personas nombrando responsable a la vez desde dos pestañas.
+    if (isUniqueViolation(err)) {
+      redirect(
+        `${destino}?error=` +
+          encodeURIComponent(
+            'Ese ministerio ya tiene responsable. Recarga la página y vuelve a intentarlo.',
+          ),
+      );
+    }
+    // HT104: el guard de la base de datos. Solo se llega aquí si alguien esquiva
+    // la interfaz, porque la pantalla no ofrece el control sobre uno mismo.
+    if (esGuardHatril(err, 'HT104')) {
+      redirect(
+        `${destino}?error=` +
+          encodeURIComponent('No puedes nombrarte líder a ti mismo.'),
+      );
+    }
+    throw err;
+  }
+
+  revalidatePath(destino);
+  revalidatePath('/panel/ministerios');
+  redirect(destino);
+}
+
+/**
+ * La foto del ministerio para la web pública.
+ *
+ * La puede cambiar quien lleve ese ministerio, no solo el pastor: es la foto de
+ * su propio equipo. Va al mismo bucket que el logo de la iglesia —público, por
+ * la misma razón: sale en la web.
+ */
+export async function guardarFotoMinisterio(
+  ministerioId: string,
+  formData: FormData,
+) {
+  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const destino = `/panel/ministerios/${ministerioId}`;
+
+  const fichero = formData.get('foto');
+  if (!(fichero instanceof File)) {
+    redirect(`${destino}?error=` + encodeURIComponent('No has elegido ninguna imagen.'));
+  }
+
+  const resultado = await subirImagenIglesia(
+    ctx.iglesia.id,
+    'foto',
+    fichero,
+    `ministerio-${ministerioId.slice(0, 8)}-${Date.now().toString(36)}`,
+  );
+
+  if (!resultado.ok) {
+    redirect(`${destino}?error=` + encodeURIComponent(resultado.error));
+  }
+
+  const [previa] = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ url: ministerios.fotoUrl })
+      .from(ministerios)
       .where(
         and(
           eq(ministerios.id, ministerioId),
           eq(ministerios.iglesiaId, ctx.iglesia.id),
-          eq(ministerios.liderMiembroId, miembroId),
         ),
-      );
-  });
+      )
+      .limit(1),
+  );
+
+  await withUser(ctx.user.id, (tx) =>
+    tx
+      .update(ministerios)
+      .set({ fotoUrl: resultado.url })
+      .where(
+        and(
+          eq(ministerios.id, ministerioId),
+          eq(ministerios.iglesiaId, ctx.iglesia.id),
+        ),
+      ),
+  );
+
+  await borrarImagenAnterior(previa?.url ?? null);
+
+  revalidatePath(destino);
+  revalidatePath(`/i/${ctx.iglesia.slug}`);
+  redirect(`${destino}?guardado=foto`);
+}
+
+/** Quitar la foto del ministerio. */
+export async function quitarFotoMinisterio(ministerioId: string) {
+  const ctx = await requireGestionMinisterioAccion(ministerioId);
+
+  const [previa] = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ url: ministerios.fotoUrl })
+      .from(ministerios)
+      .where(
+        and(
+          eq(ministerios.id, ministerioId),
+          eq(ministerios.iglesiaId, ctx.iglesia.id),
+        ),
+      )
+      .limit(1),
+  );
+
+  await withUser(ctx.user.id, (tx) =>
+    tx
+      .update(ministerios)
+      .set({ fotoUrl: null })
+      .where(
+        and(
+          eq(ministerios.id, ministerioId),
+          eq(ministerios.iglesiaId, ctx.iglesia.id),
+        ),
+      ),
+  );
+
+  await borrarImagenAnterior(previa?.url ?? null);
 
   revalidatePath(`/panel/ministerios/${ministerioId}`);
-  redirect(`/panel/ministerios/${ministerioId}`);
+  revalidatePath(`/i/${ctx.iglesia.slug}`);
+  redirect(`/panel/ministerios/${ministerioId}?guardado=foto-quitada`);
 }
 
 export async function archivarMinisterio(ministerioId: string) {

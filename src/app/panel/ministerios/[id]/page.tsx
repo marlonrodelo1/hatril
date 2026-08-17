@@ -1,10 +1,20 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { ChevronLeft, Plus, UserMinus, UserPlus } from 'lucide-react';
+import {
+  ChevronLeft,
+  Plus,
+  ShieldMinus,
+  ShieldPlus,
+  Star,
+  Trash2,
+  Upload,
+  UserMinus,
+  UserPlus,
+} from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
-import { esPastor, puede } from '@/lib/auth/permisos';
+import { esPastor, puede, puedeGestionarMinisterio } from '@/lib/auth/permisos';
 import {
   candidatosParaMinisterio,
   obtenerMinisterio,
@@ -12,7 +22,13 @@ import {
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { iniciales } from '@/lib/format/iniciales';
 import { Button } from '@/components/ui/button';
-import { asignarAlMinisterio, quitarDelMinisterio } from '../actions';
+import {
+  asignarAlMinisterio,
+  cambiarRolEnEquipo,
+  guardarFotoMinisterio,
+  quitarDelMinisterio,
+  quitarFotoMinisterio,
+} from '../actions';
 import { DialogoAsignar } from '../_components/dialogo-asignar';
 
 /*
@@ -43,8 +59,17 @@ export default async function MinisterioPage({
   const ministerio = await obtenerMinisterio(ctx, id);
   if (!ministerio) notFound();
 
-  const puedeGestionar = esPastor(ctx) || puede(ctx, 'gestionar_ministerios');
+  // El responsable de este equipo también pasa, aunque no tenga el permiso
+  // global de la iglesia. Es justo lo que compra `gestionar_su_ministerio`.
+  const puedeGestionar = puedeGestionarMinisterio(ctx, id);
+
+  // Nombrar responsable no. A ese lo pone quien gobierna la iglesia: un líder
+  // acotado puede traer ayuda, no traspasar el mando y marcharse.
+  const puedeNombrarResponsable =
+    esPastor(ctx) || puede(ctx, 'gestionar_ministerios');
+
   const color = colorDeMinisterio(ministerio.colorHex);
+  const colideres = ministerio.equipo.filter((p) => p.rolEquipo === 'colider');
 
   // Las candidatas solo se piden si el diálogo está abierto. Cargarlas siempre
   // sería una consulta de hasta 300 filas en cada visita a la pantalla, para
@@ -136,6 +161,15 @@ export default async function MinisterioPage({
                   Sin asignar
                 </span>
               )}
+
+              {/* Los colíderes van debajo del responsable y no en su propia
+                  columna: son la misma pregunta —«¿a quién le pregunto?»— y
+                  separarlos obliga a leer dos sitios para contestarla. */}
+              {colideres.length > 0 && (
+                <span className="text-[13px] text-muted-foreground">
+                  con {colideres.map((p) => p.nombre).join(', ')}
+                </span>
+              )}
             </div>
 
             <span className="h-10 w-px bg-border" />
@@ -148,6 +182,64 @@ export default async function MinisterioPage({
             </div>
           </div>
         </section>
+
+        {/* La foto que sale en la web pública, si esta persona puede tocar el
+            ministerio. Va aquí y no en el formulario de editar porque subir una
+            imagen tarda y no tiene por qué ir atado a guardar el nombre. */}
+        {puedeGestionar && (
+          <section className="flex flex-col gap-3.5 rounded-xl border border-border bg-surface p-5">
+            <div className="flex flex-col gap-0.5">
+              <h2 className="t-subtitulo">Foto del grupo</h2>
+              <p className="t-label text-muted-foreground">
+                Sale en la web pública de la iglesia. Si aparece gente
+                reconocible, asegúrate de que han dado su permiso de imagen.
+              </p>
+            </div>
+
+            {ministerio.fotoUrl && (
+              <div className="h-[160px] overflow-hidden rounded-lg border border-border bg-background">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={ministerio.fotoUrl}
+                  alt={`Foto de ${ministerio.nombre}`}
+                  className="size-full object-cover"
+                />
+              </div>
+            )}
+
+            <form
+              action={guardarFotoMinisterio.bind(null, ministerio.id)}
+              className="flex flex-wrap items-center gap-2"
+            >
+              <input
+                type="file"
+                name="foto"
+                required
+                accept="image/jpeg,image/png,image/webp"
+                aria-label="Elegir la foto del grupo"
+                className="min-w-0 flex-1 text-[13px] text-muted-foreground file:mr-2.5 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-surface-alt file:px-2.5 file:py-1.5 file:text-[13px] file:font-medium file:text-foreground hover:file:bg-background"
+              />
+              <Button type="submit" variant="outline" size="sm">
+                <Upload strokeWidth={1.7} />
+                {ministerio.fotoUrl ? 'Cambiar' : 'Subir'}
+              </Button>
+            </form>
+
+            {ministerio.fotoUrl && (
+              <form action={quitarFotoMinisterio.bind(null, ministerio.id)}>
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <Trash2 strokeWidth={1.7} />
+                  Quitarla
+                </Button>
+              </form>
+            )}
+          </section>
+        )}
 
         {/*
          * El diseño pone aquí una segunda columna con «Próximos turnos». Sale
@@ -191,37 +283,94 @@ export default async function MinisterioPage({
                   )}
                 </div>
 
-                {/* El responsable lleva el color del ministerio; el resto, el
-                    gris neutro. Nada de mezclar `className` con un spread
-                    condicional que lo pisa: se decide arriba y se aplica una
-                    vez. */}
+                {/* Quien manda lleva el color del ministerio; el resto, el gris
+                    neutro. Nada de mezclar `className` con un spread condicional
+                    que lo pisa: se decide arriba y se aplica una vez. */}
                 <span
                   className={
                     'whitespace-nowrap rounded-full px-2.5 py-[5px] text-[12px] font-semibold ' +
-                    (p.esLider ? '' : 'bg-background text-muted-foreground')
+                    (p.rolEquipo === 'voluntario'
+                      ? 'bg-background text-muted-foreground'
+                      : '')
                   }
                   style={
-                    p.esLider
-                      ? { background: color.suave, color: color.hex }
-                      : undefined
+                    p.rolEquipo === 'voluntario'
+                      ? undefined
+                      : { background: color.suave, color: color.hex }
                   }
                 >
-                  {p.esLider ? 'Responsable' : (p.rolEnMinisterio ?? 'Equipo')}
+                  {p.rolEquipo === 'responsable'
+                    ? 'Responsable'
+                    : p.rolEquipo === 'colider'
+                      ? 'Colíder'
+                      : (p.rolEnMinisterio ?? 'Equipo')}
                 </span>
 
                 {puedeGestionar && (
-                  <form action={quitarDelMinisterio.bind(null, ministerio.id, p.miembroId)}>
-                    <Button
-                      type="submit"
-                      variant="ghost"
-                      size="icon-sm"
-                      title={`Quitar a ${p.nombre} del equipo`}
-                      aria-label={`Quitar a ${p.nombre} del equipo`}
-                      className="text-muted-foreground hover:bg-muted hover:text-foreground"
+                  <div className="flex flex-none items-center gap-0.5">
+                    {/* Un formulario por acción, no uno con varios botones: con
+                        el `bind` de las server actions, dos submits en el mismo
+                        form comparten destino y el valor de `rolEquipo` acaba
+                        dependiendo de cuál pulsó el navegador. */}
+                    {p.rolEquipo === 'voluntario' && (
+                      <BotonRol
+                        accion={cambiarRolEnEquipo.bind(
+                          null,
+                          ministerio.id,
+                          p.miembroId,
+                        )}
+                        valor="colider"
+                        etiqueta={`Hacer a ${p.nombre} colíder del equipo`}
+                        Icono={ShieldPlus}
+                      />
+                    )}
+
+                    {p.rolEquipo === 'colider' && (
+                      <>
+                        {puedeNombrarResponsable && (
+                          <BotonRol
+                            accion={cambiarRolEnEquipo.bind(
+                              null,
+                              ministerio.id,
+                              p.miembroId,
+                            )}
+                            valor="responsable"
+                            etiqueta={`Hacer a ${p.nombre} responsable del equipo`}
+                            Icono={Star}
+                          />
+                        )}
+                        <BotonRol
+                          accion={cambiarRolEnEquipo.bind(
+                            null,
+                            ministerio.id,
+                            p.miembroId,
+                          )}
+                          valor="voluntario"
+                          etiqueta={`Quitar a ${p.nombre} el liderazgo del equipo`}
+                          Icono={ShieldMinus}
+                        />
+                      </>
+                    )}
+
+                    <form
+                      action={quitarDelMinisterio.bind(
+                        null,
+                        ministerio.id,
+                        p.miembroId,
+                      )}
                     >
-                      <UserMinus strokeWidth={1.7} />
-                    </Button>
-                  </form>
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="icon-sm"
+                        title={`Quitar a ${p.nombre} del equipo`}
+                        aria-label={`Quitar a ${p.nombre} del equipo`}
+                        className="text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <UserMinus strokeWidth={1.7} />
+                      </Button>
+                    </form>
+                  </div>
                 )}
               </div>
             ))
@@ -251,6 +400,41 @@ export default async function MinisterioPage({
         />
       )}
     </>
+  );
+}
+
+/**
+ * Un botón que envía un `rolEquipo` concreto.
+ *
+ * El valor viaja en un campo oculto y no en el `value` del botón: un `<button
+ * name value>` solo llega al servidor si fue ESE el que se pulsó, y con Enter
+ * desde el teclado el navegador no siempre manda cuál era.
+ */
+function BotonRol({
+  accion,
+  valor,
+  etiqueta,
+  Icono,
+}: {
+  accion: (formData: FormData) => void | Promise<void>;
+  valor: 'responsable' | 'colider' | 'voluntario';
+  etiqueta: string;
+  Icono: typeof Star;
+}) {
+  return (
+    <form action={accion}>
+      <input type="hidden" name="rolEquipo" value={valor} />
+      <Button
+        type="submit"
+        variant="ghost"
+        size="icon-sm"
+        title={etiqueta}
+        aria-label={etiqueta}
+        className="text-muted-foreground hover:bg-muted hover:text-foreground"
+      >
+        <Icono strokeWidth={1.7} />
+      </Button>
+    </form>
   );
 }
 

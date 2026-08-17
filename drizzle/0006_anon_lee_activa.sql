@@ -1,0 +1,44 @@
+-- ===========================================================================
+-- 0006 — `anon` necesita leer `iglesias.activa`
+--
+-- Fallo PREEXISTENTE, descubierto al escribir la primera prueba que hacía leer
+-- `ministerios` como `anon`. Llevaba desde `0001` y nadie lo había visto.
+--
+-- QUÉ PASABA
+-- ----------
+-- La policy `ministerios_select_publico` comprueba que la iglesia esté publicada
+-- con un `exists` sobre `public.iglesias`, mirando `activa` y
+-- `visible_en_directorio`. Y el GRANT por columna de `0001:242-249` **no incluye
+-- `activa`**.
+--
+-- La diferencia que hay que tener presente: una policy USING sobre SU PROPIA
+-- tabla no necesita permisos de columna, pero cuando la expresión consulta OTRA
+-- tabla, esa lectura se evalúa con los privilegios de quien pregunta. Así que
+-- `select * from ministerios` como `anon` no devolvía cero filas: fallaba entero
+-- con «permission denied for table iglesias».
+--
+-- POR QUÉ NO SE NOTÓ
+-- ------------------
+-- Porque nadie lo ejercita. La web pública `/i/[slug]` lista los grupos con
+-- `dbAdmin` (`src/lib/iglesias/publica.ts:11-26`), y el único sitio que consulta
+-- como visitante es el directorio, que no toca `ministerios`. La policy estaba
+-- ahí por si acaso, y el «por si acaso» no funcionaba.
+--
+-- POR QUÉ ESTA SOLUCIÓN Y NO OTRA
+-- -------------------------------
+--   - Quitar `activa` de la policy: no. Una iglesia dada de baja seguiría
+--     enseñando sus grupos.
+--   - Una función SECURITY DEFINER que envuelva la comprobación: resuelve el
+--     permiso, pero hay que concederle EXECUTE a `anon`, y eso publica una RPC
+--     en `/rest/v1/rpc/` que permite preguntar por cualquier uuid. Más
+--     superficie, no menos.
+--   - Conceder la columna: superficie CERO. La policy de `iglesias` ya solo deja
+--     ver filas con `activa = true`, así que en todo lo que `anon` alcanza esta
+--     columna vale siempre lo mismo. No revela nada que el directorio no diga ya.
+--
+-- `activa` estaba fuera de la lista junto a las columnas de facturación, pero no
+-- es de esa familia: no dice cuánto paga una iglesia, dice si su cuenta sigue
+-- viva. Las de Stripe, el plan, el trial y `config` siguen fuera.
+-- ===========================================================================
+
+grant select (activa) on public.iglesias to anon;

@@ -11,6 +11,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
+import { rolEquipoEnum } from './enums';
 import { iglesias } from './iglesias';
 import { miembros } from './miembros';
 
@@ -39,16 +40,25 @@ export const ministerios = pgTable(
      */
     colorHex: text('color_hex').notNull().default('#2F5D50'),
 
+    // Aquí vivía `lider_miembro_id`. Se fue en la migración `0005` y el
+    // liderazgo pasó a `ministerio_miembros.rol_equipo`, por dos razones:
+    //
+    // 1. Un ministerio puede tener varios líderes. La columna solo guardaba uno.
+    // 2. Nada validaba que ese uuid fuera de esta iglesia. `editarMinisterio` lo
+    //    comprobaba con `z.string().uuid()` y punto, así que un POST con el id de
+    //    un miembro de otra congregación se escribía tal cual. Al ser el
+    //    liderazgo una fila de la pivote, hereda HT102 —el trigger de coherencia
+    //    que esa tabla ya tenía— sin escribir un trigger nuevo.
+
     /**
-     * Quién lo lidera. Apunta a la FICHA, no a la cuenta: el líder de alabanza
-     * puede no tener acceso a la aplicación y seguir siendo el líder.
+     * Foto del grupo para la web pública.
      *
-     * `set null` y no `cascade`: si se borra la ficha del líder, el ministerio
-     * se queda sin líder, no desaparece con él.
+     * Va en el bucket `iglesias-publico`, el mismo que el logo y la portada: es
+     * contenido que la congregación publica a propósito. Ojo con lo que se sube
+     * aquí — si sale gente reconocible, hace falta su consentimiento de imagen,
+     * que es uno de los tres que ya registra `consentimientos`.
      */
-    liderMiembroId: uuid('lider_miembro_id').references(() => miembros.id, {
-      onDelete: 'set null',
-    }),
+    fotoUrl: text('foto_url'),
 
     activo: boolean('activo').notNull().default(true),
     orden: integer('orden').notNull().default(0),
@@ -68,7 +78,6 @@ export const ministerios = pgTable(
       sql`lower(${t.nombre})`,
     ),
     index('idx_ministerios_iglesia').on(t.iglesiaId),
-    index('idx_ministerios_lider').on(t.liderMiembroId),
   ],
 );
 
@@ -104,6 +113,16 @@ export const ministerioMiembros = pgTable(
     /** "Vocalista", "Guitarra", "Maestra de nivel 2"… libre a propósito. */
     rolEnMinisterio: text('rol_en_ministerio'),
 
+    /**
+     * Qué manda esta persona aquí dentro. El otro eje de `rolEnMinisterio`, que
+     * dice qué HACE.
+     *
+     * Esta columna lleva privilegio: de ella depende `gestionar_su_ministerio`
+     * en `src/lib/auth/permisos.ts`. Por eso el trigger HT104 impide que alguien
+     * se ascienda a sí mismo, igual que HT101 en `iglesia_usuarios`.
+     */
+    rolEquipo: rolEquipoEnum('rol_equipo').notNull().default('voluntario'),
+
     desde: date('desde'),
     hasta: date('hasta'),
     activo: boolean('activo').notNull().default(true),
@@ -119,8 +138,21 @@ export const ministerioMiembros = pgTable(
     uniqueIndex('uq_ministerio_miembro_activo')
       .on(t.ministerioId, t.miembroId)
       .where(sql`activo = true`),
+    // UN solo responsable por ministerio, y lo dice la base de datos.
+    //
+    // Parcial por `activo` igual que su vecino de arriba: quien fue responsable
+    // y salió conserva su fila con 'responsable' —el histórico que un pastor
+    // quiere poder mirar— sin bloquear a quien le sucede.
+    uniqueIndex('uq_ministerio_responsable_activo')
+      .on(t.ministerioId)
+      .where(sql`rol_equipo = 'responsable' AND activo = true`),
     index('idx_ministerio_miembros_iglesia').on(t.iglesiaId),
     index('idx_ministerio_miembros_ministerio').on(t.ministerioId),
     index('idx_ministerio_miembros_miembro').on(t.miembroId),
+    // Lo consulta `getCurrentUserContext()` en CADA carga del panel para saber
+    // qué ministerios lidera esta persona.
+    index('idx_ministerio_miembros_lider')
+      .on(t.miembroId)
+      .where(sql`rol_equipo <> 'voluntario' AND activo = true`),
   ],
 );

@@ -55,6 +55,11 @@ export type UserContext = {
   miembroId: string | null;
   /** Ministerios en los que sirve. Define su ámbito si no ve la iglesia entera. */
   ministerioIds: string[];
+  /**
+   * Aquellos donde además es responsable o colíder. Es lo que acota
+   * `gestionar_su_ministerio`: sin esto, ese permiso no significaría nada.
+   */
+  ministeriosQueLidera: string[];
 };
 
 /**
@@ -114,7 +119,12 @@ export async function getCurrentUserContext(): Promise<UserContext | null> {
   // hacerlo condicional obligaría a cada llamante a saber si le toca pedirlo.
   const ministerios = fila.miembroId
     ? await dbAdmin
-        .select({ ministerioId: ministerioMiembros.ministerioId })
+        .select({
+          ministerioId: ministerioMiembros.ministerioId,
+          // Del MISMO viaje. Saber cuáles lidera no cuesta una consulta más:
+          // cuesta una columna, y las filas ya venían.
+          rolEquipo: ministerioMiembros.rolEquipo,
+        })
         .from(ministerioMiembros)
         .where(
           and(
@@ -143,6 +153,9 @@ export async function getCurrentUserContext(): Promise<UserContext | null> {
     permisos: resolverPermisos(fila.rol, fila.permisos),
     miembroId: fila.miembroId,
     ministerioIds: ministerios.map((m) => m.ministerioId),
+    ministeriosQueLidera: ministerios
+      .filter((m) => m.rolEquipo !== 'voluntario')
+      .map((m) => m.ministerioId),
   };
 }
 

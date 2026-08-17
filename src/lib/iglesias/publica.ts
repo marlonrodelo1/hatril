@@ -33,6 +33,7 @@ export type IglesiaPublica = {
   descripcion: string | null;
   historia: string | null;
   ciudad: string | null;
+  timezone: string;
   direccion: string | null;
   telefono: string | null;
   email: string | null;
@@ -40,6 +41,7 @@ export type IglesiaPublica = {
   redes: Record<string, string>;
   logoUrl: string | null;
   bannerUrl: string | null;
+  imagenes: string[];
   horarios: HorarioSemanal[];
   cuentaDonativos: string | null;
   titularDonativos: string | null;
@@ -48,6 +50,7 @@ export type IglesiaPublica = {
     nombre: string;
     descripcion: string | null;
     colorHex: string;
+    fotoUrl: string | null;
   }[];
 };
 
@@ -63,6 +66,7 @@ export async function obtenerIglesiaPublica(
       descripcion: iglesias.descripcion,
       historia: iglesias.historia,
       ciudad: iglesias.ciudad,
+      timezone: iglesias.timezone,
       direccion: iglesias.direccion,
       telefono: iglesias.telefono,
       email: iglesias.email,
@@ -70,6 +74,7 @@ export async function obtenerIglesiaPublica(
       redes: iglesias.redes,
       logoUrl: iglesias.logoUrl,
       bannerUrl: iglesias.bannerUrl,
+      imagenes: iglesias.imagenes,
       horarios: iglesias.horarios,
       cuentaDonativos: iglesias.cuentaDonativos,
       titularDonativos: iglesias.titularDonativos,
@@ -96,6 +101,7 @@ export async function obtenerIglesiaPublica(
       nombre: ministerios.nombre,
       descripcion: ministerios.descripcion,
       colorHex: ministerios.colorHex,
+      fotoUrl: ministerios.fotoUrl,
     })
     .from(ministerios)
     .where(

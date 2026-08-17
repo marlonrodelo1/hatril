@@ -5,6 +5,7 @@ import {
   timestamp,
   boolean,
   jsonb,
+  date,
   index,
   unique,
 } from 'drizzle-orm/pg-core';
@@ -78,7 +79,25 @@ export const iglesias = pgTable(
     redes: jsonb('redes').$type<Record<string, string>>().notNull().default({}),
 
     logoUrl: text('logo_url'),
+
+    /**
+     * La primera foto de `imagenes`, duplicada.
+     *
+     * Redundante y a propósito: la usan el directorio y la etiqueta de
+     * OpenGraph, y las dos quieren UNA imagen, no un array. Se mantiene
+     * sincronizada al subir y al borrar. Sin ella, cada consumidor tendría que
+     * saber que la portada es «el primer elemento de un jsonb».
+     */
     bannerUrl: text('banner_url'),
+
+    /**
+     * Las fotos del carrusel de la web pública, en el orden en que se pasan.
+     *
+     * En jsonb y no en tabla propia por lo mismo que `horarios`: son media
+     * docena de URLs de contenido de página, no una entidad con la que nadie va
+     * a cruzar datos. Una tabla obligaría a una consulta más en cada visita.
+     */
+    imagenes: jsonb('imagenes').$type<string[]>().notNull().default([]),
 
     // --- Contenido de la web pública (`/i/[slug]`) ---------------------------
 
@@ -171,6 +190,73 @@ export const iglesias = pgTable(
       .on(t.pais, t.ciudad)
       .where(sql`visible_en_directorio = true AND activa = true`),
     index('idx_iglesias_stripe_customer').on(t.stripeCustomerId),
+  ],
+);
+
+/**
+ * El devocional del día.
+ *
+ * Una tabla y no un jsonb como `horarios`: aquí sí hay una entidad con la que se
+ * cruzan datos —quién escribió, qué día tocaba, cuáles están sin publicar— y va
+ * a crecer una fila por día durante años.
+ *
+ * LA FECHA ES EL TURNO
+ * --------------------
+ * `fecha` no es «cuándo se escribió» sino «a qué día le corresponde». Con eso, el
+ * calendario de turnos no necesita tabla propia: el pastor crea la fila con
+ * fecha y autor, y esa persona rellena el contenido cuando le llega. Un
+ * devocional sin `cuerpo` es un turno pendiente.
+ */
+export const devocionales = pgTable(
+  'devocionales',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    iglesiaId: uuid('iglesia_id')
+      .notNull()
+      .references(() => iglesias.id, { onDelete: 'cascade' }),
+
+    /** El día que le toca. Sin hora: un devocional es de un día, no de un momento. */
+    fecha: date('fecha').notNull(),
+
+    titulo: text('titulo'),
+
+    /** El versículo, tal cual se cita, y su referencia por separado. */
+    versiculo: text('versiculo'),
+    referencia: text('referencia'),
+
+    cuerpo: text('cuerpo'),
+
+    imagenUrl: text('imagen_url'),
+
+    /**
+     * Quién lo escribe. Apunta a la FICHA y no a la cuenta, igual que el
+     * liderazgo de un ministerio: se firma con el nombre de la persona, y esa
+     * persona podría no tener acceso a la aplicación.
+     */
+    autorMiembroId: uuid('autor_miembro_id'),
+
+    /**
+     * Publicado sale en la web. Sin publicar es un borrador o un turno vacío.
+     * Arranca en `false`: nada se publica solo.
+     */
+    publicado: boolean('publicado').notNull().default(false),
+
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    // Un devocional por día y por iglesia. Dos para el mismo domingo es siempre
+    // un error: o se ha duplicado el turno o alguien no vio el que ya había.
+    unique('uq_devocional_iglesia_fecha').on(t.iglesiaId, t.fecha),
+    index('idx_devocionales_iglesia_fecha').on(t.iglesiaId, t.fecha),
+    // Para «¿me toca a mí algún día de estos?», que se consulta en cada carga
+    // del panel de quien escribe.
+    index('idx_devocionales_autor').on(t.autorMiembroId),
   ],
 );
 

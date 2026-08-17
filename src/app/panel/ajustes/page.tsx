@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { eq } from 'drizzle-orm';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Image as ImageIcon, Trash2, Upload } from 'lucide-react';
 
 import { requirePastor } from '@/lib/auth/guard-panel';
 import { withUser } from '@/lib/db';
@@ -11,11 +11,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  anadirFotos,
   cambiarVisibilidadDirectorio,
   guardarDatosIglesia,
+  guardarImagen,
   guardarWebPublica,
+  quitarFoto,
+  quitarImagen,
+
 } from './actions';
-import { FILAS_HORARIO } from './constantes';
+import type { Ranura } from '@/lib/iglesias/imagenes';
+import { FILAS_HORARIO, MAX_FOTOS } from './constantes';
 
 export const metadata: Metadata = { title: 'Ajustes' };
 
@@ -23,6 +29,12 @@ const CONFIRMACIONES: Record<string, string> = {
   datos: 'Datos de la iglesia guardados.',
   web: 'Web pública guardada.',
   directorio: 'Preferencias del directorio guardadas.',
+  logo: 'Logo actualizado.',
+  banner: 'Portada actualizada.',
+  'logo-quitada': 'Logo quitado.',
+  'banner-quitada': 'Portada quitada.',
+  fotos: 'Fotos añadidas.',
+  'foto-quitada': 'Foto quitada.',
 };
 
 export default async function AjustesPage({
@@ -118,6 +130,97 @@ export default async function AjustesPage({
             </Button>
           </Seccion>
         </form>
+
+        {/* ---------- Imágenes ---------- */}
+        {/* Fuera del formulario de «Página pública» a propósito: subir 2 MB
+            tarda, y no tiene por qué ir atado a guardar los horarios. */}
+        <Seccion
+          titulo="Imágenes"
+          nota="El logo y la portada que se ven en tu página y en el directorio."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <CampoImagen
+              ranura="logo"
+              titulo="Logo"
+              nota="Cuadrado. Se usa como avatar de la iglesia."
+              url={iglesia.logoUrl}
+              alto="h-[120px]"
+            />
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-border pt-4">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[15px] font-medium">
+                Fotos de la portada
+              </span>
+              <span className="t-label text-muted-foreground">
+                Se pasan solas arriba del todo de tu página. La primera es la que
+                sale en el directorio y al compartir el enlace.
+              </span>
+            </div>
+
+            {iglesia.imagenes.length > 0 && (
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {iglesia.imagenes.map((url, i) => (
+                  <li
+                    key={url}
+                    className="flex flex-col gap-2 rounded-lg border border-border bg-surface-alt p-2"
+                  >
+                    <div className="relative h-[90px] overflow-hidden rounded-md border border-border bg-background">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`Foto ${i + 1} de la iglesia`}
+                        className="size-full object-cover"
+                      />
+                      {i === 0 && (
+                        <span className="absolute left-1.5 top-1.5 rounded-full bg-accent px-2 py-[3px] text-[11px] font-bold text-accent-foreground">
+                          Portada
+                        </span>
+                      )}
+                    </div>
+                    <form action={quitarFoto.bind(null, url)}>
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <Trash2 strokeWidth={1.7} />
+                        Quitar
+                      </Button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {iglesia.imagenes.length < MAX_FOTOS && (
+              <form
+                action={anadirFotos}
+                className="flex flex-wrap items-center gap-2"
+              >
+                <input
+                  type="file"
+                  name="fotos"
+                  required
+                  multiple
+                  accept="image/jpeg,image/png,image/webp"
+                  aria-label="Elegir fotos de la iglesia"
+                  className="min-w-0 flex-1 text-[13px] text-muted-foreground file:mr-2.5 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-surface file:px-2.5 file:py-1.5 file:text-[13px] file:font-medium file:text-foreground hover:file:bg-background"
+                />
+                <Button type="submit" variant="outline" size="sm">
+                  <Upload strokeWidth={1.7} />
+                  Añadir
+                </Button>
+              </form>
+            )}
+          </div>
+
+          <p className="t-label text-muted-foreground">
+            JPG, PNG o WebP, hasta 2 MB cada una. Máximo {MAX_FOTOS} fotos.
+          </p>
+        </Seccion>
 
         {/* ---------- Web pública ---------- */}
         <form action={guardarWebPublica}>
@@ -326,6 +429,92 @@ export default async function AjustesPage({
         </form>
       </div>
     </>
+  );
+}
+
+/**
+ * Un hueco de imagen: la que hay, subir otra, y quitarla.
+ *
+ * `<input type="file">` nativo con su `Subir`, sin previsualización en el
+ * navegador. Una previsualización obliga a componente cliente y a estado, y lo
+ * que de verdad importa —cómo queda en la página— se ve pulsando «Verla».
+ *
+ * `<img>` y no `next/image`: el dominio de Supabase ya está en `remotePatterns`,
+ * pero aquí son dos miniaturas de un panel privado, no contenido que optimizar y
+ * cachear. `next/image` añadiría una petición al optimizador por cada carga.
+ */
+function CampoImagen({
+  ranura,
+  titulo,
+  nota,
+  url,
+  alto,
+}: {
+  ranura: Ranura;
+  titulo: string;
+  nota: string;
+  url: string | null;
+  alto: string;
+}) {
+  return (
+    <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-surface-alt p-3.5">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[15px] font-medium">{titulo}</span>
+        <span className="t-label text-muted-foreground">{nota}</span>
+      </div>
+
+      <div
+        className={`flex ${alto} items-center justify-center overflow-hidden rounded-lg border border-border bg-background`}
+      >
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={url}
+            alt={`${titulo} de la iglesia`}
+            className="size-full object-contain"
+          />
+        ) : (
+          <span className="flex flex-col items-center gap-1.5 text-muted-foreground">
+            <ImageIcon className="size-5" strokeWidth={1.6} />
+            <span className="text-[13px]">Sin imagen</span>
+          </span>
+        )}
+      </div>
+
+      <form
+        action={guardarImagen.bind(null, ranura)}
+        className="flex flex-wrap items-center gap-2"
+      >
+        <input
+          type="file"
+          name="imagen"
+          required
+          accept="image/jpeg,image/png,image/webp"
+          aria-label={`Elegir ${titulo.toLowerCase()}`}
+          className="min-w-0 flex-1 text-[13px] text-muted-foreground file:mr-2.5 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-surface file:px-2.5 file:py-1.5 file:text-[13px] file:font-medium file:text-foreground hover:file:bg-background"
+        />
+        <Button type="submit" variant="outline" size="sm">
+          <Upload strokeWidth={1.7} />
+          Subir
+        </Button>
+      </form>
+
+      {/* En su propio formulario: con el de subir al lado, un Enter de más
+          borraría la imagen en vez de cambiarla. */}
+      {url && (
+        <form action={quitarImagen.bind(null, ranura)}>
+          <Button
+            type="submit"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <Trash2 strokeWidth={1.7} />
+            Quitarla
+          </Button>
+        </form>
+      )}
+    </div>
   );
 }
 

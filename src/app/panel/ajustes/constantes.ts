@@ -16,3 +16,13 @@
  * se publican.
  */
 export const FILAS_HORARIO = 6;
+
+/**
+ * Cuántas fotos caben en el carrusel de la web pública.
+ *
+ * Vive aquí y no en `actions.ts` porque un fichero `'use server'` solo puede
+ * exportar funciones async: exportar una constante desde ahí rompe el build
+ * entero, y no lo caza el typecheck —es una regla de Next, no de TypeScript—,
+ * así que aparece al abrir la pantalla.
+ */
+export const MAX_FOTOS = 6;

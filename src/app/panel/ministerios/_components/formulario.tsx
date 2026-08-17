@@ -8,24 +8,25 @@ import { COLORES_MINISTERIO } from '@/lib/ministerios/colores';
 import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
 
 /**
- * Alta y edición de un ministerio.
+ * Alta y edición de un ministerio: nombre, descripción y color.
  *
- * EL RESPONSABLE SOLO APARECE AL EDITAR
- * -------------------------------------
- * Y solo si ya hay equipo. Al crear no se puede elegir: la lista de candidatos
- * son los integrantes, y un ministerio recién creado no tiene ninguno. Enseñar
- * un desplegable vacío en el alta obliga a explicar por qué está vacío; no
- * enseñarlo no obliga a nada.
+ * AQUÍ NO SE NOMBRA AL RESPONSABLE
+ * --------------------------------
+ * Había un desplegable con los integrantes, y se fue con la migración `0005`.
+ * Ahora un ministerio admite varios líderes, y una lista de personas con su rol
+ * no cabe en un `<select>` de valor único.
+ *
+ * Se nombra desde la pantalla del ministerio, en la propia fila de cada persona.
+ * Que es además donde el pastor está mirando cuando decide quién manda: con las
+ * caras del equipo delante, no en un formulario de datos.
  */
 export function FormularioMinisterio({
   accion,
   ministerio,
-  integrantes,
   error,
 }: {
   accion: (formData: FormData) => Promise<void>;
   ministerio?: MinisterioDetalle;
-  integrantes?: { id: string; nombre: string; apellidos: string | null }[];
   error?: string;
 }) {
   const colorActual = ministerio?.colorHex ?? COLORES_MINISTERIO[0].hex;
@@ -104,27 +105,6 @@ export function FormularioMinisterio({
           </div>
         </fieldset>
 
-        {ministerio && integrantes && integrantes.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="liderMiembroId">Responsable</Label>
-            <select
-              id="liderMiembroId"
-              name="liderMiembroId"
-              defaultValue={ministerio.lider?.id ?? ''}
-              className="h-[42px] rounded-lg border border-input bg-surface-alt px-3 text-[15px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
-            >
-              <option value="">Sin responsable</option>
-              {integrantes.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {[p.nombre, p.apellidos].filter(Boolean).join(' ')}
-                </option>
-              ))}
-            </select>
-            <p className="t-label text-muted-foreground">
-              Solo puedes elegir a alguien que ya esté en el equipo.
-            </p>
-          </div>
-        )}
       </section>
 
       <div className="flex items-center gap-3">

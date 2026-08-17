@@ -10,7 +10,7 @@
  * ----------------------
  *   - `esPastor(ctx)`  → gobierno de la iglesia: ajustes, equipo, facturación,
  *     bajas. NO es delegable: no hay permiso que se lo dé a nadie más.
- *   - `puede(ctx, p)`  → las cinco capacidades que el pastor SÍ reparte.
+ *   - `puede(ctx, p)`  → las capacidades que el pastor SÍ reparte.
  *
  * DÓNDE SE GUARDAN
  * ----------------
@@ -36,15 +36,31 @@
  * tiene por qué darle la dirección, la fecha de nacimiento ni las notas de cada
  * persona. Si un solo permiso hiciera las dos cosas, dar el primero regalaría
  * el segundo por la puerta de atrás.
+ *
+ * EL ÁMBITO NO VIVE EN EL PERMISO
+ * -------------------------------
+ * `gestionar_su_ministerio` dice «esta persona lleva lo suyo», y nada más. QUÉ
+ * es lo suyo sale del dato —de qué ministerios lidera—, no del jsonb. Separados
+ * así, dárselo por error a un tesorero no le abre absolutamente nada, porque no
+ * lidera ninguno.
  */
 
-/** Rol dentro de una iglesia. Coincide con `rol_iglesia_enum` en Postgres. */
-export type RolIglesia =
-  | 'pastor'
-  | 'lider'
-  | 'tesorero'
-  | 'secretaria'
-  | 'miembro';
+/**
+ * Rol dentro de una iglesia. Coincide con `rol_iglesia_enum` en Postgres.
+ *
+ * Array y no unión de literales suelta: hace falta poder recorrerlo para pintar
+ * el desplegable de la pantalla de Equipo y para el `z.enum` de su action, y así
+ * el tipo y la lista no pueden separarse. Mismo patrón que `PERMISOS`.
+ */
+export const ROLES_IGLESIA = [
+  'pastor',
+  'lider',
+  'tesorero',
+  'secretaria',
+  'miembro',
+] as const;
+
+export type RolIglesia = (typeof ROLES_IGLESIA)[number];
 
 export const PERMISOS = [
   /** Ver la congregación entera, no solo los miembros de sus ministerios. */
@@ -57,6 +73,10 @@ export const PERMISOS = [
   'aprobar_solicitudes',
   /** Ver fecha de nacimiento, dirección, estado civil y notas. */
   'ver_datos_sensibles',
+  /** Llevar los ministerios que lidera. Acotado por el dato, no por el permiso. */
+  'gestionar_su_ministerio',
+  /** Escribir el devocional que sale en la web de la iglesia. */
+  'escribir_devocionales',
 ] as const;
 
 export type Permiso = (typeof PERMISOS)[number];
@@ -104,6 +124,55 @@ export const ETIQUETAS_PERMISOS: Record<
     descripcion:
       'Datos especialmente protegidos por la ley. Dáselo solo a quien lo necesite para su trabajo: cada consulta queda registrada con su nombre.',
   },
+  gestionar_su_ministerio: {
+    titulo: 'Llevar sus propios ministerios',
+    descripcion:
+      'Quien sea responsable o colíder de un ministerio puede editarlo y mover a su gente, solo dentro de ese ministerio. No le deja crear ministerios nuevos ni tocar los de los demás.',
+  },
+  escribir_devocionales: {
+    titulo: 'Escribir el devocional',
+    descripcion:
+      'Redacta y publica el devocional del día en la web de la iglesia. Solo puede tocar los días que le hayas asignado.',
+  },
+};
+
+/**
+ * Cómo se le presenta cada rol al pastor. Junto al catálogo por lo mismo que las
+ * etiquetas de permisos: añadir un rol obliga a explicarlo aquí.
+ *
+ * Antes vivía una copia de esto en el sidebar, solo con el título. Al necesitar
+ * el desplegable de Equipo la descripción, se unificó aquí para no tener dos
+ * listas de roles que puedan discrepar.
+ */
+export const ETIQUETAS_ROLES: Record<
+  RolIglesia,
+  { titulo: string; descripcion: string }
+> = {
+  pastor: {
+    titulo: 'Pastor',
+    descripcion:
+      'Gobierna la iglesia entera: ajustes, equipo, suscripción y bajas. No se le puede recortar nada.',
+  },
+  lider: {
+    titulo: 'Líder',
+    descripcion:
+      'Lleva los ministerios de los que es responsable. Del resto de la congregación no ve nada salvo que se lo des.',
+  },
+  tesorero: {
+    titulo: 'Tesorero',
+    descripcion:
+      'Reservado para cuando existan las finanzas. Hoy no abre nada por sí solo.',
+  },
+  secretaria: {
+    titulo: 'Secretaría',
+    descripcion:
+      'Lleva el fichero: ve la congregación entera con sus datos, edita fichas y acepta solicitudes.',
+  },
+  miembro: {
+    titulo: 'Miembro',
+    descripcion:
+      'Solo lo suyo. Es lo que recibe quien entra desde el directorio público.',
+  },
 };
 
 /**
@@ -116,6 +185,8 @@ const NINGUNO: MapaPermisos = {
   gestionar_ministerios: false,
   aprobar_solicitudes: false,
   ver_datos_sensibles: false,
+  gestionar_su_ministerio: false,
+  escribir_devocionales: false,
 };
 
 const TODOS: MapaPermisos = {
@@ -124,6 +195,8 @@ const TODOS: MapaPermisos = {
   gestionar_ministerios: true,
   aprobar_solicitudes: true,
   ver_datos_sensibles: true,
+  gestionar_su_ministerio: true,
+  escribir_devocionales: true,
 };
 
 /**
@@ -134,8 +207,10 @@ const TODOS: MapaPermisos = {
  * pasaría por la pantalla de equipo antes de poder delegar nada, y acabaría
  * dándole el rol de pastor «para que funcione».
  *
- * `lider` nace cerrado: ve su ministerio por ámbito (ver `ambitoMiembros`), que
- * no es un permiso sino la consecuencia de a qué ministerios pertenece.
+ * `lider` nace con `gestionar_su_ministerio` y con nada más, porque es justo lo
+ * que el rol significa. VER su ministerio ya lo tenía por ámbito (ver
+ * `ambitoMiembros`), que no es un permiso sino la consecuencia de a qué
+ * ministerios pertenece; esto es la otra mitad, qué puede ESCRIBIR ahí dentro.
  *
  * `tesorero` no toca personas. En la v1 no hay finanzas todavía, así que el rol
  * existe sin capacidades: reservarlo ahora evita tener que migrar filas cuando
@@ -150,7 +225,7 @@ const DEFECTOS_POR_ROL: Record<RolIglesia, MapaPermisos> = {
     aprobar_solicitudes: true,
     ver_datos_sensibles: true,
   },
-  lider: NINGUNO,
+  lider: { ...NINGUNO, gestionar_su_ministerio: true },
   tesorero: NINGUNO,
   miembro: NINGUNO,
 };
@@ -228,10 +303,41 @@ export interface ContextoPermisos {
   miembroId: string | null;
   /** Ministerios en los que sirve. Define su ámbito cuando no ve la iglesia entera. */
   ministerioIds: string[];
+  /**
+   * Aquellos donde además es responsable o colíder. Siempre un subconjunto de
+   * `ministerioIds`: no se puede liderar un equipo sin estar en él.
+   */
+  ministeriosQueLidera: string[];
 }
 
 export function puede(ctx: ContextoPermisos, permiso: Permiso): boolean {
   return ctx.permisos[permiso] === true;
+}
+
+/** ¿Es responsable o colíder de este ministerio? */
+export function esLiderDe(ctx: ContextoPermisos, ministerioId: string): boolean {
+  return ctx.ministeriosQueLidera.includes(ministerioId);
+}
+
+/**
+ * ¿Puede tocar ESTE ministerio?
+ *
+ * Tres caminos que no se solapan: el pastor, quien tiene el permiso global de la
+ * iglesia, y el líder acotado a los suyos. Este último cruza permiso y dato a
+ * propósito: el permiso solo declara la política, y el ámbito lo pone la
+ * pertenencia real al equipo.
+ *
+ * Lo que esto NO abre, ni al líder ni por error: crear ministerios, archivarlos
+ * y cambiar quién es el responsable. A ese lo nombró el pastor; un líder puede
+ * traer ayuda, no sustituirse a sí mismo y desaparecer.
+ */
+export function puedeGestionarMinisterio(
+  ctx: ContextoPermisos,
+  ministerioId: string,
+): boolean {
+  if (esPastor(ctx)) return true;
+  if (puede(ctx, 'gestionar_ministerios')) return true;
+  return puede(ctx, 'gestionar_su_ministerio') && esLiderDe(ctx, ministerioId);
 }
 
 /**

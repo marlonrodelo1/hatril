@@ -66,13 +66,35 @@ no se ha ejecutado no está verificado, por muchos verdes que haya.
 
 ### Al crear una función en Postgres
 
-Nace cerrada desde la migración `0003`. Si de verdad hace falta exponerla:
+**Revócala en su propia migración. Siempre.**
+
+```sql
+revoke execute on function public.loquesea()
+  from public, anon, authenticated, service_role;
+```
+
+Y solo si de verdad hace falta exponerla:
 
 ```sql
 grant execute on function public.loquesea() to hatril_app;
 ```
 
 Nunca a `anon` ni a `authenticated` sin pensarlo dos veces.
+
+Aquí ponía que nacían cerradas gracias al `alter default privileges` de la
+migración `0003`. **No es verdad**, y costó descubrirlo: la `0005` creó
+`guard_ministerio_miembros()` confiando en eso, y salió con `=X/postgres` en su
+`proacl` —el grantee vacío es PUBLIC— mientras sus hermanas tenían solo
+`{postgres=X}`. Están cerradas porque la `0003` las revocó **una a una**, no por
+el cambio de defecto. La `0007` lo arregla y lo cuenta entero.
+
+Para comprobarlo, el `proacl` no miente:
+
+```sql
+select proname, proacl from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname = 'public';
+```
 
 ---
 
