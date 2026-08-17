@@ -45,6 +45,8 @@ export type IglesiaPublica = {
   horarios: HorarioSemanal[];
   cuentaDonativos: string | null;
   titularDonativos: string | null;
+  /** Si tiene abierta la puerta a que alguien pida unirse desde la web. */
+  aceptaSolicitudes: boolean;
   grupos: {
     id: string;
     nombre: string;
@@ -78,6 +80,7 @@ export async function obtenerIglesiaPublica(
       horarios: iglesias.horarios,
       cuentaDonativos: iglesias.cuentaDonativos,
       titularDonativos: iglesias.titularDonativos,
+      aceptaSolicitudes: iglesias.aceptaSolicitudes,
     })
     .from(iglesias)
     .where(

@@ -299,6 +299,27 @@ function Tarjeta({
               />
             </div>
 
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor={`videoUrl-${d.id}`} className="t-label">
+                Vídeo (opcional)
+              </label>
+              <Input
+                id={`videoUrl-${d.id}`}
+                name="videoUrl"
+                type="url"
+                inputMode="url"
+                maxLength={300}
+                defaultValue={d.videoUrl ?? ''}
+                placeholder="https://www.youtube.com/watch?v=…"
+              />
+              <span className="text-[13px] leading-relaxed text-muted-foreground">
+                Si lo grabáis en vídeo, pega aquí el enlace de YouTube o Vimeo y
+                en la web sale un botón para verlo. Se abre en YouTube, no dentro
+                de la página: empotrar el reproductor obligaría a poner un aviso
+                de cookies a quien solo viene a leer.
+              </span>
+            </div>
+
             {/* Publicar solo el pastor. Quien escribe deja el texto listo. */}
             {esPastorDeLaIglesia && (
               <label className="flex cursor-pointer items-start gap-2.5">

@@ -1,0 +1,1 @@
+ALTER TABLE "devocionales" ADD COLUMN "video_url" text;

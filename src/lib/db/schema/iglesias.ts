@@ -230,6 +230,27 @@ export const devocionales = pgTable(
     imagenUrl: text('imagen_url'),
 
     /**
+     * El mismo devocional, en vídeo.
+     *
+     * ENLACE, NO REPRODUCTOR EMPOTRADO
+     * --------------------------------
+     * Guarda la dirección de YouTube o Vimeo y la web pública pinta un botón que
+     * la abre fuera. NO se empotra un `<iframe>`, y es a propósito: el
+     * reproductor de YouTube escribe en el navegador de quien visita la página
+     * antes de que le dé a play, así que empotrarlo obliga a un aviso de cookies
+     * en la web de una iglesia. Y son varios cientos de kilobytes de JavaScript
+     * de terceros en la página que más se abre desde un móvil con datos.
+     *
+     * Si algún día se quiere ver dentro, el camino es la miniatura con el botón
+     * de play que solo carga el reproductor al pulsarlo. Sigue necesitando
+     * consentimiento, pero al menos no lo pide quien solo venía a leer.
+     *
+     * El dominio se valida al guardar (`EsquemaContenido`): un campo de URL
+     * libre en una página pública es una puerta abierta a pegar cualquier cosa.
+     */
+    videoUrl: text('video_url'),
+
+    /**
      * Quién lo escribe. Apunta a la FICHA y no a la cuenta, igual que el
      * liderazgo de un ministerio: se firma con el nombre de la persona, y esa
      * persona podría no tener acceso a la aplicación.

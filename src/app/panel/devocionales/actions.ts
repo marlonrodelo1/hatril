@@ -164,11 +164,53 @@ export async function guardarImagenDevocional(id: string, formData: FormData) {
   redirect(`${DESTINO}?guardado=imagen&abrir=${id}`);
 }
 
+/**
+ * De dónde puede venir el vídeo del devocional.
+ *
+ * Lista cerrada y no «cualquier https». El enlace acaba en un botón de la web
+ * pública de la iglesia, así que un campo libre es un sitio donde alguien con
+ * acceso al panel puede colgar lo que quiera y firmarlo con el nombre de la
+ * congregación. Añadir un dominio aquí es una línea; quitar uno que ya se
+ * publicó, no.
+ */
+const DOMINIOS_VIDEO = [
+  'youtube.com',
+  'www.youtube.com',
+  'm.youtube.com',
+  'youtu.be',
+  'youtube-nocookie.com',
+  'www.youtube-nocookie.com',
+  'vimeo.com',
+  'www.vimeo.com',
+  'player.vimeo.com',
+];
+
 const EsquemaContenido = z.object({
   titulo: z.string().trim().max(120).optional().or(z.literal('')),
   versiculo: z.string().trim().max(600).optional().or(z.literal('')),
   referencia: z.string().trim().max(80).optional().or(z.literal('')),
   cuerpo: z.string().trim().max(6000).optional().or(z.literal('')),
+  videoUrl: z
+    .string()
+    .trim()
+    .max(300)
+    .refine(
+      (v) => {
+        if (v === '') return true;
+        let url: URL;
+        try {
+          url = new URL(v);
+        } catch {
+          return false;
+        }
+        // `https` y no `http`: la web de la iglesia se sirve por https y un
+        // enlace en claro dispara el aviso de contenido mixto del navegador.
+        return url.protocol === 'https:' && DOMINIOS_VIDEO.includes(url.hostname);
+      },
+      'El vídeo tiene que ser un enlace de YouTube o de Vimeo que empiece por https.',
+    )
+    .optional()
+    .or(z.literal('')),
 });
 
 /**
@@ -186,6 +228,7 @@ export async function guardarDevocional(id: string, formData: FormData) {
     versiculo: campo(formData, 'versiculo'),
     referencia: campo(formData, 'referencia'),
     cuerpo: campo(formData, 'cuerpo'),
+    videoUrl: campo(formData, 'videoUrl'),
   });
 
   if (!parsed.success) volver(parsed.error.issues[0]!.message);
@@ -231,6 +274,7 @@ export async function guardarDevocional(id: string, formData: FormData) {
         versiculo: d.versiculo || null,
         referencia: d.referencia || null,
         cuerpo: d.cuerpo || null,
+        videoUrl: d.videoUrl || null,
         // Publicar es del pastor. Quien escribe deja el texto listo; el pastor
         // decide cuándo sale, que es lo que pidió la iglesia al repartir turnos.
         ...(esPastor(ctx) ? { publicado: casilla(formData, 'publicado') } : {}),

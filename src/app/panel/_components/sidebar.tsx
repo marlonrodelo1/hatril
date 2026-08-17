@@ -10,6 +10,7 @@ import {
   Settings,
   ShieldCheck,
   BookOpen,
+  MessagesSquare,
   ExternalLink,
   LogOut,
 } from 'lucide-react';
@@ -86,6 +87,15 @@ export function PanelSidebar({
           },
         ]
       : []),
+    // La comunidad no es del panel: es de toda la congregación y vive en el área
+    // del miembro. Está aquí porque quien administra también entra a ella, y
+    // buscarla escribiendo la dirección a mano no es un plan.
+    {
+      href: '/mi/comunidad',
+      etiqueta: 'Comunidad',
+      Icono: MessagesSquare,
+      aviso: 0,
+    },
     ...(puedeVerSolicitudes
       ? [
           {

@@ -59,6 +59,7 @@ declare
   MIE_B1 uuid;
   VIN_A1 uuid;
   VIN_A2 uuid;
+  PUB_A uuid;
 begin
   -- Montaje: dos iglesias, dos pastores y una solicitud sin aprobar.
   insert into public.iglesias (id, slug, nombre, ciudad, visible_en_directorio)
@@ -302,9 +303,112 @@ begin
                      left(sqlerrm, 30));
   end;
 
+  -- --- EL MURO DE LA COMUNIDAD (migracion 0015) ---
+  --
+  -- Es la primera tabla del proyecto donde escribe cualquier miembro, no solo
+  -- quien administra. Y donde firmar con la ficha de otro seria suplantarle
+  -- delante de su congregacion, asi que eso lo impide la base de datos y no la
+  -- aplicacion.
+  --
+  -- USR_C quedo aprobado mas arriba con miembro_id = MIE_A2 (Ruben).
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_C), true);
+  execute 'set local role hatril_app';
+
+  insert into public.publicaciones (iglesia_id, autor_miembro_id, texto)
+  values (IGL_A, MIE_A2, 'Peticion de oracion por mi madre');
+  get diagnostics n = row_count;
+  r := r || format(E'  %s un miembro raso SI puede publicar (%s fila)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  select id into PUB_A from public.publicaciones where iglesia_id = IGL_A limit 1;
+
+  -- Firmar con la ficha de otra persona de la MISMA iglesia.
+  begin
+    insert into public.publicaciones (iglesia_id, autor_miembro_id, texto)
+    values (IGL_A, MIE_A1, 'Escrito en nombre de Lucia');
+    r := r || E'  FALLO se puede publicar en nombre de otro miembro\\n';
+  exception when others then
+    r := r || E'  OK   no se puede publicar en nombre de otro miembro\\n';
+  end;
+
+  -- Dos veces el mismo me gusta no es un contador que sube.
+  insert into public.publicaciones_me_gusta (iglesia_id, publicacion_id, miembro_id)
+  values (IGL_A, PUB_A, MIE_A2);
+  begin
+    insert into public.publicaciones_me_gusta (iglesia_id, publicacion_id, miembro_id)
+    values (IGL_A, PUB_A, MIE_A2);
+    r := r || E'  FALLO el mismo me gusta cuenta dos veces\\n';
+  exception when unique_violation then
+    r := r || E'  OK   el mismo me gusta no cuenta dos veces\\n';
+  end;
+
+  -- --- Aislamiento del muro: el pastor de Sion ---
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.publicaciones;
+  r := r || format(E'  %s Sion no ve el muro de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.publicaciones_comentarios;
+  r := r || format(E'  %s Sion no ve los comentarios de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  -- Ni escribir en el muro ajeno, que es la otra mitad del aislamiento y la
+  -- que nadie prueba nunca.
+  begin
+    insert into public.publicaciones (iglesia_id, autor_miembro_id, texto)
+    values (IGL_A, MIE_A1, 'Colado desde otra iglesia');
+    r := r || E'  FALLO Sion escribe en el muro de Betania\\n';
+  exception when others then
+    r := r || E'  OK   Sion no escribe en el muro de Betania\\n';
+  end;
+
+  -- HT107: un comentario que apunta a una publicacion de otra congregacion.
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_C), true);
+  execute 'set local role hatril_app';
+
+  begin
+    insert into public.publicaciones_comentarios
+      (iglesia_id, publicacion_id, autor_miembro_id, texto)
+    values (IGL_B, PUB_A, MIE_A2, 'Cruzando iglesias');
+    r := r || E'  FALLO un comentario cruza dos iglesias\\n';
+  exception when others then
+    r := r || format(E'  %s un comentario no cruza dos iglesias (%s)\\n',
+                     case when sqlerrm like 'HT107%' or sqlerrm like '%row-level%'
+                          then 'OK  ' else 'FALLO' end,
+                     left(sqlerrm, 30));
+  end;
+
+  -- El pastor modera: borra lo que no es suyo dentro de SU iglesia.
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  delete from public.publicaciones where id = PUB_A;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s el pastor SI puede borrar lo de otro (%s fila)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
   -- --- anon ---
   execute 'reset role';
   execute 'set local role anon';
+
+  -- El muro es lo mas privado que guarda una iglesia despues del fichero de
+  -- miembros: una foto del domingo con menores dentro.
+  begin
+    select count(*) into n from public.publicaciones;
+    r := r || format(E'  FALLO anon lee el muro de la comunidad (%s)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega al muro de la comunidad\\n';
+  end;
 
   begin
     select count(*) into n from public.miembros;

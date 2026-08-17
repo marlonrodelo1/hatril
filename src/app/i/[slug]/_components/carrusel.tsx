@@ -96,18 +96,39 @@ export function CarruselIglesia({
   }
 
   return (
-    <div className="relative" onTouchStart={() => setParado(true)}>
+    /*
+     * EL ALTO LO MANDA EL TEXTO, NO LA FOTO
+     *
+     * Antes cada diapositiva medía 520px fijos y el texto iba encima en
+     * `absolute`. En un móvil de 320px la descripción de la iglesia ocupa nueve
+     * líneas, y el texto se salía por abajo de la foto y seguía por encima del
+     * fondo crema: el titular sobre la imagen y el botón fuera. No se veía en
+     * un iPhone normal, solo en los pequeños y con descripciones largas, que es
+     * justo lo que escribe una iglesia cuando le dejas un campo de texto.
+     *
+     * Ahora el alto es un mínimo, no una medida: el contenido va en el flujo y
+     * la fotografía se estira detrás con `absolute inset-0`. Si el texto crece,
+     * la foto crece con él.
+     *
+     * Y el mínimo va en `svh` acotado con `min()`: un móvil apaisado tiene unos
+     * 360px de alto, así que 460px fijos dejaban la primera pantalla sin que se
+     * viera nada más que la foto.
+     */
+    <div
+      className="relative flex min-h-[min(460px,86svh)] items-center overflow-hidden rounded-2xl border border-border md:min-h-[min(560px,84svh)] lg:min-h-[min(620px,86svh)]"
+      onTouchStart={() => setParado(true)}
+    >
       <div
         ref={pista}
         onScroll={alDesplazar}
-        className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-2xl border border-border [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         aria-roledescription="carrusel"
         aria-label={`Fotos de ${nombre}`}
       >
         {imagenes.map((url, i) => (
           <div
             key={url}
-            className="relative h-[520px] w-full flex-none snap-center md:h-[620px]"
+            className="relative h-full w-full flex-none snap-center"
             aria-roledescription="diapositiva"
             aria-label={`Foto ${i + 1} de ${imagenes.length}`}
           >
@@ -118,7 +139,7 @@ export function CarruselIglesia({
               // La primera se carga con prioridad porque es lo primero que se ve
               // al abrir la página; las demás, cuando toquen.
               priority={i === 0}
-              sizes="(max-width: 768px) 100vw, 1180px"
+              sizes="(max-width: 768px) 100vw, (max-width: 1180px) calc(100vw - 80px), 1100px"
               className="object-cover"
             />
 
@@ -140,31 +161,40 @@ export function CarruselIglesia({
       </div>
 
       {/* El contenido va FUERA del contenedor con scroll: dentro se desplazaría
-          con las fotos y habría que repetirlo en cada una. */}
+          con las fotos y habría que repetirlo en cada una. El `py` de abajo deja
+          sitio a los puntos para que no caigan sobre el último botón. */}
       {children && (
-        <div className="pointer-events-none absolute inset-0 flex items-center">
-          <div className="pointer-events-auto w-full px-6 md:px-12">
-            {children}
-          </div>
+        <div className="relative w-full px-5 py-12 sm:px-8 md:px-12 md:py-16">
+          {children}
         </div>
       )}
 
       {imagenes.length > 1 && (
-        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2">
+        <div className="absolute bottom-1 left-0 right-0 flex justify-center">
           {imagenes.map((url, i) => (
+            /*
+             * El punto mide 8px, pero el botón que lo contiene mide 44: es el
+             * mínimo de un objetivo táctil, y estos se pulsan con el pulgar
+             * sobre una foto en movimiento. Antes el área pulsable era el punto
+             * mismo y fallaba una de cada dos veces.
+             */
             <button
               key={url}
               type="button"
               onClick={() => irA(i)}
               aria-label={`Ver la foto ${i + 1}`}
               aria-current={i === actual}
-              className={
-                'h-2 rounded-full transition-all ' +
-                (i === actual
-                  ? 'w-7 bg-white'
-                  : 'w-2 bg-white/50 hover:bg-white/80')
-              }
-            />
+              className="group/punto flex size-11 items-center justify-center"
+            >
+              <span
+                className={
+                  'h-2 rounded-full transition-all ' +
+                  (i === actual
+                    ? 'w-7 bg-white'
+                    : 'w-2 bg-white/50 group-hover/punto:bg-white/80')
+                }
+              />
+            </button>
           ))}
         </div>
       )}

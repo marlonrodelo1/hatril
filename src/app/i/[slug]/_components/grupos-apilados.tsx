@@ -43,13 +43,23 @@ export function GruposApilados({
           <div
             key={g.id}
             className="sticky"
-            // `top` en línea y no con clases de Tailwind: es un valor calculado
-            // por posición, y generar `top-[24px]`, `top-[46px]`… a mano sería
-            // una clase por tarjeta que además Tailwind no puede purgar bien.
-            style={{ top: `${24 + i * 22}px` }}
+            /*
+             * `top` en línea y no con clases de Tailwind: es un valor calculado
+             * por posición, y generar `top-[24px]`, `top-[46px]`… a mano sería
+             * una clase por tarjeta que además Tailwind no puede purgar bien.
+             *
+             * Empieza en 76 y no en 24 porque la cabecera flota encima: con 24
+             * la tarjeta se quedaba pegada DEBAJO de la píldora y se le comía el
+             * borde superior, que es justo lo que da la sensación de baraja.
+             *
+             * Y el escalón se corta a las seis tarjetas. Una iglesia con diez
+             * ministerios acumulaba 220px de desplazamiento, y la última tarjeta
+             * ya no cabía entera en la pantalla de un móvil.
+             */
+            style={{ top: `${76 + Math.min(i, 5) * 13}px` }}
           >
             <article
-              className="relative flex min-h-[440px] flex-col justify-end overflow-hidden rounded-2xl border border-border p-8 md:min-h-[520px] md:p-12"
+              className="relative flex min-h-[min(420px,72svh)] flex-col justify-end overflow-hidden rounded-2xl border border-border p-6 sm:p-8 md:min-h-[min(520px,74svh)] md:p-12"
               style={{ background: g.fotoUrl ? undefined : color.suave }}
             >
               {g.fotoUrl ? (
@@ -58,7 +68,7 @@ export function GruposApilados({
                     src={g.fotoUrl}
                     alt={g.nombre}
                     fill
-                    sizes="(max-width: 768px) 100vw, 1180px"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1180px) calc(100vw - 80px), 1100px"
                     className="object-cover"
                   />
                   {/* El mismo velo plano que el carrusel del hero, por la misma
@@ -87,7 +97,7 @@ export function GruposApilados({
                 </span>
 
                 <h3
-                  className="text-pretty text-[32px] font-extrabold leading-[1.05] tracking-[-0.03em] md:text-[44px]"
+                  className="text-pretty text-[clamp(28px,7.5vw,44px)] font-extrabold leading-[1.05] tracking-[-0.03em]"
                   style={{ color: g.fotoUrl ? '#fff' : color.hex }}
                 >
                   {g.nombre}

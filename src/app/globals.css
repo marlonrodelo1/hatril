@@ -171,6 +171,20 @@
     @apply border-border outline-ring/30;
   }
 
+  /*
+   * La web pública de una iglesia se recorre entera a base de anclas: el menú
+   * son cinco enlaces a secciones de la misma página. Sin esto, cada pulsación
+   * es un salto seco y no se sabe si la página ha cambiado o se ha recargado.
+   *
+   * Dentro de `no-preference` porque para quien pide menos movimiento en su
+   * sistema, un desplazamiento largo y automático es justo lo que marea.
+   */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-size: var(--text-body);
@@ -283,5 +297,46 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--hatril-text-secondary);
+  }
+}
+
+/*
+ * Latido suave para una llamada a la acción concreta: la de la comunidad, que
+ * va dentro de una ilustración llena de gente y de color y se pierde entre el
+ * dibujo si se queda quieta.
+ *
+ * DOS LATIDOS Y UNA PAUSA LARGA
+ * -----------------------------
+ * El 70% del ciclo está en reposo. Una animación continua en bucle en una
+ * página que alguien va a leer entera cansa a los diez segundos; así el botón
+ * llama la atención cada tres segundos y desaparece del rabillo del ojo el
+ * resto del tiempo. Y crece un 4,5%, no un 20: es un aviso, no un anuncio.
+ *
+ * `prefers-reduced-motion` NO es opcional aquí. Un elemento que se mueve solo y
+ * sin parar es justo lo que marea a quien pide menos movimiento en su sistema, y
+ * a quien tiene un trastorno vestibular puede llegar a producirle náuseas. Fuera
+ * de ese `@media` el botón se queda quieto y funciona igual.
+ *
+ * Se aplica a un envoltorio y nunca al propio botón: el botón del sistema lleva
+ * `active:translate-y-px`, y dos reglas peleándose por el mismo `transform`
+ * hacen que al pulsarlo pegue un salto.
+ */
+@keyframes latido-suave {
+  0%,
+  70%,
+  100% {
+    transform: scale(1);
+  }
+  80% {
+    transform: scale(1.045);
+  }
+  90% {
+    transform: scale(1.012);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .latido-suave {
+    animation: latido-suave 3s ease-in-out infinite;
   }
 }

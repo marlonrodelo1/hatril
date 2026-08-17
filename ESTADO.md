@@ -40,8 +40,13 @@ lee al arrancar.
 - **Ministerios con varios líderes**: un responsable garantizado único por la
   base de datos, más los colíderes que hagan falta. Un líder gestiona los suyos
   y nada más (`gestionar_su_ministerio`).
-- **Devocionales**: calendario de turnos, redacción, imagen de fondo y
-  publicación. El devocional del día sale en la web de la iglesia.
+- **Devocionales**: calendario de turnos, redacción, imagen de fondo, enlace a
+  vídeo y publicación. El devocional del día sale en la web de la iglesia.
+- **Comunidad**: el muro de la congregación en `/mi/comunidad`. Publicar con
+  texto y hasta cuatro fotos, me gusta, comentarios, y borrado por el autor o
+  por el pastor. Solo para miembros con acceso ACTIVO: no sale en la web
+  pública, donde únicamente hay una invitación con un recuento. Las fotos van al
+  bucket **privado** `comunidad` y se sirven con URL firmada de una hora.
 - **Público**: portada, directorio de iglesias, web pública de cada
   congregación (carrusel de fotos con el titular encima, horarios con «lo
   próximo» calculado, devocional, grupos apilados al bajar), formulario de
@@ -51,12 +56,15 @@ lee al arrancar.
 - **Legales**: `/privacidad` y `/terminos`, con el encargo de tratamiento del
   art. 28 como anexo aceptable al registrar la iglesia. Los datos salen todos de
   `src/lib/legal/datos-responsable.ts`, así que se cambian en un solo sitio.
-- **Aislamiento**: 26 comprobaciones en `npm run test:aislamiento` más cuatro que
+- **Aislamiento**: 35 comprobaciones en `npm run test:aislamiento` más cuatro que
   llaman a `withUser()` de verdad, y cuatro hechas desde fuera con un JWT real
-  contra la API pública.
+  contra la API pública. Las nueve nuevas son del muro: publicar siendo miembro
+  raso, no poder firmar con la ficha de otro, me gusta duplicado, que Sion no
+  lea ni escriba en el muro de Betania, HT107, la moderación del pastor y que
+  `anon` no llegue.
 
-  **Pendiente**: el test no cubre todavía `devocionales`, que es tabla nueva con
-  RLS propia. Es lo primero que hay que añadir la próxima sesión.
+  **Pendiente**: el test sigue sin cubrir `devocionales`, que es tabla nueva con
+  RLS propia.
 
 ## Qué falta
 
@@ -88,6 +96,31 @@ la `0005`. Al conceder una policy, mirar SIEMPRE a qué roles va.
 
 **Una función nueva NO nace cerrada.** Pese a lo que decía este repo. Ver el
 apartado de funciones en `CLAUDE.md` y la migración `0007`.
+
+**`npm run db:migrate` no aplica nada y sale con código 0.** Sin error, sin
+mensaje y sin dejar rastro: parece que ha funcionado. Es `strict: true` en
+`drizzle.config.ts`, que pide confirmación por consola; cuando nadie puede
+contestarla, drizzle-kit se rinde en silencio. Se descubrió porque las tablas no
+aparecían después de dos pasadas «correctas».
+
+Mientras siga así, la vía que sí aplica —y registra igual en
+`drizzle.__drizzle_migrations`, así que el repo sigue siendo la fuente de
+verdad— es el migrador de `drizzle-orm`:
+
+```bash
+node --env-file=.env.local --input-type=module -e "import postgres from 'postgres'; import { drizzle } from 'drizzle-orm/postgres-js'; import { migrate } from 'drizzle-orm/postgres-js/migrator'; const sql = postgres(process.env.DATABASE_URL, { prepare: false, ssl: 'require', max: 1 }); await migrate(drizzle(sql), { migrationsFolder: './drizzle' }); await sql.end();"
+```
+
+Y da el error de verdad, que drizzle-kit se tragaba: hay que leer `e.cause`,
+porque `e.message` solo trae el SQL entero.
+
+**`miembros.estado` y `iglesia_usuarios.estado` son enums distintos que se
+parecen.** El primero es `visitante · nuevo · miembro · inactivo · baja` (la
+situación de la persona en la congregación); el segundo, `pendiente · activo ·
+rechazado · baja` (si su cuenta tiene acceso). Escribir `miembros.estado =
+'activo'` tumbó entera la migración `0015`. Para «¿esta persona puede entrar?»
+manda siempre el de `iglesia_usuarios`, que es el que consulta
+`pertenece_a_iglesia()`.
 
 **Una policy que consulta otra tabla necesita los GRANT de esa otra tabla.** Una
 policy `USING` sobre su propia tabla no comprueba permisos de columna; en cuanto
@@ -184,8 +217,15 @@ fichero.
 **Eventos y calendario.** Con fecha y hora, distintos de los horarios semanales
 que ya existen. Salen en la web pública.
 
-**Web pública, lo que falta:** versículos, servicios, sección de donaciones,
-«quiero ser parte» y redes sociales.
+**Web pública, lo que falta:** versículos, servicios y redes sociales. Los
+donativos ya no son una sección: son el botón «Donar» de la cabecera, y ahí es
+donde entrará el pago con Stripe. «Quiero ser parte» está en el bloque de
+comunidad.
+
+**Comunidad, fase 2:** vídeo (hoy solo enlace de YouTube en el devocional;
+subirlo cuesta almacenamiento y tráfico), avisos de la comunidad, menciones,
+reportar y ocultar, publicaciones fijadas. Y paginación del muro, que hoy trae
+las últimas treinta y ya está.
 
 **Reina-Valera 1960.** Investigar la licencia para poder mostrar el texto
 bíblico dentro del producto.

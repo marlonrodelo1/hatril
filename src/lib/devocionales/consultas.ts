@@ -27,6 +27,7 @@ export type DevocionalFila = {
   referencia: string | null;
   cuerpo: string | null;
   imagenUrl: string | null;
+  videoUrl: string | null;
   publicado: boolean;
   autorMiembroId: string | null;
   autorNombre: string | null;
@@ -42,6 +43,7 @@ function aFila(f: {
   referencia: string | null;
   cuerpo: string | null;
   imagenUrl: string | null;
+  videoUrl: string | null;
   publicado: boolean;
   autorMiembroId: string | null;
   autorNombre: string | null;
@@ -55,6 +57,7 @@ function aFila(f: {
     referencia: f.referencia,
     cuerpo: f.cuerpo,
     imagenUrl: f.imagenUrl,
+    videoUrl: f.videoUrl,
     publicado: f.publicado,
     autorMiembroId: f.autorMiembroId,
     autorNombre: f.autorNombre
@@ -72,6 +75,7 @@ const CAMPOS = {
   referencia: devocionales.referencia,
   cuerpo: devocionales.cuerpo,
   imagenUrl: devocionales.imagenUrl,
+  videoUrl: devocionales.videoUrl,
   publicado: devocionales.publicado,
   autorMiembroId: devocionales.autorMiembroId,
   autorNombre: miembros.nombre,
@@ -181,6 +185,7 @@ export async function devocionalPublico(
   referencia: string | null;
   cuerpo: string;
   imagenUrl: string | null;
+  videoUrl: string | null;
   autorNombre: string | null;
   esDeHoy: boolean;
 } | null> {
@@ -194,6 +199,7 @@ export async function devocionalPublico(
       referencia: devocionales.referencia,
       cuerpo: devocionales.cuerpo,
       imagenUrl: devocionales.imagenUrl,
+      videoUrl: devocionales.videoUrl,
       autorNombre: miembros.nombre,
       autorApellidos: miembros.apellidos,
     })
@@ -225,6 +231,7 @@ export async function devocionalPublico(
     referencia: d.referencia,
     cuerpo: d.cuerpo,
     imagenUrl: d.imagenUrl,
+    videoUrl: d.videoUrl,
     autorNombre: d.autorNombre
       ? [d.autorNombre, d.autorApellidos].filter(Boolean).join(' ')
       : null,
