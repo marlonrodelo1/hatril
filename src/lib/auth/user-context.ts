@@ -48,6 +48,8 @@ export type UserContext = {
     trialUntil: Date | null;
     stripeSubscriptionId: string | null;
     logoUrl: string | null;
+    /** Para poder ofrecer el enlace a su web solo cuando existe de verdad. */
+    webPublica: boolean;
   };
   rol: RolIglesia;
   permisos: MapaPermisos;
@@ -94,6 +96,7 @@ export async function getCurrentUserContext(): Promise<UserContext | null> {
       trialUntil: iglesias.trialUntil,
       stripeSubscriptionId: iglesias.stripeSubscriptionId,
       logoUrl: iglesias.logoUrl,
+      webPublica: iglesias.webPublica,
     })
     .from(iglesiaUsuarios)
     .innerJoin(iglesias, eq(iglesias.id, iglesiaUsuarios.iglesiaId))
@@ -148,6 +151,7 @@ export async function getCurrentUserContext(): Promise<UserContext | null> {
       trialUntil: fila.trialUntil,
       stripeSubscriptionId: fila.stripeSubscriptionId,
       logoUrl: fila.logoUrl,
+      webPublica: fila.webPublica,
     },
     rol: fila.rol,
     permisos: resolverPermisos(fila.rol, fila.permisos),

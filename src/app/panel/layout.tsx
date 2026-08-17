@@ -44,6 +44,7 @@ export default async function PanelLayout({
       <PanelSidebar
         iglesiaNombre={ctx.iglesia.nombre}
         iglesiaCiudad={ctx.iglesia.ciudad}
+        webIglesia={ctx.iglesia.webPublica ? `/i/${ctx.iglesia.slug}` : null}
         personaNombre={
           // El nombre que se puso al registrarse. Si por lo que sea no está,
           // el correo antes de la arroba es mejor que un hueco en blanco.

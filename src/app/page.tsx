@@ -45,7 +45,26 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const iglesias = await totalEnDirectorio();
+  /*
+   * EL CONTADOR NO PUEDE TUMBAR EL DESPLIEGUE
+   *
+   * Esta página es estática con ISR, así que Next la PRERENDERIZA al construir.
+   * Dentro del contenedor de Docker no existe `DATABASE_URL` —es una variable
+   * de ejecución, no de compilación— y `withAnon` lanza al no encontrarla. El
+   * build entero se caía con «Export encountered an error on /page: /», y en
+   * local no se veía porque ahí sí está el `.env.local`.
+   *
+   * Que un número decorativo impida desplegar es desproporcionado: se traga el
+   * fallo y se pinta la portada sin él. En la primera revalidación, con la
+   * variable ya presente, aparece.
+   */
+  let iglesias: number | null = null;
+
+  try {
+    iglesias = await totalEnDirectorio();
+  } catch (err) {
+    console.warn('[portada] no se pudo contar el directorio', err);
+  }
 
   return (
     <div className="min-h-dvh bg-background">
@@ -198,11 +217,13 @@ export default async function HomePage() {
             ¿Buscas tu propia iglesia?
           </h2>
           <p className="max-w-[520px] text-pretty text-[16px] leading-relaxed text-muted-foreground">
-            {iglesias === 0
-              ? 'Todavía no hay ninguna congregación publicada en el directorio. Si la tuya usa Hatril, pídele su enlace.'
-              : iglesias === 1
-                ? 'Hay una congregación publicada en el directorio. Búscala, mira sus horarios y pide unirte.'
-                : `Hay ${iglesias} congregaciones publicadas en el directorio. Busca la tuya, mira sus horarios y pide unirte.`}
+            {iglesias === null
+              ? 'Busca tu congregación en el directorio, mira sus horarios y pide unirte.'
+              : iglesias === 0
+                ? 'Todavía no hay ninguna congregación publicada en el directorio. Si la tuya usa Hatril, pídele su enlace.'
+                : iglesias === 1
+                  ? 'Hay una congregación publicada en el directorio. Búscala, mira sus horarios y pide unirte.'
+                  : `Hay ${iglesias} congregaciones publicadas en el directorio. Busca la tuya, mira sus horarios y pide unirte.`}
           </p>
           <Button variant="outline" render={<Link href="/iglesias" />}>
             Ir al directorio

@@ -10,6 +10,7 @@ import {
   Settings,
   ShieldCheck,
   BookOpen,
+  ExternalLink,
   LogOut,
 } from 'lucide-react';
 
@@ -42,6 +43,7 @@ import { ETIQUETAS_ROLES, type RolIglesia } from '@/lib/auth/permisos';
 export function PanelSidebar({
   iglesiaNombre,
   iglesiaCiudad,
+  webIglesia,
   personaNombre,
   rol,
   solicitudesPendientes,
@@ -51,6 +53,8 @@ export function PanelSidebar({
 }: {
   iglesiaNombre: string;
   iglesiaCiudad: string | null;
+  /** Su web pública, o null si todavía no la ha publicado. */
+  webIglesia: string | null;
   personaNombre: string;
   rol: RolIglesia;
   solicitudesPendientes: number;
@@ -130,6 +134,21 @@ export function PanelSidebar({
           )}
         </div>
       </div>
+
+      {/* El enlace a su propia web, solo si está publicada. Lleva a un sitio
+          fuera del panel, así que se abre en otra pestaña: quien lo pulsa quiere
+          MIRAR cómo ha quedado, no irse. */}
+      {webIglesia && (
+        <a
+          href={webIglesia}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mx-3 mt-3 flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-surface-alt text-[13.5px] font-semibold text-foreground no-underline transition-colors hover:bg-background hover:no-underline"
+        >
+          <ExternalLink className="size-[15px]" strokeWidth={1.8} />
+          Ver la web de la iglesia
+        </a>
+      )}
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
         {secciones.map(({ href, etiqueta, Icono, aviso }) => {
