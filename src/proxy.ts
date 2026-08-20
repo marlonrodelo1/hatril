@@ -36,6 +36,29 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  /*
+   * Las rutas de máquina salen aquí, antes de resolver el dominio.
+   *
+   * NO ES UNA OPTIMIZACIÓN, ES UN ARREGLO. La resolución de dominio de abajo
+   * mira la cabecera `Host`, y el webhook de Stripe llega con el `Host` que
+   * tenga configurado el endpoint. Si ese host resolviera a una iglesia con
+   * dominio propio, la petición se reescribiría a `/i/[slug]/api/stripe/webhook`
+   * —que no existe—, Stripe recibiría un 404, reintentaría durante tres días y
+   * se rendiría. Y nadie vería un solo error en los logs de la aplicación,
+   * porque la aplicación nunca se enteró.
+   *
+   * Y de paso se salta `updateSession()`, que tocaría cookies de Supabase en una
+   * petición server-to-server donde no hay sesión ninguna.
+   *
+   * Esto no abre nada: el proxy no autoriza (ver la cabecera de este fichero y
+   * `RUTAS_PRIVADAS` en `@/lib/supabase/middleware`, donde `/api` ni siquiera
+   * figura). Cada handler bajo `/api` lleva su propio guard: `requirePermisoApi`,
+   * `requireApiToken`, o —en el webhook— la firma HMAC de Stripe.
+   */
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
   const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
   const slug = await resolverSlugPorDominio(host);
 

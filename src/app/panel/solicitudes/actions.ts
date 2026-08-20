@@ -15,6 +15,10 @@ import {
 } from '@/lib/db/schema';
 import { VERSION_POLITICA_PRIVACIDAD } from '@/lib/rgpd/consentimiento';
 import { campo } from '@/lib/api/formulario';
+import {
+  cerrarAvisosDeSolicitud,
+  emitirNotificacion,
+} from '@/lib/notificaciones/emitir';
 
 /**
  * Aprobar o rechazar quien pide entrar en la iglesia.
@@ -36,7 +40,10 @@ export async function aprobarSolicitud(solicitudId: string) {
     redirect('/panel/solicitudes');
   }
 
-  await withUser(ctx.user.id, async (tx) => {
+  // La transacción devuelve a quién hay que avisar. El aviso se emite DESPUÉS y
+  // fuera: va por `dbAdmin` —la tabla no acepta escrituras de una sesión— y
+  // meterlo dentro ataría la aprobación al éxito de una notificación.
+  const avisarA = await withUser(ctx.user.id, async (tx) => {
     const [solicitud] = await tx
       .select({
         id: solicitudesIngreso.id,
@@ -57,7 +64,7 @@ export async function aprobarSolicitud(solicitudId: string) {
 
     // Ya la resolvió otra persona del equipo entre que se cargó la pantalla y
     // se pulsó el botón. No es un error: simplemente no hay nada que hacer.
-    if (!solicitud) return;
+    if (!solicitud) return null;
 
     // La ficha se crea al aprobar, no al solicitar. Mientras la solicitud está
     // pendiente, esa persona NO forma parte del fichero de la congregación: si
@@ -110,6 +117,20 @@ export async function aprobarSolicitud(solicitudId: string) {
         revisadoAt: new Date(),
       })
       .where(eq(solicitudesIngreso.id, solicitud.id));
+
+    return solicitud.authUserId;
+  });
+
+  // Al resolverla, el «ha llegado una solicitud» que recibió el resto del equipo
+  // deja de tener sentido: se da por leído solo.
+  await cerrarAvisosDeSolicitud(ctx.iglesia.id, solicitudId);
+
+  await emitirNotificacion({
+    iglesiaId: ctx.iglesia.id,
+    destinatarioAuthUserId: avisarA,
+    tipo: 'solicitud_aprobada',
+    datos: { iglesia: ctx.iglesia.nombre },
+    enlace: '/mi/comunidad',
   });
 
   revalidatePath('/panel/solicitudes');
@@ -138,7 +159,7 @@ export async function rechazarSolicitud(
 
   if (!parsed.success) redirect('/panel/solicitudes');
 
-  await withUser(ctx.user.id, async (tx) => {
+  const avisarA = await withUser(ctx.user.id, async (tx) => {
     const [solicitud] = await tx
       .select({ authUserId: solicitudesIngreso.authUserId })
       .from(solicitudesIngreso)
@@ -151,7 +172,7 @@ export async function rechazarSolicitud(
       )
       .limit(1);
 
-    if (!solicitud) return;
+    if (!solicitud) return null;
 
     await tx
       .update(solicitudesIngreso)
@@ -183,6 +204,24 @@ export async function rechazarSolicitud(
           eq(iglesiaUsuarios.estado, 'pendiente'),
         ),
       );
+
+    return solicitud.authUserId;
+  });
+
+  // Se le dice, con el motivo si lo hubo. Dejar a alguien esperando para siempre
+  // una respuesta que ya se ha tomado es lo que hacía esta pantalla antes de
+  // tener a dónde escribirle.
+  await cerrarAvisosDeSolicitud(ctx.iglesia.id, solicitudId);
+
+  await emitirNotificacion({
+    iglesiaId: ctx.iglesia.id,
+    destinatarioAuthUserId: avisarA,
+    tipo: 'solicitud_rechazada',
+    datos: {
+      iglesia: ctx.iglesia.nombre,
+      ...(parsed.data.motivo ? { motivo: parsed.data.motivo } : {}),
+    },
+    enlace: '/iglesias',
   });
 
   revalidatePath('/panel/solicitudes');

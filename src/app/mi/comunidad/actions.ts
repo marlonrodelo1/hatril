@@ -16,6 +16,10 @@ import {
 import { campo } from '@/lib/api/formulario';
 import { autorDePublicacion } from '@/lib/comunidad/consultas';
 import {
+  cuentaDeMiembro,
+  emitirNotificacion,
+} from '@/lib/notificaciones/emitir';
+import {
   borrarImagenes,
   subirImagenesPublicacion,
   MAX_IMAGENES,
@@ -157,6 +161,10 @@ export async function alternarMeGusta(publicacionId: string) {
   const ctx = await requireIglesiaAccion();
   const miembroId = requiereFicha(ctx);
 
+  // `true` solo cuando se PONE. Al quitarlo no se avisa de nada: nadie quiere
+  // enterarse de que a alguien ha dejado de gustarle lo suyo.
+  let puesto = false;
+
   await withUser(ctx.user.id, async (tx) => {
     const borradas = await tx
       .delete(publicacionesMeGusta)
@@ -177,10 +185,65 @@ export async function alternarMeGusta(publicacionId: string) {
           miembroId,
         })
         .onConflictDoNothing();
+      puesto = true;
     }
   });
 
+  if (puesto) {
+    await avisarAlAutor(ctx, publicacionId, 'me_gusta_en_publicacion');
+  }
+
   revalidatePath(DESTINO);
+}
+
+/**
+ * Avisa a quien escribió la publicación.
+ *
+ * `emitirNotificacion` se salta el aviso cuando el destinatario es quien lo
+ * provoca, así que comentarse a uno mismo o darse me gusta no genera nada. Y
+ * `cuentaDeMiembro` devuelve `null` para quien tiene ficha y no usa la
+ * aplicación, que es media congregación: tampoco es un error.
+ */
+/**
+ * Con qué nombre firma el aviso quien lo provoca.
+ *
+ * Del `user_metadata` y no de su ficha, que obligaría a otra consulta para poner
+ * una palabra. Si no hay nombre —una cuenta creada sin él— sale «Alguien», que
+ * es cierto y no deja el aviso a medias.
+ */
+function nombreDe(ctx: UserContext): string {
+  return (
+    (ctx.user.user_metadata?.nombre as string | undefined) ??
+    ctx.user.email?.split('@')[0] ??
+    'Alguien'
+  );
+}
+
+async function avisarAlAutor(
+  ctx: UserContext,
+  publicacionId: string,
+  tipo: 'comentario_en_publicacion' | 'me_gusta_en_publicacion',
+  extracto?: string,
+) {
+  const publicacion = await autorDePublicacion(ctx, publicacionId);
+  if (!publicacion) return;
+
+  const destinatario = await cuentaDeMiembro(
+    ctx.iglesia.id,
+    publicacion.autorMiembroId,
+  );
+
+  await emitirNotificacion({
+    iglesiaId: ctx.iglesia.id,
+    destinatarioAuthUserId: destinatario,
+    provocadoPor: ctx.user.id,
+    tipo,
+    datos: {
+      quien: nombreDe(ctx),
+      ...(extracto ? { extracto } : {}),
+    },
+    enlace: DESTINO,
+  });
 }
 
 const EsquemaComentario = z.object({
@@ -203,6 +266,15 @@ export async function comentar(publicacionId: string, formData: FormData) {
       autorMiembroId: miembroId,
       texto: parsed.data.texto,
     }),
+  );
+
+  // El extracto va en el aviso para que se entienda sin abrirlo. Cortado a 120:
+  // es un aviso, no el comentario.
+  await avisarAlAutor(
+    ctx,
+    publicacionId,
+    'comentario_en_publicacion',
+    parsed.data.texto.slice(0, 120),
   );
 
   revalidatePath(DESTINO);

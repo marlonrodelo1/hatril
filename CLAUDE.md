@@ -96,6 +96,45 @@ select proname, proacl from pg_proc p
  where n.nspname = 'public';
 ```
 
+### Al crear una tabla en Postgres
+
+**Revócala también, y ANTES de cualquier `grant`.**
+
+```sql
+revoke all on public.loquesea from anon, authenticated, service_role;
+```
+
+Un `grant select (col, col)` **no recorta nada** si debajo sigue el grant de
+tabla entera. Y el grant de tabla entera está ahí aunque nadie lo escriba: el
+defecto de Supabase daba `arwdDxtm` a `anon` y `authenticated` en cada tabla
+nueva de `public`.
+
+No es teoría. La `0012` fue la única migración que hizo `grant` sin `revoke`
+delante, y el resultado es que durante meses esta petición devolvió 200 con la
+clave publicable, la que va en el JavaScript del navegador:
+
+```
+GET /rest/v1/devocionales?select=id,autor_miembro_id,video_url
+```
+
+Justo la columna que esa misma migración había dejado fuera del grant a
+propósito, escribiendo al lado que «el id de una ficha no tiene por qué salir a
+internet». La RLS aguantó lo demás —no había policy de escritura para `anon`—,
+pero el recorte por columnas era decorativo. Lo cuenta entero la `0022`, que
+además **invierte el defecto**, así que a partir de ahí una tabla nueva nace
+cerrada. Aun así, escribe el `revoke`: el defecto vale para esta base, y el
+fichero tiene que decir la verdad en cualquier otra.
+
+Para comprobarlo, sin fiarse de nada:
+
+```sql
+select relname,
+       has_table_privilege('anon', oid, 'SELECT') as anon,
+       has_table_privilege('authenticated', oid, 'SELECT') as auth
+  from pg_class c join pg_namespace n on n.oid = c.relnamespace
+ where n.nspname = 'public' and c.relkind = 'r';
+```
+
 ---
 
 ## Stack

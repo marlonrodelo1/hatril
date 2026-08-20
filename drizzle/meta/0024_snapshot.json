@@ -1,0 +1,3459 @@
+{
+  "id": "af6f0d6b-cd95-4e44-ab75-4e2d0f6395fe",
+  "prevId": "dc405608-587d-4e71-b1a8-687b9be34142",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.devocionales": {
+      "name": "devocionales",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha": {
+          "name": "fecha",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "titulo": {
+          "name": "titulo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "versiculo": {
+          "name": "versiculo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referencia": {
+          "name": "referencia",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cuerpo": {
+          "name": "cuerpo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "imagen_url": {
+          "name": "imagen_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "video_url": {
+          "name": "video_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "autor_miembro_id": {
+          "name": "autor_miembro_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "publicado": {
+          "name": "publicado",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_devocionales_iglesia_fecha": {
+          "name": "idx_devocionales_iglesia_fecha",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "fecha",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_devocionales_autor": {
+          "name": "idx_devocionales_autor",
+          "columns": [
+            {
+              "expression": "autor_miembro_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "devocionales_iglesia_id_iglesias_id_fk": {
+          "name": "devocionales_iglesia_id_iglesias_id_fk",
+          "tableFrom": "devocionales",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "uq_devocional_iglesia_fecha": {
+          "name": "uq_devocional_iglesia_fecha",
+          "columns": [
+            "iglesia_id",
+            "fecha"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.iglesia_usuarios": {
+      "name": "iglesia_usuarios",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth_user_id": {
+          "name": "auth_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rol": {
+          "name": "rol",
+          "type": "rol_iglesia_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'miembro'"
+        },
+        "permisos": {
+          "name": "permisos",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_membresia_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pendiente'"
+        },
+        "miembro_id": {
+          "name": "miembro_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aprobado_por": {
+          "name": "aprobado_por",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aprobado_at": {
+          "name": "aprobado_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_iglesia_usuarios_auth": {
+          "name": "idx_iglesia_usuarios_auth",
+          "columns": [
+            {
+              "expression": "auth_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_iglesia_usuarios_iglesia": {
+          "name": "idx_iglesia_usuarios_iglesia",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_iglesia_usuarios_miembro": {
+          "name": "idx_iglesia_usuarios_miembro",
+          "columns": [
+            {
+              "expression": "miembro_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "iglesia_usuarios_iglesia_id_iglesias_id_fk": {
+          "name": "iglesia_usuarios_iglesia_id_iglesias_id_fk",
+          "tableFrom": "iglesia_usuarios",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "iglesia_usuarios_iglesia_auth_unique": {
+          "name": "iglesia_usuarios_iglesia_auth_unique",
+          "columns": [
+            "iglesia_id",
+            "auth_user_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.iglesias": {
+      "name": "iglesias",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "denominacion": {
+          "name": "denominacion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "descripcion": {
+          "name": "descripcion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pais": {
+          "name": "pais",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'CO'"
+        },
+        "ciudad": {
+          "name": "ciudad",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direccion": {
+          "name": "direccion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'America/Bogota'"
+        },
+        "moneda": {
+          "name": "moneda",
+          "type": "moneda_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'COP'"
+        },
+        "telefono": {
+          "name": "telefono",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "web": {
+          "name": "web",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "redes": {
+          "name": "redes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "logo_url": {
+          "name": "logo_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "banner_url": {
+          "name": "banner_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "imagenes": {
+          "name": "imagenes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "web_publica": {
+          "name": "web_publica",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "historia": {
+          "name": "historia",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "horarios": {
+          "name": "horarios",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "cuenta_donativos": {
+          "name": "cuenta_donativos",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "titular_donativos": {
+          "name": "titular_donativos",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dominio_propio": {
+          "name": "dominio_propio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "visible_en_directorio": {
+          "name": "visible_en_directorio",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "acepta_solicitudes": {
+          "name": "acepta_solicitudes",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "plan": {
+          "name": "plan",
+          "type": "plan_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'trial'"
+        },
+        "trial_until": {
+          "name": "trial_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stripe_customer_id": {
+          "name": "stripe_customer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stripe_subscription_id": {
+          "name": "stripe_subscription_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activa": {
+          "name": "activa",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "config": {
+          "name": "config",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_iglesias_directorio": {
+          "name": "idx_iglesias_directorio",
+          "columns": [
+            {
+              "expression": "pais",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ciudad",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "visible_en_directorio = true AND activa = true",
+          "concurrently": false
+        },
+        "idx_iglesias_stripe_customer": {
+          "name": "idx_iglesias_stripe_customer",
+          "columns": [
+            {
+              "expression": "stripe_customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"iglesias\".\"stripe_customer_id\" is not null",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "iglesias_slug_unique": {
+          "name": "iglesias_slug_unique",
+          "columns": [
+            "slug"
+          ],
+          "nullsNotDistinct": false
+        },
+        "iglesias_dominio_propio_unique": {
+          "name": "iglesias_dominio_propio_unique",
+          "columns": [
+            "dominio_propio"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.miembros": {
+      "name": "miembros",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth_user_id": {
+          "name": "auth_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "numero_miembro": {
+          "name": "numero_miembro",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "apellidos": {
+          "name": "apellidos",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "telefono": {
+          "name": "telefono",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fecha_nacimiento": {
+          "name": "fecha_nacimiento",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direccion": {
+          "name": "direccion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ciudad": {
+          "name": "ciudad",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado_civil": {
+          "name": "estado_civil",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notas": {
+          "name": "notas",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "foto_url": {
+          "name": "foto_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_miembro_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'visitante'"
+        },
+        "bautizado": {
+          "name": "bautizado",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "fecha_bautismo": {
+          "name": "fecha_bautismo",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fecha_ingreso": {
+          "name": "fecha_ingreso",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ultima_asistencia": {
+          "name": "ultima_asistencia",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "archivado_at": {
+          "name": "archivado_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_miembros_iglesia": {
+          "name": "idx_miembros_iglesia",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_miembros_auth": {
+          "name": "idx_miembros_auth",
+          "columns": [
+            {
+              "expression": "auth_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_miembros_iglesia_estado": {
+          "name": "idx_miembros_iglesia_estado",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "estado",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_miembros_email": {
+          "name": "idx_miembros_email",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "miembros_iglesia_id_iglesias_id_fk": {
+          "name": "miembros_iglesia_id_iglesias_id_fk",
+          "tableFrom": "miembros",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "miembros_iglesia_numero_unique": {
+          "name": "miembros_iglesia_numero_unique",
+          "columns": [
+            "iglesia_id",
+            "numero_miembro"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.solicitudes_ingreso": {
+      "name": "solicitudes_ingreso",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth_user_id": {
+          "name": "auth_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "telefono": {
+          "name": "telefono",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mensaje": {
+          "name": "mensaje",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_solicitud_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pendiente'"
+        },
+        "revisado_por": {
+          "name": "revisado_por",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revisado_at": {
+          "name": "revisado_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "motivo_rechazo": {
+          "name": "motivo_rechazo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "uq_solicitudes_pendiente_por_persona": {
+          "name": "uq_solicitudes_pendiente_por_persona",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "auth_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "estado = 'pendiente'",
+          "concurrently": false
+        },
+        "idx_solicitudes_iglesia_estado": {
+          "name": "idx_solicitudes_iglesia_estado",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "estado",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_solicitudes_auth": {
+          "name": "idx_solicitudes_auth",
+          "columns": [
+            {
+              "expression": "auth_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "solicitudes_ingreso_iglesia_id_iglesias_id_fk": {
+          "name": "solicitudes_ingreso_iglesia_id_iglesias_id_fk",
+          "tableFrom": "solicitudes_ingreso",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ministerio_miembros": {
+      "name": "ministerio_miembros",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ministerio_id": {
+          "name": "ministerio_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "miembro_id": {
+          "name": "miembro_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rol_en_ministerio": {
+          "name": "rol_en_ministerio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rol_equipo": {
+          "name": "rol_equipo",
+          "type": "rol_equipo_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'voluntario'"
+        },
+        "desde": {
+          "name": "desde",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hasta": {
+          "name": "hasta",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activo": {
+          "name": "activo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "uq_ministerio_miembro_activo": {
+          "name": "uq_ministerio_miembro_activo",
+          "columns": [
+            {
+              "expression": "ministerio_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "miembro_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "activo = true",
+          "concurrently": false
+        },
+        "uq_ministerio_responsable_activo": {
+          "name": "uq_ministerio_responsable_activo",
+          "columns": [
+            {
+              "expression": "ministerio_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "rol_equipo = 'responsable' AND activo = true",
+          "concurrently": false
+        },
+        "idx_ministerio_miembros_iglesia": {
+          "name": "idx_ministerio_miembros_iglesia",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_ministerio_miembros_ministerio": {
+          "name": "idx_ministerio_miembros_ministerio",
+          "columns": [
+            {
+              "expression": "ministerio_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_ministerio_miembros_miembro": {
+          "name": "idx_ministerio_miembros_miembro",
+          "columns": [
+            {
+              "expression": "miembro_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_ministerio_miembros_lider": {
+          "name": "idx_ministerio_miembros_lider",
+          "columns": [
+            {
+              "expression": "miembro_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "rol_equipo <> 'voluntario' AND activo = true",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "ministerio_miembros_iglesia_id_iglesias_id_fk": {
+          "name": "ministerio_miembros_iglesia_id_iglesias_id_fk",
+          "tableFrom": "ministerio_miembros",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "ministerio_miembros_ministerio_id_ministerios_id_fk": {
+          "name": "ministerio_miembros_ministerio_id_ministerios_id_fk",
+          "tableFrom": "ministerio_miembros",
+          "columnsFrom": [
+            "ministerio_id"
+          ],
+          "tableTo": "ministerios",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "ministerio_miembros_miembro_id_miembros_id_fk": {
+          "name": "ministerio_miembros_miembro_id_miembros_id_fk",
+          "tableFrom": "ministerio_miembros",
+          "columnsFrom": [
+            "miembro_id"
+          ],
+          "tableTo": "miembros",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ministerios": {
+      "name": "ministerios",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descripcion": {
+          "name": "descripcion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "color_hex": {
+          "name": "color_hex",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'#2F5D50'"
+        },
+        "foto_url": {
+          "name": "foto_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activo": {
+          "name": "activo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "orden": {
+          "name": "orden",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "uq_ministerios_iglesia_nombre": {
+          "name": "uq_ministerios_iglesia_nombre",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"nombre\")",
+              "isExpression": true,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_ministerios_iglesia": {
+          "name": "idx_ministerios_iglesia",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "ministerios_iglesia_id_iglesias_id_fk": {
+          "name": "ministerios_iglesia_id_iglesias_id_fk",
+          "tableFrom": "ministerios",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.publicaciones": {
+      "name": "publicaciones",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "autor_miembro_id": {
+          "name": "autor_miembro_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "texto": {
+          "name": "texto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "imagenes": {
+          "name": "imagenes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_publicaciones_iglesia_fecha": {
+          "name": "idx_publicaciones_iglesia_fecha",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_publicaciones_autor": {
+          "name": "idx_publicaciones_autor",
+          "columns": [
+            {
+              "expression": "autor_miembro_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "publicaciones_iglesia_id_iglesias_id_fk": {
+          "name": "publicaciones_iglesia_id_iglesias_id_fk",
+          "tableFrom": "publicaciones",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "publicaciones_autor_miembro_id_miembros_id_fk": {
+          "name": "publicaciones_autor_miembro_id_miembros_id_fk",
+          "tableFrom": "publicaciones",
+          "columnsFrom": [
+            "autor_miembro_id"
+          ],
+          "tableTo": "miembros",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ck_publicaciones_no_vacia": {
+          "name": "ck_publicaciones_no_vacia",
+          "value": "\"publicaciones\".\"texto\" is not null or jsonb_array_length(\"publicaciones\".\"imagenes\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.publicaciones_comentarios": {
+      "name": "publicaciones_comentarios",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "publicacion_id": {
+          "name": "publicacion_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "autor_miembro_id": {
+          "name": "autor_miembro_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "texto": {
+          "name": "texto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_comentarios_publicacion": {
+          "name": "idx_comentarios_publicacion",
+          "columns": [
+            {
+              "expression": "publicacion_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_comentarios_autor": {
+          "name": "idx_comentarios_autor",
+          "columns": [
+            {
+              "expression": "autor_miembro_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "publicaciones_comentarios_iglesia_id_iglesias_id_fk": {
+          "name": "publicaciones_comentarios_iglesia_id_iglesias_id_fk",
+          "tableFrom": "publicaciones_comentarios",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "publicaciones_comentarios_publicacion_id_publicaciones_id_fk": {
+          "name": "publicaciones_comentarios_publicacion_id_publicaciones_id_fk",
+          "tableFrom": "publicaciones_comentarios",
+          "columnsFrom": [
+            "publicacion_id"
+          ],
+          "tableTo": "publicaciones",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "publicaciones_comentarios_autor_miembro_id_miembros_id_fk": {
+          "name": "publicaciones_comentarios_autor_miembro_id_miembros_id_fk",
+          "tableFrom": "publicaciones_comentarios",
+          "columnsFrom": [
+            "autor_miembro_id"
+          ],
+          "tableTo": "miembros",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.publicaciones_me_gusta": {
+      "name": "publicaciones_me_gusta",
+      "schema": "",
+      "columns": {
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "publicacion_id": {
+          "name": "publicacion_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "miembro_id": {
+          "name": "miembro_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_me_gusta_miembro": {
+          "name": "idx_me_gusta_miembro",
+          "columns": [
+            {
+              "expression": "miembro_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "publicaciones_me_gusta_iglesia_id_iglesias_id_fk": {
+          "name": "publicaciones_me_gusta_iglesia_id_iglesias_id_fk",
+          "tableFrom": "publicaciones_me_gusta",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "publicaciones_me_gusta_publicacion_id_publicaciones_id_fk": {
+          "name": "publicaciones_me_gusta_publicacion_id_publicaciones_id_fk",
+          "tableFrom": "publicaciones_me_gusta",
+          "columnsFrom": [
+            "publicacion_id"
+          ],
+          "tableTo": "publicaciones",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "publicaciones_me_gusta_miembro_id_miembros_id_fk": {
+          "name": "publicaciones_me_gusta_miembro_id_miembros_id_fk",
+          "tableFrom": "publicaciones_me_gusta",
+          "columnsFrom": [
+            "miembro_id"
+          ],
+          "tableTo": "miembros",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "publicaciones_me_gusta_publicacion_id_miembro_id_pk": {
+          "name": "publicaciones_me_gusta_publicacion_id_miembro_id_pk",
+          "columns": [
+            "publicacion_id",
+            "miembro_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.notificaciones": {
+      "name": "notificaciones",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destinatario_auth_user_id": {
+          "name": "destinatario_auth_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "tipo_notificacion_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "datos": {
+          "name": "datos",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "enlace": {
+          "name": "enlace",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "leida_at": {
+          "name": "leida_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_notificaciones_destinatario": {
+          "name": "idx_notificaciones_destinatario",
+          "columns": [
+            {
+              "expression": "destinatario_auth_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_notificaciones_sin_leer": {
+          "name": "idx_notificaciones_sin_leer",
+          "columns": [
+            {
+              "expression": "destinatario_auth_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"notificaciones\".\"leida_at\" is null",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "notificaciones_iglesia_id_iglesias_id_fk": {
+          "name": "notificaciones_iglesia_id_iglesias_id_fk",
+          "tableFrom": "notificaciones",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.cajas": {
+      "name": "cajas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "tipo_caja_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activo": {
+          "name": "activo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "uq_cajas_nombre": {
+          "name": "uq_cajas_nombre",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"nombre\")",
+              "isExpression": true,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_cajas_iglesia": {
+          "name": "idx_cajas_iglesia",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "cajas_iglesia_id_iglesias_id_fk": {
+          "name": "cajas_iglesia_id_iglesias_id_fk",
+          "tableFrom": "cajas",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.fondos": {
+      "name": "fondos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "es_general": {
+          "name": "es_general",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "color_hex": {
+          "name": "color_hex",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activo": {
+          "name": "activo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "orden": {
+          "name": "orden",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "uq_fondos_general": {
+          "name": "uq_fondos_general",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"fondos\".\"es_general\"",
+          "concurrently": false
+        },
+        "uq_fondos_nombre": {
+          "name": "uq_fondos_nombre",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"nombre\")",
+              "isExpression": true,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_fondos_iglesia": {
+          "name": "idx_fondos_iglesia",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "orden",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "fondos_iglesia_id_iglesias_id_fk": {
+          "name": "fondos_iglesia_id_iglesias_id_fk",
+          "tableFrom": "fondos",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.movimientos": {
+      "name": "movimientos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "tipo_movimiento_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha": {
+          "name": "fecha",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "importe": {
+          "name": "importe",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "importe_con_signo": {
+          "name": "importe_con_signo",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "type": "stored",
+            "as": "case when tipo = 'ingreso' then importe else -importe end"
+          }
+        },
+        "concepto": {
+          "name": "concepto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fondo_id": {
+          "name": "fondo_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "caja_id": {
+          "name": "caja_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "metodo_pago": {
+          "name": "metodo_pago",
+          "type": "metodo_pago_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'efectivo'"
+        },
+        "referencia": {
+          "name": "referencia",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tipo_ingreso": {
+          "name": "tipo_ingreso",
+          "type": "tipo_ingreso_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "registrado_por_miembro_id": {
+          "name": "registrado_por_miembro_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_movimientos_libro": {
+          "name": "idx_movimientos_libro",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "fecha",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_movimientos_caja": {
+          "name": "idx_movimientos_caja",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "caja_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_movimientos_fondo": {
+          "name": "idx_movimientos_fondo",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "fondo_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "movimientos_iglesia_id_iglesias_id_fk": {
+          "name": "movimientos_iglesia_id_iglesias_id_fk",
+          "tableFrom": "movimientos",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "movimientos_fondo_id_fondos_id_fk": {
+          "name": "movimientos_fondo_id_fondos_id_fk",
+          "tableFrom": "movimientos",
+          "columnsFrom": [
+            "fondo_id"
+          ],
+          "tableTo": "fondos",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "movimientos_caja_id_cajas_id_fk": {
+          "name": "movimientos_caja_id_cajas_id_fk",
+          "tableFrom": "movimientos",
+          "columnsFrom": [
+            "caja_id"
+          ],
+          "tableTo": "cajas",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ck_movimientos_importe_positivo": {
+          "name": "ck_movimientos_importe_positivo",
+          "value": "\"movimientos\".\"importe\" > 0"
+        },
+        "ck_movimientos_tipo_ingreso": {
+          "name": "ck_movimientos_tipo_ingreso",
+          "value": "(\"movimientos\".\"tipo\" = 'ingreso') = (\"movimientos\".\"tipo_ingreso\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.evento_inscripciones": {
+      "name": "evento_inscripciones",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "evento_id": {
+          "name": "evento_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "origen": {
+          "name": "origen",
+          "type": "origen_inscripcion_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'publico'"
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "telefono": {
+          "name": "telefono",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "acompanantes": {
+          "name": "acompanantes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "nota": {
+          "name": "nota",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pagado": {
+          "name": "pagado",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "pagado_at": {
+          "name": "pagado_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "marcado_por_miembro_id": {
+          "name": "marcado_por_miembro_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "codigo_cancelacion": {
+          "name": "codigo_cancelacion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cancelada_at": {
+          "name": "cancelada_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "consentimiento_version": {
+          "name": "consentimiento_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "consentimiento_at": {
+          "name": "consentimiento_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "consentimiento_avisos": {
+          "name": "consentimiento_avisos",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "ip": {
+          "name": "ip",
+          "type": "inet",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "uq_inscripcion_viva_por_email": {
+          "name": "uq_inscripcion_viva_por_email",
+          "columns": [
+            {
+              "expression": "evento_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"email\")",
+              "isExpression": true,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"evento_inscripciones\".\"cancelada_at\" is null",
+          "concurrently": false
+        },
+        "uq_inscripcion_codigo": {
+          "name": "uq_inscripcion_codigo",
+          "columns": [
+            {
+              "expression": "codigo_cancelacion",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_inscripciones_evento_vivas": {
+          "name": "idx_inscripciones_evento_vivas",
+          "columns": [
+            {
+              "expression": "evento_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"evento_inscripciones\".\"cancelada_at\" is null",
+          "concurrently": false
+        },
+        "idx_inscripciones_iglesia": {
+          "name": "idx_inscripciones_iglesia",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "evento_inscripciones_iglesia_id_iglesias_id_fk": {
+          "name": "evento_inscripciones_iglesia_id_iglesias_id_fk",
+          "tableFrom": "evento_inscripciones",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "evento_inscripciones_evento_id_eventos_id_fk": {
+          "name": "evento_inscripciones_evento_id_eventos_id_fk",
+          "tableFrom": "evento_inscripciones",
+          "columnsFrom": [
+            "evento_id"
+          ],
+          "tableTo": "eventos",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ck_inscripciones_nombre_len": {
+          "name": "ck_inscripciones_nombre_len",
+          "value": "length(\"evento_inscripciones\".\"nombre\") between 1 and 120"
+        },
+        "ck_inscripciones_email_len": {
+          "name": "ck_inscripciones_email_len",
+          "value": "length(\"evento_inscripciones\".\"email\") between 3 and 200"
+        },
+        "ck_inscripciones_email_minusculas": {
+          "name": "ck_inscripciones_email_minusculas",
+          "value": "\"evento_inscripciones\".\"email\" = lower(\"evento_inscripciones\".\"email\")"
+        },
+        "ck_inscripciones_telefono_len": {
+          "name": "ck_inscripciones_telefono_len",
+          "value": "\"evento_inscripciones\".\"telefono\" is null or length(\"evento_inscripciones\".\"telefono\") <= 32"
+        },
+        "ck_inscripciones_nota_len": {
+          "name": "ck_inscripciones_nota_len",
+          "value": "\"evento_inscripciones\".\"nota\" is null or length(\"evento_inscripciones\".\"nota\") <= 500"
+        },
+        "ck_inscripciones_user_agent_len": {
+          "name": "ck_inscripciones_user_agent_len",
+          "value": "\"evento_inscripciones\".\"user_agent\" is null or length(\"evento_inscripciones\".\"user_agent\") <= 400"
+        },
+        "ck_inscripciones_consentimiento_len": {
+          "name": "ck_inscripciones_consentimiento_len",
+          "value": "length(\"evento_inscripciones\".\"consentimiento_version\") between 5 and 40"
+        },
+        "ck_inscripciones_codigo_len": {
+          "name": "ck_inscripciones_codigo_len",
+          "value": "length(\"evento_inscripciones\".\"codigo_cancelacion\") between 20 and 64"
+        },
+        "ck_inscripciones_acompanantes": {
+          "name": "ck_inscripciones_acompanantes",
+          "value": "\"evento_inscripciones\".\"acompanantes\" between 0 and 10"
+        },
+        "ck_inscripciones_pagado": {
+          "name": "ck_inscripciones_pagado",
+          "value": "\"evento_inscripciones\".\"pagado\" = (\"evento_inscripciones\".\"pagado_at\" is not null)"
+        },
+        "ck_inscripciones_origen_evidencia": {
+          "name": "ck_inscripciones_origen_evidencia",
+          "value": "\"evento_inscripciones\".\"origen\" = 'publico' or (\"evento_inscripciones\".\"ip\" is null and \"evento_inscripciones\".\"user_agent\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.eventos": {
+      "name": "eventos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "titulo": {
+          "name": "titulo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descripcion": {
+          "name": "descripcion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "inicio_en": {
+          "name": "inicio_en",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fin_en": {
+          "name": "fin_en",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lugar": {
+          "name": "lugar",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "imagen_url": {
+          "name": "imagen_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precio": {
+          "name": "precio",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cupo": {
+          "name": "cupo",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "publicado": {
+          "name": "publicado",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "inscripciones_abiertas": {
+          "name": "inscripciones_abiertas",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "enlace_pago": {
+          "name": "enlace_pago",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enlace_pago_host": {
+          "name": "enlace_pago_host",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pago_instrucciones": {
+          "name": "pago_instrucciones",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creado_por_miembro_id": {
+          "name": "creado_por_miembro_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_eventos_iglesia_inicio": {
+          "name": "idx_eventos_iglesia_inicio",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "inicio_en",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_eventos_publicados": {
+          "name": "idx_eventos_publicados",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "inicio_en",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"eventos\".\"publicado\"",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "eventos_iglesia_id_iglesias_id_fk": {
+          "name": "eventos_iglesia_id_iglesias_id_fk",
+          "tableFrom": "eventos",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ck_eventos_titulo_len": {
+          "name": "ck_eventos_titulo_len",
+          "value": "length(\"eventos\".\"titulo\") between 1 and 140"
+        },
+        "ck_eventos_descripcion_len": {
+          "name": "ck_eventos_descripcion_len",
+          "value": "\"eventos\".\"descripcion\" is null or length(\"eventos\".\"descripcion\") <= 4000"
+        },
+        "ck_eventos_lugar_len": {
+          "name": "ck_eventos_lugar_len",
+          "value": "\"eventos\".\"lugar\" is null or length(\"eventos\".\"lugar\") <= 160"
+        },
+        "ck_eventos_pago_instrucciones_len": {
+          "name": "ck_eventos_pago_instrucciones_len",
+          "value": "\"eventos\".\"pago_instrucciones\" is null or length(\"eventos\".\"pago_instrucciones\") <= 300"
+        },
+        "ck_eventos_fin_despues": {
+          "name": "ck_eventos_fin_despues",
+          "value": "\"eventos\".\"fin_en\" is null or \"eventos\".\"fin_en\" >= \"eventos\".\"inicio_en\""
+        },
+        "ck_eventos_precio": {
+          "name": "ck_eventos_precio",
+          "value": "\"eventos\".\"precio\" is null or \"eventos\".\"precio\" > 0"
+        },
+        "ck_eventos_cupo": {
+          "name": "ck_eventos_cupo",
+          "value": "\"eventos\".\"cupo\" is null or \"eventos\".\"cupo\" > 0"
+        },
+        "ck_eventos_enlace_https": {
+          "name": "ck_eventos_enlace_https",
+          "value": "\"eventos\".\"enlace_pago\" is null or \"eventos\".\"enlace_pago\" like 'https://%'"
+        },
+        "ck_eventos_enlace_host": {
+          "name": "ck_eventos_enlace_host",
+          "value": "(\"eventos\".\"enlace_pago\" is null and \"eventos\".\"enlace_pago_host\" is null)\n          or (\"eventos\".\"enlace_pago_host\" is not null\n              and position('https://' || \"eventos\".\"enlace_pago_host\" || '/' in \"eventos\".\"enlace_pago\") = 1)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.auditoria": {
+      "name": "auditoria",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_auth_user_id": {
+          "name": "actor_auth_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accion": {
+          "name": "accion",
+          "type": "accion_auditoria_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entidad": {
+          "name": "entidad",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entidad_id": {
+          "name": "entidad_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "datos_antes": {
+          "name": "datos_antes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "datos_despues": {
+          "name": "datos_despues",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ip": {
+          "name": "ip",
+          "type": "inet",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_auditoria_iglesia_fecha": {
+          "name": "idx_auditoria_iglesia_fecha",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_auditoria_entidad": {
+          "name": "idx_auditoria_entidad",
+          "columns": [
+            {
+              "expression": "entidad",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entidad_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_auditoria_actor": {
+          "name": "idx_auditoria_actor",
+          "columns": [
+            {
+              "expression": "actor_auth_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "auditoria_iglesia_id_iglesias_id_fk": {
+          "name": "auditoria_iglesia_id_iglesias_id_fk",
+          "tableFrom": "auditoria",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.consentimientos": {
+      "name": "consentimientos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "iglesia_id": {
+          "name": "iglesia_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "miembro_id": {
+          "name": "miembro_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "tipo_consentimiento_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version_texto": {
+          "name": "version_texto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "otorgado_at": {
+          "name": "otorgado_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "revocado_at": {
+          "name": "revocado_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ip": {
+          "name": "ip",
+          "type": "inet",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "uq_consentimiento_vivo": {
+          "name": "uq_consentimiento_vivo",
+          "columns": [
+            {
+              "expression": "miembro_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "tipo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "revocado_at is null",
+          "concurrently": false
+        },
+        "idx_consentimientos_iglesia": {
+          "name": "idx_consentimientos_iglesia",
+          "columns": [
+            {
+              "expression": "iglesia_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "idx_consentimientos_miembro": {
+          "name": "idx_consentimientos_miembro",
+          "columns": [
+            {
+              "expression": "miembro_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "consentimientos_iglesia_id_iglesias_id_fk": {
+          "name": "consentimientos_iglesia_id_iglesias_id_fk",
+          "tableFrom": "consentimientos",
+          "columnsFrom": [
+            "iglesia_id"
+          ],
+          "tableTo": "iglesias",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "consentimientos_miembro_id_miembros_id_fk": {
+          "name": "consentimientos_miembro_id_miembros_id_fk",
+          "tableFrom": "consentimientos",
+          "columnsFrom": [
+            "miembro_id"
+          ],
+          "tableTo": "miembros",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.admin_users": {
+      "name": "admin_users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "auth_user_id": {
+          "name": "auth_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notas": {
+          "name": "notas",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "admin_users_auth_user_unique": {
+          "name": "admin_users_auth_user_unique",
+          "columns": [
+            "auth_user_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.rate_limits": {
+      "name": "rate_limits",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "clave": {
+          "name": "clave",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dia": {
+          "name": "dia",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contador": {
+          "name": "contador",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_rate_limits_dia": {
+          "name": "idx_rate_limits_dia",
+          "columns": [
+            {
+              "expression": "dia",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "rate_limits_scope_clave_dia_unique": {
+          "name": "rate_limits_scope_clave_dia_unique",
+          "columns": [
+            "scope",
+            "clave",
+            "dia"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.stripe_events_processed": {
+      "name": "stripe_events_processed",
+      "schema": "",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "procesado_at": {
+          "name": "procesado_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.accion_auditoria_enum": {
+      "name": "accion_auditoria_enum",
+      "schema": "public",
+      "values": [
+        "alta",
+        "modificacion",
+        "baja",
+        "lectura_sensible"
+      ]
+    },
+    "public.estado_membresia_enum": {
+      "name": "estado_membresia_enum",
+      "schema": "public",
+      "values": [
+        "pendiente",
+        "activo",
+        "rechazado",
+        "baja"
+      ]
+    },
+    "public.estado_miembro_enum": {
+      "name": "estado_miembro_enum",
+      "schema": "public",
+      "values": [
+        "visitante",
+        "nuevo",
+        "miembro",
+        "inactivo",
+        "baja"
+      ]
+    },
+    "public.estado_solicitud_enum": {
+      "name": "estado_solicitud_enum",
+      "schema": "public",
+      "values": [
+        "pendiente",
+        "aprobada",
+        "rechazada"
+      ]
+    },
+    "public.moneda_enum": {
+      "name": "moneda_enum",
+      "schema": "public",
+      "values": [
+        "COP",
+        "EUR",
+        "USD"
+      ]
+    },
+    "public.plan_enum": {
+      "name": "plan_enum",
+      "schema": "public",
+      "values": [
+        "trial",
+        "esencial",
+        "comunidad",
+        "plus",
+        "cancelado"
+      ]
+    },
+    "public.rol_equipo_enum": {
+      "name": "rol_equipo_enum",
+      "schema": "public",
+      "values": [
+        "responsable",
+        "colider",
+        "voluntario"
+      ]
+    },
+    "public.rol_iglesia_enum": {
+      "name": "rol_iglesia_enum",
+      "schema": "public",
+      "values": [
+        "pastor",
+        "lider",
+        "tesorero",
+        "secretaria",
+        "miembro"
+      ]
+    },
+    "public.tipo_consentimiento_enum": {
+      "name": "tipo_consentimiento_enum",
+      "schema": "public",
+      "values": [
+        "datos_religiosos",
+        "comunicaciones",
+        "imagen"
+      ]
+    },
+    "public.tipo_notificacion_enum": {
+      "name": "tipo_notificacion_enum",
+      "schema": "public",
+      "values": [
+        "solicitud_recibida",
+        "solicitud_aprobada",
+        "solicitud_rechazada",
+        "comentario_en_publicacion",
+        "me_gusta_en_publicacion",
+        "turno_devocional"
+      ]
+    },
+    "public.metodo_pago_enum": {
+      "name": "metodo_pago_enum",
+      "schema": "public",
+      "values": [
+        "efectivo",
+        "transferencia",
+        "tarjeta",
+        "otro"
+      ]
+    },
+    "public.tipo_caja_enum": {
+      "name": "tipo_caja_enum",
+      "schema": "public",
+      "values": [
+        "efectivo",
+        "banco",
+        "billetera",
+        "pasarela"
+      ]
+    },
+    "public.tipo_ingreso_enum": {
+      "name": "tipo_ingreso_enum",
+      "schema": "public",
+      "values": [
+        "diezmo",
+        "ofrenda",
+        "donacion",
+        "otro"
+      ]
+    },
+    "public.tipo_movimiento_enum": {
+      "name": "tipo_movimiento_enum",
+      "schema": "public",
+      "values": [
+        "ingreso",
+        "gasto"
+      ]
+    },
+    "public.origen_inscripcion_enum": {
+      "name": "origen_inscripcion_enum",
+      "schema": "public",
+      "values": [
+        "publico",
+        "panel"
+      ]
+    }
+  },
+  "schemas": {},
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

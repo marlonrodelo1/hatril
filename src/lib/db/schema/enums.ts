@@ -103,6 +103,9 @@ export const planEnum = pgEnum('plan_enum', [
  */
 export const monedaEnum = pgEnum('moneda_enum', ['COP', 'EUR', 'USD']);
 
+/** Mismo patrón que `RolEquipo`: el tipo sale de la lista, no se escribe aparte. */
+export type Moneda = (typeof monedaEnum.enumValues)[number];
+
 export const estadoSolicitudEnum = pgEnum('estado_solicitud_enum', [
   'pendiente',
   'aprobada',

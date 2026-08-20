@@ -16,6 +16,11 @@ import {
   subirImagenIglesia,
 } from '@/lib/iglesias/imagenes';
 import type { UserContext } from '@/lib/auth/user-context';
+import {
+  cuentaDeMiembro,
+  emitirNotificacion,
+} from '@/lib/notificaciones/emitir';
+import { formatearFechaLarga } from '@/lib/fecha/hoy';
 
 /**
  * Devocionales.
@@ -80,6 +85,22 @@ export async function crearTurno(formData: FormData) {
       volver('Esa persona no es de tu iglesia.');
     }
     throw err;
+  }
+
+  // A quien le toca se le dice. Un calendario que hay que mirar por si acaso no
+  // es un reparto de turnos: es una lista que alguien tiene que recordar.
+  if (parsed.data.autorMiembroId) {
+    await emitirNotificacion({
+      iglesiaId: ctx.iglesia.id,
+      destinatarioAuthUserId: await cuentaDeMiembro(
+        ctx.iglesia.id,
+        parsed.data.autorMiembroId,
+      ),
+      provocadoPor: ctx.user.id,
+      tipo: 'turno_devocional',
+      datos: { fecha: formatearFechaLarga(parsed.data.fecha) },
+      enlace: DESTINO,
+    });
   }
 
   revalidatePath(DESTINO);

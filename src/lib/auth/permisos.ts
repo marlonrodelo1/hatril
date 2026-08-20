@@ -77,6 +77,36 @@ export const PERMISOS = [
   'gestionar_su_ministerio',
   /** Escribir el devocional que sale en la web de la iglesia. */
   'escribir_devocionales',
+  /**
+   * Llevar la caja: apuntar lo que entra y lo que sale, y ver las cuentas.
+   *
+   * UNO Y NO CUATRO
+   * ---------------
+   * La tentación era partirlo en ver / registrar / aprobar / exportar. En una
+   * congregación de 120 personas esas cuatro son la misma persona, y cada
+   * casilla de más en `/panel/lideres` es una decisión que el pastor toma sin
+   * información y acaba resolviendo dándoselo todo a todo el mundo — que es
+   * justo lo que este modelo de permisos existe para evitar.
+   *
+   * La segregación de funciones de verdad (que quien cuenta el dinero no sea
+   * quien lo verifica) no se hace con permisos: necesita que el verificador sea
+   * el usuario de la sesión, y eso llega con el arqueo. Un permiso suelto que
+   * la simule sería peor que no tenerla, porque parecería un control.
+   */
+  'gestionar_finanzas',
+  /**
+   * Crear eventos, publicarlos y llevar la lista de inscritos.
+   *
+   * No cabe en `gestionar_ministerios` —un retiro no es un ministerio— y
+   * `esPastor()` se queda corto: el campamento de jóvenes lo organiza el líder
+   * de jóvenes, y si hiciera falta ser pastor para crearlo, el pastor acabaría
+   * creando los eventos de todos.
+   *
+   * Lleva consigo ver nombre y correo de gente que NO es de la congregación, así
+   * que es un permiso con peso: quien lo tiene ve la lista de asistentes a un
+   * acto religioso.
+   */
+  'gestionar_eventos',
 ] as const;
 
 export type Permiso = (typeof PERMISOS)[number];
@@ -134,6 +164,22 @@ export const ETIQUETAS_PERMISOS: Record<
     descripcion:
       'Redacta y publica el devocional del día en la web de la iglesia. Solo puede tocar los días que le hayas asignado.',
   },
+  gestionar_finanzas: {
+    // Se dice explícitamente que Hatril NO guarda quién dio cuánto, porque es
+    // la primera pregunta que se hace un pastor al leer «finanzas» y la
+    // respuesta cambia a quién se lo da.
+    titulo: 'Llevar las cuentas',
+    descripcion:
+      'Apunta la ofrenda de cada culto, los diezmos y los gastos, y ve cuánto entró y salió en cada mes. Son totales: Hatril no guarda quién dio cuánto.',
+  },
+  gestionar_eventos: {
+    // Se avisa de lo que de verdad decide el pastor al marcar esta casilla: no
+    // es «crear carteles», es ver la lista de quién viene, con gente de fuera
+    // incluida.
+    titulo: 'Organizar eventos',
+    descripcion:
+      'Crea retiros, congresos y conciertos, los publica en la web de la iglesia y ve quién se ha apuntado, incluidas personas que no son de la congregación.',
+  },
 };
 
 /**
@@ -161,7 +207,7 @@ export const ETIQUETAS_ROLES: Record<
   tesorero: {
     titulo: 'Tesorero',
     descripcion:
-      'Reservado para cuando existan las finanzas. Hoy no abre nada por sí solo.',
+      'Lleva la caja: apunta lo que entra y lo que sale y ve las cuentas de la iglesia. De las personas no ve nada más que cualquier otro miembro.',
   },
   secretaria: {
     titulo: 'Secretaría',
@@ -187,6 +233,8 @@ const NINGUNO: MapaPermisos = {
   ver_datos_sensibles: false,
   gestionar_su_ministerio: false,
   escribir_devocionales: false,
+  gestionar_finanzas: false,
+  gestionar_eventos: false,
 };
 
 const TODOS: MapaPermisos = {
@@ -197,6 +245,8 @@ const TODOS: MapaPermisos = {
   ver_datos_sensibles: true,
   gestionar_su_ministerio: true,
   escribir_devocionales: true,
+  gestionar_finanzas: true,
+  gestionar_eventos: true,
 };
 
 /**
@@ -212,9 +262,16 @@ const TODOS: MapaPermisos = {
  * `ambitoMiembros`), que no es un permiso sino la consecuencia de a qué
  * ministerios pertenece; esto es la otra mitad, qué puede ESCRIBIR ahí dentro.
  *
- * `tesorero` no toca personas. En la v1 no hay finanzas todavía, así que el rol
- * existe sin capacidades: reservarlo ahora evita tener que migrar filas cuando
- * llegue el módulo.
+ * `tesorero` no toca personas: lleva la caja y nada más. El rol existía vacío
+ * desde la `0000` esperando justo esto, así que estrenarlo no cuesta migrar ni
+ * una fila — el jsonb guarda excepciones sobre el defecto, y quien ya era
+ * tesorero con `{}` gana el permiso solo.
+ *
+ * NI SECRETARÍA NI LÍDER lo reciben por defecto, y el líder es el caso que
+ * conviene razonar: no es que no pinte nada en la caja, es que un agregado NO
+ * es inocuo por ser agregado. En una congregación de treinta personas, el total
+ * de un culto más saber quién faltó ese domingo se acerca bastante al dato
+ * nominal. El agregado protege a escala, y esto se vende a iglesias pequeñas.
  */
 const DEFECTOS_POR_ROL: Record<RolIglesia, MapaPermisos> = {
   pastor: TODOS,
@@ -224,9 +281,13 @@ const DEFECTOS_POR_ROL: Record<RolIglesia, MapaPermisos> = {
     editar_miembros: true,
     aprobar_solicitudes: true,
     ver_datos_sensibles: true,
+    // La secretaría lleva ya el fichero y la agenda de la iglesia: el
+    // calendario es el mismo trabajo, y sin esto el pastor tendría que crear
+    // cada evento él.
+    gestionar_eventos: true,
   },
   lider: { ...NINGUNO, gestionar_su_ministerio: true },
-  tesorero: NINGUNO,
+  tesorero: { ...NINGUNO, gestionar_finanzas: true },
   miembro: NINGUNO,
 };
 
@@ -373,6 +434,29 @@ export function ambitoMiembros(ctx: ContextoPermisos): AmbitoMiembros {
  */
 export function puedeVerDatosSensibles(ctx: ContextoPermisos): boolean {
   return esPastor(ctx) || puede(ctx, 'ver_datos_sensibles');
+}
+
+/**
+ * ¿Puede entrar en finanzas?
+ *
+ * Sin ámbito que cruzar, a diferencia de los ministerios: la caja es una por
+ * iglesia. Quien tiene el permiso ve toda la caja de SU congregación y ninguna
+ * otra, y de eso último se encarga la RLS, no esta función.
+ */
+export function puedeGestionarFinanzas(ctx: ContextoPermisos): boolean {
+  return esPastor(ctx) || puede(ctx, 'gestionar_finanzas');
+}
+
+/**
+ * ¿Puede organizar eventos?
+ *
+ * Como finanzas, sin ámbito que cruzar: los eventos son de la iglesia entera y
+ * no de un ministerio. Un líder con `gestionar_su_ministerio` NO los ve, aunque
+ * el retiro sea de su grupo — el día que haga falta acotarlo, el eje es una
+ * columna `ministerio_id` en `eventos` y no un permiso más.
+ */
+export function puedeGestionarEventos(ctx: ContextoPermisos): boolean {
+  return esPastor(ctx) || puede(ctx, 'gestionar_eventos');
 }
 
 /**

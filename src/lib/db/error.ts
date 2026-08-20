@@ -42,8 +42,35 @@ export function isUniqueViolation(err: unknown): boolean {
   return /duplicate key value violates unique constraint/i.test(msg);
 }
 
-/** Los guards propios que lanzan los triggers, con su código en el mensaje. */
-export type GuardHatril = 'HT101' | 'HT102' | 'HT104' | 'HT105';
+/**
+ * Los guards propios que lanzan los triggers, con su código en el mensaje.
+ *
+ * La lista se había quedado atrás: HT106 a HT109 existen en las migraciones
+ * `0015` y `0017` desde agosto y no estaban aquí, así que `esGuardHatril()` no
+ * se podía llamar con ellos sin que el compilador lo rechazara.
+ */
+export type GuardHatril =
+  | 'HT101'
+  | 'HT102'
+  | 'HT104'
+  | 'HT105'
+  | 'HT106'
+  | 'HT107'
+  | 'HT108'
+  | 'HT109'
+  /** El fondo, la caja o quien registra no son de esta iglesia (`0020`). */
+  | 'HT110'
+  /** Un movimiento, fondo o caja no puede cambiar de iglesia (`0020`). */
+  | 'HT111'
+  /**
+   * Alguien intentó escribir su propio plan o su `trial_until` desde una sesión
+   * (`0021`). No es una fuga entre iglesias: es saltarse el muro de pago.
+   */
+  | 'HT112'
+  /** El evento, quien lo crea o quien marca el pago no son de esta iglesia (`0024`). */
+  | 'HT113'
+  /** Una inscripción no cambia de evento, de iglesia ni de identidad (`0024`). */
+  | 'HT114';
 
 /**
  * ¿Es este error uno de nuestros triggers guard?

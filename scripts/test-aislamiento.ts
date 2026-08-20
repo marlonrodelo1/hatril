@@ -52,6 +52,8 @@ declare
   USR_A constant uuid := 'a0000000-0000-4000-8000-00000000000a';
   USR_B constant uuid := 'b0000000-0000-4000-8000-00000000000b';
   USR_C constant uuid := 'c0000000-0000-4000-8000-00000000000c';
+  -- Sin membresia ninguna: el rechazado, para la prueba de la 0018.
+  USR_D constant uuid := 'd0000000-0000-4000-8000-00000000000d';
   MIN_A constant uuid := 'e0000000-0000-4000-8000-00000000000a';
   MIN_B constant uuid := 'e0000000-0000-4000-8000-00000000000b';
   MIE_A1 uuid;
@@ -60,6 +62,16 @@ declare
   VIN_A1 uuid;
   VIN_A2 uuid;
   PUB_A uuid;
+  FON_A uuid;
+  FON_B uuid;
+  CAJ_A uuid;
+  CAJ_B uuid;
+  MOV_A uuid;
+  EVE_A constant uuid := 'f0000000-0000-4000-8000-00000000000a';
+  EVE_B constant uuid := 'f0000000-0000-4000-8000-00000000000b';
+  -- Lo que responde inscribir_en_evento. Un solo escalar a proposito: ver la
+  -- cabecera de la 0024.
+  v_res text;
 begin
   -- Montaje: dos iglesias, dos pastores y una solicitud sin aprobar.
   insert into public.iglesias (id, slug, nombre, ciudad, visible_en_directorio)
@@ -397,6 +409,66 @@ begin
   r := r || format(E'  %s el pastor SI puede borrar lo de otro (%s fila)\\n',
                    case when n = 1 then 'OK  ' else 'FALLO' end, n);
 
+  -- --- NOTIFICACIONES (migraciones 0016 a 0018) ---
+  --
+  -- Se insertan como postgres a proposito: es lo que hace el servidor con
+  -- dbAdmin, porque "hatril_app" no tiene INSERT sobre esta tabla.
+  execute 'reset role';
+
+  insert into public.notificaciones (iglesia_id, destinatario_auth_user_id, tipo, datos)
+  values (IGL_A, USR_A, 'solicitud_recibida', '{"quien":"Nuria"}'::jsonb),
+         (IGL_B, USR_B, 'solicitud_recibida', '{"quien":"Otro"}'::jsonb),
+         -- USR_D no tiene NI HA TENIDO fila en iglesia_usuarios: es el caso del
+         -- rechazado, a quien se le borra la membresia al rechazarle.
+         (IGL_A, USR_D, 'solicitud_rechazada', '{"iglesia":"Betania"}'::jsonb);
+
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.notificaciones;
+  r := r || format(E'  %s cada cual ve solo SUS avisos (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  -- Nadie puede fabricar un aviso: sin grant de INSERT no hay policy que valga.
+  begin
+    insert into public.notificaciones (iglesia_id, destinatario_auth_user_id, tipo)
+    values (IGL_A, USR_C, 'solicitud_aprobada');
+    r := r || E'  FALLO una sesion puede fabricar notificaciones\\n';
+  exception when others then
+    r := r || E'  OK   una sesion no puede fabricar notificaciones\\n';
+  end;
+
+  -- Marcar leido SI. Cambiar lo que dice, NO (HT109).
+  update public.notificaciones set leida_at = now() where destinatario_auth_user_id = USR_A;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s se puede marcar leido lo propio (%s fila)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    update public.notificaciones set enlace = 'https://phishing.example'
+     where destinatario_auth_user_id = USR_A;
+    r := r || E'  FALLO se puede reescribir el destino de un aviso\\n';
+  exception when others then
+    r := r || format(E'  %s no se puede reescribir un aviso (%s)\\n',
+                     case when sqlerrm like 'HT109%' then 'OK  ' else 'FALLO' end,
+                     left(sqlerrm, 30));
+  end;
+
+  -- LA COMPROBACION QUE MOTIVO LA 0018.
+  --
+  -- La primera version de la policy exigia ademas "pertenece_a_iglesia()", y
+  -- como a quien se rechaza se le BORRA la membresia, su aviso de rechazo nacia
+  -- ilegible para el. La fila existia y no la veia nadie jamas.
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_D), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.notificaciones;
+  r := r || format(E'  %s el rechazado SI puede leer su aviso (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
   -- --- anon ---
   execute 'reset role';
   execute 'set local role anon';
@@ -408,6 +480,13 @@ begin
     r := r || format(E'  FALLO anon lee el muro de la comunidad (%s)\\n', n);
   exception when others then
     r := r || E'  OK   anon no llega al muro de la comunidad\\n';
+  end;
+
+  begin
+    select count(*) into n from public.notificaciones;
+    r := r || format(E'  FALLO anon lee las notificaciones (%s)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a las notificaciones\\n';
   end;
 
   begin
@@ -428,6 +507,32 @@ begin
     r := r || E'  OK   anon no ve columnas de facturacion\\n';
   end;
 
+  begin
+    perform trial_until from public.iglesias limit 1;
+    r := r || E'  FALLO anon lee trial_until\\n';
+  exception when others then
+    r := r || E'  OK   anon no ve trial_until\\n';
+  end;
+
+  begin
+    perform plan from public.iglesias limit 1;
+    r := r || E'  FALLO anon lee el plan\\n';
+  exception when others then
+    r := r || E'  OK   anon no ve el plan\\n';
+  end;
+
+  -- Y la cara contraria: redes SI tiene que llegarle, porque el pie de la web
+  -- publica de la iglesia se pinta con ella. Los GRANT de iglesias son por
+  -- columna y se escriben a mano en cada migracion; el dia que alguien toque esa
+  -- lista para anadir algo de Stripe, esta linea avisa de que se ha llevado por
+  -- delante las redes sociales de todas las congregaciones.
+  begin
+    perform redes from public.iglesias limit 1;
+    r := r || E'  OK   anon sigue viendo las redes sociales\\n';
+  exception when others then
+    r := r || E'  FALLO anon ya no puede leer redes\\n';
+  end;
+
   -- La web publica de una iglesia lista sus grupos. Cerrar la fuga NO puede
   -- haber roto esto: la policy sigue existiendo, solo que ya no se le concede
   -- ademas al rol de la aplicacion.
@@ -442,6 +547,346 @@ begin
     r := r || format(E'  FALLO anon lee quien sirve en cada equipo (%s)\\n', n);
   exception when others then
     r := r || E'  OK   anon no llega a la composicion de los equipos\\n';
+  end;
+
+  begin
+    select count(*) into n from public.movimientos;
+    r := r || format(E'  FALLO anon lee la caja de las iglesias (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a los movimientos\\n';
+  end;
+
+  begin
+    select count(*) into n from public.fondos;
+    r := r || format(E'  FALLO anon lee los fondos (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a los fondos\\n';
+  end;
+
+  -- ==========================================================================
+  -- FACTURACION (HT112)
+  --
+  -- No es aislamiento entre iglesias: es que nadie se pague solo. La 0001
+  -- concede update sobre iglesias entera a hatril_app y la policy del pastor
+  -- le deja tocar SU fila, asi que sin el trigger el muro de suscripcion se
+  -- salta con un update.
+  -- ==========================================================================
+
+  -- Venimos del bloque de anon: hay que soltar ese rol antes de tomar otro.
+  execute 'reset role';
+
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  begin
+    update public.iglesias set plan = 'plus' where id = IGL_A;
+    r := r || E'  FALLO el pastor pudo subirse el plan a mano\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT112%'
+                   then E'  OK   HT112 impide subirse el plan\\n'
+                   else format(E'  FALLO error inesperado al subir plan: %s\\n', sqlerrm) end;
+  end;
+
+  -- Por separado: regalarse una fecha futura es el mismo salto por otra puerta,
+  -- y es la columna de la que salen los tres dias de gracia.
+  begin
+    update public.iglesias set trial_until = now() + interval '10 years' where id = IGL_A;
+    r := r || E'  FALLO el pastor pudo regalarse trial_until\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT112%'
+                   then E'  OK   HT112 impide regalarse trial_until\\n'
+                   else format(E'  FALLO error inesperado en trial_until: %s\\n', sqlerrm) end;
+  end;
+
+  -- Y que el guard NO sea un candado sobre la tabla entera: el pastor tiene que
+  -- poder seguir editando los datos de su iglesia. Si esto falla, el trigger
+  -- esta comparando de mas y Ajustes deja de funcionar.
+  begin
+    update public.iglesias set ciudad = 'Bogota DC' where id = IGL_A;
+    r := r || E'  OK   el pastor SI puede editar los datos de su iglesia\\n';
+  exception when others then
+    r := r || format(E'  FALLO HT112 bloquea de mas: %s\\n', sqlerrm);
+  end;
+
+  -- La tabla de idempotencia del webhook no la toca ninguna sesion: la escribe
+  -- dbAdmin y solo el. No tiene GRANT (0001:228) y esto lo ejercita.
+  begin
+    select count(*) into n from public.stripe_events_processed;
+    r := r || format(E'  FALLO hatril_app lee los eventos de Stripe (%s)\\n', n);
+  exception when others then
+    r := r || E'  OK   hatril_app no llega a stripe_events_processed\\n';
+  end;
+
+  execute 'reset role';
+
+  -- ==========================================================================
+  -- FINANZAS
+  --
+  -- Es el dato mas delicado que guarda Hatril despues de la pertenencia: si la
+  -- caja de una congregacion alcanza a otra, no es un listado raro, es su libro
+  -- contable entero en manos ajenas.
+  -- ==========================================================================
+
+  insert into public.fondos (iglesia_id, nombre, es_general)
+  values (IGL_A, 'General', true), (IGL_B, 'General', true);
+  select id into FON_A from public.fondos where iglesia_id = IGL_A;
+  select id into FON_B from public.fondos where iglesia_id = IGL_B;
+
+  insert into public.cajas (iglesia_id, nombre, tipo)
+  values (IGL_A, 'Efectivo', 'efectivo'), (IGL_B, 'Efectivo', 'efectivo');
+  select id into CAJ_A from public.cajas where iglesia_id = IGL_A;
+  select id into CAJ_B from public.cajas where iglesia_id = IGL_B;
+
+  insert into public.movimientos
+    (iglesia_id, tipo, fecha, importe, concepto, fondo_id, caja_id, tipo_ingreso)
+  values (IGL_A, 'ingreso', current_date, 250000, 'Ofrenda', FON_A, CAJ_A, 'ofrenda')
+  returning id into MOV_A;
+
+  insert into public.movimientos
+    (iglesia_id, tipo, fecha, importe, concepto, fondo_id, caja_id)
+  values (IGL_B, 'gasto', current_date, 100000, 'Luz de Sion', FON_B, CAJ_B);
+
+  -- El pastor de Betania.
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.movimientos;
+  r := r || format(E'  %s Betania ve solo su movimiento (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.fondos;
+  r := r || format(E'  %s Betania ve solo su fondo (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  -- La columna generada: el saldo no lo escribe nadie, lo calcula Postgres.
+  select sum(importe_con_signo) into n from public.movimientos;
+  r := r || format(E'  %s el saldo sale de importe_con_signo (%s)\\n',
+                   case when n = 250000 then 'OK  ' else 'FALLO' end, n);
+
+  -- HT110: apuntar contra el fondo de la otra congregacion.
+  begin
+    insert into public.movimientos
+      (iglesia_id, tipo, fecha, importe, concepto, fondo_id, caja_id, tipo_ingreso)
+    values (IGL_A, 'ingreso', current_date, 1, 'Colado', FON_B, CAJ_A, 'ofrenda');
+    r := r || E'  FALLO se pudo apuntar contra el fondo de otra iglesia\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT110%'
+                   then E'  OK   HT110 rechaza el fondo de otra iglesia\\n'
+                   else format(E'  FALLO error inesperado: %s\\n', sqlerrm) end;
+  end;
+
+  -- HT111: llevarse un movimiento a la otra iglesia por UPDATE. La policy sola
+  -- NO lo impide: el using y el with check son ciertos a la vez para quien
+  -- pertenece a las dos congregaciones, que es un caso real.
+  begin
+    update public.movimientos set iglesia_id = IGL_B where id = MOV_A;
+    r := r || E'  FALLO un movimiento pudo cambiar de iglesia\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT111%'
+                   then E'  OK   HT111 impide mover un movimiento de iglesia\\n'
+                   else format(E'  FALLO error inesperado: %s\\n', sqlerrm) end;
+  end;
+
+  -- Un gasto con tipo de ingreso: la equivalencia del CHECK.
+  begin
+    insert into public.movimientos
+      (iglesia_id, tipo, fecha, importe, concepto, fondo_id, caja_id, tipo_ingreso)
+    values (IGL_A, 'gasto', current_date, 5, 'Gasto con tipo', FON_A, CAJ_A, 'diezmo');
+    r := r || E'  FALLO un gasto pudo llevar tipo_ingreso\\n';
+  exception when others then
+    r := r || E'  OK   un gasto no puede llevar tipo_ingreso\\n';
+  end;
+
+  execute 'reset role';
+
+  -- Y en el otro sentido: Sion tampoco ve lo de Betania.
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.movimientos where iglesia_id = IGL_A;
+  r := r || format(E'  %s Sion no ve la caja de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- service_role entra por PostgREST con una clave de variable de entorno, y es
+  -- una puerta distinta de la de dbAdmin. La 0020 se la cierra.
+  execute 'set local role service_role';
+
+  begin
+    select count(*) into n from public.movimientos;
+    r := r || format(E'  FALLO service_role lee la caja (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   service_role no llega a los movimientos\\n';
+  end;
+
+  execute 'reset role';
+
+  -- ==========================================================================
+  -- EVENTOS (HT113, HT114, HT115)
+  --
+  -- Es el unico modulo donde escribe gente SIN cuenta, asi que se comprueban
+  -- dos cosas distintas: el aislamiento de siempre, y que la funcion publica no
+  -- sea un oraculo. Lo segundo importa porque apuntarse a un acto de una
+  -- congregacion dice algo de las creencias de quien se apunta.
+  -- ==========================================================================
+
+  -- Las dos iglesias del montaje nacen con web_publica en false, que es el
+  -- defecto del schema. La inscripcion publica lo exige —un evento de una
+  -- congregacion que todavia no ha publicado su pagina no existe para nadie de
+  -- fuera— asi que hay que abrirla aqui de forma explicita.
+  update public.iglesias set web_publica = true where id in (IGL_A, IGL_B);
+
+  insert into public.eventos (id, iglesia_id, titulo, inicio_en, cupo,
+                              publicado, inscripciones_abiertas)
+  values (EVE_A, IGL_A, 'Retiro Betania', now() + interval '30 days', 1, true, true),
+         (EVE_B, IGL_B, 'Retiro Sion',    now() + interval '30 days', null, true, true);
+
+  -- La via publica: la ejecuta postgres desde una server action, sin claims.
+  select public.inscribir_en_evento(
+    EVE_A, 'Visitante', 'visita@ejemplo.test', 'privacidad-2026-08',
+    null, 0, null, '203.0.113.7', 'navegador') into v_res;
+  r := r || format(E'  %s una inscripcion publica entra (%s)\\n',
+                   case when v_res = 'ok' then 'OK  ' else 'FALLO' end, v_res);
+
+  -- El mismo correo otra vez responde EXACTAMENTE igual. Si algun dia esto
+  -- devuelve otra cosa, se puede preguntar por una lista de correos quien
+  -- asiste a un acto religioso sin leer ni una fila.
+  --
+  -- Se prueba sobre EVE_B, que no tiene cupo, y no sobre EVE_A, que tiene uno.
+  -- No es casualidad: con el aforo lleno, el aforo se evalua ANTES del alta y
+  -- las dos llamadas responden 'completo'. Siguen siendo indistinguibles entre
+  -- si, que es el invariante, pero medirlo ahi confunde las dos cosas.
+  select public.inscribir_en_evento(
+    EVE_B, 'Visitante', 'visita@ejemplo.test', 'privacidad-2026-08',
+    null, 0, null, '203.0.113.7', 'navegador') into v_res;
+  r := r || format(E'  %s una inscripcion en la otra iglesia entra (%s)\\n',
+                   case when v_res = 'ok' then 'OK  ' else 'FALLO' end, v_res);
+
+  select public.inscribir_en_evento(
+    EVE_B, 'Visitante', 'VISITA@Ejemplo.TEST', 'privacidad-2026-08',
+    null, 0, null, '203.0.113.7', 'navegador') into v_res;
+  r := r || format(E'  %s un correo repetido no se distingue (%s)\\n',
+                   case when v_res = 'ok' then 'OK  ' else 'FALLO' end, v_res);
+
+  select count(*) into n from public.evento_inscripciones where evento_id = EVE_B;
+  r := r || format(E'  %s y no creo una segunda fila (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  -- Cupo 1, ya ocupado.
+  select public.inscribir_en_evento(
+    EVE_A, 'Otro', 'otro@ejemplo.test', 'privacidad-2026-08',
+    null, 0, null, null, null) into v_res;
+  r := r || format(E'  %s el aforo se respeta (%s)\\n',
+                   case when v_res = 'completo' then 'OK  ' else 'FALLO' end, v_res);
+
+  -- Cuatro causas, una sola palabra: no existe, sin publicar, iglesia de baja y
+  -- iglesia sin web publica.
+  select public.inscribir_en_evento(
+    '99999999-0000-4000-8000-999999999999', 'X', 'x@ejemplo.test',
+    'privacidad-2026-08', null, 0, null, null, null) into v_res;
+  r := r || format(E'  %s un uuid inventado no delata nada (%s)\\n',
+                   case when v_res = 'no_disponible' then 'OK  ' else 'FALLO' end, v_res);
+
+  -- HT113: la inscripcion tiene que ser del evento de SU iglesia.
+  begin
+    insert into public.evento_inscripciones
+      (iglesia_id, evento_id, nombre, email, codigo_cancelacion, consentimiento_version)
+    values (IGL_B, EVE_A, 'Intruso', 'intruso@ejemplo.test',
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'privacidad-2026-08');
+    r := r || E'  FALLO una inscripcion cruzo dos iglesias\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT113%'
+                   then E'  OK   HT113 impide la inscripcion cruzada\\n'
+                   else format(E'  FALLO error inesperado (HT113): %s\\n', sqlerrm) end;
+  end;
+
+  -- HT114: la prueba del consentimiento no se reescribe. Un registro que el
+  -- responsable puede editar no prueba nada ante el art. 7.1.
+  begin
+    update public.evento_inscripciones
+       set consentimiento_version = 'privacidad-2020-01'
+     where evento_id = EVE_A;
+    r := r || E'  FALLO se reescribio el consentimiento\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT114%'
+                   then E'  OK   HT114 congela la prueba del consentimiento\\n'
+                   else format(E'  FALLO error inesperado (HT114): %s\\n', sqlerrm) end;
+  end;
+
+  -- --- Aislamiento, con el pastor de Betania dentro ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.eventos;
+  r := r || format(E'  %s Betania ve solo su evento (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  -- HT115: mover un evento de iglesia se llevaria por delante la coherencia de
+  -- todas sus inscripciones.
+  begin
+    update public.eventos set iglesia_id = IGL_B where id = EVE_A;
+    r := r || E'  FALLO un evento cambio de iglesia\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT115%'
+                   then E'  OK   HT115 impide mover un evento de iglesia\\n'
+                   else format(E'  FALLO error inesperado (HT115): %s\\n', sqlerrm) end;
+  end;
+
+  execute 'reset role';
+
+  -- --- Y desde Sion, que no debe ver a los inscritos de Betania ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.evento_inscripciones where iglesia_id = IGL_A;
+  r := r || format(E'  %s Sion no ve los inscritos de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- --- anon: ni una columna, y la funcion tampoco es suya ---
+  execute 'set local role anon';
+
+  begin
+    select count(*) into n from public.evento_inscripciones;
+    r := r || format(E'  FALLO anon lee los inscritos (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a los inscritos\\n';
+  end;
+
+  begin
+    select count(*) into n from public.eventos;
+    r := r || format(E'  FALLO anon lee los eventos (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a los eventos\\n';
+  end;
+
+  -- La funcion no se concede a nadie: la llama dbAdmin como postgres. Si esto
+  -- deja de fallar, hay un endpoint /rest/v1/rpc/ abierto a internet.
+  begin
+    perform public.inscribir_en_evento(
+      EVE_A, 'X', 'x@ejemplo.test', 'privacidad-2026-08',
+      null, 0, null, null, null);
+    r := r || E'  FALLO anon puede ejecutar inscribir_en_evento\\n';
+  exception when others then
+    r := r || E'  OK   anon no puede ejecutar inscribir_en_evento\\n';
+  end;
+
+  execute 'reset role';
+
+  execute 'set local role service_role';
+
+  begin
+    select count(*) into n from public.evento_inscripciones;
+    r := r || format(E'  FALLO service_role lee los inscritos (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   service_role no llega a los inscritos\\n';
   end;
 
   execute 'reset role';
@@ -502,6 +947,23 @@ async function comprobarWithUser(): Promise<string[]> {
       tx.execute(`select rol_equipo from ministerio_miembros limit 1`),
     );
     lineas.push('  OK   withUser() ve la columna rol_equipo');
+
+    // Finanzas, por la puerta de la aplicacion. Es la comprobacion que caza el
+    // GRANT olvidado: la fase SQL de arriba prueba que las policies estan bien
+    // escritas, no que `hatril_app` tenga concedida la tabla. Sin el grant,
+    // esto revienta con 42501 y el panel de finanzas daria 500 en la primera
+    // pantalla, que es exactamente como se descubrio la ultima vez.
+    await withUser(USR_A, (tx) =>
+      tx.execute(`select 1 from movimientos limit 1`),
+    );
+    lineas.push('  OK   withUser() puede consultar movimientos');
+
+    // La columna generada. Caza el «se me olvido aplicar la 0019» aqui y no al
+    // abrir el resumen, que es donde se suma.
+    await withUser(USR_A, (tx) =>
+      tx.execute(`select importe_con_signo from movimientos limit 1`),
+    );
+    lineas.push('  OK   withUser() ve la columna generada importe_con_signo');
 
     // LA FUGA, CAZADA POR LA FUNCIÓN QUE USA LA APLICACIÓN.
     //

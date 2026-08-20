@@ -60,5 +60,25 @@ export const TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS =
 export const TEXTO_CONSENTIMIENTO_COMUNICACIONES =
   'Quiero recibir avisos de mi iglesia sobre eventos y actividades.';
 
+/**
+ * Para quien se apunta a un evento SIN ser de la congregación.
+ *
+ * Es un consentimiento distinto del de arriba y por eso tiene texto propio: allí
+ * la persona autoriza un vínculo con la iglesia, y aquí no hay vínculo ninguno
+ * —el vecino que va a un concierto no se hace miembro de nada—. Prometer menos
+ * es lo que lo hace válido: se dice para qué son los datos, se dice que no la
+ * dan de alta en el fichero, y se dice cómo se van.
+ *
+ * Se guarda en `evento_inscripciones.consentimiento_version` y NO en la tabla
+ * `consentimientos`, que exige `miembro_id`. La consecuencia buena es que este
+ * consentimiento es independiente del de la congregación: el día que suba
+ * `VERSION_POLITICA_PRIVACIDAD` no habrá que re-preguntar a toda la iglesia por
+ * culpa de un evento.
+ */
+export const TEXTO_CONSENTIMIENTO_EVENTO =
+  'Autorizo a esta iglesia a guardar mi nombre y mi correo para organizar este ' +
+  'evento y avisarme si cambia. Sé que apuntarme dice algo de mis creencias y ' +
+  'que puedo pedir que borren mis datos cuando quiera.';
+
 export const TEXTO_CONSENTIMIENTO_IMAGEN =
   'Autorizo que mi foto aparezca en el directorio interno de la congregación.';

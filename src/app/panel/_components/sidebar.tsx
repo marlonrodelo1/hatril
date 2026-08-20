@@ -7,9 +7,14 @@ import {
   Users,
   HandHeart,
   Inbox,
+  CreditCard,
   Settings,
   ShieldCheck,
   BookOpen,
+  Wallet,
+  CalendarDays,
+  Bell,
+  Share2,
   MessagesSquare,
   ExternalLink,
   LogOut,
@@ -48,8 +53,11 @@ export function PanelSidebar({
   personaNombre,
   rol,
   solicitudesPendientes,
+  avisosSinLeer,
   puedeVerSolicitudes,
   puedeEscribirDevocionales,
+  puedeVerFinanzas,
+  puedeVerEventos,
   esPastorDeLaIglesia,
 }: {
   iglesiaNombre: string;
@@ -59,8 +67,12 @@ export function PanelSidebar({
   personaNombre: string;
   rol: RolIglesia;
   solicitudesPendientes: number;
+  /** Sin leer. El punto rojo de la campana. */
+  avisosSinLeer: number;
   puedeVerSolicitudes: boolean;
   puedeEscribirDevocionales: boolean;
+  puedeVerFinanzas: boolean;
+  puedeVerEventos: boolean;
   esPastorDeLaIglesia: boolean;
 }) {
   const pathname = usePathname();
@@ -87,6 +99,26 @@ export function PanelSidebar({
           },
         ]
       : []),
+    ...(puedeVerEventos
+      ? [
+          {
+            href: '/panel/eventos',
+            etiqueta: 'Eventos',
+            Icono: CalendarDays,
+            aviso: 0,
+          },
+        ]
+      : []),
+    ...(puedeVerFinanzas
+      ? [
+          {
+            href: '/panel/finanzas',
+            etiqueta: 'Finanzas',
+            Icono: Wallet,
+            aviso: 0,
+          },
+        ]
+      : []),
     // La comunidad no es del panel: es de toda la congregación y vive en el área
     // del miembro. Está aquí porque quien administra también entra a ella, y
     // buscarla escribiendo la dirección a mano no es un plan.
@@ -95,6 +127,14 @@ export function PanelSidebar({
       etiqueta: 'Comunidad',
       Icono: MessagesSquare,
       aviso: 0,
+    },
+    // Los avisos tampoco son del panel y por el mismo motivo. Sin permiso que
+    // consultar: los recibe cualquiera.
+    {
+      href: '/mi/avisos',
+      etiqueta: 'Avisos',
+      Icono: Bell,
+      aviso: avisosSinLeer,
     },
     ...(puedeVerSolicitudes
       ? [
@@ -106,6 +146,16 @@ export function PanelSidebar({
           },
         ]
       : []),
+    // Compartir sí es del panel y lo ve todo el equipo: los enlaces que reparte
+    // son públicos, y quien lleva las redes de la iglesia no siempre es quien
+    // tiene la contraseña del pastor. Lo único que se escribe ahí —las redes—
+    // lo protege su propia action.
+    {
+      href: '/panel/compartir',
+      etiqueta: 'Compartir',
+      Icono: Share2,
+      aviso: 0,
+    },
     ...(esPastorDeLaIglesia
       ? [
           // `ShieldCheck` y no `Users`: `Users` ya es Miembros, y dos iconos de
@@ -115,6 +165,12 @@ export function PanelSidebar({
             href: '/panel/lideres',
             etiqueta: 'Líderes',
             Icono: ShieldCheck,
+            aviso: 0,
+          },
+          {
+            href: '/panel/suscripcion',
+            etiqueta: 'Suscripción',
+            Icono: CreditCard,
             aviso: 0,
           },
           {

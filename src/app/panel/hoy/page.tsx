@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
-import { esPastor, puede } from '@/lib/auth/permisos';
+import { esPastor, puede, puedeGestionarFinanzas } from '@/lib/auth/permisos';
 import {
   nuevosSinMinisterio,
   resumenCongregacion,
@@ -20,7 +20,10 @@ import {
 import { ministeriosSinResponsable } from '@/lib/ministerios/consultas';
 import { listarSolicitudesPendientes } from '@/lib/solicitudes/consultas';
 import { misTurnosPendientes } from '@/lib/devocionales/consultas';
-import { formatearFechaLarga } from '@/lib/fecha/hoy';
+import { formatearFechaLarga, mesEnLaIglesia } from '@/lib/fecha/hoy';
+import { resumen as resumenFinanzas } from '@/lib/finanzas/consultas';
+import { formatearDinero } from '@/lib/format/dinero';
+import type { Moneda } from '@/lib/db/schema';
 import { ESTADOS } from '@/lib/miembros/estados';
 import { iniciales } from '@/lib/format/iniciales';
 import { Button } from '@/components/ui/button';
@@ -92,6 +95,21 @@ export default async function HoyPage({
     solicitudes.length > 0 ||
     sinResponsable.length > 0 ||
     recienLlegados.length > 0;
+
+  // El pastor vive en esta pantalla y es quien paga. Si el número de la caja no
+  // le sale al paso aquí, no abre finanzas y no renueva. Solo se consulta a
+  // quien puede verlo: para un líder de alabanza sería una consulta en cada
+  // carga del panel para algo que no se pinta.
+  const finanzas = await (async () => {
+    if (!puedeGestionarFinanzas(ctx)) return null;
+    const { desde, hasta, etiqueta } = mesEnLaIglesia(ctx.iglesia.timezone);
+    const r = await resumenFinanzas(ctx, desde, hasta, etiqueta);
+    const moneda = ctx.iglesia.moneda as Moneda;
+    return {
+      entro: formatearDinero(r.entro, moneda),
+      salio: formatearDinero(r.salio, moneda),
+    };
+  })();
 
   const sirviendoPct =
     resumen.total > 0
@@ -262,6 +280,31 @@ export default async function HoyPage({
             </div>
           </div>
         </section>
+
+        {/* ---------- La caja ---------- */}
+        {finanzas && (
+          <section className="flex flex-col gap-3">
+            <h2 className="t-micro">La caja</h2>
+
+            <Link
+              href="/panel/finanzas"
+              className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border bg-surface p-5 no-underline transition-colors hover:bg-surface-alt hover:no-underline"
+            >
+              <div className="flex flex-col gap-1">
+                <span className="t-micro">Entró este mes</span>
+                <span className="text-[22px] font-bold tracking-[-0.02em] tabular-nums">
+                  {finanzas.entro}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="t-micro">Salió</span>
+                <span className="text-[22px] font-bold tracking-[-0.02em] tabular-nums">
+                  {finanzas.salio}
+                </span>
+              </div>
+            </Link>
+          </section>
+        )}
 
         {resumen.total === 0 && puedeCrear && (
           <section className="flex flex-col items-start gap-3.5 rounded-xl border border-border bg-surface p-6">

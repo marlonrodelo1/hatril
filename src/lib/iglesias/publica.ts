@@ -4,6 +4,7 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import { dbAdmin } from '@/lib/db';
 import { iglesias, ministerios, type HorarioSemanal } from '@/lib/db/schema';
+import type { Red } from '@/lib/iglesias/redes';
 
 /**
  * Datos de la web pública de una iglesia.
@@ -34,11 +35,13 @@ export type IglesiaPublica = {
   historia: string | null;
   ciudad: string | null;
   timezone: string;
+  /** Para pintar el precio de un evento. La moneda es de la iglesia. */
+  moneda: string;
   direccion: string | null;
   telefono: string | null;
   email: string | null;
   web: string | null;
-  redes: Record<string, string>;
+  redes: Partial<Record<Red, string>>;
   logoUrl: string | null;
   bannerUrl: string | null;
   imagenes: string[];
@@ -69,6 +72,7 @@ export async function obtenerIglesiaPublica(
       historia: iglesias.historia,
       ciudad: iglesias.ciudad,
       timezone: iglesias.timezone,
+      moneda: iglesias.moneda,
       direccion: iglesias.direccion,
       telefono: iglesias.telefono,
       email: iglesias.email,

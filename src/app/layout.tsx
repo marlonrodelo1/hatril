@@ -17,6 +17,18 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  /**
+   * Sin esto, Next avisa por consola en cada build de que no puede resolver las
+   * URL relativas de OpenGraph, y la etiqueta que comparte la web de una iglesia
+   * sin foto propia sale rota.
+   *
+   * Ojo: `NEXT_PUBLIC_SITE_URL` se incrusta al COMPILAR, así que en Dokploy
+   * tiene que estar además en «Build-time Arguments». Si falta, el respaldo es
+   * localhost y las tarjetas de WhatsApp apuntan a ninguna parte.
+   */
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
+  ),
   title: {
     default: 'Hatril · Software de gestión para iglesias',
     template: '%s · Hatril',

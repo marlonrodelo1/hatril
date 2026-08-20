@@ -14,6 +14,10 @@ import { checkRateLimit, getClientIp } from '@/lib/api/rate-limit';
 import { validarPassword, traducirErrorAuth } from '@/lib/auth/password';
 import { normalizarTelefono } from '@/lib/telefono/normalizar';
 import { campo, campoObligatorio } from '@/lib/api/formulario';
+import {
+  cuentasQueAprueban,
+  emitirNotificaciones,
+} from '@/lib/notificaciones/emitir';
 
 /**
  * Crear cuenta personal y pedir entrar en una iglesia.
@@ -95,16 +99,23 @@ export async function solicitarIngreso(formData: FormData) {
     );
   }
 
+  let solicitudId: string | null = null;
+
   try {
     await dbAdmin.transaction(async (tx) => {
-      await tx.insert(solicitudesIngreso).values({
-        iglesiaId: iglesia.id,
-        authUserId: user.id,
-        nombre: d.nombre,
-        email: user.email ?? null,
-        telefono: normalizarTelefono(d.telefono || null, 'CO'),
-        mensaje: d.mensaje || null,
-      });
+      const [creada] = await tx
+        .insert(solicitudesIngreso)
+        .values({
+          iglesiaId: iglesia.id,
+          authUserId: user.id,
+          nombre: d.nombre,
+          email: user.email ?? null,
+          telefono: normalizarTelefono(d.telefono || null, 'CO'),
+          mensaje: d.mensaje || null,
+        })
+        .returning({ id: solicitudesIngreso.id });
+
+      solicitudId = creada!.id;
 
       /*
        * La membresía se crea YA, en estado 'pendiente'.
@@ -134,6 +145,32 @@ export async function solicitarIngreso(formData: FormData) {
     }
     throw err;
   }
+
+  /*
+   * El aviso, DESPUÉS del `try` y nunca dentro.
+   *
+   * Dentro habría avisado también cuando la transacción se cae por duplicado
+   * —alguien que pulsa dos veces, o que ya había solicitado— y el equipo
+   * recibiría un aviso de una solicitud que no llegó a existir.
+   *
+   * Y va a todo el que pueda aprobarlas, no solo al pastor: en una iglesia con
+   * secretaria es ella quien mira esta bandeja.
+   */
+  const destinatarios = await cuentasQueAprueban(iglesia.id);
+
+  await emitirNotificaciones(
+    destinatarios.map((destinatario) => ({
+      iglesiaId: iglesia.id,
+      destinatarioAuthUserId: destinatario,
+      tipo: 'solicitud_recibida' as const,
+      datos: {
+        quien: d.nombre,
+        ...(solicitudId ? { solicitudId } : {}),
+        ...(d.mensaje ? { mensaje: d.mensaje } : {}),
+      },
+      enlace: '/panel/solicitudes',
+    })),
+  );
 
   redirect('/mi?enviada=1');
 }

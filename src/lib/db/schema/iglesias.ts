@@ -7,6 +7,7 @@ import {
   jsonb,
   date,
   index,
+  uniqueIndex,
   unique,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -16,6 +17,7 @@ import { sql } from 'drizzle-orm';
 // Ruta relativa y no el alias `@/`: drizzle-kit compila estos ficheros con su
 // propio esbuild y no siempre resuelve los paths del tsconfig.
 import type { Permiso } from '../../auth/permisos';
+import type { Red } from '../../iglesias/redes';
 
 import {
   estadoMembresiaEnum,
@@ -76,7 +78,19 @@ export const iglesias = pgTable(
     telefono: text('telefono'),
     email: text('email'),
     web: text('web'),
-    redes: jsonb('redes').$type<Record<string, string>>().notNull().default({}),
+    /**
+     * Redes sociales, por su nombre corto: `{ instagram: 'https://…' }`.
+     *
+     * El catálogo de claves admitidas y la validación de cada dirección están en
+     * `src/lib/iglesias/redes.ts`. El tipo es `Partial` y no `Record` completo
+     * porque casi ninguna iglesia va a rellenar las cinco, y al leer hay que
+     * tolerar claves de más: esta columna está concedida a `anon` desde la
+     * `0001` y lleva ahí desde antes de que existiera el catálogo.
+     */
+    redes: jsonb('redes')
+      .$type<Partial<Record<Red, string>>>()
+      .notNull()
+      .default({}),
 
     logoUrl: text('logo_url'),
 
@@ -189,7 +203,13 @@ export const iglesias = pgTable(
     index('idx_iglesias_directorio')
       .on(t.pais, t.ciudad)
       .where(sql`visible_en_directorio = true AND activa = true`),
-    index('idx_iglesias_stripe_customer').on(t.stripeCustomerId),
+    // UNICO, y parcial. El webhook resuelve la iglesia por este valor cuando el
+    // evento no trae metadata; si dos filas lo compartieran, la suscripcion de
+    // una se aplicaria a la otra en silencio. Parcial porque casi todas las
+    // filas lo tienen a null y `null` no colisiona consigo mismo. Ver `0021`.
+    uniqueIndex('idx_iglesias_stripe_customer')
+      .on(t.stripeCustomerId)
+      .where(sql`${t.stripeCustomerId} is not null`),
   ],
 );
 

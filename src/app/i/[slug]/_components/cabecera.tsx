@@ -40,6 +40,18 @@ export type Donativos = { cuenta: string; titular: string | null };
  * las visitas llegan por un enlace de WhatsApp abierto en un móvil. Quien entra
  * buscando a qué hora es el culto tenía que desplazarse a ciegas.
  *
+ * Y EL CORTE SUBIÓ DE `lg` A `xl` CUANDO LLEGARON LOS EVENTOS
+ * -----------------------------------------------------------
+ * Con cinco secciones, el menú ya ocupaba 589 de los 929px de la píldora a
+ * 1024px — está medido más abajo, donde se explica por qué solo cabe un botón
+ * de acción. «Eventos» añade otros noventa y pico, y lo que se come es el
+ * nombre de la iglesia, que es lo último que debe encogerse en su propia web.
+ *
+ * Así que entre 1024 y 1279px manda la hamburguesa, que no pierde nada: el menú
+ * completo está dentro. Si algún día se quita una sección, esto se puede
+ * devolver a `lg`, pero hay que MIRARLO a 1024 exactos con un nombre largo, no
+ * razonarlo.
+ *
  * LA MARCA SIGUE AL RATÓN, PERO TAMBIÉN A LA LECTURA
  * --------------------------------------------------
  * La versión anterior movía la píldora solo con `onMouseEnter`. En un móvil no
@@ -125,13 +137,13 @@ export function CabeceraIglesia({
          * es lo último que puede recortarse en su propia web; que el menú quede
          * unos píxeles a un lado no lo nota nadie.
          */}
-        <div className="flex items-center gap-2 rounded-full border border-border bg-surface-alt p-1.5 supports-[backdrop-filter]:bg-surface-alt/80 supports-[backdrop-filter]:backdrop-blur-xl md:gap-4 lg:grid lg:grid-cols-[auto_1fr_auto] lg:gap-3 xl:gap-4">
+        <div className="flex items-center gap-2 rounded-full border border-border bg-surface-alt p-1.5 supports-[backdrop-filter]:bg-surface-alt/80 supports-[backdrop-filter]:backdrop-blur-xl md:gap-4 xl:grid xl:grid-cols-[auto_1fr_auto] xl:gap-3 2xl:gap-4">
           {/* Identidad. `min-w-0` para que el nombre pueda encogerse: sin él, un
               nombre largo empuja al botón fuera de la píldora en un móvil de
               320px. */}
           <a
             href="#"
-            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full pl-1 no-underline hover:no-underline lg:flex-none"
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full pl-1 no-underline hover:no-underline xl:flex-none"
           >
             {logoUrl ? (
               <Image
@@ -146,7 +158,7 @@ export function CabeceraIglesia({
                 {iniciales}
               </span>
             )}
-            <span className="flex min-w-0 flex-col lg:max-w-[260px]">
+            <span className="flex min-w-0 flex-col xl:max-w-[260px]">
               <span className="truncate text-[15px] font-bold leading-tight tracking-[-0.018em] text-foreground">
                 {nombre}
               </span>
@@ -162,12 +174,12 @@ export function CabeceraIglesia({
               que no se ha pintado deja al visitante donde estaba sin que pase
               nada, y parece que la web está rota. */}
           {secciones.length > 0 && (
-            <nav className="hidden lg:flex lg:justify-center">
+            <nav className="hidden xl:flex xl:justify-center">
               <MenuEscritorio secciones={secciones} activa={activa} />
             </nav>
           )}
 
-          <div className="flex flex-none items-center gap-2 lg:justify-end">
+          <div className="flex flex-none items-center gap-2 xl:justify-end">
             {/*
              * UN SOLO BOTÓN AQUÍ, Y VERDE.
              *
@@ -213,7 +225,7 @@ export function CabeceraIglesia({
               variant="ghost"
               size="icon"
               aria-label="Mi cuenta"
-              className="hidden size-10 rounded-full lg:inline-flex"
+              className="hidden size-10 rounded-full xl:inline-flex"
               render={<Link href="/mi" />}
             >
               <UserRound strokeWidth={1.8} className="size-[19px]" />
@@ -230,7 +242,7 @@ export function CabeceraIglesia({
                 // 44px, que es el mínimo de un objetivo táctil. El `size="icon"`
                 // del sistema son 40 y aquí es el único control de la cabecera
                 // en un móvil: si falla, no hay otra forma de navegar.
-                className="size-11 rounded-full lg:hidden"
+                className="size-11 rounded-full xl:hidden"
                 onClick={() => setAbierto((v) => !v)}
               >
                 {abierto ? (
@@ -248,7 +260,7 @@ export function CabeceraIglesia({
         {abierto && (
           <div
             id="menu-movil"
-            className="absolute inset-x-0 top-[calc(100%+8px)] flex flex-col gap-1 rounded-3xl border border-border bg-surface-alt p-2 supports-[backdrop-filter]:bg-surface-alt/95 supports-[backdrop-filter]:backdrop-blur-xl lg:hidden"
+            className="absolute inset-x-0 top-[calc(100%+8px)] flex flex-col gap-1 rounded-3xl border border-border bg-surface-alt p-2 supports-[backdrop-filter]:bg-surface-alt/95 supports-[backdrop-filter]:backdrop-blur-xl xl:hidden"
           >
             {secciones.map((s) => (
               <a

@@ -1,6 +1,6 @@
 # Estado de Hatril
 
-Última actualización: 17 de agosto de 2026.
+Última actualización: 20 de agosto de 2026.
 
 Este fichero se actualiza al cerrar cada sesión de trabajo. Va **dentro del
 repo** a propósito: Pidoo guardaba su detalle en ficheros `memory/` fuera del
@@ -47,6 +47,29 @@ lee al arrancar.
   por el pastor. Solo para miembros con acceso ACTIVO: no sale en la web
   pública, donde únicamente hay una invitación con un recuento. Las fotos van al
   bucket **privado** `comunidad` y se sirven con URL firmada de una hora.
+- **Avisos**: las notificaciones de cada persona en `/mi/avisos`, con la campana
+  y su punto rojo en el panel. Seis tipos: solicitud recibida, aprobada y
+  rechazada, comentario y me gusta en el muro, y turno de devocional. El texto
+  se compone al pintarlo desde `notificaciones/textos.ts` —en la fila solo van
+  el tipo y los datos—, y las escribe siempre el servidor con `dbAdmin`: quien
+  pudiera insertarlas se fabricaría un «solicitud aprobada» o le mandaría a otro
+  un enlace a su gusto. La pantalla **solo pide sesión**, sin `requireIglesia`:
+  a quien le rechazan la solicitud se le borra la membresía en el mismo
+  movimiento y el aviso que se lo explica quedaría fuera de su alcance.
+- **Finanzas**: el libro de caja. Fondos (de quién es el dinero) y cajas (dónde
+  está), movimientos con alta, edición y borrado, saldo por fondo y por caja,
+  resumen del mes, informe imprimible para la asamblea y exportación a CSV.
+  Verificado apuntando una ofrenda de 250.000 y borrándola desde la pantalla.
+  **Sin nombres de donante**: ver el apartado de decisiones.
+- **Compartir**: `/panel/compartir`. La dirección absoluta de la web de la
+  iglesia y la de «pedir unirme», con copiar y con enviar por WhatsApp, y el
+  formulario de las cinco redes sociales —Instagram, Facebook, YouTube,
+  WhatsApp, TikTok— que salen al pie de la web pública. Acepta las tres formas
+  en que la gente copia esto (`@nombre`, la dirección pegada, o un teléfono para
+  WhatsApp) y las canoniza; una dirección de otro host se rechaza con un mensaje
+  legible. La ve todo el equipo, pero las redes solo las escribe el pastor. Si
+  la web no está publicada o las solicitudes están cerradas, lo dice en vez de
+  dar un enlace que no funciona.
 - **Público**: portada, directorio de iglesias, web pública de cada
   congregación (carrusel de fotos con el titular encima, horarios con «lo
   próximo» calculado, devocional, grupos apilados al bajar), formulario de
@@ -56,9 +79,12 @@ lee al arrancar.
 - **Legales**: `/privacidad` y `/terminos`, con el encargo de tratamiento del
   art. 28 como anexo aceptable al registrar la iglesia. Los datos salen todos de
   `src/lib/legal/datos-responsable.ts`, así que se cambian en un solo sitio.
-- **Aislamiento**: 35 comprobaciones en `npm run test:aislamiento` más cuatro que
+- **Aislamiento**: 45 comprobaciones en `npm run test:aislamiento` más seis que
   llaman a `withUser()` de verdad, y cuatro hechas desde fuera con un JWT real
-  contra la API pública. Las nueve nuevas son del muro: publicar siendo miembro
+  contra la API pública. Las diez nuevas son de finanzas: que Sion no vea la caja
+  de Betania en ningún sentido, HT110, HT111, el CHECK del tipo de ingreso, que
+  el saldo salga de la columna generada, y que ni `anon` ni **`service_role`**
+  lleguen. Las nueve nuevas son del muro: publicar siendo miembro
   raso, no poder firmar con la ficha de otro, me gusta duplicado, que Sion no
   lea ni escriba en el muro de Betania, HT107, la moderación del pastor y que
   `anon` no llegue.
@@ -72,8 +98,7 @@ lee al arrancar.
 |---|---|
 | Proveedor de alojamiento en los legales | **Sin rellenar.** Lo más urgente: bloquea publicar |
 | Foto en la ficha de miembro | Va en OTRO bucket, privado y con URL firmada. El de iglesias es público |
-| Eventos y calendario | Decidido que van, sin empezar. Tabla nueva con fecha y hora |
-| Finanzas | **Decidido el modelo**: diezmos CON nombre, ofrendas solo en total. Ver abajo |
+| Eventos y calendario | **La base de datos está hecha y probada** (`0023` y `0024`). Falta todo lo de arriba: panel, web pública, permiso `gestionar_eventos` y los textos legales |
 | Área del miembro | `/mi` echa al panel a quien tiene iglesia. No hay vista propia |
 | Stripe | Nada. El trial vence y no pasa nada |
 | Correo (Resend) | Nada. Ni bienvenida ni aviso de solicitud |
@@ -96,6 +121,19 @@ la `0005`. Al conceder una policy, mirar SIEMPRE a qué roles va.
 
 **Una función nueva NO nace cerrada.** Pese a lo que decía este repo. Ver el
 apartado de funciones en `CLAUDE.md` y la migración `0007`.
+
+**Una tabla nueva tampoco, y ahí sí hubo fuga.** El `grant select (columnas)` de
+la `0012` no recortaba nada, porque debajo seguía el grant de tabla entera que
+Supabase da por defecto a `anon` y `authenticated`. Resultado: durante meses,
+`GET /rest/v1/devocionales?select=id,autor_miembro_id,video_url` devolvía 200 con
+la clave publicable —la que viaja en el JavaScript del navegador—, y sacaba justo
+la columna que esa migración había dejado fuera a propósito. Solo `devocionales`
+estaba afectada: es la única migración del repo que hace `grant` sin `revoke`
+delante. La RLS impidió lo demás, porque `anon` no tenía ninguna policy de
+escritura. Lo cierra la `0022`, que además invierte el defecto de tablas —como la
+`0003` hizo con el de funciones— y revoca `service_role` en `auditoria`,
+`consentimientos` y `solicitudes_ingreso`, que era lo que este fichero llevaba
+pidiendo desde el 19-ago.
 
 **`npm run db:migrate` no aplica nada y sale con código 0.** Sin error, sin
 mensaje y sin dejar rastro: parece que ha funcionado. Es `strict: true` en
@@ -163,6 +201,59 @@ cambia a `authenticated`, el panel entero devuelve 500 sin más pista que un
 simplemente no viaja en el envío tumba la validación entera. Usar los helpers de
 `src/lib/api/formulario.ts`.
 
+**Una policy de UPDATE no impide cambiar de iglesia.** Parece que sí: el `using`
+mira la fila de origen y el `with check` la de destino. Pero una cuenta puede
+pertenecer a DOS congregaciones —`iglesia_usuarios` solo es único por
+`(iglesia_id, auth_user_id)`, y un pastor que planta una segunda iglesia o
+alguien que se muda son casos reales—, y entonces las dos condiciones son
+ciertas a la vez. No es una fuga hacia un extraño, porque quien lo haría ya ve
+las dos; es corromper el libro de una con los movimientos de la otra. Lo tapa
+**HT111** en la `0020`, y hace falta el mismo guard en cualquier tabla futura.
+
+**`service_role` es una puerta distinta de `dbAdmin`.** Las migraciones hasta la
+`0017` revocaban solo `from anon, authenticated`. `dbAdmin` conecta como
+`postgres` por `DATABASE_URL` y ahí no hay nada que revocar, pero `service_role`
+entra por PostgREST con una clave que viaja en variables de entorno: es la clave
+que ESTADO.md lleva desde el 16-ago pidiendo rotar. La `0020` le revoca las tres
+tablas de finanzas y no rompe nada, porque ninguna consulta va por supabase-js.
+Conviene hacer lo mismo en las tablas que ya existen.
+
+**Un route handler NO queda cubierto por el `layout.tsx` de su carpeta.** Es la
+excepción a la regla de «los guards van en el layout»: los handlers no participan
+en layouts, y `src/proxy.ts` es comprobación optimista, no autorización. Por eso
+existe `src/lib/auth/guard-api.ts`, que devuelve `Response` y no `redirect()` —un
+redirect desde un endpoint que sirve un fichero le entrega al navegador una
+página HTML con nombre de CSV.
+
+**`capitalize` de Tailwind capitaliza CADA palabra.** `toLocaleDateString` en
+español devuelve «agosto de 2026» y salía «Agosto De 2026». Para una sola
+mayúscula inicial, `first-letter:uppercase`.
+
+**Un BOM literal en el código es invisible y alguien lo borra.** El CSV necesita
+BOM UTF-8 o Excel en español destroza los acentos, y `sep=;` o mete el fichero
+entero en una columna. Escrito como carácter literal no se ve en el editor;
+va como `﻿`. Y ojo al comprobarlo: `fetch().text()` **elimina el BOM** al
+decodificar, así que parece que falta cuando está. Hay que mirar los bytes.
+
+**lucide 1.x ya no trae iconos de marca.** `Instagram`, `Facebook` y `Youtube`
+son `undefined`: se retiraron del paquete. Importarlos no da error de
+compilación, da un componente vacío en tiempo de ejecución. Por eso las redes
+del pie de `/i/[slug]` van como pastillas con el nombre escrito y no como
+iconos. Dibujar logotipos a mano junto a un juego coherente se ve peor, y es la
+regla de iconografía del sistema de diseño.
+
+**El `<Toaster />` de sonner no está montado en ningún layout.** `src/lib/toast.ts`
+y `src/components/ui/sonner.tsx` existen —vienen de Gonper—, pero nadie los
+monta: una llamada a `toast()` no pinta nada y no avisa. Para confirmar una
+acción en cliente, que el propio botón lo diga. Montarlo traería `next-themes` a
+una aplicación de modo claro únicamente.
+
+**Los backticks rompen `scripts/test-aislamiento.ts`.** El bloque SQL vive dentro
+de un template literal de TypeScript: un backtick en un comentario SQL cierra la
+cadena y el fichero deja de compilar. Y los saltos de línea del informe van como
+`\n`, doble, para que llegue `
+` a Postgres.
+
 **Los GRANT son por columna.** Una columna nueva en `iglesias` nace invisible
 para `anon`. Si la web pública deja de mostrar un campo recién añadido, mirar el
 `GRANT SELECT (…)` de la migración antes que el código.
@@ -206,18 +297,73 @@ fichero.
 
 ## Decidido y pendiente de construir
 
-**Finanzas.** Se separan en dos:
+**Finanzas, lo que falta.** La v1 está hecha y NO guarda nombres de donante.
+`tipo_ingreso` distingue diezmo de ofrenda para poder sumarlos por separado, pero
+nada vincula un importe con una persona.
 
-- *Diezmos*: **con nombre**. Hace falta para el certificado de donación. Es lo
-  más delicado que guardaría Hatril —dinero cruzado con confesión religiosa—, así
-  que va con permiso propio y registro de cada consulta, como `ver_datos_sensibles`.
-- *Ofrendas*: **solo el total** por culto o por mes. Nadie queda vinculado a una
-  cifra.
+El diezmo nominativo sigue decidido y sigue haciendo falta para el certificado de
+donación. Lo que cambió es el **orden**, y el motivo es que hoy no hay base
+jurídica: el consentimiento que la gente ha marcado —`datos_religiosos`, art.
+9.2.a— dice que se guardan sus datos «para que la congregación pueda
+organizarse», y eso no cubre «y cuánto dinero doy, con mi nombre, durante años».
+Antes de la tabla satélite hacen falta:
+
+- Un valor nuevo en `tipo_consentimiento_enum` con su casilla separada (art. 7.2,
+  granularidad), y decidir por escrito qué pasa con quien se niega.
+- Reescribir `/privacidad` §3, que hoy dice que «los donativos no pasan por
+  Hatril» y con el módulo ya es falso, y §6, que promete un borrado que
+  `auditar()` no cumple.
+- Ampliar el anexo del art. 28 en `/terminos` §7, que no menciona aportaciones
+  económicas: tratar una categoría que el contrato no nombra convierte al
+  encargado en responsable (art. 28.10).
+- Cerrar la segunda puerta: `grant select on public.auditoria to hatril_app`
+  (0001:226) es de tabla entera y `auditoria_select_pastor` (0001:439) no filtra
+  por entidad, así que el mapa diezmo→persona se reconstruiría desde la auditoría
+  sin dejar rastro.
+
+Cuando llegue, el nombre NO va como columna de `movimientos`: los GRANT son por
+columna pero todas las sesiones entran como el mismo rol, así que una columna no
+se puede ocultar a quien ya lee la fila, y filtrarla por RLS haría mentir a
+`sum()`. Va en tabla satélite sin GRANT, tras funciones `security definer`.
+
+**Lo que se aplazó a propósito de la v1:** arqueo de la ofrenda con desglose por
+denominación, cierre de periodo, categorías de gasto, campo `beneficiario`
+(invita a escribir un nombre y con él el motivo, que suele ser de salud),
+adjuntar justificante, PDF y XLSX generados en servidor, y la comparativa
+interanual —que no tiene con qué comparar hasta que haya un año de datos—.
 
 **Eventos y calendario.** Con fecha y hora, distintos de los horarios semanales
 que ya existen. Salen en la web pública.
 
-**Web pública, lo que falta:** versículos, servicios y redes sociales. Los
+Las tablas ya están: `eventos` y `evento_inscripciones`, con su RLS, sus tres
+guards (HT113, HT114, HT115) y la función `inscribir_en_evento`. Verificado
+ejecutándolo: 39 comprobaciones contra la base de verdad, más doce nuevas
+permanentes en `npm run test:aislamiento`.
+
+Tres decisiones que conviene no volver a discutir:
+
+- **`anon` no recibe nada, ni una columna, ni un `grant execute`.** La
+  inscripción pública no pasa por PostgREST: la server action llama con
+  `dbAdmin` a una función `security definer` que no está concedida a nadie. Eso
+  quita del mapa `POST /rest/v1/rpc/` y hace que la IP deje de venir de un
+  desconocido.
+- **La función devuelve un solo escalar.** Un correo ya inscrito responde
+  exactamente igual que un alta nueva. Devolver el código de cancelación solo en
+  el alta convertiría esto en un oráculo: con una lista de correos se
+  reconstruiría quién asiste a un acto religioso sin leer una fila. El código va
+  por correo, así que **hasta que Resend esté montado no hay autocancelación**:
+  la baja la hace el pastor.
+- **Ninguna señal de aforo sale a la calle.** Ni plazas restantes, ni «completo»,
+  ni un botón que desaparezca: con cualquiera de las tres se rearma el mismo
+  oráculo desde fuera. El rechazo por aforo se entera al enviar.
+
+Lo que falta es todo lo de arriba: `/panel/eventos`, la sección de la web
+pública, el permiso `gestionar_eventos`, y los textos de `/privacidad` y
+`/terminos` — que **no son opcionales** aquí, porque es la primera vez que la
+plataforma guarda datos de gente que no es miembro de ninguna iglesia.
+
+**Web pública, lo que falta:** versículos y servicios. Las redes sociales ya
+están, al pie. Los
 donativos ya no son una sección: son el botón «Donar» de la cabecera, y ahí es
 donde entrará el pago con Stripe. «Quiero ser parte» está en el bloque de
 comunidad.

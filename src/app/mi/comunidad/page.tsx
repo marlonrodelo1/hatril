@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Bell } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { listarMuro } from '@/lib/comunidad/consultas';
+import { sinLeer } from '@/lib/notificaciones/consultas';
 import { iniciales } from '@/lib/format/iniciales';
 import { salir } from '@/app/(auth)/actions';
 import { Aviso } from '@/components/aviso';
@@ -43,6 +44,7 @@ export default async function ComunidadPage({
   const { error } = await searchParams;
   const ctx = await requireIglesia();
   const muro = await listarMuro(ctx);
+  const avisos = await sinLeer(ctx);
 
   const nombre =
     (ctx.user.user_metadata?.nombre as string | undefined) ??
@@ -71,6 +73,21 @@ export default async function ComunidadPage({
           </span>
 
           <span className="flex-1" />
+
+          {/* La campana aquí y no solo en el panel: la mayoría de la
+              congregación no entra al panel nunca. */}
+          <Link
+            href="/mi/avisos"
+            aria-label={
+              avisos > 0 ? `Avisos, ${avisos} sin leer` : 'Avisos'
+            }
+            className="relative flex size-9 flex-none items-center justify-center rounded-full text-muted-foreground no-underline hover:bg-background hover:text-foreground hover:no-underline"
+          >
+            <Bell className="size-[19px]" strokeWidth={1.8} />
+            {avisos > 0 && (
+              <span className="absolute right-1 top-1 flex size-2 rounded-full bg-primary" />
+            )}
+          </Link>
 
           <span className="flex size-8 flex-none items-center justify-center rounded-full bg-muted text-[11.5px] font-bold text-muted-foreground">
             {iniciales(nombre)}

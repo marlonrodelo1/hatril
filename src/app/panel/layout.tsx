@@ -1,7 +1,13 @@
 import { requireIglesia } from '@/lib/auth/guard-panel';
-import { esPastor, puede } from '@/lib/auth/permisos';
+import {
+  esPastor,
+  puede,
+  puedeGestionarEventos,
+  puedeGestionarFinanzas,
+} from '@/lib/auth/permisos';
 import { contarSolicitudesPendientes } from '@/lib/solicitudes/consultas';
 import { misTurnosPendientes } from '@/lib/devocionales/consultas';
+import { sinLeer } from '@/lib/notificaciones/consultas';
 import { PanelSidebar } from './_components/sidebar';
 
 /**
@@ -35,9 +41,17 @@ export default async function PanelLayout({
   // El contador solo se pide si esta persona va a ver la sección. Para un líder
   // de alabanza sería una consulta en cada carga del panel para un número que
   // no se pinta.
+  const puedeVerFinanzas = puedeGestionarFinanzas(ctx);
+  const puedeVerEventos = puedeGestionarEventos(ctx);
+
   const solicitudesPendientes = puedeVerSolicitudes
     ? await contarSolicitudesPendientes(ctx)
     : 0;
+
+  // Este sí se pide siempre: los avisos los recibe cualquiera de la
+  // congregación, no solo quien administra. Va contra el índice parcial de la
+  // `0016`, que solo indexa las filas sin leer.
+  const avisosSinLeer = await sinLeer(ctx);
 
   return (
     <div className="flex min-h-dvh bg-background">
@@ -54,8 +68,11 @@ export default async function PanelLayout({
         }
         rol={ctx.rol}
         solicitudesPendientes={solicitudesPendientes}
+        avisosSinLeer={avisosSinLeer}
         puedeVerSolicitudes={puedeVerSolicitudes}
         puedeEscribirDevocionales={puedeEscribirDevocionales}
+        puedeVerFinanzas={puedeVerFinanzas}
+        puedeVerEventos={puedeVerEventos}
         esPastorDeLaIglesia={esPastor(ctx)}
       />
 

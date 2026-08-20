@@ -5,6 +5,10 @@ import type { Metadata } from 'next';
 import { Mail, MapPin, Phone, Play, UsersRound } from 'lucide-react';
 
 import { obtenerIglesiaPublica } from '@/lib/iglesias/publica';
+import { redesParaPintar } from '@/lib/iglesias/redes';
+import { eventosPublicos } from '@/lib/eventos/publica';
+import { EventosIglesia } from './_components/eventos';
+import type { Moneda } from '@/lib/db/schema';
 import { iniciales } from '@/lib/format/iniciales';
 import { formatearTelefono } from '@/lib/telefono/normalizar';
 import { Button } from '@/components/ui/button';
@@ -92,9 +96,21 @@ export default async function WebIglesiaPage({
   const tieneContacto = Boolean(
     iglesia.direccion || iglesia.telefono || iglesia.email,
   );
+  // Tolerante a lo que haya guardado: la columna es de la migración `0000` y
+  // puede traer claves anteriores al catálogo. Se ignoran en vez de tumbar la
+  // web de la iglesia.
+  const redes = redesParaPintar(iglesia.redes);
+  // Va por `dbAdmin`, como todo lo de esta página, y NO consulta inscripciones:
+  // ni siquiera para contarlas. El porqué, en `src/lib/eventos/publica.ts`.
+  const eventosDeLaIglesia = await eventosPublicos(iglesia.id);
+  const monedaIglesia = iglesia.moneda as Moneda;
   const secciones: { href: string; texto: string }[] = [];
   if (iglesia.horarios.length > 0) {
     secciones.push({ href: '#horarios', texto: 'Horarios' });
+  }
+  // Entre horarios y devocional, en el MISMO orden en que se pintan más abajo.
+  if (eventosDeLaIglesia.length > 0) {
+    secciones.push({ href: '#eventos', texto: 'Eventos' });
   }
   if (devocional) {
     secciones.push({ href: '#devocional', texto: 'Devocional' });
@@ -370,6 +386,34 @@ export default async function WebIglesiaPage({
               );
             })}
           </div>
+        </section>
+      )}
+
+      {/* --- Eventos ---
+          Entre los horarios y el devocional a propósito: los horarios son lo
+          que se repite cada semana y esto es lo que pasa UNA vez, así que se
+          leen seguidos. Y el orden de este bloque tiene que ser el mismo que el
+          del array `secciones`: la marca verde del menú recorre ese array y se
+          queda con la última sección que ha pasado la línea de lectura, así que
+          si discrepan se queda pegada en la equivocada. */}
+      {eventosDeLaIglesia.length > 0 && (
+        <section
+          id="eventos"
+          className="mx-auto max-w-[1180px] scroll-mt-20 px-4 py-14 sm:px-5 md:px-10 md:py-16 lg:py-20"
+        >
+          <div className="mb-7 flex flex-col gap-2">
+            <span className="t-micro">Lo próximo</span>
+            <h2 className="text-[clamp(24px,4vw,32px)] font-extrabold leading-tight tracking-[-0.03em]">
+              Eventos
+            </h2>
+          </div>
+
+          <EventosIglesia
+            eventos={eventosDeLaIglesia}
+            slug={iglesia.slug}
+            timezone={iglesia.timezone}
+            moneda={monedaIglesia}
+          />
         </section>
       )}
 
@@ -811,6 +855,34 @@ export default async function WebIglesiaPage({
               )}
             </div>
           </div>
+
+          {/* Las redes van AQUÍ y no en la cabecera, aunque parezca el sitio
+              obvio: la píldora de arriba ya va justa a 1024px —por eso «Mi
+              cuenta» es solo icono y solo cabe un botón de acción— y cinco
+              enlaces más la rompen. Además no son una sección de la página, así
+              que no entran en el menú de anclas.
+
+              Sin iconos de marca, y no por pereza: lucide 1.x retiró
+              `Instagram`, `Facebook` y `Youtube`, y dibujar logotipos a mano
+              junto a un juego de iconos coherente se ve peor que el nombre
+              escrito. Si algún día vuelven, aquí es donde entran. */}
+          {redes.length > 0 && (
+            <ul className="flex flex-wrap items-center gap-2">
+              {redes.map(({ red, titulo, url }) => (
+                <li key={red}>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${iglesia.nombre} en ${titulo}`}
+                    className="flex h-8 items-center rounded-full border border-border bg-surface-alt px-3.5 text-[13px] font-semibold text-muted-foreground no-underline transition-colors hover:bg-background hover:text-foreground hover:no-underline"
+                  >
+                    {titulo}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
 
           {/* `hidden` en móvil: en columna este separador no empuja nada, pero
               sigue contando como hijo del flex y duplica el hueco entre el logo
