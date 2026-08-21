@@ -25,6 +25,7 @@ import {
   borrarInscritos,
   cambiarInscripciones,
   cambiarPublicado,
+  borrarInscripcion,
   cancelarInscripcion,
   marcarPagada,
 } from '../actions';
@@ -228,6 +229,25 @@ export default async function EventoPage({
                     )}
                   </div>
 
+                  <div className="flex flex-none items-center gap-2">
+                    {/* Borrar los datos de UNA persona, y sin la condicion de
+                        que el evento haya pasado: el derecho de supresion no
+                        espera a que termine el retiro. Aparece tambien en las
+                        canceladas, que es donde acaba quien se dio de baja y
+                        despues pide que le borren. */}
+                    <form action={borrarInscripcion.bind(null, i.id, id)}>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground"
+                        title="Borra su nombre, correo, telefono y nota. No se puede deshacer."
+                      >
+                        Borrar sus datos
+                      </Button>
+                    </form>
+                  </div>
+
                   {!i.canceladaAt && (
                     <div className="flex flex-none items-center gap-2">
                       {e.precio && (
@@ -277,8 +297,11 @@ export default async function EventoPage({
             <h2 className="t-subtitulo">Borrar</h2>
             <p className="max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">
               Quien se apunta a un evento sin ser de la iglesia confía sus datos
-              para eso y nada más. Cuando el evento pase y ya no necesites la
-              lista, bórrala: no hay ninguna tarea automática que lo haga por ti.
+              para eso y nada más. Lo que tienes pactado en los términos es no
+              guardar la lista más de{' '}
+              <strong className="font-semibold">90 días</strong> desde que el
+              evento termina. No hay ninguna tarea automática que lo haga por ti:
+              este botón es la forma de cumplirlo.
             </p>
           </div>
 

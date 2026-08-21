@@ -392,6 +392,41 @@ export async function cancelarInscripcion(
 }
 
 /**
+ * Borrar los datos de UNA persona.
+ *
+ * `cancelarInscripcion` da de baja pero CONSERVA nombre, correo, teléfono, nota
+ * e IP: sirve para que el organizador sepa quién no viene, no para el art. 17.
+ *
+ * Sin esto, atender a quien pide que le borren obligaba a borrar la lista entera
+ * —o el evento— y con ella los datos de los otros cuarenta. Es decir: la única
+ * forma de cumplir con una persona era incumplir con el resto. Y `/privacidad`
+ * promete justamente que no hace falta.
+ *
+ * Tampoco valía anonimizar en su sitio: HT114 congela `email` en cualquier
+ * UPDATE, así que la fila no se puede vaciar. Se borra.
+ */
+export async function borrarInscripcion(
+  inscripcionId: string,
+  eventoId: string,
+): Promise<void> {
+  const ctx = await requireEventos(`${DESTINO}/${eventoId}`);
+
+  await withUser(ctx.user.id, (tx) =>
+    tx
+      .delete(eventoInscripciones)
+      .where(
+        and(
+          eq(eventoInscripciones.id, inscripcionId),
+          eq(eventoInscripciones.iglesiaId, ctx.iglesia.id),
+        ),
+      ),
+  );
+
+  revalidatePath(`${DESTINO}/${eventoId}`);
+  redirect(`${DESTINO}/${eventoId}?guardado=inscripcion-borrada`);
+}
+
+/**
  * Borrar la lista entera de inscritos de un evento pasado.
  *
  * Existe porque NO hay cron de purga: la regla de conservación que se escribe en

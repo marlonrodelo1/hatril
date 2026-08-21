@@ -8,6 +8,7 @@ import { obtenerIglesiaPublica } from '@/lib/iglesias/publica';
 import { formatearInstante } from '@/lib/fecha/zona';
 import { formatearDinero } from '@/lib/format/dinero';
 import { TEXTO_CONSENTIMIENTO_EVENTO } from '@/lib/rgpd/consentimiento';
+import { DATOS_RESPONSABLE } from '@/lib/legal/datos-responsable';
 import type { Moneda } from '@/lib/db/schema';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
@@ -290,13 +291,58 @@ export default async function EventoPublicoPage({
                   className="mt-0.5 flex-none"
                 />
                 <span>
-                  {TEXTO_CONSENTIMIENTO_EVENTO}{' '}
+                  {TEXTO_CONSENTIMIENTO_EVENTO(iglesia.nombre)}{' '}
                   <Link href="/privacidad" target="_blank" rel="noopener noreferrer">
-                    Cómo se tratan tus datos
+                    Más información sobre el tratamiento
                   </Link>
                   .
                 </span>
               </label>
+
+              {/* La primera capa del art. 13, y va AQUÍ y no detrás del enlace.
+                  Quien se apunta a un concierto no abre una pestaña nueva para
+                  bajar a la sección 3 de una política: si la información que
+                  exige el art. 13 solo está allí, no se ha informado a nadie.
+                  El enlace de arriba es la segunda capa, no la primera.
+
+                  Y el responsable es la IGLESIA, no Hatril: aquí no hay
+                  contrato con esta persona, solo su consentimiento. */}
+              <div className="flex flex-col gap-1 rounded-lg border border-border bg-surface-alt p-4 text-[13px] leading-relaxed text-muted-foreground">
+                <p>
+                  <b className="font-semibold text-foreground">Responsable:</b>{' '}
+                  {iglesia.nombre}
+                  {iglesia.email ? `, ${iglesia.email}` : ''}
+                  {iglesia.telefono ? ` · ${iglesia.telefono}` : ''}.
+                </p>
+                <p>
+                  <b className="font-semibold text-foreground">Para qué:</b>{' '}
+                  organizar este evento y poder avisarte si cambia o se cancela.
+                  La dirección IP y el navegador se guardan con un solo fin:
+                  poder demostrar que el permiso lo diste tú.
+                </p>
+                <p>
+                  <b className="font-semibold text-foreground">Por qué se puede:</b>{' '}
+                  por tu consentimiento explícito (art. 9.2.a del RGPD). Darlo es
+                  voluntario; sin él no podemos apuntarte, y no pasa nada más.
+                </p>
+                <p>
+                  <b className="font-semibold text-foreground">Quién más lo ve:</b>{' '}
+                  nadie fuera de la iglesia, salvo Hatril y sus proveedores, que
+                  solo prestan el servicio.
+                </p>
+                <p>
+                  <b className="font-semibold text-foreground">Cuánto tiempo:</b>{' '}
+                  como máximo 90 días desde que el evento termina.
+                </p>
+                <p>
+                  <b className="font-semibold text-foreground">Tus derechos:</b>{' '}
+                  acceder, rectificar, borrar y retirar este permiso cuando
+                  quieras, escribiendo a la iglesia o a{' '}
+                  <a href={`mailto:${DATOS_RESPONSABLE.email}`}>{DATOS_RESPONSABLE.email}</a>.
+                  Retirarlo no afecta a lo hecho antes. Y puedes reclamar ante la
+                  autoridad de protección de datos.
+                </p>
+              </div>
 
               <Button type="submit" className="w-fit">
                 Apuntarme

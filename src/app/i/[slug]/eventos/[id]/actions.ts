@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { dbAdmin } from '@/lib/db';
 import { campo, campoObligatorio } from '@/lib/api/formulario';
 import { checkRateLimit } from '@/lib/api/rate-limit';
-import { VERSION_POLITICA_PRIVACIDAD } from '@/lib/rgpd/consentimiento';
+import { VERSION_CONSENTIMIENTO_EVENTO } from '@/lib/rgpd/consentimiento';
 import { MAX_ACOMPANANTES } from '@/app/panel/eventos/constantes';
 
 /**
@@ -131,7 +131,7 @@ export async function inscribirse(
       ${eventoId}::uuid,
       ${d.nombre},
       ${d.email},
-      ${VERSION_POLITICA_PRIVACIDAD},
+      ${VERSION_CONSENTIMIENTO_EVENTO},
       ${d.telefono ?? null},
       ${acompanantes},
       ${d.nota ?? null},

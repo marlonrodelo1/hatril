@@ -24,5 +24,6 @@ export const CONFIRMACIONES: Record<string, string> = {
   pagada: 'Marcada como pagada.',
   'pago-quitado': 'Ya no consta como pagada.',
   'inscripcion-cancelada': 'Inscripción cancelada.',
+  'inscripcion-borrada': 'Datos de esa persona borrados.',
   'lista-borrada': 'Lista de inscritos borrada.',
 };

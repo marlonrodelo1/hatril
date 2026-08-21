@@ -33,7 +33,7 @@ export const DATOS_RESPONSABLE = {
   /** Solo sociedades. Vacío para autónomo. */
   registroMercantil: '',
 
-  ultimaActualizacion: '2026-08-16',
+  ultimaActualizacion: '2026-08-20',
 } as const;
 
 /**

@@ -144,11 +144,44 @@ export default function PrivacidadPage() {
           teléfono si lo das, y el mensaje que escribas.
         </P>
         <P>
+          De quien se apunta a un evento abierto sin tener cuenta: nombre,
+          correo, teléfono si lo das, cuántas personas te acompañan, lo que
+          escribas en la nota, y si la iglesia ha marcado tu plaza como pagada.
+          Guardamos también la dirección IP y el navegador desde el que te
+          apuntaste. Sirven para una sola cosa: demostrar que el permiso lo diste
+          tú. Si te apunta la iglesia porque llamaste por teléfono, no se guarda
+          ninguna de las dos: la IP sería la suya, no la tuya. Apuntarte a un
+          acto de una iglesia dice algo de tus creencias, así que ese dato lleva
+          la misma protección que el de un miembro.{' '}
           <strong className="font-semibold">
-            No pedimos datos bancarios a los miembros.
+            Apuntarte a un evento no te hace miembro de nada
           </strong>{' '}
-          Los donativos no pasan por Hatril: si tu iglesia publica una cuenta,
-          es suya y el dinero va directo a ella.
+          y no te damos de alta en el fichero de la congregación.
+        </P>
+        <P>
+          Del dinero de la iglesia guardamos lo que entra y lo que sale: importe,
+          concepto y fecha, y si una ofrenda fue diezmo o donativo para poder
+          sumarlos por separado.{' '}
+          <strong className="font-semibold">
+            No hay ninguna casilla para el nombre de quien da.
+          </strong>{' '}
+          El concepto lo escribe a mano el tesorero de tu iglesia, y le pedimos
+          que no ponga nombres ahí.
+        </P>
+        <P>
+          Lo único que sí une a una persona con un pago es la marca de «plaza
+          pagada» de un evento, y eso lo apunta la iglesia, no nosotros.
+        </P>
+        <P>
+          <strong className="font-semibold">
+            No pedimos datos bancarios a los miembros y no cobramos nada por
+            cuenta de tu iglesia.
+          </strong>{' '}
+          Los donativos y las entradas de los eventos no pasan por Hatril: si tu
+          iglesia publica una cuenta o un enlace de pago, son suyos y el dinero va
+          directo a ella. Lo único que guardamos de eso es la anotación que hace
+          la propia iglesia de quién ha pagado su plaza, que es un apunte suyo y
+          no una comprobación nuestra.
         </P>
       </Seccion>
 
@@ -171,14 +204,22 @@ export default function PrivacidadPage() {
           </li>
         </Lista>
         <P>
-          Retirar el consentimiento es tan fácil como darlo y no tiene
-          consecuencias más allá de que dejes de aparecer. Lo que ya pasó antes
-          de retirarlo sigue siendo válido; lo dice el art. 7.3.
+          <strong className="font-semibold">
+            Si te apuntas a un evento sin ser de la iglesia
+          </strong>{' '}
+          la única base es tu consentimiento explícito, el que das en ese mismo
+          formulario. No hay contrato contigo y no estás en el fichero de la
+          congregación. Usamos tus datos para organizar ese evento y para avisarte
+          si cambia o se cancela, y para nada más: ni te apuntamos a una lista de
+          correo, ni te escribimos por otra cosa.
         </P>
         <P>
-          Los avisos de actividades y la publicación de tu foto en el directorio
-          interno se consienten <em>por separado</em>. Puedes revocar uno sin
-          tocar el otro.
+          Retirar el consentimiento no tiene más consecuencia que dejar de
+          aparecer, y lo que ya pasó antes sigue siendo válido: lo dice el art.
+          7.3. Todavía no hay un botón para hacerlo tú desde la aplicación:
+          escríbele a tu iglesia, o a{' '}
+          <a href={`mailto:${r.email}`}>{r.email}</a>, y lo tramitamos a mano,
+          sin coste y sin pedirte explicaciones.
         </P>
       </Seccion>
 
@@ -230,7 +271,18 @@ export default function PrivacidadPage() {
           <li>
             Si pides que se borre, se borra. Lo único que se conserva es el
             registro de que hubo un consentimiento y de que lo retiraste, porque
-            sin eso no podríamos demostrar que actuamos bien.
+            sin eso no podríamos demostrar que actuamos bien. Una ficha de
+            miembro que se da de baja no se borra sola: queda archivada como
+            histórico hasta que pidas el borrado.
+          </li>
+          <li>
+            Las listas de inscritos a un evento son de la iglesia y las borra
+            ella. Lo que tiene pactado con nosotros es no guardarlas más de 90
+            días desde que el evento termina, y tiene un botón para borrarlas de
+            una vez. Si quieres que borren solo lo tuyo, y antes, pídeselo: puede
+            hacerlo sin esperar a que pase el evento y sin tocar los datos de
+            nadie más. Si no obtienes respuesta, escríbenos y lo hacemos
+            nosotros.
           </li>
           <li>
             Si una iglesia deja Hatril, sus datos se eliminan a los 60 días de
@@ -248,8 +300,8 @@ export default function PrivacidadPage() {
         </P>
         <P>
           Escribe a <a href={`mailto:${r.email}`}>{r.email}</a> desde el correo
-          con el que estés registrado y contestamos en un mes como máximo. No
-          cobramos por ello.
+          con el que te apuntaste o con el que estés registrado, y contestamos en
+          un mes como máximo. No cobramos por ello.
         </P>
         <P>
           Si crees que lo hemos hecho mal puedes reclamar ante la Agencia
@@ -294,10 +346,10 @@ export default function PrivacidadPage() {
 
       <Seccion numero={10} titulo="Si esto cambia">
         <P>
-          Te avisaremos por correo antes de que un cambio de fondo entre en
-          vigor. Y si el cambio afecta a aquello que consentiste, volveremos a
-          preguntártelo: no damos por bueno un permiso dado sobre un texto
-          distinto.
+          Cuando cambiemos algo de fondo lo verás en la fecha del pie, y esa
+          fecha es la única señal fiable: todavía no mandamos correos. Si el
+          cambio afecta a aquello que consentiste, volveremos a preguntártelo: no
+          damos por bueno un permiso dado sobre un texto distinto.
         </P>
       </Seccion>
 

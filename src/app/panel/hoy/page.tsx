@@ -11,7 +11,12 @@ import {
 } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
-import { esPastor, puede, puedeGestionarFinanzas } from '@/lib/auth/permisos';
+import {
+  esPastor,
+  puede,
+  puedeGestionarEventos,
+  puedeGestionarFinanzas,
+} from '@/lib/auth/permisos';
 import {
   nuevosSinMinisterio,
   resumenCongregacion,
@@ -22,6 +27,8 @@ import { listarSolicitudesPendientes } from '@/lib/solicitudes/consultas';
 import { misTurnosPendientes } from '@/lib/devocionales/consultas';
 import { formatearFechaLarga, mesEnLaIglesia } from '@/lib/fecha/hoy';
 import { resumen as resumenFinanzas } from '@/lib/finanzas/consultas';
+import { proximosEventos } from '@/lib/eventos/consultas';
+import { formatearInstante } from '@/lib/fecha/zona';
 import { formatearDinero } from '@/lib/format/dinero';
 import type { Moneda } from '@/lib/db/schema';
 import { ESTADOS } from '@/lib/miembros/estados';
@@ -110,6 +117,13 @@ export default async function HoyPage({
       salio: formatearDinero(r.salio, moneda),
     };
   })();
+
+  // Lo que viene, para quien organiza. Un evento que nadie recuerda es un
+  // evento al que no va nadie, y el pastor vive en esta pantalla: mismo
+  // argumento que ya justifica el bloque de la caja.
+  const eventosProximos = puedeGestionarEventos(ctx)
+    ? await proximosEventos(ctx, 3)
+    : [];
 
   const sirviendoPct =
     resumen.total > 0
@@ -280,6 +294,38 @@ export default async function HoyPage({
             </div>
           </div>
         </section>
+
+        {/* ---------- Lo próximo ---------- */}
+        {eventosProximos.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="t-micro">Lo próximo</h2>
+
+            <ul className="flex flex-col gap-2">
+              {eventosProximos.map((e) => (
+                <li key={e.id}>
+                  <Link
+                    href={`/panel/eventos/${e.id}`}
+                    className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-xl border border-border bg-surface p-4 no-underline transition-colors hover:bg-surface-alt hover:no-underline"
+                  >
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <span className="truncate text-[15.5px] font-semibold text-foreground">
+                        {e.titulo}
+                      </span>
+                      <span className="text-[13px] text-muted-foreground first-letter:uppercase">
+                        {formatearInstante(e.inicioEn, ctx.iglesia.timezone)}
+                      </span>
+                    </div>
+                    <span className="flex-none text-[13.5px] text-muted-foreground tabular-nums">
+                      {e.cupo
+                        ? `${e.ocupadas} de ${e.cupo}`
+                        : `${e.ocupadas} apuntados`}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* ---------- La caja ---------- */}
         {finanzas && (

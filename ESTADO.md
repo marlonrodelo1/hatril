@@ -70,6 +70,13 @@ lee al arrancar.
   legible. La ve todo el equipo, pero las redes solo las escribe el pastor. Si
   la web no está publicada o las solicitudes están cerradas, lo dice en vez de
   dar un enlace que no funciona.
+- **Eventos**: `/panel/eventos`. Crear un evento con fecha y hora, aforo, precio
+  y el enlace de pago de la iglesia; publicarlo y abrir inscripciones, que son
+  dos interruptores separados; la lista de quién viene, marcar plazas pagadas y
+  descargar el CSV. Sale en la web de la congregación entre los horarios y el
+  devocional, y **cualquiera puede apuntarse sin cuenta**. Verificado creando un
+  retiro de 150.000 con aforo 2, apuntando gente y llenándolo. Con permiso
+  propio, `gestionar_eventos`, que la secretaría tiene por defecto.
 - **Público**: portada, directorio de iglesias, web pública de cada
   congregación (carrusel de fotos con el titular encima, horarios con «lo
   próximo» calculado, devocional, grupos apilados al bajar), formulario de
@@ -98,7 +105,7 @@ lee al arrancar.
 |---|---|
 | Proveedor de alojamiento en los legales | **Sin rellenar.** Lo más urgente: bloquea publicar |
 | Foto en la ficha de miembro | Va en OTRO bucket, privado y con URL firmada. El de iglesias es público |
-| Eventos y calendario | **La base de datos está hecha y probada** (`0023` y `0024`). Falta todo lo de arriba: panel, web pública, permiso `gestionar_eventos` y los textos legales |
+| Eventos y calendario | Hecho y verificado, con sus textos legales |
 | Área del miembro | `/mi` echa al panel a quien tiene iglesia. No hay vista propia |
 | Stripe | Nada. El trial vence y no pasa nada |
 | Correo (Resend) | Nada. Ni bienvenida ni aviso de solicitud |
@@ -168,6 +175,25 @@ no tenía concedida, así que `anon` nunca pudo leer ni un ministerio: fallaba c
 «permission denied for table iglesias». Llevaba roto desde la `0001` y no se veía
 porque `/i/[slug]` va por `dbAdmin`. Lo arregla la `0006`.
 
+**Un texto legal se revisa contra el código, no contra sí mismo.** La primera
+redacción de los párrafos de eventos pasaba lectura, era coherente y decía cuatro
+cosas falsas. Todas se cazaron comparando frase por frase con lo que el producto
+hace: la política declaraba que la IP servía «para frenar inscripciones
+automáticas» cuando el propio schema dice que no se usa para eso; afirmaba que
+«nada vincula un importe con una persona» tres párrafos después de contar que se
+guarda quién ha pagado su plaza; prometía un aviso por correo sin que exista
+envío de correo; y el anexo del art. 28 declaraba como medida del art. 32 un
+«registro de quién consulta los datos protegidos» que no existe —`lectura_sensible`
+está en el enum y no lo escribe nadie—. A eso se suma que `/terminos` prohibía
+«guardar datos de personas que no tengan relación con la congregación», que es
+literalmente lo que hace el módulo de eventos.
+
+**Y una promesa legal necesita el botón que la cumple.** «Si pides que se borre,
+se borra» era falso para un inscrito: solo existía dar de baja —que conserva
+nombre, correo, teléfono, nota e IP— o borrar la lista entera. Atender a una
+persona obligaba a incumplir con las otras cuarenta. Ahora hay un botón de borrar
+los datos de una sola.
+
 **Cambiar el texto de privacidad no es gratis.** `VERSION_POLITICA_PRIVACIDAD` se
 guarda con cada consentimiento. Si se toca el fondo de `/privacidad` hay que
 subir esa constante **y** volver a pedir el consentimiento a quien aceptó la
@@ -234,6 +260,15 @@ BOM UTF-8 o Excel en español destroza los acentos, y `sep=;` o mete el fichero
 entero en una columna. Escrito como carácter literal no se ve en el editor;
 va como `﻿`. Y ojo al comprobarlo: `fetch().text()` **elimina el BOM** al
 decodificar, así que parece que falta cuando está. Hay que mirar los bytes.
+
+**Una columna interpolada en un `sql` de Drizzle sale SIN cualificar.**
+`${eventos.id}` dentro de una subconsulta se escribe como `"id"` a secas, y
+Postgres lo resuelve contra la tabla de DENTRO si esa también tiene una columna
+`id`. El contador de plazas quedó como `where ei.evento_id = ei.id`: cero
+siempre, sin error, sin aviso y con la consulta perfectamente válida para el
+compilador y para Postgres. Se vio en pantalla —«0 personas de 2 plazas» con un
+inscrito debajo— y no en ninguna comprobación automática. En una subconsulta
+correlacionada, el nombre de la tabla de fuera se escribe a mano.
 
 **lucide 1.x ya no trae iconos de marca.** `Instagram`, `Facebook` y `Youtube`
 son `undefined`: se retiraron del paquete. Importarlos no da error de

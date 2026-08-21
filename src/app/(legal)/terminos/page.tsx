@@ -119,9 +119,13 @@ export default function TerminosPage() {
           </li>
         </Lista>
         <P>
-          No se puede usar Hatril para mandar publicidad no pedida, ni para
-          guardar datos de personas que no tengan relación con la congregación,
-          ni para nada ilegal.
+          No se puede usar Hatril para mandar publicidad no pedida ni para nada
+          ilegal. Tampoco para guardar datos de gente que no tiene nada que ver
+          contigo.
+        </P>
+        <P>
+          Quien se apunta a un evento abierto sí puede estar: te dio permiso él
+          mismo al apuntarse. Esos datos valen para ese evento y para nada más.
         </P>
       </Seccion>
 
@@ -211,10 +215,45 @@ export default function TerminosPage() {
         </P>
 
         <P>
-          <strong className="font-semibold">Qué datos y de quién.</strong> Datos
-          identificativos y de contacto, y datos de categoría especial del
-          artículo 9 —la pertenencia religiosa—, de los miembros, colaboradores
-          y solicitantes de la iglesia.
+          <strong className="font-semibold">Qué datos y de quién.</strong> De tus
+          miembros, colaboradores y de quien pide entrar: nombre, contacto y su
+          vínculo con la iglesia, que es dato protegido del artículo 9. También
+          de los menores de edad cuya ficha lleves. Y de quien se apunte a un
+          evento abierto tuyo aunque no sea de tu congregación: lo que escriba en
+          el formulario, la IP y el navegador desde los que se apuntó —la prueba
+          de que dio permiso— y tu marca de si ha pagado la plaza.
+        </P>
+
+        <P>
+          Del dinero: los apuntes del libro de cuentas, sin nombre de quien da,
+          con quién los registró y cuándo.
+        </P>
+
+        <P>
+          Hay campos de texto libre —la nota de una inscripción, el concepto de
+          un movimiento, las notas pastorales— donde puede acabar un dato de
+          salud o de otra naturaleza protegida. Te comprometes a no meter ahí
+          datos de salud, de origen étnico, de vida sexual ni de condenas
+          penales, y respondes de ello.
+        </P>
+
+        <P>
+          <strong className="font-semibold">Cobros de eventos.</strong>{' '}
+          {r.razonSocial} no cobra ni intermedia el precio de un evento. La
+          iglesia publica su propio medio de pago y anota a mano quién ha pagado.
+          Ese apunte es un dato más de la inscripción y responde de él la
+          iglesia, no nosotros. Tampoco guardamos datos de tarjetas ni de cuentas
+          de quien paga.
+        </P>
+
+        <P>
+          <strong className="font-semibold">
+            Cuánto se guardan las listas de inscritos.
+          </strong>{' '}
+          Como máximo 90 días desde que termina el evento. Pasado ese plazo la
+          iglesia las borra: tiene un botón para hacerlo de una vez, y otro para
+          borrar los datos de una sola persona si esa persona lo pide antes. No
+          hay ninguna tarea automática que lo haga, así que es cosa suya.
         </P>
 
         <P>
@@ -231,9 +270,10 @@ export default function TerminosPage() {
           </li>
           <li>
             Aplicar las medidas del artículo 32. En concreto: cifrado en
-            tránsito, control de acceso por persona, aislamiento entre
-            congregaciones impuesto por la propia base de datos, y registro de
-            quién consulta los datos protegidos.
+            tránsito, control de acceso por persona y por permiso, aislamiento
+            entre congregaciones impuesto por la propia base de datos, y registro
+            de los cambios sobre las fichas de miembros y sobre los eventos, con
+            quién los hizo y cuándo.
           </li>
           <li>
             Avisar a la iglesia{' '}
@@ -244,6 +284,15 @@ export default function TerminosPage() {
           <li>
             Ayudarla a atender los derechos de sus miembros y a hacer su
             evaluación de impacto si la necesita.
+          </li>
+          <li>
+            Imponer por contrato a cada subencargado las mismas obligaciones de
+            protección de datos que asumimos aquí, y responder plenamente ante la
+            iglesia si alguno incumple.
+          </li>
+          <li>
+            Decirle a la iglesia de inmediato si creemos que una instrucción suya
+            infringe el RGPD o cualquier otra norma de protección de datos.
           </li>
           <li>
             Al terminar, devolver o borrar los datos según nos indique, y borrar
@@ -274,10 +323,14 @@ export default function TerminosPage() {
         </P>
 
         <P>
-          <strong className="font-semibold">Transferencias.</strong> Los datos se
-          guardan en la Unión Europea. Si algún subencargado tratara datos fuera,
-          será con garantías del capítulo V del RGPD, y queda dicho en la lista
-          de arriba.
+          <strong className="font-semibold">Transferencias.</strong> La base de
+          datos y los ficheros de la congregación están en la Unión Europea
+          (Irlanda). Si algún subencargado tratara datos fuera de la UE, será con
+          las garantías del capítulo V del RGPD y queda dicho en la lista de
+          subencargados, que incluye también los que todavía no están en uso. Si
+          alguna vez una ley nos obligara a transferir datos fuera del Espacio
+          Económico Europeo, se lo diremos a la iglesia antes de hacerlo, salvo
+          que esa misma ley lo prohíba por razones de interés público.
         </P>
       </Seccion>
 

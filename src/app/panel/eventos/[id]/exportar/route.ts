@@ -78,7 +78,7 @@ export async function GET(
     // El aviso viaja DENTRO del fichero. Puesto solo en la pantalla se queda en
     // la pantalla, y quien reenvía el CSV ya no lo está viendo.
     celda(
-      'Aviso: esta lista lleva nombres y correos de personas, algunas ajenas a la congregacion. Apuntarse a un acto de una iglesia dice algo de las creencias de quien se apunta, asi que trata este fichero como lo que es. Borralo cuando el evento haya pasado.',
+      'Aviso: esta lista lleva nombres y correos de personas, algunas ajenas a la congregacion. Apuntarse a un acto de una iglesia dice algo de las creencias de quien se apunta, asi que trata este fichero como lo que es. Borralo cuando el evento haya pasado, y como muy tarde 90 dias despues de que termine: es lo que tu iglesia tiene pactado con Hatril.',
     ),
   ];
 
