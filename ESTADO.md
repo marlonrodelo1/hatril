@@ -363,6 +363,29 @@ mano al fichero de migración. Pasó con `iglesias.imagenes` (0010) y con
 `ministerios.foto_url` (0011); sin el GRANT la consulta pública no devuelve cero
 filas, **falla entera** con «permission denied».
 
+**Un `blur` no distingue «me he ido» de «he abierto el diálogo de ficheros».**
+Al abrir el selector de archivos del sistema, el foco sale de la página y el
+evento llega con `relatedTarget` a `null` — exactamente igual que si la persona
+se hubiera ido a otra pestaña. El publicador del muro pliega su fila de acciones
+cuando nadie escribe, y sin cubrir este caso la fila desaparecía justo bajo el
+dedo mientras se elegía la foto. Se tapa con una bandera que se levanta en el
+`pointerdown` de la etiqueta y se baja con el `focus` de la ventana: el navegador
+**no avisa de una cancelación** del diálogo —no hay `change`, y `cancel` no llega
+en todos—, así que bajarla en el `change` la dejaría levantada para siempre.
+
+Y dos hermanos del mismo caso: moverse entre controles de dentro del formulario
+tampoco es salir (`currentTarget.contains(relatedTarget)`), y con texto escrito o
+fotos elegidas no se pliega nunca — esconder el botón de publicar encima de un
+borrador es peor que ocupar sitio.
+
+**Plegar algo con estado tiene que nacer desplegado.** El mismo publicador
+arranca con `abierto = true`, así que el HTML del servidor ya trae el botón de
+publicar y quien no tenga JavaScript sigue pudiendo enviar. Y se pliega con
+`useLayoutEffect` y no con `useEffect`: con el segundo el navegador alcanza a
+dibujar la fila y la quita al fotograma siguiente, un parpadeo en cada carga del
+muro. Como `useLayoutEffect` no existe en el servidor, va tras el alias habitual
+que elige uno u otro según dónde se ejecute.
+
 **Un fichero `'use server'` solo puede exportar funciones async.** Exportar una
 constante desde ahí rompe el build entero, y el typecheck no lo caza porque es
 una regla de Next y no de TypeScript: aparece al abrir la pantalla. Las
