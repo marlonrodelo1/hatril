@@ -231,6 +231,41 @@ lee al arrancar.
 - **Legales**: `/privacidad` y `/terminos`, con el encargo de tratamiento del
   art. 28 como anexo aceptable al registrar la iglesia. Los datos salen todos de
   `src/lib/legal/datos-responsable.ts`, así que se cambian en un solo sitio.
+- **Suscripción**: el circuito de cobro completo. `/panel/suscripcion` con el
+  tamaño de la congregación arriba —sin ese número, elegir plan es adivinar—,
+  los tres planes, mensual o anual, y el portal de Stripe para facturas, tarjeta
+  y baja. La franja de aviso corona el panel los tres últimos días de prueba y
+  durante toda la gracia de lectura: hasta ahora el trial vencía y no pasaba
+  nada visible.
+
+  **El muro tiene dos capas, y ninguna de las dos está donde uno esperaría.**
+  Escribir lo corta `exigirPoderEscribir()` dentro de las cuatro guards de
+  server action, así que cubre lo que existe hoy y lo que se escriba dentro de un
+  año sin que nadie se acuerde. Leer solo se corta cuando se acabó también la
+  gracia, y entonces el layout manda a `/suscripcion` —una ruta de FUERA del
+  panel—, porque un layout de Next **no se vuelve a ejecutar al navegar** y un
+  muro pintado ahí dentro se esquiva con un clic del menú.
+
+  Cuatro cosas nunca se bloquean: pagar, darse de baja, aceptar la política y
+  cambiar la contraseña propia. Cerrar cualquiera de ellas deja a una iglesia sin
+  forma de salir del estado en el que está.
+
+  Verificado ejecutándolo, con la fecha de Betania movida a mano: a un día
+  vencida el panel sigue navegable, `/panel/cuenta` guarda y `/panel/ajustes`
+  responde «no puedes guardar cambios»; a cinco días, `/panel/hoy` acaba en el
+  muro, sin menú y con los planes; y al devolver la fecha, `/suscripcion`
+  devuelve al panel. El pastor ve los planes y la secretaria, «esto lo resuelve
+  el pastor».
+
+- **El webhook de Stripe**: `/api/stripe/webhook`, la única voz autorizada para
+  decir quién ha pagado —el trigger HT112 de la `0021` impide escribir la
+  suscripción desde cualquier otro sitio—. Verificado con eventos firmados de
+  verdad contra la base real, sin tocar Stripe: un alta deja `plan = comunidad`
+  con la fecha de fin de periodo, el reenvío del mismo evento contesta
+  «repetido» sin volver a trabajar, `cancel_at_period_end` baja a `cancelado`
+  conservando la fecha pagada, `past_due` conserva el plan, y una firma que no
+  cuadra recibe 400.
+
 - **Aislamiento**: 45 comprobaciones en `npm run test:aislamiento` más seis que
   llaman a `withUser()` de verdad, y cuatro hechas desde fuera con un JWT real
   contra la API pública. Las diez nuevas son de finanzas: que Sion no vea la caja
@@ -252,8 +287,9 @@ lee al arrancar.
 | Foto en la ficha de miembro | Va en OTRO bucket, privado y con URL firmada. El de iglesias es público |
 | Eventos y calendario | Hecho y verificado, con sus textos legales |
 | Área del miembro | Hecha la base. Faltan el repertorio del domingo, los turnos y el material del equipo |
-| Stripe | Nada. El trial vence y no pasa nada |
-| Correo (Resend) | Nada. Ni bienvenida ni aviso de solicitud |
+| Stripe | **Hecho el circuito entero**, sin claves todavía. Ver «Qué hay que crear en Stripe» |
+| Correo (Resend) | Nada. Ni bienvenida, ni aviso de solicitud, ni el de «se te acaba la prueba» — que ahora es el que más falta hace: el aviso solo se ve entrando al panel |
+| El muro en `/mi` | A propósito NO está. Con la iglesia bloqueada, un miembro sigue leyendo su área; lo que no puede es publicar en el muro |
 | Exportar y borrar datos | Derecho de supresión del RGPD, sin implementar |
 | Cumpleaños de la semana en Inicio | Se puede: `fecha_nacimiento` existe. Va con `ver_datos_sensibles` y sin enseñar el año |
 | Asistencia a escala | **Hecha la base, no la escala.** Marcar casillas una a una no sirve para 1.500 personas. Ver «Decidido y pendiente» |
@@ -289,6 +325,28 @@ escritura. Lo cierra la `0022`, que además invierte el defecto de tablas —com
 `0003` hizo con el de funciones— y revoca `service_role` en `auditoria`,
 `consentimientos` y `solicitudes_ingreso`, que era lo que este fichero llevaba
 pidiendo desde el 19-ago.
+
+**`current_period_end` ya no está donde dicen los tutoriales.** Desde la
+versión de API `basil` vive en cada línea de la suscripción
+(`subscription.items.data[].current_period_end`) y no en la suscripción. El SDK
+instalado —22.5, OpenAPI v2349— no lo declara arriba, así que copiar
+`sub.current_period_end` de cualquier ejemplo de internet no compila. Y con un
+`as any` por medio compila y devuelve `undefined`, que es como una iglesia al
+día se queda sin fecha de acceso y bloqueada tres días después.
+
+**Un layout de Next no se vuelve a ejecutar al navegar**, y tampoco «controla si
+el resto de la ruta se renderiza» — lo dice su propia documentación en
+`03-file-conventions/layout.md`. Este repo pone los guards en el layout de cada
+sección a propósito y eso sigue estando bien para lo que no cambia dentro de una
+sesión: quién eres y a qué iglesia perteneces. Pero un estado que puede cambiar
+mientras alguien navega —la suscripción— no se puede vigilar solo desde ahí. Por
+eso el muro corta en el guard de cada server action y el layout se limita a
+mandar fuera del panel.
+
+**El MCP de Supabase es de solo lectura.** `execute_sql` sirve para mirar y
+falla con «cannot execute UPDATE in a read-only transaction» al escribir. Para
+preparar o deshacer un dato de prueba hay que ir por `DATABASE_URL` con un
+script suelto; el MCP no vale.
 
 **Un `alter type ... add value` no se puede usar en la misma transacción.**
 Postgres deja añadir el valor al enum, pero no escribirlo hasta que la
@@ -514,6 +572,34 @@ fichero.
   Está apagada, y es el único WARN de `get_advisors`. Es un clic, no código.
 - **Precio.** En variables de entorno a propósito. La competencia va de 9 a 70
   USD/mes escalados por número de miembros.
+
+### Qué hay que crear en Stripe
+
+El código está entero y verificado; lo que falta son las claves. Sin ellas la
+pantalla dice «Falta configurar los precios» y no pinta un botón que reventaría
+al pulsarlo.
+
+1. **Seis precios** en el panel de Stripe: Esencial, Comunidad y Plus, cada uno
+   mensual y anual. Sus ids van a `STRIPE_PRICE_*` en el entorno. La cifra vive
+   en Stripe, no en el repo, y por eso ajustarla no cuesta un despliegue.
+2. **`STRIPE_SECRET_KEY`**, de la misma cuenta que los precios. Un id de precio
+   de otra cuenta falla al pulsar «Ver precio», no antes.
+3. **El endpoint del webhook**, apuntando a
+   `https://<dominio>/api/stripe/webhook`, suscrito a cuatro eventos:
+   `checkout.session.completed`, `customer.subscription.created`,
+   `.updated` y `.deleted`. Su secreto va a `STRIPE_WEBHOOK_SECRET`. Sin esa
+   variable el endpoint responde 500 a propósito: es un fallo de despliegue, no
+   del evento, y Stripe reintenta hasta que esté puesta.
+4. **En Dokploy, además de en `.env.local`.** Ninguna es `NEXT_PUBLIC_`, así que
+   basta con las variables de ejecución; no hacen falta como argumentos de
+   compilación.
+
+Lo único que NO se ha podido probar sin claves es la vuelta de Checkout —el
+evento `checkout.session.completed` es el único que pide un viaje a Stripe para
+leer la suscripción—. Los otros tres caminos sí, con eventos firmados de verdad.
+
+Y cuando existan las claves, el primer cobro real conviene hacerlo en modo
+prueba con `stripe listen --forward-to localhost:3000/api/stripe/webhook`.
 
 ---
 

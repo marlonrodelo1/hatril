@@ -4,8 +4,10 @@ import { requireIglesia } from '@/lib/auth/guard-panel';
 import { esDelEquipo } from '@/lib/auth/permisos';
 import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { flagsDelMenu } from '@/lib/panel/menu';
+import { leerEstadoSuscripcion } from '@/lib/suscripcion/estado';
 import { iniciales } from '@/lib/format/iniciales';
 import { PanelSidebar } from './_components/sidebar';
+import { AvisoSuscripcion } from './_components/aviso-suscripcion';
 
 /**
  * Marco del panel.
@@ -56,6 +58,31 @@ export default async function PanelLayout({
   // iglesia por una decisión de diseño anterior. El porqué, en `rgpd/consultas.ts`.
   await exigirConsentimientoAlDia(ctx);
 
+  /*
+   * El muro de suscripción, y solo cuando ya no queda ni la gracia de lectura.
+   *
+   * VA A UNA RUTA DE FUERA DEL PANEL, Y NO SE PINTA AQUÍ
+   * ----------------------------------------------------
+   * Lo natural sería pintar el muro en lugar de `{children}`. No sirve, y la
+   * razón está en la documentación de Next: un layout **no se vuelve a ejecutar
+   * al navegar** entre rutas que comparte, y además «no controla si el resto de
+   * la ruta se renderiza». Un muro pintado aquí se esquivaría con un clic del
+   * menú, que seguiría estando a la vista.
+   *
+   * Con `redirect()` a `/suscripcion` —que cuelga de la raíz, no del panel— la
+   * persona sale de esta sección y ya no hay layout que mantener al día. Y
+   * `/suscripcion` hace lo contrario: si la iglesia vuelve a tener acceso,
+   * devuelve al panel. Las dos condiciones son la misma función negada, que es
+   * lo que impide que se llamen entre ellas para siempre.
+   *
+   * En `solo_lectura` NO se corta: el panel sigue navegable durante los tres
+   * días de gracia y lo único que se bloquea es guardar, que lo hace
+   * `exigirPoderEscribir()` en el guard de cada server action.
+   */
+  if (leerEstadoSuscripcion(ctx.iglesia).situacion === 'bloqueada') {
+    redirect('/suscripcion');
+  }
+
   const flags = await flagsDelMenu(ctx);
 
   return (
@@ -69,7 +96,13 @@ export default async function PanelLayout({
         webIglesia={ctx.iglesia.webPublica ? `/i/${ctx.iglesia.slug}` : null}
       />
 
-      <main className="flex min-w-0 flex-1 flex-col">{children}</main>
+      <main className="flex min-w-0 flex-1 flex-col">
+        {/* Encima de la cabecera de cada pantalla a propósito: es lo único que
+            afecta a la iglesia entera, y dentro del contenido se perdería entre
+            lo que cada sección tenga ese día. */}
+        <AvisoSuscripcion ctx={ctx} />
+        {children}
+      </main>
     </div>
   );
 }

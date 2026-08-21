@@ -22,7 +22,7 @@ import { NextResponse, type NextRequest } from 'next/server';
  * a una consulta que devuelve cero filas.
  */
 
-const RUTAS_PRIVADAS = ['/panel', '/mi', '/admin'];
+const RUTAS_PRIVADAS = ['/panel', '/mi', '/admin', '/suscripcion'];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });

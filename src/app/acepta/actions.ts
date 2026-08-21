@@ -36,7 +36,11 @@ import { casilla } from '@/lib/api/formulario';
  * cumpliéndose.
  */
 export async function aceptar(formData: FormData) {
-  const ctx = await requireIglesiaAccion();
+  // SIN MURO, y es lo importante de esta línea: aceptar o rechazar la
+  // política es un acto legal, no una función del producto. Bloquearlo por un
+  // recibo devuelto dejaría a la persona encerrada en `/acepta`, que es la
+  // única pantalla que el corte del consentimiento le deja abierta.
+  const ctx = await requireIglesiaAccion({ sinMuro: true });
 
   // Sin ficha no hay a qué colgar el consentimiento y esta pantalla no debería
   // haberse pintado. Se sale al panel en vez de fallar: no es culpa de nadie.

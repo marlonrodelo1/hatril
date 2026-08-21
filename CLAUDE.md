@@ -232,12 +232,18 @@ una subconsulta encadenada de tres niveles con un índice por salto.
 70 USD/mes escalados por número de miembros, y el precio de este mercado está sin
 validar. Va a cambiar varias veces y ningún cambio debe costar un despliegue.
 
-**Ideas rescatadas de Gonper que todavía no están implementadas** y que hay que
-recuperar cuando toque el muro de suscripción:
+**Ideas rescatadas de Gonper, y en qué quedaron.** El muro de suscripción ya
+está construido, así que dos de las tres dejaron de ser deuda:
 
-- *Gracia de lectura de 3 días.* Al vencer el trial se bloquea escribir, pero
-  consultar sigue funcionando tres días más. Cerrar de golpe deja a una iglesia
-  sin su fichero un domingo por la mañana por un recibo devuelto el viernes.
-- *402 y no 403.* El 403 significa «tu rol no llega». Una cuenta sin pagar es
-  otra cosa y merece su propia pantalla, no un «no tienes permiso» que confunde.
-- *Nunca se bloquea lo que sirve para pagar ni para darse de baja.*
+- *Gracia de lectura de 3 días.* **Hecha**, en `GRACIA_DIAS`. Al vencer se
+  bloquea escribir y consultar sigue funcionando tres días más. Cerrar de golpe
+  deja a una iglesia sin su fichero un domingo por la mañana por un recibo
+  devuelto el viernes.
+- *Nunca se bloquea lo que sirve para pagar ni para darse de baja.* **Hecha**, y
+  con dos más encima: aceptar la política y cambiar la contraseña propia. Es el
+  parámetro `sinMuro` de las guards de action, y la lista de quién lo usa es
+  corta a propósito.
+- *402 y no 403.* **Sigue pendiente, y hoy no aplica**: el panel redirige con un
+  mensaje, no devuelve códigos. Volverá a hacer falta el día que la app móvil de
+  la v2 hable con una API, que es cuando un 403 —«tu rol no llega»— se confunde
+  de verdad con una cuenta sin pagar.

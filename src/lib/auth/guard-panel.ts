@@ -13,6 +13,7 @@ import {
   type Permiso,
 } from '@/lib/auth/permisos';
 import { createClient } from '@/lib/supabase/server';
+import { exigirPoderEscribir } from '@/lib/suscripcion/muro';
 
 /**
  * Guardas de autorización del panel.
@@ -138,35 +139,56 @@ export async function requireGestionMinisterio(
 // ============================================
 
 /**
+ * El portillo del muro de suscripción.
+ *
+ * Las cuatro guards de action cortan por defecto cuando la iglesia ya no puede
+ * escribir. `sinMuro` es la excepción, y la lista de quién la usa es corta a
+ * propósito: pagar, darse de baja, aceptar la política y tocar la cuenta
+ * propia. Todo lo demás pasa por el muro sin decir nada, incluido lo que se
+ * escriba dentro de un año.
+ */
+export type OpcionesAccion = { sinMuro?: boolean };
+
+/**
  * Exige sesión con iglesia activa desde una server action.
  *
  * No lleva `destinoError` como sus hermanas: si no hay sesión, el único destino
  * con sentido es identificarse, no volver a una pantalla del panel que también
  * va a rebotar.
  */
-export async function requireIglesiaAccion(): Promise<UserContext> {
+export async function requireIglesiaAccion(
+  opciones?: OpcionesAccion,
+): Promise<UserContext> {
   const ctx = await getCurrentUserContext();
   if (!ctx) return rebotar();
+  if (!opciones?.sinMuro) exigirPoderEscribir(ctx);
   return ctx;
 }
 
 export async function requirePastorAccion(
   destinoError = '/panel/hoy',
+  opciones?: OpcionesAccion,
 ): Promise<UserContext> {
   const ctx = await getCurrentUserContext();
   if (!ctx) return rebotar();
+  // El rol primero y el muro después: a quien no es pastor se le dice que esta
+  // sección no es suya, que es lo que le pasa a ella. «Tu iglesia no ha pagado»
+  // es cierto pero no es su problema ni puede resolverlo.
   if (!esPastor(ctx)) {
     redirect(`${destinoError}?error=` + encodeURIComponent(MENSAJE_SOLO_PASTOR));
   }
+  if (!opciones?.sinMuro) exigirPoderEscribir(ctx, destinoError);
   return ctx;
 }
 
 export async function requirePermisoAccion(
   permiso: Permiso,
   destinoError = '/panel/hoy',
+  opciones?: OpcionesAccion,
 ): Promise<UserContext> {
   const ctx = await getCurrentUserContext();
   if (!ctx) return rebotar();
+  if (!opciones?.sinMuro) exigirPoderEscribir(ctx, destinoError);
   if (!esPastor(ctx) && !puede(ctx, permiso)) {
     redirect(
       `${destinoError}?error=` +
@@ -181,7 +203,8 @@ export async function requireGestionMinisterioAccion(
   ministerioId: string,
   destinoError = '/panel/ministerios',
 ): Promise<UserContext> {
-  const ctx = await requireIglesiaAccion();
+  const ctx = await requireIglesiaAccion({ sinMuro: true });
+  exigirPoderEscribir(ctx, destinoError);
   if (!puedeGestionarMinisterio(ctx, ministerioId)) {
     redirect(
       `${destinoError}?error=` +

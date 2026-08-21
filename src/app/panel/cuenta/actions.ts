@@ -12,6 +12,15 @@ import { createClient } from '@/lib/supabase/server';
 import { campo, campoObligatorio } from '@/lib/api/formulario';
 import { validarPassword, traducirErrorAuth } from '@/lib/auth/password';
 
+/**
+ * LAS DOS ACTIONS DE AQUÍ VAN CON `sinMuro`
+ * ----------------------------------------
+ * Son los datos de la PERSONA, no de la iglesia: su nombre, su teléfono y su
+ * contraseña. Que la congregación no tenga la suscripción al día no es motivo
+ * para impedirle a alguien cambiar una contraseña —que es justo lo que hay que
+ * poder hacer con prisa, y el único día que se hace es un mal día—.
+ */
+
 const DESTINO = '/panel/cuenta';
 const DESTINO_PASSWORD = '/panel/cuenta/contrasena';
 
@@ -56,7 +65,7 @@ const EsquemaDatos = z.object({
  * cualquier otro de su iglesia.
  */
 export async function guardarMisDatos(formData: FormData) {
-  const ctx = await requireIglesiaAccion();
+  const ctx = await requireIglesiaAccion({ sinMuro: true });
 
   const datos = EsquemaDatos.safeParse({
     nombre: campoObligatorio(formData, 'nombre'),
@@ -128,7 +137,7 @@ const EsquemaPassword = z.object({
  * que no inicie sesión.
  */
 export async function cambiarMiPassword(formData: FormData) {
-  const ctx = await requireIglesiaAccion();
+  const ctx = await requireIglesiaAccion({ sinMuro: true });
 
   const datos = EsquemaPassword.safeParse({
     // Sin `campo()`: recorta espacios, y en una contraseña un espacio al final
