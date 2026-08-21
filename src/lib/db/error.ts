@@ -96,7 +96,16 @@ export type GuardHatril =
    */
   | 'HT118'
   /** Una asignación no cambia de iglesia ni de persona acompañada (`0033`). */
-  | 'HT119';
+  | 'HT119'
+  /**
+   * Una respuesta apunta a un comentario de otra publicación, a uno que no
+   * existe, o a otra respuesta (`0035`). Lo último es el tope de un solo nivel:
+   * sin él, una conversación de siete niveles en un móvil de 360 px acaba en una
+   * columna de cuatro caracteres de ancho.
+   */
+  | 'HT120'
+  /** El comentario o la persona del «me gusta» no son de esta iglesia (`0035`). */
+  | 'HT121';
 
 /**
  * ¿Es este error uno de nuestros triggers guard?

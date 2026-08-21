@@ -1,4 +1,5 @@
 import {
+  type AnyPgColumn,
   pgTable,
   uuid,
   text,
@@ -144,6 +145,26 @@ export const publicacionesComentarios = pgTable(
 
     texto: text('texto').notNull(),
 
+    /**
+     * A qué comentario responde. `null` es un comentario de primer nivel.
+     *
+     * UN SOLO NIVEL, Y LO GARANTIZA UN TRIGGER
+     * ----------------------------------------
+     * Una respuesta no puede responder a otra respuesta (HT120 en la `0035`).
+     * Sin ese tope, una conversación de siete niveles en un móvil de 360px acaba
+     * en una columna de texto de cuatro caracteres de ancho, y no hay diseño que
+     * lo arregle. Es lo que hacen Instagram y Facebook, y por lo mismo.
+     *
+     * `onDelete: 'cascade'`: borrar un comentario se lleva sus respuestas. La
+     * alternativa —dejarlas huérfanas colgando de un padre que ya no está— pinta
+     * respuestas sin pregunta, y en un muro de iglesia eso es especialmente
+     * feo: quedaría «pues yo no estoy de acuerdo» sin nada delante.
+     */
+    respuestaAId: uuid('respuesta_a_id').references(
+      (): AnyPgColumn => publicacionesComentarios.id,
+      { onDelete: 'cascade' },
+    ),
+
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -151,5 +172,48 @@ export const publicacionesComentarios = pgTable(
   (t) => [
     index('idx_comentarios_publicacion').on(t.publicacionId, t.createdAt),
     index('idx_comentarios_autor').on(t.autorMiembroId),
+    // Para colgar las respuestas de su padre sin recorrer los comentarios de
+    // toda la publicación.
+    index('idx_comentarios_respuesta').on(t.respuestaAId, t.createdAt),
+  ],
+);
+
+/**
+ * «Me gusta» en un comentario.
+ *
+ * TABLA PROPIA Y NO UNA COLUMNA `tipo` EN LA DE PUBLICACIONES
+ * -----------------------------------------------------------
+ * Sería una tabla menos y una clave ajena que no se puede declarar: la fila
+ * apuntaría unas veces a `publicaciones` y otras a `publicaciones_comentarios`,
+ * así que el `references` desaparece y con él la garantía de que el objeto
+ * existe. Ese patrón —una referencia polimórfica— convierte cada consulta en un
+ * `case` y cada borrado en un problema.
+ *
+ * La clave primaria compuesta hace el trabajo del «no se puede dar dos veces»:
+ * es la misma decisión que en `publicaciones_me_gusta`, donde ya evitó tener
+ * que comprobar antes de insertar.
+ */
+export const publicacionesComentariosMeGusta = pgTable(
+  'publicaciones_comentarios_me_gusta',
+  {
+    iglesiaId: uuid('iglesia_id')
+      .notNull()
+      .references(() => iglesias.id, { onDelete: 'cascade' }),
+
+    comentarioId: uuid('comentario_id')
+      .notNull()
+      .references(() => publicacionesComentarios.id, { onDelete: 'cascade' }),
+
+    miembroId: uuid('miembro_id')
+      .notNull()
+      .references(() => miembros.id, { onDelete: 'cascade' }),
+
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.comentarioId, t.miembroId] }),
+    index('idx_comentarios_me_gusta_miembro').on(t.miembroId),
   ],
 );

@@ -62,6 +62,8 @@ declare
   VIN_A1 uuid;
   VIN_A2 uuid;
   PUB_A uuid;
+  COM_A uuid;
+  COM_R uuid;
   FON_A uuid;
   FON_B uuid;
   CAJ_A uuid;
@@ -405,6 +407,105 @@ begin
                      left(sqlerrm, 30));
   end;
 
+  -- --- RESPUESTAS Y ME GUSTA DE COMENTARIOS (migracion 0035) ---
+  --
+  -- Dos cosas nuevas que tocan datos de una congregacion: quien responde a
+  -- quien, y a quien le gusta que. Van con la misma vara que el resto del muro.
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_C), true);
+  execute 'set local role hatril_app';
+
+  insert into public.publicaciones_comentarios
+    (iglesia_id, publicacion_id, autor_miembro_id, texto)
+  values (IGL_A, PUB_A, MIE_A2, 'Estare orando')
+  returning id into COM_A;
+
+  -- Responder a un comentario de primer nivel: se puede.
+  insert into public.publicaciones_comentarios
+    (iglesia_id, publicacion_id, autor_miembro_id, texto, respuesta_a_id)
+  values (IGL_A, PUB_A, MIE_A2, 'Gracias', COM_A)
+  returning id into COM_R;
+  r := r || E'  OK   se puede responder a un comentario\\n';
+
+  -- HT120, primera mitad: responder a una respuesta abriria el tercer nivel.
+  begin
+    insert into public.publicaciones_comentarios
+      (iglesia_id, publicacion_id, autor_miembro_id, texto, respuesta_a_id)
+    values (IGL_A, PUB_A, MIE_A2, 'Tercer nivel', COM_R);
+    r := r || E'  FALLO se puede responder a una respuesta\\n';
+  exception when others then
+    r := r || format(E'  %s HT120 impide responder a una respuesta (%s)\\n',
+                     case when sqlerrm like 'HT120%' then 'OK  ' else 'FALLO' end,
+                     left(sqlerrm, 30));
+  end;
+
+  -- HT120, segunda mitad: colgar la respuesta de un comentario de OTRA
+  -- publicacion. Con otra iglesia de por medio seria una fuga con todas las
+  -- letras; sin ella, una respuesta que aparece donde nadie la espera.
+  begin
+    insert into public.publicaciones (iglesia_id, autor_miembro_id, texto)
+    values (IGL_A, MIE_A2, 'Otra publicacion');
+
+    insert into public.publicaciones_comentarios
+      (iglesia_id, publicacion_id, autor_miembro_id, texto, respuesta_a_id)
+    select IGL_A, p2.id, MIE_A2, 'Cruzada', COM_A
+      from public.publicaciones p2
+     where p2.iglesia_id = IGL_A and p2.id <> PUB_A
+     limit 1;
+    r := r || E'  FALLO una respuesta cuelga de otra publicacion\\n';
+  exception when others then
+    r := r || format(E'  %s HT120 impide responder cruzando publicacion (%s)\\n',
+                     case when sqlerrm like 'HT120%' then 'OK  ' else 'FALLO' end,
+                     left(sqlerrm, 30));
+  end;
+
+  -- El me gusta del comentario, y que no cuente dos veces.
+  insert into public.publicaciones_comentarios_me_gusta
+    (iglesia_id, comentario_id, miembro_id)
+  values (IGL_A, COM_A, MIE_A2);
+
+  begin
+    insert into public.publicaciones_comentarios_me_gusta
+      (iglesia_id, comentario_id, miembro_id)
+    values (IGL_A, COM_A, MIE_A2);
+    r := r || E'  FALLO el mismo me gusta de comentario cuenta dos veces\\n';
+  exception when unique_violation then
+    r := r || E'  OK   el mismo me gusta de comentario no cuenta dos veces\\n';
+  end;
+
+  -- HT121: el me gusta que dice ser de otra iglesia.
+  begin
+    insert into public.publicaciones_comentarios_me_gusta
+      (iglesia_id, comentario_id, miembro_id)
+    values (IGL_B, COM_A, MIE_A2);
+    r := r || E'  FALLO un me gusta de comentario cruza dos iglesias\\n';
+  exception when others then
+    r := r || format(E'  %s HT121 o la RLS paran el me gusta cruzado (%s)\\n',
+                     case when sqlerrm like 'HT121%' or sqlerrm like '%row-level%'
+                          then 'OK  ' else 'FALLO' end,
+                     left(sqlerrm, 30));
+  end;
+
+  -- Y Sion no ve ni toca nada de eso.
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.publicaciones_comentarios_me_gusta;
+  r := r || format(E'  %s Sion no ve los me gusta de comentarios de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.publicaciones_comentarios_me_gusta
+      (iglesia_id, comentario_id, miembro_id)
+    values (IGL_A, COM_A, MIE_A1);
+    r := r || E'  FALLO Sion da me gusta a un comentario de Betania\\n';
+  exception when others then
+    r := r || E'  OK   Sion no da me gusta a un comentario de Betania\\n';
+  end;
+
   -- El pastor modera: borra lo que no es suyo dentro de SU iglesia.
   execute 'reset role';
   perform set_config('request.jwt.claims',
@@ -482,6 +583,13 @@ begin
 
   -- El muro es lo mas privado que guarda una iglesia despues del fichero de
   -- miembros: una foto del domingo con menores dentro.
+  begin
+    select count(*) into n from public.publicaciones_comentarios_me_gusta;
+    r := r || format(E'  FALLO anon lee los me gusta de comentarios (%s)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a los me gusta de comentarios\\n';
+  end;
+
   begin
     select count(*) into n from public.publicaciones;
     r := r || format(E'  FALLO anon lee el muro de la comunidad (%s)\\n', n);

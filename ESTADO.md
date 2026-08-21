@@ -188,10 +188,37 @@ lee al arrancar.
 - **Devocionales**: calendario de turnos, redacción, imagen de fondo, enlace a
   vídeo y publicación. El devocional del día sale en la web de la iglesia.
 - **Comunidad**: el muro de la congregación en `/mi/comunidad`. Publicar con
-  texto y hasta cuatro fotos, me gusta, comentarios, y borrado por el autor o
-  por el pastor. Solo para miembros con acceso ACTIVO: no sale en la web
-  pública, donde únicamente hay una invitación con un recuento. Las fotos van al
-  bucket **privado** `comunidad` y se sirven con URL firmada de una hora.
+  texto y hasta cuatro fotos, me gusta, comentarios con **respuestas de un solo
+  nivel** y su propio me gusta, y borrado por el autor o por el pastor. Solo
+  para miembros con acceso ACTIVO: no sale en la web pública, donde únicamente
+  hay una invitación con un recuento. Las fotos van al bucket **privado**
+  `comunidad` y se sirven con URL firmada de una hora.
+
+  **Escribir y comentar viven en una hoja que sube desde abajo**, como en
+  cualquier muro que la gente ya usa. Antes el compositor ocupaba la primera
+  pantalla del muro y los comentarios salían todos desplegados bajo cada
+  publicación: con veinte comentarios, la publicación siguiente quedaba a tres
+  pantallazos. Ahora el icono dice cuántos hay —contando respuestas— y al tocarlo
+  se abren en su hoja, con el campo de escribir pegado abajo.
+
+  El compositor **sigue funcionando sin JavaScript**: el HTML que manda el
+  servidor trae el formulario entero y desplegado, y solo después de hidratar se
+  cambia por el disparador. Verificado pidiendo la página con `fetch` y mirando
+  que el `<textarea>` y el botón «Publicar» están en la respuesta.
+
+  La barra de abajo pasó de cuatro pestañas a **tres y un botón**: «Mi cuenta»
+  se fue —el avatar de la cabecera abre el mismo menú, y dos caminos al mismo
+  sitio en cuatro huecos es gastar la cuarta parte de la navegación en
+  repetirse— y en su lugar está el «+» de publicar. Abre la hoja por dos
+  caminos, y hacen falta los dos: enlace con `?publicar=1` desde otra pestaña, y
+  un evento del navegador estando ya en el muro, donde no hay navegación que
+  monte nada.
+
+  Las publicaciones van **a sangre en el móvil** y vuelven a ser tarjetas a
+  partir de `sm`. Y el muro de demostración se llena con `scripts/seed-muro.sql`:
+  siete publicaciones de cinco personas con sus comentarios, respuestas y me
+  gusta. Sin eso solo había dos publicaciones, las dos de la misma cuenta, y la
+  pantalla parecía decir que la comunidad enseña solo lo tuyo.
 - **Avisos**: las notificaciones de cada persona en `/mi/avisos`, con la campana
   y su punto rojo en el panel. Seis tipos: solicitud recibida, aprobada y
   rechazada, comentario y me gusta en el muro, y turno de devocional. El texto
@@ -325,6 +352,21 @@ escritura. Lo cierra la `0022`, que además invierte el defecto de tablas —com
 `0003` hizo con el de funciones— y revoca `service_role` en `auditoria`,
 `consentimientos` y `solicitudes_ingreso`, que era lo que este fichero llevaba
 pidiendo desde el 19-ago.
+
+**Un campo de menos de 16px hace que Safari de iOS amplíe la página entera.**
+Y no lo deshace al salir: la página se queda ampliada y desplazada a un lado,
+con la cabecera pegajosa fuera de sitio y el contenido cortado por el borde
+izquierdo. Es lo que se veía en el muro —«está muy pegado a los bordes y se
+mueve todo»— y costó encontrarlo porque **en el navegador de escritorio, con el
+mismo ancho de 375px, no pasa nada**: `scrollWidth` sale idéntico al ancho de la
+ventana, no hay ni un elemento que desborde, y todas las comprobaciones dan
+verde. El campo de comentario medía 14.5px y el de publicar, 15.
+
+Lo arregla una regla en `globals.css` que sube a 16px todo `input`, `textarea` y
+`select` por debajo de `md`. La otra forma —`maximum-scale=1` en el viewport—
+se descarta a propósito: le quita el zoom a quien no ve bien, y en una
+congregación con gente mayor eso es cambiar un problema de maquetación por uno
+de accesibilidad.
 
 **`current_period_end` ya no está donde dicen los tutoriales.** Desde la
 versión de API `basil` vive en cada línea de la suscripción
@@ -744,6 +786,13 @@ subirlo cuesta almacenamiento y tráfico), avisos de la comunidad, menciones,
 reportar y ocultar, publicaciones fijadas. Y paginación del muro, que hoy trae
 las últimas treinta y ya está.
 
+Dos avisos que **no** se emiten y es deliberado: «le ha gustado tu comentario» y
+«te han respondido». Los seis tipos viven en un enum de Postgres con sus textos,
+así que cada uno es una migración más un texto; y aunque fueran gratis, la
+campana ya recibe un aviso por cada me gusta de publicación. Sumar uno por cada
+me gusta de comentario en un muro activo un domingo la convierte en ruido que
+nadie mira. Cuando se añadan, van juntos y con una forma de agruparlos.
+
 **Reina-Valera 1960.** Investigar la licencia para poder mostrar el texto
 bíblico dentro del producto.
 
@@ -754,7 +803,12 @@ El encargo de tratamiento del art. 28 ya no está pendiente: es el apartado 7 de
 
 ## Datos de prueba
 
-`scripts/seed-demo.sql`. Siete cuentas, contraseña `Hatril2026`:
+`scripts/seed-demo.sql` crea las cuentas, las fichas y los ministerios, y
+`scripts/seed-muro.sql` llena el muro de Betania —siete publicaciones de cinco
+personas, con comentarios, respuestas y me gusta—. El segundo se puede repetir:
+borra antes lo suyo, que va marcado con `[demo]` en el texto.
+
+Siete cuentas, contraseña `Hatril2026`:
 `pastor@`, `secretaria@`, `lider@`, `miembro@`, `visita@`, `admin@` y
 `pastor.sion@` (de otra iglesia, para probar el aislamiento), todas
 `@hatril.test`.

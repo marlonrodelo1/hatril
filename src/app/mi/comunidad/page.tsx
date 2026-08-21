@@ -81,7 +81,13 @@ export default async function ComunidadPage({
         volver="/mi"
       />
 
-      <main className="mx-auto flex w-full max-w-[620px] flex-col gap-4 px-4 py-5 sm:px-5 sm:py-6">
+      {/*
+       * `gap-3` en móvil y no `gap-4`: las publicaciones van a sangre —sin borde
+       * a los lados— y con cuatro unidades entre ellas el muro se lee como una
+       * lista de fichas sueltas en vez de como una conversación seguida. En
+       * pantalla ancha vuelven a ser tarjetas y el aire hace falta otra vez.
+       */}
+      <main className="mx-auto flex w-full max-w-[620px] flex-col gap-3 px-4 py-4 sm:gap-4 sm:px-5 sm:py-6">
         {error && <Aviso tipo="error">{error}</Aviso>}
 
         {!config.activa ? (

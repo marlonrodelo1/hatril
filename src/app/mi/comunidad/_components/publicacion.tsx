@@ -1,29 +1,33 @@
-import { Heart, MessageCircle, Trash2 } from 'lucide-react';
+import { Heart, Trash2 } from 'lucide-react';
 
 import { iniciales } from '@/lib/format/iniciales';
+import { haceCuanto } from '@/lib/format/hace-cuanto';
 import { Button } from '@/components/ui/button';
 import type { PublicacionMuro } from '@/lib/comunidad/consultas';
-import {
-  alternarMeGusta,
-  borrarComentario,
-  borrarPublicacion,
-  comentar,
-} from '../actions';
+import { alternarMeGusta, borrarPublicacion } from '../actions';
+import { Comentarios, type ComentarioPintado } from './comentarios';
 
 /**
  * Una publicación del muro.
  *
- * COMPONENTE DE SERVIDOR, Y TODO CON `<form>`
- * -------------------------------------------
- * El corazón, el comentario y el borrar son tres formularios que llaman a una
- * server action. Ni un `use client`, ni un `useState`, ni un solo kilobyte de
- * JavaScript enviado al navegador para una pantalla que es, sobre todo, texto y
- * fotos.
+ * COMPONENTE DE SERVIDOR, Y CASI TODO CON `<form>`
+ * ------------------------------------------------
+ * El corazón y el borrar son formularios que llaman a una server action. Ni un
+ * `useState` ni un kilobyte de JavaScript para una pantalla que es, sobre todo,
+ * texto y fotos.
  *
- * El precio es que cada acción recarga la vista. En un muro de treinta
- * publicaciones eso se nota, y cuando se note habrá que traer `useOptimistic`
- * para el corazón. Se deja apuntado a propósito en vez de adelantarlo: es la
- * única parte que lo pediría, y hoy no hay usuarios para saberlo.
+ * La única pieza de cliente es la hoja de comentarios, y es porque necesita
+ * estado en el navegador: si está abierta y a quién se responde. Aun así, los
+ * botones de dentro siguen siendo formularios con server action.
+ *
+ * A SANGRE EN EL MÓVIL, TARJETA EN ESCRITORIO
+ * -------------------------------------------
+ * En un móvil de 375px, una tarjeta con borde a cada lado deja el texto en 311
+ * píxeles útiles y hace que todo parezca apretado contra el marco del teléfono
+ * —que es exactamente lo que se veía—. Con `-mx-4` la publicación ocupa el
+ * ancho entero y la foto va a sangre, mientras el texto conserva sus 16 px de
+ * aire por dentro. A partir de `sm` vuelve a ser una tarjeta con su borde,
+ * porque en una pantalla ancha una banda de 900 px de borde a borde no se lee.
  */
 export function Publicacion({
   publicacion: p,
@@ -33,15 +37,41 @@ export function Publicacion({
   publicacion: PublicacionMuro;
   puedeModerar: boolean;
   /**
-   * Comentarios cerrados: no se pinta el formulario, pero los comentarios que
-   * ya existan se siguen leyendo y su autor los sigue pudiendo borrar. Cerrar
-   * no es borrar, y es lo mismo que hace la `0027`: quita el INSERT y deja el
-   * SELECT donde estaba.
+   * Comentarios cerrados: no se pinta el campo de escribir, pero los que ya
+   * existan se siguen leyendo y su autor los sigue pudiendo borrar. Cerrar no es
+   * borrar, y es lo mismo que hace la `0027`: quita el INSERT y deja el SELECT
+   * donde estaba.
    */
   admiteComentarios: boolean;
 }) {
+  /*
+   * El «hace tanto» se calcula AQUÍ, en el servidor, y viaja ya escrito hasta la
+   * hoja de comentarios. Llamar a `haceCuanto()` dentro del componente de
+   * cliente daría un instante distinto del que usó el servidor y React se
+   * quejaría al hidratar. El porqué largo está en `lib/format/hace-cuanto.ts`.
+   */
+  const comentarios: ComentarioPintado[] = p.comentarios.map((c) => ({
+    id: c.id,
+    texto: c.texto,
+    cuando: haceCuanto(c.createdAt),
+    autorNombre: c.autorNombre,
+    esMio: c.esMio,
+    meGusta: c.meGusta,
+    leHeDado: c.leHeDado,
+    respuestas: c.respuestas.map((r) => ({
+      id: r.id,
+      texto: r.texto,
+      cuando: haceCuanto(r.createdAt),
+      autorNombre: r.autorNombre,
+      esMio: r.esMio,
+      meGusta: r.meGusta,
+      leHeDado: r.leHeDado,
+      respuestas: [],
+    })),
+  }));
+
   return (
-    <article className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
+    <article className="-mx-4 flex flex-col gap-3 border-y border-border bg-surface px-4 py-3.5 sm:mx-0 sm:rounded-xl sm:border sm:p-4">
       <header className="flex items-center gap-3">
         <span className="flex size-9 flex-none items-center justify-center rounded-full bg-muted text-[12px] font-bold text-muted-foreground">
           {iniciales(p.autorNombre)}
@@ -88,10 +118,15 @@ export function Publicacion({
          * incluye la firma: la misma foto se reoptimizaría entera cada vez que
          * la firma cambia, y el disco del contenedor se llenaría de copias que
          * ya no sirven.
+         *
+         * `-mx-4` para que en el móvil la foto llegue hasta el borde, como en
+         * cualquier muro que la gente ya usa. En escritorio vuelve dentro de la
+         * tarjeta y recupera su borde redondeado.
          */
         <div
           className={
-            'grid gap-2 ' + (p.imagenes.length > 1 ? 'grid-cols-2' : 'grid-cols-1')
+            '-mx-4 grid gap-1 sm:mx-0 sm:gap-2 ' +
+            (p.imagenes.length > 1 ? 'grid-cols-2' : 'grid-cols-1')
           }
         >
           {p.imagenes.map((url) => (
@@ -102,7 +137,7 @@ export function Publicacion({
               alt=""
               loading="lazy"
               className={
-                'w-full rounded-lg border border-border object-cover ' +
+                'w-full object-cover sm:rounded-lg sm:border sm:border-border ' +
                 (p.imagenes.length > 1 ? 'aspect-square' : 'max-h-[520px]')
               }
             />
@@ -117,6 +152,7 @@ export function Publicacion({
             variant="ghost"
             size="sm"
             aria-pressed={p.leHeDado}
+            aria-label={p.leHeDado ? 'Quitar el me gusta' : 'Me gusta'}
             className={
               p.leHeDado
                 ? 'text-danger hover:bg-[#F3DEDD]'
@@ -134,100 +170,14 @@ export function Publicacion({
           </Button>
         </form>
 
-        <span className="inline-flex items-center gap-1.5 px-2 text-[13.5px] text-muted-foreground">
-          <MessageCircle className="size-[16px]" strokeWidth={1.8} />
-          {p.comentarios.length}
-        </span>
+        <Comentarios
+          publicacionId={p.id}
+          comentarios={comentarios}
+          total={p.totalComentarios}
+          admiteComentarios={admiteComentarios}
+          puedeModerar={puedeModerar}
+        />
       </div>
-
-      {p.comentarios.length > 0 && (
-        <ul className="flex flex-col gap-2.5">
-          {p.comentarios.map((c) => (
-            <li key={c.id} className="flex items-start gap-2.5">
-              <span className="mt-0.5 flex size-7 flex-none items-center justify-center rounded-full bg-muted text-[10.5px] font-bold text-muted-foreground">
-                {iniciales(c.autorNombre)}
-              </span>
-
-              <span className="flex min-w-0 flex-1 flex-col rounded-lg bg-background px-3 py-2">
-                <span className="flex items-baseline gap-2">
-                  <span className="truncate text-[13.5px] font-bold">
-                    {c.autorNombre}
-                  </span>
-                  <span className="flex-none text-[12px] text-muted-foreground">
-                    {haceCuanto(c.createdAt)}
-                  </span>
-                </span>
-                <span className="whitespace-pre-line text-pretty text-[14.5px] leading-relaxed">
-                  {c.texto}
-                </span>
-              </span>
-
-              {(c.esMio || puedeModerar) && (
-                <form action={borrarComentario.bind(null, c.id)}>
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Borrar el comentario"
-                    className="text-muted-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    <Trash2 className="size-4" strokeWidth={1.7} />
-                  </Button>
-                </form>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {admiteComentarios && (
-        <form action={comentar.bind(null, p.id)} className="flex gap-2">
-          <input
-            name="texto"
-            maxLength={1000}
-            placeholder="Escribe un comentario"
-            aria-label="Escribe un comentario"
-            className="min-w-0 flex-1 rounded-lg border border-input bg-surface-alt px-3 py-2 text-[14.5px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
-          />
-          <Button
-            type="submit"
-            variant="outline"
-            size="sm"
-            className="flex-none"
-          >
-            Enviar
-          </Button>
-        </form>
-      )}
     </article>
   );
-}
-
-/**
- * «Hace diez minutos», y a partir de una semana la fecha.
- *
- * Se calcula en el servidor, que es donde se pinta. Eso significa que usa la
- * hora del servidor y no la del móvil de quien mira: para «hace un rato» da
- * igual, y a cambio no hay que hidratar el componente ni arrastrar la
- * diferencia horaria de cada país.
- */
-function haceCuanto(fecha: Date): string {
-  const segundos = Math.max(0, (Date.now() - fecha.getTime()) / 1000);
-
-  if (segundos < 60) return 'ahora mismo';
-
-  const minutos = Math.floor(segundos / 60);
-  if (minutos < 60) return `hace ${minutos} min`;
-
-  const horas = Math.floor(minutos / 60);
-  if (horas < 24) return `hace ${horas} h`;
-
-  const dias = Math.floor(horas / 24);
-  if (dias === 1) return 'ayer';
-  if (dias < 7) return `hace ${dias} días`;
-
-  return fecha.toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'long',
-  });
 }

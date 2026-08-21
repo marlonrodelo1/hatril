@@ -11,9 +11,11 @@ import { withUser } from '@/lib/db';
 import {
   publicaciones,
   publicacionesComentarios,
+  publicacionesComentariosMeGusta,
   publicacionesMeGusta,
 } from '@/lib/db/schema';
 import { campo } from '@/lib/api/formulario';
+import { esGuardHatril } from '@/lib/db/error';
 import { autorDePublicacion } from '@/lib/comunidad/consultas';
 import {
   cuentaDeMiembro,
@@ -287,6 +289,17 @@ async function avisarAlAutor(
 
 const EsquemaComentario = z.object({
   texto: z.string().trim().min(1, 'Escribe algo antes de enviar.').max(1000),
+  /**
+   * A qué comentario responde, si responde a alguno. Viaja en un campo oculto
+   * del formulario, así que llega del navegador: llega de quien quiera escribir
+   * lo que quiera.
+   *
+   * Que el UUID sea de otra publicación —o de otra iglesia— no lo puede saber
+   * Zod, y por eso no se comprueba aquí: lo rechaza HT120 en la base, que es
+   * quien puede mirar la fila del padre. Repetir la comprobación en este fichero
+   * serían una consulta más y una segunda verdad que puede quedarse atrás.
+   */
+  respuestaA: z.uuid().optional(),
 });
 
 export async function comentar(publicacionId: string, formData: FormData) {
@@ -300,17 +313,32 @@ export async function comentar(publicacionId: string, formData: FormData) {
 
   const parsed = EsquemaComentario.safeParse({
     texto: campo(formData, 'texto'),
+    respuestaA: campo(formData, 'respuestaA'),
   });
   if (!parsed.success) volver(parsed.error.issues[0]!.message);
 
-  await withUser(ctx.user.id, (tx) =>
-    tx.insert(publicacionesComentarios).values({
-      iglesiaId: ctx.iglesia.id,
-      publicacionId,
-      autorMiembroId: miembroId,
-      texto: parsed.data.texto,
-    }),
-  );
+  try {
+    await withUser(ctx.user.id, (tx) =>
+      tx.insert(publicacionesComentarios).values({
+        iglesiaId: ctx.iglesia.id,
+        publicacionId,
+        autorMiembroId: miembroId,
+        texto: parsed.data.texto,
+        respuestaAId: parsed.data.respuestaA ?? null,
+      }),
+    );
+  } catch (err) {
+    // HT120: la respuesta apunta a un comentario de otra publicación, a uno que
+    // ya no existe, o a otra respuesta. Lo normal es lo segundo —alguien borró
+    // el comentario mientras se escribía la respuesta— y merece una frase, no
+    // una pantalla de error.
+    if (esGuardHatril(err, 'HT120')) {
+      volver(
+        'Ese comentario ya no está. Recarga la pantalla y vuelve a intentarlo.',
+      );
+    }
+    throw err;
+  }
 
   // El extracto va en el aviso para que se entienda sin abrirlo. Cortado a 120:
   // es un aviso, no el comentario.
@@ -320,6 +348,54 @@ export async function comentar(publicacionId: string, formData: FormData) {
     'comentario_en_publicacion',
     parsed.data.texto.slice(0, 120),
   );
+
+  revalidatePath(DESTINO);
+}
+
+/**
+ * Me gusta en un COMENTARIO.
+ *
+ * Gemela de `alternarMeGusta`, y con las mismas dos decisiones: se pone y se
+ * quita con la misma acción, y el `on conflict do nothing` deja que la clave
+ * primaria resuelva el doble toque en vez de mirar antes si ya estaba.
+ *
+ * SIN AVISO, Y NO ES UN OLVIDO
+ * ----------------------------
+ * Los seis tipos de aviso viven en un enum de Postgres y sus textos en
+ * `notificaciones/textos.ts`, así que «le ha gustado tu comentario» es una
+ * migración más un texto más. Y aunque fuera gratis: la campana ya recibe un
+ * aviso por cada me gusta de publicación, y sumarle uno por cada me gusta de
+ * comentario en un muro activo un domingo la convierte en ruido que nadie mira.
+ * Queda apuntado en ESTADO.md en vez de colarse aquí a medias.
+ */
+export async function alternarMeGustaComentario(comentarioId: string) {
+  const ctx = await requireIglesiaAccion();
+  const miembroId = requiereFicha(ctx);
+
+  if (!ctx.iglesia.comunidad.activa) volver(MENSAJE_COMUNIDAD_APAGADA);
+
+  await withUser(ctx.user.id, async (tx) => {
+    const borradas = await tx
+      .delete(publicacionesComentariosMeGusta)
+      .where(
+        and(
+          eq(publicacionesComentariosMeGusta.comentarioId, comentarioId),
+          eq(publicacionesComentariosMeGusta.miembroId, miembroId),
+        ),
+      )
+      .returning({ id: publicacionesComentariosMeGusta.comentarioId });
+
+    if (borradas.length === 0) {
+      await tx
+        .insert(publicacionesComentariosMeGusta)
+        .values({
+          iglesiaId: ctx.iglesia.id,
+          comentarioId,
+          miembroId,
+        })
+        .onConflictDoNothing();
+    }
+  });
 
   revalidatePath(DESTINO);
 }

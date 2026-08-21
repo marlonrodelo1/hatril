@@ -249,6 +249,37 @@
     border-color: var(--hatril-disabled-border);
     cursor: not-allowed;
   }
+
+  /*
+   * 16px EN LOS CAMPOS DE MÓVIL, Y NO ES UN CAPRICHO TIPOGRÁFICO
+   * ------------------------------------------------------------
+   * Safari de iOS hace zoom sobre la página al enfocar un campo cuya letra mide
+   * MENOS de 16px. Y no lo deshace al salir: la página se queda ampliada y
+   * desplazada a un lado, con la cabecera pegajosa fuera de sitio y el contenido
+   * cortado por el borde izquierdo.
+   *
+   * Eso es exactamente lo que se veía en el muro —«está muy pegado a los bordes
+   * y se mueve todo»— y costó encontrarlo porque en el navegador de escritorio,
+   * con el mismo ancho de 375px, no pasa nada: no hay desbordamiento que medir,
+   * `scrollWidth` es idéntico al ancho de la ventana y todas las
+   * comprobaciones salen en verde. El campo de comentario medía 14.5px y el de
+   * publicar, 15.
+   *
+   * La otra forma de arreglarlo es `maximum-scale=1` en el viewport, que
+   * impide ampliar la página a quien no ve bien. No se hace: quitarle el zoom a
+   * una congregación con gente mayor para ahorrarse esta regla es cambiar un
+   * problema de maquetación por uno de accesibilidad.
+   *
+   * Solo por debajo de `md`: en escritorio no existe el problema y la escala
+   * del sistema de diseño se respeta tal cual.
+   */
+  @media (max-width: 767px) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    textarea,
+    select {
+      font-size: 16px;
+    }
+  }
 }
 
 @layer components {

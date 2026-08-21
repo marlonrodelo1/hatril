@@ -7,6 +7,7 @@ import {
   miembros,
   publicaciones,
   publicacionesComentarios,
+  publicacionesComentariosMeGusta,
   publicacionesMeGusta,
 } from '@/lib/db/schema';
 import type { UserContext } from '@/lib/auth/user-context';
@@ -37,6 +38,13 @@ export type ComentarioMuro = {
   autorId: string;
   autorNombre: string;
   esMio: boolean;
+  meGusta: number;
+  leHeDado: boolean;
+  /**
+   * Las respuestas a este comentario. Siempre vacío dentro de una respuesta: el
+   * árbol tiene un solo nivel y lo garantiza HT120 en la base, no esta función.
+   */
+  respuestas: ComentarioMuro[];
 };
 
 export type PublicacionMuro = {
@@ -49,7 +57,17 @@ export type PublicacionMuro = {
   esMia: boolean;
   meGusta: number;
   leHeDado: boolean;
+  /** Solo los de primer nivel. Cada uno lleva las suyas dentro. */
   comentarios: ComentarioMuro[];
+  /**
+   * Cuántos hay contando respuestas.
+   *
+   * Es lo que va en el icono de la hoja de comentarios, y no
+   * `comentarios.length`: con dos comentarios y ocho respuestas, ese número
+   * diría «2» y quien lo abre encuentra diez. Contar lo que se va a ver es lo
+   * único que no defrauda.
+   */
+  totalComentarios: number;
 };
 
 /** Una pantalla de muro. Sin paginación todavía: se verá cuando haga falta. */
@@ -98,6 +116,7 @@ export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
           texto: publicacionesComentarios.texto,
           createdAt: publicacionesComentarios.createdAt,
           autorId: publicacionesComentarios.autorMiembroId,
+          respuestaAId: publicacionesComentarios.respuestaAId,
           autorNombre: miembros.nombre,
           autorApellidos: miembros.apellidos,
         })
@@ -111,11 +130,58 @@ export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
     ),
   ]);
 
+  /*
+   * Los «me gusta» de los comentarios. Va después y no dentro del `Promise.all`
+   * de arriba porque necesita los ids que acaba de devolver la consulta de
+   * comentarios, y pedirlos por `publicacion_id` con un `join` sería empujar a
+   * la RLS a evaluar `pertenece_a_iglesia()` sobre el producto de las dos
+   * tablas. Con la lista de ids en la mano es un `in (...)` plano.
+   *
+   * El `if` no es una micro-optimización: `inArray` con un array vacío genera
+   * `in ()`, que es un error de sintaxis en Postgres.
+   */
+  const idsComentarios = comentarios.map((c) => c.id);
+
+  const gustosComentarios =
+    idsComentarios.length === 0
+      ? []
+      : await withUser(ctx.user.id, (tx) =>
+          tx
+            .select({
+              comentarioId: publicacionesComentariosMeGusta.comentarioId,
+              miembroId: publicacionesComentariosMeGusta.miembroId,
+            })
+            .from(publicacionesComentariosMeGusta)
+            .where(
+              inArray(
+                publicacionesComentariosMeGusta.comentarioId,
+                idsComentarios,
+              ),
+            ),
+        );
+
   // Una sola llamada a Storage para todas las fotos de la pantalla.
   const firmas = await firmarImagenes(filas.flatMap((f) => f.imagenes ?? []));
 
   const nombreCompleto = (n: string, a: string | null) =>
     [n, a].filter(Boolean).join(' ');
+
+  /** Una fila de comentario, ya con sus cuentas hechas y sin respuestas. */
+  const aComentario = (c: (typeof comentarios)[number]): ComentarioMuro => ({
+    id: c.id,
+    texto: c.texto,
+    createdAt: c.createdAt,
+    autorId: c.autorId,
+    autorNombre: nombreCompleto(c.autorNombre, c.autorApellidos),
+    esMio: yo !== null && c.autorId === yo,
+    meGusta: gustosComentarios.filter((g) => g.comentarioId === c.id).length,
+    leHeDado:
+      yo !== null &&
+      gustosComentarios.some(
+        (g) => g.comentarioId === c.id && g.miembroId === yo,
+      ),
+    respuestas: [],
+  });
 
   return filas.map((f) => ({
     id: f.id,
@@ -131,16 +197,29 @@ export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
     leHeDado:
       yo !== null &&
       gustos.some((g) => g.publicacionId === f.id && g.miembroId === yo),
-    comentarios: comentarios
-      .filter((c) => c.publicacionId === f.id)
-      .map((c) => ({
-        id: c.id,
-        texto: c.texto,
-        createdAt: c.createdAt,
-        autorId: c.autorId,
-        autorNombre: nombreCompleto(c.autorNombre, c.autorApellidos),
-        esMio: yo !== null && c.autorId === yo,
-      })),
+    comentarios: (() => {
+      const suyos = comentarios.filter((c) => c.publicacionId === f.id);
+
+      /*
+       * El árbol se arma aquí y no con una consulta recursiva porque tiene un
+       * solo nivel: HT120 impide responder a una respuesta, así que un
+       * `with recursive` sería maquinaria para una profundidad que la base ya
+       * garantiza que es uno.
+       *
+       * Las respuestas van en orden ascendente porque una conversación se lee
+       * de arriba abajo — al revés que el muro, donde lo último va primero.
+       */
+      const primerNivel = suyos.filter((c) => c.respuestaAId === null);
+
+      return primerNivel.map((c) => ({
+        ...aComentario(c),
+        respuestas: suyos
+          .filter((r) => r.respuestaAId === c.id)
+          .map(aComentario),
+      }));
+    })(),
+    totalComentarios: comentarios.filter((c) => c.publicacionId === f.id)
+      .length,
   }));
 }
 
