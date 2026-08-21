@@ -1,6 +1,5 @@
 import { getCurrentUserContext } from '@/lib/auth/user-context';
 import { esDelEquipo } from '@/lib/auth/permisos';
-import { puedePublicarEnMuro } from '@/lib/comunidad/reglas';
 import { BarraInferior } from './_components/barra-inferior';
 
 /**
@@ -32,22 +31,10 @@ export default async function MiLayout({
 
   if (!conPestanas) return <>{children}</>;
 
-  /*
-   * El «+» de la barra abre el compositor del muro, así que solo se pinta si
-   * esta persona puede escribir en él. Lo decide la iglesia —el muro puede
-   * estar apagado, o abierto solo al equipo— y la policy de la `0027` rechaza
-   * el INSERT si no. Un botón que promete algo que la base va a negar es peor
-   * que no tener botón.
-   *
-   * Se calcula aquí, en el layout, y no dentro de la barra: la barra es un
-   * componente de cliente y el contexto de iglesia no viaja al navegador.
-   */
-  const puedePublicar = puedePublicarEnMuro(ctx!);
-
   return (
     <>
       {children}
-      <BarraInferior puedePublicar={puedePublicar} />
+      <BarraInferior />
       {/*
        * El hueco de la barra, que es `fixed` y flota sobre el contenido. Sin
        * esto la última publicación del muro queda debajo de las pestañas y no

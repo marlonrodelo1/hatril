@@ -71,14 +71,26 @@ export default async function ComunidadPage({
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      {/* La campana aquí y no solo en el panel: la mayoría de la congregación
-          no entra al panel nunca. */}
+      {/*
+       * La campana aquí y no solo en el panel: la mayoría de la congregación no
+       * entra al panel nunca.
+       *
+       * SIN FLECHA DE VOLVER, Y NO ES UN DESCUIDO
+       * -----------------------------------------
+       * La tenía, apuntando a `/mi`. Pero `/mi` redirige a esta misma pantalla
+       * en cuanto quien mira pertenece a una iglesia (ver `mi/page.tsx`), así
+       * que la flecha daba la vuelta y volvía aquí: un botón que parecía llevar
+       * a algún sitio y no llevaba a ninguno.
+       *
+       * Y aunque llevara: esto es una pestaña, no una pantalla de detalle. Una
+       * flecha de «atrás» sobre una sección principal, con la barra de abajo
+       * justo debajo diciendo dónde estás, es la clase de mueble que sobra.
+       */}
       <CabeceraMiembro
         logoUrl={ctx.iglesia.logoUrl}
         user={ctx.user}
         titulo="Comunidad"
         subtitulo={ctx.iglesia.nombre}
-        volver="/mi"
       />
 
       {/*

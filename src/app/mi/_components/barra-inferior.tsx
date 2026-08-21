@@ -2,36 +2,31 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, CalendarDays, MessagesSquare, Plus } from 'lucide-react';
+import { BookOpen, CalendarDays, MessagesSquare } from 'lucide-react';
 
 /**
  * Las pestañas del área del miembro.
  *
- * TRES DESTINOS Y UN BOTÓN, NO CUATRO DESTINOS
- * --------------------------------------------
- * Había una cuarta pestaña, «Mi cuenta», y sobraba: la cabecera de todas las
- * pantallas de `/mi` ya lleva el avatar arriba a la derecha, que abre el mismo
- * menú de cuenta. Dos caminos al mismo sitio en una barra de cuatro huecos es
- * gastar el 25% de la navegación en repetirse.
+ * TRES, Y EL CUARTO HUECO SE QUEDA VACÍO A PROPÓSITO
+ * --------------------------------------------------
+ * Aquí han vivido dos cosas que se fueron, y las dos por el mismo motivo:
+ * repetían algo que ya estaba a la vista.
  *
- * En su lugar va el botón de publicar, que es lo que la gente viene a hacer y
- * hasta ahora solo se podía desde la cabecera del muro. Es la misma decisión que
- * Instagram, y por lo mismo: la acción principal se toca con el pulgar sin tener
- * que llegar antes a ninguna pantalla.
+ *   - **«Mi cuenta».** La cabecera de todas las pantallas de `/mi` lleva el
+ *     avatar arriba a la derecha, que abre el mismo menú.
+ *   - **El «+» de publicar.** Duraba una tanda. La primera pantalla del muro ya
+ *     tiene el disparador «¿Qué quieres compartir?» con su icono de foto, así
+ *     que el botón de abajo hacía exactamente lo mismo dos dedos más abajo. Lo
+ *     dijo Marlon en cuanto lo vio, y tenía razón.
  *
- * NO ES UN ENLACE MÁS, Y POR ESO SE VE DISTINTO
- * ---------------------------------------------
- * Las tres pestañas dicen «dónde estás»; este dice «haz algo». Va relleno de
- * `accent` y sin etiqueta debajo, para que no se lea como un cuarto sitio al que
- * ir. Y lleva `aria-label`, porque un icono sin texto no lo anuncia nadie.
+ * En Instagram el «+» tiene sentido porque su primera pantalla NO trae
+ * compositor: hay que ir a otro sitio para publicar. Aquí sí lo trae, y copiar
+ * el patrón sin copiar el motivo es como se llena una barra de botones que se
+ * pisan.
  *
- * ABRE EL COMPOSITOR POR LA URL
- * -----------------------------
- * `?publicar=1`, que el muro lee y limpia. Esta barra vive en el layout y el
- * compositor en la página: compartir estado entre los dos pediría un proveedor
- * de React envolviendo el área del miembro entera para un booleano. Por la URL,
- * además, el botón funciona desde Agenda o Devocional —lleva al muro y abre el
- * compositor— y volver atrás lo cierra.
+ * El hueco se deja libre hasta que haya un cuarto destino de verdad —«Mi
+ * iglesia», «Mis ministerios», «Dar»— y no se rellena por rellenar, que es
+ * justo lo que pasó las dos veces anteriores.
  *
  * CUATRO Y NO SIETE
  * -----------------
@@ -88,22 +83,8 @@ const PESTANAS = [
   { href: '/mi/agenda', etiqueta: 'Agenda', Icono: CalendarDays },
 ] as const;
 
-export function BarraInferior({
-  puedePublicar = false,
-}: {
-  /**
-   * Lo decide la iglesia: el muro puede estar apagado, o abierto solo al equipo
-   * o solo al pastor. Un «+» que lleva a una pantalla donde no se puede escribir
-   * es un botón que promete algo que la policy de la `0027` va a rechazar.
-   */
-  puedePublicar?: boolean;
-}) {
+export function BarraInferior() {
   const pathname = usePathname();
-
-  // El botón se cuela entre Devocional y Agenda: en el centro, que es donde
-  // llega el pulgar sin recolocar la mano.
-  const izquierda = PESTANAS.slice(0, 2);
-  const derecha = PESTANAS.slice(2);
 
   return (
     <nav
@@ -121,64 +102,10 @@ export function BarraInferior({
         'md:inset-x-auto md:bottom-5 md:left-1/2 md:w-auto md:-translate-x-1/2'
       }
     >
-      {izquierda.map((p) => (
-        <Pestana key={p.href} pestana={p} pathname={pathname} />
-      ))}
-
-      {puedePublicar && <BotonPublicar enElMuro={pathname === '/mi/comunidad'} />}
-
-      {derecha.map((p) => (
+      {PESTANAS.map((p) => (
         <Pestana key={p.href} pestana={p} pathname={pathname} />
       ))}
     </nav>
-  );
-}
-
-/**
- * El botón de publicar. Enlace o botón, según dónde estemos.
- *
- * ESTANDO YA EN EL MURO NO PUEDE SER UN ENLACE
- * --------------------------------------------
- * `/mi/comunidad?publicar=1` desde `/mi/comunidad` es una navegación de cliente
- * que NO desmonta el compositor, así que el parámetro no lo lee nadie y el botón
- * no hace nada. Se descubre a la primera pulsación.
- *
- * Desde ahí se lanza un evento del navegador y el compositor, que está
- * suscrito, se abre. Desde cualquier otra pestaña sí hace falta el enlace:
- * primero hay que llegar al muro.
- *
- * El nombre del evento lleva prefijo `hatril:` porque `window` es un espacio
- * compartido con todo lo que corra en la página.
- */
-function BotonPublicar({ enElMuro }: { enElMuro: boolean }) {
-  const clases =
-    'flex size-11 flex-none items-center justify-center rounded-xl bg-accent text-accent-foreground no-underline transition-colors hover:bg-accent-hover hover:no-underline active:translate-y-px md:size-10';
-
-  const icono = (
-    <Plus className="size-[22px] md:size-[19px]" strokeWidth={2.2} aria-hidden />
-  );
-
-  if (enElMuro) {
-    return (
-      <button
-        type="button"
-        aria-label="Escribir una publicación"
-        onClick={() => window.dispatchEvent(new CustomEvent('hatril:publicar'))}
-        className={'cursor-pointer outline-none focus-visible:ring-3 focus-visible:ring-ring/20 ' + clases}
-      >
-        {icono}
-      </button>
-    );
-  }
-
-  return (
-    <Link
-      href="/mi/comunidad?publicar=1"
-      aria-label="Escribir una publicación"
-      className={clases}
-    >
-      {icono}
-    </Link>
   );
 }
 

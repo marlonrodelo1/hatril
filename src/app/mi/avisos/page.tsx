@@ -48,7 +48,7 @@ export default async function AvisosPage() {
        * El menú de cuenta sí, y es la razón de que exista `soloSalir`: aquí
        * puede haber alguien SIN iglesia. La cabecera lo resuelve sola.
        */}
-      <CabeceraMiembro user={user} titulo="Avisos" volver="/mi" campana={false}>
+      <CabeceraMiembro user={user} titulo="Avisos" volver="/mi/comunidad" campana={false}>
         {sinLeer > 0 && (
           <form action={marcarTodoLeido}>
             <Button type="submit" variant="ghost" size="sm">

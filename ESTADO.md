@@ -206,13 +206,27 @@ lee al arrancar.
   cambia por el disparador. Verificado pidiendo la página con `fetch` y mirando
   que el `<textarea>` y el botón «Publicar» están en la respuesta.
 
-  La barra de abajo pasó de cuatro pestañas a **tres y un botón**: «Mi cuenta»
-  se fue —el avatar de la cabecera abre el mismo menú, y dos caminos al mismo
-  sitio en cuatro huecos es gastar la cuarta parte de la navegación en
-  repetirse— y en su lugar está el «+» de publicar. Abre la hoja por dos
-  caminos, y hacen falta los dos: enlace con `?publicar=1` desde otra pestaña, y
-  un evento del navegador estando ya en el muro, donde no hay navegación que
-  monte nada.
+  La barra de abajo tiene **tres pestañas y un hueco vacío a propósito**. Han
+  vivido ahí dos cosas y las dos se fueron por lo mismo, repetir algo que ya
+  estaba a la vista: «Mi cuenta» —el avatar de la cabecera abre el mismo menú— y
+  un «+» de publicar que duró una tanda, porque la primera pantalla del muro ya
+  trae el disparador. En Instagram el «+» tiene sentido porque su primera
+  pantalla NO trae compositor; copiar el patrón sin copiar el motivo llena la
+  barra de botones que se pisan. El hueco espera a un cuarto destino de verdad.
+
+  **La foto abre la galería directamente**, sin pasar por la hoja, que es el
+  flujo de Instagram. Eso obliga a algo que no es evidente: el `<input
+  type="file">` NO puede vivir dentro de la hoja, porque el navegador solo abre
+  el diálogo de ficheros dentro del gesto que lo pide y en ese instante la hoja
+  todavía no está montada. Vive fuera y se ata al formulario con el atributo
+  `form`, que es HTML de toda la vida y funciona también sin JavaScript.
+  Verificado metiendo un fichero por `DataTransfer`: el `FormData` lo lleva y la
+  ruta acaba en el bucket.
+
+  **Y sin flecha de volver.** La tenía, apuntando a `/mi` — que redirige a esta
+  misma pantalla en cuanto quien mira pertenece a una iglesia. Daba la vuelta y
+  volvía aquí: un botón que parecía llevar a algún sitio y no llevaba a ninguno.
+  La de `/mi/avisos` sí se queda, pero ahora apunta al muro y no a ese rebote.
 
   Las publicaciones van **a sangre en el móvil** y vuelven a ser tarjetas a
   partir de `sm`. Y el muro de demostración se llena con `scripts/seed-muro.sql`:
