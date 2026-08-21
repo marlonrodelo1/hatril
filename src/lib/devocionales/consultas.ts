@@ -295,3 +295,71 @@ export async function devocionalDeHoy(ctx: UserContext): Promise<{
     return { ...d, cuerpo: d.cuerpo!, esDeHoy: d.fecha === hoy };
   });
 }
+
+/**
+ * El versículo del día.
+ *
+ * POR QUÉ NO ES UNA TABLA NUEVA
+ * -----------------------------
+ * Porque `devocionales` ya tiene `versiculo` y `referencia` desde la `0012`, y
+ * porque un turno YA es una fila que puede estar a medio llenar: el propio
+ * schema dice que una fila sin cuerpo es un turno pendiente. Una iglesia que
+ * solo quiera publicar el versículo crea la fila del día, escribe esos dos
+ * campos y la publica. Una tabla aparte habría duplicado el calendario, los
+ * permisos y la pantalla del panel para guardar dos columnas.
+ *
+ * Y ES UNA CONSULTA APARTE, NO UN CAMPO DE `devocionalDeHoy()`
+ * ------------------------------------------------------------
+ * Aquella exige `cuerpo is not null` a propósito —sin eso enseñaría el hueco de
+ * un turno sin escribir—, así que un versículo suelto NUNCA saldría por ahí. Y
+ * son dos cosas independientes: la mayoría de los días habrá versículo sin
+ * devocional, que es justo lo que se pidió.
+ *
+ * CAE AL ÚLTIMO, IGUAL QUE EL DEVOCIONAL
+ * --------------------------------------
+ * Si hoy no hay, se enseña el último publicado. Un hueco donde debería ir el
+ * versículo parece una pantalla rota, y el de ayer sigue valiendo. `esDeHoy`
+ * deja que la pantalla decida cómo titularlo: llamar «de hoy» a uno de hace
+ * tres días es la clase de mentira pequeña que este repo ya ha pagado cara.
+ */
+export async function versiculoDelDia(ctx: UserContext): Promise<{
+  versiculo: string;
+  referencia: string | null;
+  fecha: string;
+  esDeHoy: boolean;
+} | null> {
+  const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
+
+  return withUser(ctx.user.id, async (tx) => {
+    const filas = await tx
+      .select({
+        versiculo: devocionales.versiculo,
+        referencia: devocionales.referencia,
+        fecha: devocionales.fecha,
+      })
+      .from(devocionales)
+      .where(
+        and(
+          eq(devocionales.iglesiaId, ctx.iglesia.id),
+          eq(devocionales.publicado, true),
+          lte(devocionales.fecha, hoy),
+          isNotNull(devocionales.versiculo),
+        ),
+      )
+      .orderBy(desc(devocionales.fecha))
+      .limit(1);
+
+    const v = filas[0];
+    // El `<> ''` no lo puede hacer la consulta sin ensuciarla: hay filas con la
+    // cadena vacía —el formulario guarda '' cuando se deja el campo en blanco—
+    // y `is not null` no las descarta.
+    if (!v?.versiculo?.trim()) return null;
+
+    return {
+      versiculo: v.versiculo.trim(),
+      referencia: v.referencia?.trim() || null,
+      fecha: v.fecha,
+      esDeHoy: v.fecha === hoy,
+    };
+  });
+}

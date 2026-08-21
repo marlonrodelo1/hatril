@@ -228,6 +228,23 @@ lee al arrancar.
   volvía aquí: un botón que parecía llevar a algún sitio y no llevaba a ninguno.
   La de `/mi/avisos` sí se queda, pero ahora apunta al muro y no a ese rebote.
 
+  **Arriba del muro, lo del día**: el versículo primero y el devocional debajo,
+  y los dos pueden faltar por separado. No hizo falta tabla nueva: `devocionales`
+  ya tenía `versiculo` y `referencia` desde la `0012`, y una fila sin cuerpo ya
+  era un turno a medio llenar. Una iglesia que solo quiera publicar el versículo
+  crea la fila del día, escribe esos dos campos y la publica.
+
+  El versículo es **el único bloque de color de la pantalla** —verde `support`
+  con letra blanca— y es deliberado: el muro entero es crema sobre crema. No
+  rompe ninguna de las tres reglas del sistema, y usa `support` y no `accent`
+  porque el naranja está reservado a las acciones.
+
+  Lo que **falta**: la pantalla del panel para escribir solo el versículo. Hoy se
+  escribe desde `/panel/devocionales`, que pide título y cuerpo aunque se dejen
+  vacíos. Y el texto bíblico lo pone la iglesia: la RVR60 tiene derechos de
+  Sociedades Bíblicas Unidas y no entra en el producto —el seed usa la RV1909,
+  que es de dominio público—.
+
   Las publicaciones van **a sangre en el móvil** y vuelven a ser tarjetas a
   partir de `sm`. Y el muro de demostración se llena con `scripts/seed-muro.sql`:
   siete publicaciones de cinco personas con sus comentarios, respuestas y me

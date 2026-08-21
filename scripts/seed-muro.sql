@@ -184,3 +184,51 @@ join gente g on g.nombre = v.autor
 cross join iglesia i;
 
 commit;
+
+
+-- ===========================================================================
+-- El devocional de HOY, con su versículo
+--
+-- Corona el muro: primero el versículo y debajo el devocional. Los dos salen de
+-- la MISMA fila de `devocionales` —la tabla ya tenía `versiculo` y `referencia`
+-- desde la 0012— y por eso no hizo falta tabla nueva.
+--
+-- El texto del versículo es de la Reina-Valera de 1909, que es de dominio
+-- público. La RVR60 tiene derechos de Sociedades Bíblicas Unidas y no puede ir
+-- ni siquiera en un fichero de demostración: lo que se copia en las pruebas
+-- acaba copiado en producción.
+--
+-- `on conflict` porque hay un único por (iglesia, fecha): volver a ejecutar el
+-- seed actualiza el de hoy en vez de reventar.
+-- ===========================================================================
+
+insert into public.devocionales (
+  iglesia_id, fecha, titulo, versiculo, referencia, cuerpo,
+  imagen_url, autor_miembro_id, publicado
+)
+select
+  i.id,
+  (now() at time zone i.timezone)::date,
+  'Cuando todo tiembla',
+  'Dios es nuestro amparo y fortaleza, nuestro pronto auxilio en las tribulaciones.',
+  'Salmos 46:1 (RV1909)',
+  E'Hay semanas en que uno llega al domingo sin nada que ofrecer. El trabajo, una carta del banco, una llamada del hospital. Y entonces se canta «Dios es nuestro amparo» con la voz rota, porque no es un adorno: es lo unico que queda de pie.\n\nEsta semana, antes de pedir nada, dale gracias por tres cosas concretas. No generales. Tres, con nombre y apellido.',
+  d.imagen_url,
+  m.id,
+  true
+from public.iglesias i
+left join public.miembros m
+  on m.iglesia_id = i.id and m.nombre = 'David'
+left join lateral (
+  select imagen_url from public.devocionales
+   where iglesia_id = i.id and imagen_url is not null
+   order by fecha desc limit 1
+) d on true
+where i.slug = 'betania'
+on conflict (iglesia_id, fecha) do update set
+  titulo      = excluded.titulo,
+  versiculo   = excluded.versiculo,
+  referencia  = excluded.referencia,
+  cuerpo      = excluded.cuerpo,
+  imagen_url  = excluded.imagen_url,
+  publicado   = true;

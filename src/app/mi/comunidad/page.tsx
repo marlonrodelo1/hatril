@@ -6,12 +6,17 @@ import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { puedeModerarComunidad } from '@/lib/auth/permisos';
 import { listarMuro } from '@/lib/comunidad/consultas';
 import {
+  devocionalDeHoy,
+  versiculoDelDia,
+} from '@/lib/devocionales/consultas';
+import {
   porQueNoPuedesPublicar,
   puedePublicarEnMuro,
 } from '@/lib/comunidad/reglas';
 import { nombreDeLaCuenta } from '@/lib/auth/nombre';
 import { Aviso } from '@/components/aviso';
 import { CabeceraMiembro } from '../_components/cabecera-miembro';
+import { CabeceraDelDia } from './_components/cabecera-del-dia';
 import { Publicador } from './_components/publicador';
 import { Publicacion } from './_components/publicacion';
 
@@ -65,7 +70,15 @@ export default async function ComunidadPage({
 
   // Con la comunidad apagada no se pide el muro siquiera: no se va a pintar, y
   // son cuatro consultas y una firma de imágenes contra Storage.
-  const muro = config.activa ? await listarMuro(ctx) : [];
+  //
+  // El versículo y el devocional SÍ se piden aunque el muro esté apagado: no son
+  // del muro, son de la iglesia. Apagar la comunidad es cerrar las
+  // publicaciones, no dejar a la congregación sin lo que le toca leer hoy.
+  const [muro, versiculo, devocional] = await Promise.all([
+    config.activa ? listarMuro(ctx) : Promise.resolve([]),
+    versiculoDelDia(ctx),
+    devocionalDeHoy(ctx),
+  ]);
 
   const nombre = nombreDeLaCuenta(ctx.user);
 
@@ -101,6 +114,27 @@ export default async function ComunidadPage({
        */}
       <main className="mx-auto flex w-full max-w-[620px] flex-col gap-3 px-4 py-4 sm:gap-4 sm:px-5 sm:py-6">
         {error && <Aviso tipo="error">{error}</Aviso>}
+
+        {/*
+         * Lo del día corona la pantalla, y va FUERA del `if` de la comunidad
+         * apagada: el versículo y el devocional no son del muro, son de la
+         * iglesia. Cerrar las publicaciones no puede dejar a la congregación sin
+         * lo que le toca leer hoy.
+         */}
+        <CabeceraDelDia
+          versiculo={versiculo}
+          devocional={
+            devocional && {
+              titulo: devocional.titulo,
+              // El extracto se corta aquí, en el servidor, además del
+              // `line-clamp` de la tarjeta: un cuerpo de tres mil caracteres
+              // viajaría entero al navegador para enseñar cuarenta.
+              cuerpo: devocional.cuerpo.slice(0, 180),
+              imagenUrl: devocional.imagenUrl,
+              esDeHoy: devocional.esDeHoy,
+            }
+          }
+        />
 
         {!config.activa ? (
           /*
