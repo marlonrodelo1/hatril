@@ -234,10 +234,26 @@ lee al arrancar.
   era un turno a medio llenar. Una iglesia que solo quiera publicar el versículo
   crea la fila del día, escribe esos dos campos y la publica.
 
-  El versículo es **el único bloque de color de la pantalla** —verde `support`
-  con letra blanca— y es deliberado: el muro entero es crema sobre crema. No
-  rompe ninguna de las tres reglas del sistema, y usa `support` y no `accent`
-  porque el naranja está reservado a las acciones.
+  El versículo es **el único bloque de color de la pantalla**: la foto del
+  devocional de fondo y encima un cristal verde de verdad —`backdrop-blur`, así
+  que lo que se difumina es la foto—. Es deliberado, y es la respuesta a «lo veo
+  todo muy gris»: el muro entero es crema sobre crema. Usa `support` y no
+  `accent` porque el naranja está reservado a las acciones.
+
+  Del glaseado hay dos números que no se tocan a la ligera. **La opacidad no baja
+  de 0.82**: una foto de un culto tiene focos blancos, y con el cristal a 0.6
+  media frase del versículo cae sobre uno y desaparece. Y **la etiqueta va en
+  blanco puro**, no al 75%: en el peor caso —foto blanca entera detrás— el 75%
+  se queda en 3.5:1 y el blanco puro da 4.8:1, que es lo que pide la norma. Sin
+  foto, el bloque cae a verde sólido y sube a 7:1.
+
+  Cuando el versículo y el devocional salen de la misma fila, la miniatura del
+  segundo desaparece: la foto ya está arriba, y repetirla nítida dos centímetros
+  más abajo se lee como un error de maquetación.
+
+  La barra de abajo también estrenó cristal —más desenfoque, menos opacidad y
+  `backdrop-saturate`—, que hasta ahora no se distinguía de un fondo sólido
+  porque no había nada de color por debajo que difuminar.
 
   Lo que **falta**: la pantalla del panel para escribir solo el versículo. Hoy se
   escribe desde `/panel/devocionales`, que pide título y cuerpo aunque se dejen

@@ -95,9 +95,23 @@ export function BarraInferior() {
         // come la fila de abajo.
         'fixed inset-x-3 z-30 flex items-center gap-1 rounded-2xl border border-border p-1.5 ' +
         'bottom-[calc(0.75rem+env(safe-area-inset-bottom))] ' +
-        // El glaseado, con guarda: sin `backdrop-filter` el fondo translúcido
-        // dejaría el texto ilegible sobre lo que haya debajo.
-        'bg-surface supports-[backdrop-filter]:bg-surface/75 supports-[backdrop-filter]:backdrop-blur-xl ' +
+        /*
+         * El glaseado, con guarda: sin `backdrop-filter` el fondo translúcido
+         * dejaría el texto ilegible sobre lo que haya debajo.
+         *
+         * MÁS CRISTAL DESDE QUE EL MURO TIENE COLOR
+         * -----------------------------------------
+         * Con el muro entero en crema, un glaseado no se distingue de un fondo
+         * sólido: no hay nada detrás que difuminar. Desde que el versículo del
+         * día es un bloque verde, al pasar por debajo se ve el color a través
+         * del cristal — así que baja la opacidad, sube el desenfoque y entra
+         * `backdrop-saturate`, que revive el color que atraviesa en vez de
+         * dejarlo lavado.
+         *
+         * No baja de 0.7: por debajo, el texto de las pestañas empieza a
+         * pelearse con una foto del domingo que pase por detrás.
+         */
+        'bg-surface supports-backdrop-filter:bg-surface/70 supports-backdrop-filter:backdrop-blur-2xl supports-backdrop-filter:backdrop-saturate-150 ' +
         // Escritorio: pastilla centrada del ancho de su contenido.
         'md:inset-x-auto md:bottom-5 md:left-1/2 md:w-auto md:-translate-x-1/2'
       }

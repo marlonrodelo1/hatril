@@ -126,6 +126,7 @@ export default async function ComunidadPage({
           devocional={
             devocional && {
               titulo: devocional.titulo,
+              fecha: devocional.fecha,
               // El extracto se corta aquí, en el servidor, además del
               // `line-clamp` de la tarjeta: un cuerpo de tres mil caracteres
               // viajaría entero al navegador para enseñar cuarenta.

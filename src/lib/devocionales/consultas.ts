@@ -325,6 +325,12 @@ export async function devocionalDeHoy(ctx: UserContext): Promise<{
 export async function versiculoDelDia(ctx: UserContext): Promise<{
   versiculo: string;
   referencia: string | null;
+  /**
+   * La foto de ese devocional, que la pantalla usa de fondo tras el glaseado.
+   * Va aquí y no en una consulta aparte porque es la misma fila: pedirla dos
+   * veces sería un viaje de más para una columna que ya viene en el camino.
+   */
+  imagenUrl: string | null;
   fecha: string;
   esDeHoy: boolean;
 } | null> {
@@ -335,6 +341,7 @@ export async function versiculoDelDia(ctx: UserContext): Promise<{
       .select({
         versiculo: devocionales.versiculo,
         referencia: devocionales.referencia,
+        imagenUrl: devocionales.imagenUrl,
         fecha: devocionales.fecha,
       })
       .from(devocionales)
@@ -358,6 +365,7 @@ export async function versiculoDelDia(ctx: UserContext): Promise<{
     return {
       versiculo: v.versiculo.trim(),
       referencia: v.referencia?.trim() || null,
+      imagenUrl: v.imagenUrl,
       fecha: v.fecha,
       esDeHoy: v.fecha === hoy,
     };
