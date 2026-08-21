@@ -38,39 +38,31 @@ import 'server-only';
  * vez a quien tenga una versión anterior. Cambiarla a solas es peor que no
  * cambiarla, porque deja la base diciendo que aceptaron algo que no leyeron.
  *
- * DEUDA ABIERTA: ESTA VERSIÓN SE HA QUEDADO CORTA
- * -----------------------------------------------
- * `/privacidad` ha cambiado de fondo desde que se fijó `privacidad-2026-08`:
- *
- *   - §3 describe dos tratamientos que entonces no existían — el libro de
- *     cuentas de la iglesia y las inscripciones a eventos de gente que no es
- *     miembro de nadie.
- *   - §4 añade una base jurídica nueva para esos inscritos.
- *   - §6 añade el plazo de conservación de las listas de inscritos.
- *
- * Según la regla de arriba, tocaba subirla. NO se ha hecho, y conviene saber por
- * qué antes de «arreglarlo»: subir la versión deja a toda la congregación en
- * estado caducado, y hoy **no existe la maquinaria para resolverlo**. No hay
- * envío de correo montado, no hay cron, no hay pantalla de «vuelve a aceptar», y
- * `consentimientos.miembro_id` es NOT NULL. Subirla ahora crearía un incomplido
+ * LA DEUDA QUE HABÍA AQUÍ ESTÁ CERRADA, Y CONVIENE SABER CÓMO
+ * -----------------------------------------------------------
+ * Durante meses esta constante se quedó en `privacidad-2026-08` mientras el
+ * texto cambiaba debajo: finanzas y eventos reescribieron §3, §4 y §6 y nadie
+ * la subió. No fue descuido — estaba razonado aquí mismo: subirla deja a toda
+ * la congregación en estado caducado, y no existía forma de resolverlo. Sin
+ * pantalla de «vuelve a aceptar», subirla solo habría creado un incumplimiento
  * visible en la base a cambio de nada.
  *
- * Y aquí había escrito que el consentimiento del inscrito a un evento «es válido
- * y probatorio desde el primer día porque guarda la versión en su propia fila».
- * NO ERA CIERTO mientras guardara esta misma etiqueta: `privacidad-2026-08` ya
- * designa dos textos distintos —el de antes de los eventos y el de ahora—, así
- * que probaba que hubo casilla, no A QUÉ dijeron que sí. Lo arregla
- * `VERSION_CONSENTIMIENTO_EVENTO`, aquí abajo.
+ * La asistencia y el seguimiento forzaron cerrarla, porque son el dato más
+ * sensible del producto y no podían entrar bajo una etiqueta que ya designaba
+ * dos textos distintos. Se hizo en el orden que este comentario pedía:
  *
- * ORDEN PARA CERRARLA, y en este orden:
- *   1. Rellenar `ALOJAMIENTO` en `datos-responsable.ts`, que sigue bloqueando
- *      la publicación de estos textos.
- *   2. Construir el re-consentimiento: pantalla, aviso y el envío de correo.
- *   3. Subir esta constante a `privacidad-2026-09`, una sola vez y con todo
- *      dentro. Dos subidas en un mes es pedirlo dos veces, y a la segunda nadie
- *      lee.
+ *   1. La pantalla de re-consentimiento — `/acepta`, más el corte en
+ *      `requireIglesia()`. Sin correo, que sigue sin montarse: se la encuentra
+ *      quien entra. Es peor que un aviso por correo y es infinitamente mejor
+ *      que nada, porque a quien no entra tampoco le estamos tratando nada nuevo.
+ *   2. Esta subida, UNA sola vez y con todo dentro: los cambios de finanzas y
+ *      eventos que venían pendientes, más asistencia y seguimiento.
+ *
+ * Lo que sigue pendiente y NO bloquea esto: rellenar `ALOJAMIENTO` en
+ * `datos-responsable.ts`, que es lo que mantiene el aviso rojo sobre los dos
+ * textos legales.
  */
-export const VERSION_POLITICA_PRIVACIDAD = 'privacidad-2026-08';
+export const VERSION_POLITICA_PRIVACIDAD = 'privacidad-2026-09';
 
 /**
  * Texto exacto que se muestra junto a la casilla del registro.
@@ -88,6 +80,27 @@ export const TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS =
   'Autorizo a que Hatril guarde mis datos y mi vínculo con esta iglesia para ' +
   'que la congregación pueda organizarse. Sé que estos son datos protegidos y ' +
   'que puedo retirar este permiso cuando quiera.';
+
+/**
+ * La casilla de la asistencia y el seguimiento.
+ *
+ * SE DICE LO QUE SE GUARDA, NO LA CATEGORÍA JURÍDICA
+ * --------------------------------------------------
+ * «Tratamiento de datos de participación en actos de culto» es correcto y no
+ * significa nada para quien lo lee. Aquí se nombra la cosa: si vine o no el
+ * domingo, y lo que se apunta cuando alguien me llama porque llevo tiempo sin
+ * aparecer. Un consentimiento que el interesado no ha entendido no es válido
+ * aunque esté marcado (art. 7.2).
+ *
+ * Y se dice lo que NO se guarda, que es la mitad que tranquiliza: la lista de
+ * resultados es cerrada, así que nadie va a escribir ahí por qué se separó.
+ */
+export const TEXTO_CONSENTIMIENTO_ASISTENCIA_Y_SEGUIMIENTO =
+  'Autorizo a que mi iglesia apunte si vengo o no a sus reuniones, y lo que se ' +
+  'hable conmigo si alguien del equipo me contacta porque llevo tiempo sin ' +
+  'aparecer. Sé que se elige de una lista y que nadie escribe ahí nada sobre ' +
+  'mi salud ni mi vida privada. Puedo retirar este permiso cuando quiera, y si ' +
+  'lo retiro dejo de aparecer en esas listas.';
 
 export const TEXTO_CONSENTIMIENTO_COMUNICACIONES =
   'Quiero recibir avisos de mi iglesia sobre eventos y actividades.';

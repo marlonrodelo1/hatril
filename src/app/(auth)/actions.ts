@@ -10,6 +10,8 @@ import { crearIglesiaConSeeds } from '@/lib/onboarding/crear-iglesia';
 import { checkRateLimit, getClientIp } from '@/lib/api/rate-limit';
 import { validarPassword, traducirErrorAuth } from '@/lib/auth/password';
 import { getOrigin } from '@/lib/auth/get-origin';
+import { getCurrentUserContext } from '@/lib/auth/user-context';
+import { inicioDe } from '@/lib/auth/permisos';
 import { campo, campoObligatorio } from '@/lib/api/formulario';
 
 /**
@@ -60,9 +62,13 @@ export async function acceder(formData: FormData) {
 
   // Solo se acepta una ruta interna. Con la URL completa esto sería un
   // redirector abierto: un enlace con nuestro dominio que lleva a otro sitio.
+  // Sin `next`, el destino depende de quién sea: el panel es de quien lleva algo
+  // en la iglesia y `/mi` del resto. Mandarlos a todos al panel funcionaba —el
+  // layout devuelve al miembro— pero le enseñaba una pantalla en blanco por el
+  // camino.
   const destino = next && next.startsWith('/') && !next.startsWith('//')
     ? next
-    : '/panel/hoy';
+    : inicioDe(await getCurrentUserContext());
 
   redirect(destino);
 }
@@ -256,7 +262,7 @@ export async function cambiarPassword(formData: FormData) {
     );
   }
 
-  redirect('/panel/hoy');
+  redirect(inicioDe(await getCurrentUserContext()));
 }
 
 // ============================================================================

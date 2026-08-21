@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { desc, isNull, sql } from 'drizzle-orm';
 
 import { withUser } from '@/lib/db';
 import { notificaciones } from '@/lib/db/schema';
@@ -69,25 +69,36 @@ export async function listarNotificaciones(
 }
 
 /**
- * Cuántos sin leer, para el punto rojo.
+ * Cuántos sin leer, para el punto de la campana.
  *
  * Se pide en CADA carga del panel, así que va contra el índice parcial de la
  * `0016` —el que solo indexa las filas con `leida_at is null`— y no cuenta la
  * tabla entera. Y se corta en 99: nadie necesita saber si tiene 240 o 260, y sin
  * el corte una cuenta abandonada haría un recuento cada vez más caro para
  * pintar un número que no cambia de significado.
+ *
+ * CUENTA LAS DE TODAS SUS IGLESIAS, Y ANTES NO
+ * --------------------------------------------
+ * Filtraba por `ctx.iglesia.id` mientras `listarNotificaciones` no filtra por
+ * ninguna. Con las dos cosas a la vez el resultado era un punto que no se
+ * apagaba: quien está en dos congregaciones pulsaba «Marcar todo», la lista se
+ * vaciaba entera, y el contador seguía enseñando avisos de la otra iglesia que
+ * ya estaban leídos —o al revés, marcaba pendientes que la lista no mostraba—.
+ *
+ * Se arregla contando lo mismo que se lista. Que aparezca en el panel de
+ * Betania un aviso de Sion no confunde: los textos de `textos.ts` llevan dentro
+ * el nombre de la iglesia justo cuando importa.
+ *
+ * Sigue recibiendo el contexto entero y no solo el `user.id` para no cambiar la
+ * firma a sus llamantes, y porque el día que haya un selector de congregación
+ * este es el sitio donde volverá a hacer falta.
  */
 export async function sinLeer(ctx: UserContext): Promise<number> {
   const [fila] = await withUser(ctx.user.id, (tx) =>
     tx
       .select({ n: sql<number>`count(*)::int` })
       .from(notificaciones)
-      .where(
-        and(
-          eq(notificaciones.iglesiaId, ctx.iglesia.id),
-          isNull(notificaciones.leidaAt),
-        ),
-      )
+      .where(isNull(notificaciones.leidaAt))
       .limit(1),
   );
 

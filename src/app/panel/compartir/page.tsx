@@ -23,6 +23,8 @@ import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CabeceraPanel } from '../_components/cabecera';
+import { Contenedor } from '../_components/contenedor';
 import { Copiar } from './_components/copiar';
 import { guardarRedes } from './actions';
 
@@ -77,149 +79,170 @@ export default async function CompartirPage({
 
   return (
     <>
-      <header className="border-b border-border bg-surface px-5 py-4 md:px-8">
-        <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
-          Compartir
-        </h1>
-        <p className="text-[13px] text-muted-foreground">
-          Los enlaces de {iglesia.nombre} y dónde encontrarla
-        </p>
-      </header>
+      <CabeceraPanel
+        titulo="Compartir"
+        subtitulo={`Los enlaces de ${iglesia.nombre} y dónde encontrarla`}
+      />
 
-      <div className="flex w-full max-w-[760px] flex-col gap-8 px-5 pb-16 pt-6 md:px-8">
+      <Contenedor>
         {error && <Aviso>{error}</Aviso>}
         {guardado === 'redes' && (
           <Aviso tipo="ok">Redes sociales guardadas.</Aviso>
         )}
 
-        {/* ---------- La web de la iglesia ---------- */}
-        <Seccion
-          titulo="La página de la iglesia"
-          nota="Lo que ve quien busca dónde os reunís: horarios, grupos y el devocional del día."
-        >
-          {iglesia.webPublica ? (
-            <>
-              <Copiar
-                url={urlWeb}
-                etiqueta="Dirección de la página de la iglesia"
-                destacado
-              />
-              <div className="flex flex-wrap gap-2">
+        {/*
+         * Dos columnas a partir de `xl` (1280 px). A la izquierda los dos
+         * enlaces que se copian y se mandan; a la derecha las redes, que se
+         * rellenan una vez y se olvidan. Apiladas dejaban las redes a un
+         * scroll de distancia de lo único que se viene a hacer aquí.
+         *
+         * `items-start` para que la columna corta no se estire hasta la altura
+         * de la otra y quede un palmo de vacío dentro de la tarjeta.
+         */}
+        <div className="grid items-start gap-6 xl:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-6">
+            {/* ---------- La web de la iglesia ---------- */}
+            <Seccion
+              titulo="La página de la iglesia"
+              nota="Lo que ve quien busca dónde os reunís: horarios, grupos y el devocional del día."
+            >
+              {iglesia.webPublica ? (
+                <>
+                  <Copiar
+                    url={urlWeb}
+                    etiqueta="Dirección de la página de la iglesia"
+                    destacado
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      render={
+                        <a
+                          href={enlaceWhatsapp(
+                            `Esta es la página de ${iglesia.nombre}:`,
+                            urlWeb,
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        />
+                      }
+                    >
+                      <MessageCircle strokeWidth={1.8} />
+                      Enviar por WhatsApp
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      render={
+                        <a
+                          href={urlWeb}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        />
+                      }
+                    >
+                      <ExternalLink strokeWidth={1.8} />
+                      Verla
+                    </Button>
+                  </div>
+                  {iglesia.dominioPropio && (
+                    <p className="t-label text-muted-foreground">
+                      Estás usando tu propio dominio. Si algún día lo quitas, la
+                      página seguirá donde siempre: {origen}/i/{iglesia.slug}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <Aviso>
+                  Tu página todavía no está publicada, así que este enlace no
+                  funcionaría. Se activa en Ajustes, en «Web pública».
+                </Aviso>
+              )}
+
+              {!iglesia.webPublica && (
                 <Button
                   variant="outline"
-                  render={
-                    <a
-                      href={enlaceWhatsapp(
-                        `Esta es la página de ${iglesia.nombre}:`,
-                        urlWeb,
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    />
-                  }
+                  className="w-fit"
+                  render={<Link href="/panel/ajustes" />}
                 >
-                  <MessageCircle strokeWidth={1.8} />
-                  Enviar por WhatsApp
+                  <Settings strokeWidth={1.8} />
+                  Ir a Ajustes
                 </Button>
-                <Button
-                  variant="ghost"
-                  render={
-                    <a href={urlWeb} target="_blank" rel="noopener noreferrer" />
-                  }
-                >
-                  <ExternalLink strokeWidth={1.8} />
-                  Verla
-                </Button>
-              </div>
-              {iglesia.dominioPropio && (
-                <p className="t-label text-muted-foreground">
-                  Estás usando tu propio dominio. Si algún día lo quitas, la
-                  página seguirá donde siempre: {origen}/i/{iglesia.slug}
-                </p>
               )}
-            </>
-          ) : (
-            <Aviso>
-              Tu página todavía no está publicada, así que este enlace no
-              funcionaría. Se activa en Ajustes, en «Web pública».
-            </Aviso>
-          )}
+            </Seccion>
 
-          {!iglesia.webPublica && (
-            <Button
-              variant="outline"
-              className="w-fit"
-              render={<Link href="/panel/ajustes" />}
+            {/* ---------- Unirse a la congregación ---------- */}
+            <Seccion
+              titulo="Invitar a formar parte"
+              nota="Quien abra este enlace pide unirse, y su solicitud os llega a Solicitudes para aprobarla."
             >
-              <Settings strokeWidth={1.8} />
-              Ir a Ajustes
-            </Button>
-          )}
-        </Seccion>
-
-        {/* ---------- Unirse a la congregación ---------- */}
-        <Seccion
-          titulo="Invitar a formar parte"
-          nota="Quien abra este enlace pide unirse, y su solicitud os llega a Solicitudes para aprobarla."
-        >
-          {iglesia.aceptaSolicitudes ? (
-            <>
-              <Copiar
-                url={urlUnirse}
-                etiqueta="Enlace para pedir unirse a la iglesia"
-              />
-              <Button
-                variant="outline"
-                className="w-fit"
-                render={
-                  <a
-                    href={enlaceWhatsapp(
-                      `Únete a ${iglesia.nombre} desde aquí:`,
-                      urlUnirse,
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
+              {iglesia.aceptaSolicitudes ? (
+                <>
+                  <Copiar
+                    url={urlUnirse}
+                    etiqueta="Enlace para pedir unirse a la iglesia"
                   />
-                }
-              >
-                <MessageCircle strokeWidth={1.8} />
-                Enviar por WhatsApp
-              </Button>
-            </>
-          ) : (
-            <Aviso>
-              Tenéis cerradas las solicitudes, así que este enlace diría que no
-              se admiten. Se abre en Ajustes, en «Directorio».
-            </Aviso>
-          )}
-        </Seccion>
+                  <Button
+                    variant="outline"
+                    className="w-fit"
+                    render={
+                      <a
+                        href={enlaceWhatsapp(
+                          `Únete a ${iglesia.nombre} desde aquí:`,
+                          urlUnirse,
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      />
+                    }
+                  >
+                    <MessageCircle strokeWidth={1.8} />
+                    Enviar por WhatsApp
+                  </Button>
+                </>
+              ) : (
+                <Aviso>
+                  Tenéis cerradas las solicitudes, así que este enlace diría que
+                  no se admiten. Se abre en Ajustes, en «Directorio».
+                </Aviso>
+              )}
+            </Seccion>
+          </div>
 
-        {/* ---------- Redes sociales ---------- */}
-        {puedeEditarRedes ? (
-          <form action={guardarRedes}>
+          {/* ---------- Redes sociales ---------- */}
+          {puedeEditarRedes ? (
+            <form action={guardarRedes} className="min-w-0">
+              <Seccion
+                titulo="Redes sociales"
+                nota="Salen al pie de la página de la iglesia. Lo que dejes en blanco no aparece."
+              >
+                {/*
+                 * Vuelve a una sola columna en `xl` y recupera las dos en
+                 * `2xl`: entre 1280 y 1536 la tarjeta ya es media pantalla, y
+                 * dos columnas ahí dejan cada campo en unos 180 px, que no da
+                 * ni para ver el principio de una URL.
+                 */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+                  {REDES.map((red) => (
+                    <CampoRed key={red} red={red} valor={valores[red]} />
+                  ))}
+                </div>
+                {/* `outline`: el naranja de esta pantalla es el «Copiar» del
+                    enlace de la iglesia, que es a lo que se viene aquí. */}
+                <Button type="submit" variant="outline" className="w-fit">
+                  Guardar redes
+                </Button>
+              </Seccion>
+            </form>
+          ) : (
             <Seccion
               titulo="Redes sociales"
-              nota="Salen al pie de la página de la iglesia. Lo que dejes en blanco no aparece."
+              nota="Las cambia el pastor desde esta misma pantalla."
             >
-              <div className="grid gap-4 sm:grid-cols-2">
-                {REDES.map((red) => (
-                  <CampoRed key={red} red={red} valor={valores[red]} />
-                ))}
-              </div>
-              <Button type="submit" className="w-fit">
-                Guardar redes
-              </Button>
+              <ListaRedes valores={valores} />
             </Seccion>
-          </form>
-        ) : (
-          <Seccion
-            titulo="Redes sociales"
-            nota="Las cambia el pastor desde esta misma pantalla."
-          >
-            <ListaRedes valores={valores} />
-          </Seccion>
-        )}
-      </div>
+          )}
+        </div>
+      </Contenedor>
     </>
   );
 }

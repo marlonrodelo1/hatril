@@ -6,15 +6,20 @@
  * único punto de importación: `import { miembros } from '@/lib/db/schema'`.
  *
  * Orden de dependencia (importa para las migraciones): enums → iglesias →
- * miembros → ministerios → comunidad → notificaciones → finanzas → eventos →
- * rgpd.
+ * miembros → ministerios → asistencia → seguimiento → comunidad →
+ * notificaciones → finanzas → eventos → rgpd.
  * `plataforma` no depende de nada.
+ *
+ * `asistencia` va detrás de `ministerios` y no antes: `reuniones` apunta a un
+ * ministerio cuando es un ensayo, y a nada cuando es el culto del domingo.
  */
 
 export * from './enums';
 export * from './iglesias';
 export * from './miembros';
 export * from './ministerios';
+export * from './asistencia';
+export * from './seguimiento';
 export * from './comunidad';
 export * from './notificaciones';
 export * from './finanzas';

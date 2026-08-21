@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import {
-  ChevronLeft,
   Plus,
   ShieldMinus,
   ShieldPlus,
@@ -20,6 +19,7 @@ import {
   obtenerMinisterio,
 } from '@/lib/ministerios/consultas';
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
+import { tipoDeMinisterio } from '@/lib/ministerios/tipos';
 import { iniciales } from '@/lib/format/iniciales';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +30,9 @@ import {
   quitarFotoMinisterio,
 } from '../actions';
 import { DialogoAsignar } from '../_components/dialogo-asignar';
+import { PestanasMinisterio } from './_components/pestanas';
+import { CabeceraPanel } from '../../_components/cabecera';
+import { Contenedor } from '../../_components/contenedor';
 
 /*
  * Título fijo y no el nombre del ministerio.
@@ -69,6 +72,16 @@ export default async function MinisterioPage({
     esPastor(ctx) || puede(ctx, 'gestionar_ministerios');
 
   const color = colorDeMinisterio(ministerio.colorHex);
+  const tipo = tipoDeMinisterio(ministerio.tipo);
+
+  // Los tres se pintan juntos o no se pinta el bloque. Un recuadro con «Misión»
+  // vacío y nada más no informa de nada; el hueco lo cuenta mejor la invitación
+  // a escribirlo, y solo a quien puede hacerlo.
+  const rumbo = [
+    { etiqueta: 'Objetivo de esta temporada', texto: ministerio.objetivo },
+    { etiqueta: 'Misión', texto: ministerio.mision },
+    { etiqueta: 'Visión', texto: ministerio.vision },
+  ].filter((c): c is { etiqueta: string; texto: string } => Boolean(c.texto));
   const colideres = ministerio.equipo.filter((p) => p.rolEquipo === 'colider');
 
   // Las candidatas solo se piden si el diálogo está abierto. Cargarlas siempre
@@ -83,32 +96,15 @@ export default async function MinisterioPage({
 
   return (
     <>
-      <header className="flex flex-col gap-3 border-b border-border bg-surface px-5 py-4 md:flex-row md:items-center md:gap-4 md:px-8">
-        <Button
-          variant="outline"
-          size="icon-sm"
-          aria-label="Volver a ministerios"
-          className="hidden flex-none md:inline-flex"
-          render={<Link href="/panel/ministerios" />}
-        >
-          <ChevronLeft strokeWidth={1.9} />
-        </Button>
-
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <Link
-            href="/panel/ministerios"
-            className="inline-flex w-fit items-center gap-1 text-[13px] font-medium text-muted-foreground no-underline hover:text-foreground hover:no-underline md:hidden"
-          >
-            <ChevronLeft className="size-4" strokeWidth={1.8} />
-            Ministerios
-          </Link>
-          <h1 className="truncate text-[22px] font-bold leading-tight tracking-[-0.025em]">
-            {ministerio.nombre}
-          </h1>
-        </div>
-
+      {/* El «volver» era doble: un botón con flecha en escritorio y un enlace de
+          texto en móvil, o sea el mismo destino escrito dos veces. Ahora es una
+          sola miga que la cabecera resuelve igual en los dos tamaños. */}
+      <CabeceraPanel
+        titulo={ministerio.nombre}
+        volver={{ href: '/panel/ministerios', texto: 'Ministerios' }}
+      >
         {puedeGestionar && (
-          <div className="flex flex-none flex-wrap gap-2">
+          <>
             <Button
               variant="outline"
               render={<Link href={`/panel/ministerios/${ministerio.id}/editar`} />}
@@ -119,11 +115,13 @@ export default async function MinisterioPage({
               <UserPlus strokeWidth={1.8} />
               Asignar miembros
             </Button>
-          </div>
+          </>
         )}
-      </header>
+      </CabeceraPanel>
 
-      <div className="flex w-full max-w-[1400px] flex-1 flex-col gap-5 px-5 pb-12 pt-6 md:px-8">
+      <Contenedor>
+        <PestanasMinisterio ministerio={ministerio} activa="equipo" />
+
         <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5 md:flex-row md:items-center md:gap-6 md:px-6">
           <span
             className="flex size-14 flex-none items-center justify-center rounded-xl"
@@ -136,8 +134,16 @@ export default async function MinisterioPage({
           </span>
 
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className="text-[20px] font-bold tracking-[-0.022em]">
-              {ministerio.nombre}
+            <span className="flex flex-wrap items-center gap-2.5">
+              <span className="text-[20px] font-bold tracking-[-0.022em]">
+                {ministerio.nombre}
+              </span>
+              {/* El tipo va aquí y no en su propia columna: contesta la misma
+                  pregunta que el nombre —«qué es esto»— y de él dependen las
+                  herramientas que el equipo tiene encendidas. */}
+              <span className="rounded-md border border-border bg-surface-alt px-2 py-0.5 text-[12px] font-semibold text-muted-foreground">
+                {tipo.nombre}
+              </span>
             </span>
             <span className="text-pretty text-[14px] leading-snug text-muted-foreground">
               {ministerio.descripcion ?? 'Sin descripción todavía'}
@@ -182,6 +188,55 @@ export default async function MinisterioPage({
             </div>
           </div>
         </section>
+
+        {/* Hacia dónde trabaja el equipo. Lo escribe quien puede gestionarlo,
+            desde el formulario de editar; aquí solo se lee.
+
+            Va justo debajo de la cabecera y encima del equipo a propósito: el
+            objetivo es lo que da sentido a la lista de personas que viene
+            después, y enterrado al final no lo leería nadie. */}
+        {rumbo.length > 0 ? (
+          <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5">
+            <h2 className="t-subtitulo">Hacia dónde trabaja</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {rumbo.map((c, i) => (
+                <div
+                  key={c.etiqueta}
+                  // El objetivo ocupa la fila entera cuando hay más de uno: es
+                  // el único que se revisa, y compartir ancho con la misión lo
+                  // igualaba con algo que se escribe una vez y dura años.
+                  className={
+                    i === 0 && rumbo.length > 1
+                      ? 'flex flex-col gap-1.5 sm:col-span-2'
+                      : 'flex flex-col gap-1.5'
+                  }
+                >
+                  <span className="t-micro">{c.etiqueta}</span>
+                  <p className="text-pretty text-[15px] leading-relaxed">
+                    {c.texto}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : (
+          puedeGestionar && (
+            <section className="flex flex-col items-start gap-2 rounded-xl border border-dashed border-border bg-surface p-5">
+              <h2 className="t-subtitulo">Hacia dónde trabaja</h2>
+              <p className="text-pretty text-[14px] leading-relaxed text-muted-foreground">
+                Nadie ha escrito todavía qué persigue este equipo. Un objetivo
+                concreto es lo que después permite mirar atrás y saber si se ha
+                cumplido.
+              </p>
+              <Link
+                href={`/panel/ministerios/${ministerio.id}/editar`}
+                className="text-[14px] font-semibold text-accent-brand underline-offset-4 hover:underline"
+              >
+                Escribirlo ahora
+              </Link>
+            </section>
+          )
+        )}
 
         {/* La foto que sale en la web pública, si esta persona puede tocar el
             ministerio. Va aquí y no en el formulario de editar porque subir una
@@ -389,7 +444,7 @@ export default async function MinisterioPage({
             </div>
           )}
         </section>
-      </div>
+      </Contenedor>
 
       {asignar && puedeGestionar && (
         <DialogoAsignar

@@ -33,7 +33,17 @@ export const DATOS_RESPONSABLE = {
   /** Solo sociedades. Vacío para autónomo. */
   registroMercantil: '',
 
-  ultimaActualizacion: '2026-08-20',
+  /**
+   * La fecha del pie de los dos textos legales.
+   *
+   * NO ES DECORACIÓN: `/privacidad` §10 dice literalmente que cuando algo cambie
+   * de fondo «lo verás en la fecha del pie, y esa fecha es la única señal
+   * fiable», porque todavía no hay envío de correo. Dejarla vieja tras tocar el
+   * texto convierte esa frase en mentira y quita la única pista que tiene quien
+   * quiera saber si esto ha cambiado. Se sube SIEMPRE que se toque el fondo de
+   * cualquiera de las dos páginas.
+   */
+  ultimaActualizacion: '2026-08-21',
 } as const;
 
 /**
@@ -79,10 +89,25 @@ export type Encargado = {
  * del despliegue (`187.124.37.206`) está en un rango que no es europeo, así que
  * conviene confirmarlo antes de escribir «UE» en una política.
  */
+/**
+ * El VPS donde corre la aplicación.
+ *
+ * «Hostinger International Limited» y no «Hostinger» a secas: en un anexo del
+ * art. 28 hay que nombrar a la entidad con la que se contrata, no a la marca. Es
+ * el nombre con el que está registrado el sistema autónomo AS47583, que es el
+ * dueño del rango donde vive el despliegue.
+ *
+ * PENDIENTE DE CONFIRMAR: el país exacto del centro de datos. Marlon indicó
+ * Alemania y la geolocalización de la IP del despliegue devuelve Francia. Las
+ * dos son UE —que es lo que de verdad sostiene la frase de `/privacidad`— pero
+ * el dato concreto hay que mirarlo en hPanel, en la ficha del VPS, no deducirlo
+ * de una base de geolocalización: con los proveedores de hosting fallan a menudo
+ * porque la IP se registra en un país y la máquina está en otro.
+ */
 export const ALOJAMIENTO: Encargado = {
-  nombre: '[PENDIENTE: proveedor del VPS]',
+  nombre: 'Hostinger International Limited',
   finalidad: 'Ejecuta la aplicación y procesa cada petición',
-  ubicacion: '[PENDIENTE: país del centro de datos]',
+  ubicacion: 'Alemania (UE)',
   activo: true,
 };
 

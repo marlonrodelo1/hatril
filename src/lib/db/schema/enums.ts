@@ -101,6 +101,31 @@ export const planEnum = pgEnum('plan_enum', [
  * Moneda de la iglesia. Determina cómo se formatean los importes, no dónde se
  * cobra: la suscripción se cobra siempre en la moneda del precio de Stripe.
  */
+/**
+ * Quién puede publicar en el muro de la congregación.
+ *
+ * No es lo mismo que un permiso del catálogo: los permisos dicen qué puede
+ * hacer una PERSONA, y esto lo decide la iglesia entera de una vez. Una
+ * congregación de trescientas que abre el muro a todo el mundo y otra de
+ * cuarenta donde solo escribe el pastor son dos productos distintos, y la
+ * diferencia no cabe en el mapa de permisos por persona.
+ *
+ *   `todos`  — cualquier miembro con ficha. Es el defecto y lo que había antes
+ *              de que esto existiera, así que las iglesias que ya usan el muro
+ *              no notan el cambio.
+ *   `equipo` — quien tiene un rol distinto de `miembro`: pastor, líder,
+ *              tesorero y secretaría.
+ *   `pastor` — solo el pastor. El muro pasa a ser un tablón de anuncios.
+ *
+ * Comentar y dar me gusta NO dependen de esto: van por su propio interruptor.
+ * Una iglesia puede querer que solo publique el equipo y que responda todo el
+ * mundo, que es exactamente el tablón parroquial de toda la vida.
+ */
+export const comunidadQuienPublicaEnum = pgEnum(
+  'comunidad_quien_publica_enum',
+  ['todos', 'equipo', 'pastor'],
+);
+
 export const monedaEnum = pgEnum('moneda_enum', ['COP', 'EUR', 'USD']);
 
 /** Mismo patrón que `RolEquipo`: el tipo sale de la lista, no se escribe aparte. */
@@ -124,6 +149,17 @@ export const tipoConsentimientoEnum = pgEnum('tipo_consentimiento_enum', [
   'datos_religiosos',
   'comunicaciones',
   'imagen',
+  /**
+   * Que se apunte a qué reuniones viene y qué se habla con ella cuando lleva
+   * tiempo sin aparecer.
+   *
+   * Casilla separada de `datos_religiosos` a propósito: aquél dice que los
+   * datos se guardan «para que la congregación pueda organizarse», y eso no
+   * cubre un registro nominal y semanal de dónde estuvo cada persona. Art. 7.2,
+   * granularidad. El porqué de que sea UN valor y no dos, y qué pasa con quien
+   * se niega, están en la migración `0034`.
+   */
+  'asistencia_y_seguimiento',
 ]);
 
 /**

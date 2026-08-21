@@ -6,7 +6,7 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { requireIglesiaAccion } from '@/lib/auth/guard-panel';
-import { esPastor } from '@/lib/auth/permisos';
+import { puedeModerarComunidad } from '@/lib/auth/permisos';
 import { withUser } from '@/lib/db';
 import {
   publicaciones,
@@ -24,24 +24,37 @@ import {
   subirImagenesPublicacion,
   MAX_IMAGENES,
 } from '@/lib/comunidad/imagenes';
+import {
+  MENSAJE_COMENTARIOS_CERRADOS,
+  MENSAJE_COMUNIDAD_APAGADA,
+  MENSAJE_FOTOS_APAGADAS,
+  porQueNoPuedesPublicar,
+  puedePublicarEnMuro,
+} from '@/lib/comunidad/reglas';
 import type { UserContext } from '@/lib/auth/user-context';
 
 /**
  * El muro de la comunidad.
  *
- * QUIÉN PUEDE ESCRIBIR: CUALQUIER MIEMBRO
- * ---------------------------------------
- * No hay permiso que consultar. `requireIglesiaAccion()` ya exige membresía
- * ACTIVA —quien solicitó el ingreso y espera aprobación no llega aquí—, y
- * dentro de una congregación todos publican igual. Poner un permiso encima
- * sería inventarse una jerarquía que la iglesia no ha pedido.
+ * QUIÉN PUEDE ESCRIBIR: LO QUE HAYA DECIDIDO LA IGLESIA
+ * -----------------------------------------------------
+ * Aquí ponía que escribía cualquier miembro y que no había permiso que
+ * consultar. Dejó de ser verdad con las migraciones `0026` y `0027`: ahora la
+ * congregación elige si el muro está encendido, quién publica (`todos`,
+ * `equipo` o solo el `pastor`), si se comenta y si se suben fotos. Se toca en
+ * `/panel/comunidad` y viaja en `ctx.iglesia.comunidad`.
+ *
+ * Lo que NO cambió es que no hay permiso del jsonb para publicar: `moderar_
+ * comunidad` existe, pero es para borrar lo de otro, no para escribir.
  *
  * LO QUE DE VERDAD SOSTIENE ESTO NO ESTÁ EN ESTE FICHERO
  * ------------------------------------------------------
- * Está en las policies de la `0015`. Aquí se comprueba lo justo para dar un
- * mensaje decente; si algo se colara, la base de datos lo rechaza igual porque
- * `autor_miembro_id` tiene que ser `miembro_actual(iglesia_id)`. Escribir en
- * nombre de otro no es una comprobación que se pueda olvidar en el código.
+ * Está en las policies de la `0015` y la `0027`. Aquí se comprueba lo justo
+ * para dar un mensaje decente en castellano; si algo se colara, la base de datos
+ * lo rechaza igual porque `autor_miembro_id` tiene que ser
+ * `miembro_actual(iglesia_id)` y el INSERT pasa por
+ * `comunidad_admite_publicacion()`. Escribir en nombre de otro no es una
+ * comprobación que se pueda olvidar en el código.
  */
 
 const DESTINO = '/mi/comunidad';
@@ -76,6 +89,15 @@ export async function publicar(formData: FormData) {
   const ctx = await requireIglesiaAccion();
   const miembroId = requiereFicha(ctx);
 
+  /*
+   * Las dos comprobaciones de configuración van SEPARADAS y por este orden para
+   * poder decir cuál falló. `puedePublicarEnMuro` también mira si está apagada,
+   * pero su mensaje habla de quién publica, y a quien se encuentra el muro
+   * cerrado eso no le dice nada.
+   */
+  if (!ctx.iglesia.comunidad.activa) volver(MENSAJE_COMUNIDAD_APAGADA);
+  if (!puedePublicarEnMuro(ctx)) volver(porQueNoPuedesPublicar(ctx));
+
   const parsed = EsquemaPublicacion.safeParse({
     texto: campo(formData, 'texto'),
   });
@@ -95,6 +117,12 @@ export async function publicar(formData: FormData) {
 
   if (ficheros.length > MAX_IMAGENES) {
     volver(`Puedes subir hasta ${MAX_IMAGENES} fotos en una publicación.`);
+  }
+
+  // Con las fotos apagadas la policy rechaza el INSERT entero, así que sin este
+  // aviso el texto también se perdería sin que nadie entendiera por qué.
+  if (ficheros.length > 0 && !ctx.iglesia.comunidad.fotos) {
+    volver(MENSAJE_FOTOS_APAGADAS);
   }
 
   /*
@@ -160,6 +188,17 @@ export async function publicar(formData: FormData) {
 export async function alternarMeGusta(publicacionId: string) {
   const ctx = await requireIglesiaAccion();
   const miembroId = requiereFicha(ctx);
+
+  /*
+   * La `0027` es más suelta que esto a propósito: cierra el INSERT con la
+   * comunidad apagada, pero deja el DELETE abierto para que nadie quede
+   * atrapado en un me gusta que ya no puede retirar. Aquí se cierran los dos,
+   * porque la comprobación tendría que ir DENTRO de la transacción —después de
+   * saber si toca poner o quitar— y un `redirect()` ahí dentro aborta la
+   * transacción a media faena. Con el muro sin pintar tampoco hay corazón que
+   * pulsar, así que en la práctica no atrapa a nadie.
+   */
+  if (!ctx.iglesia.comunidad.activa) volver(MENSAJE_COMUNIDAD_APAGADA);
 
   // `true` solo cuando se PONE. Al quitarlo no se avisa de nada: nadie quiere
   // enterarse de que a alguien ha dejado de gustarle lo suyo.
@@ -254,6 +293,11 @@ export async function comentar(publicacionId: string, formData: FormData) {
   const ctx = await requireIglesiaAccion();
   const miembroId = requiereFicha(ctx);
 
+  // Comentar no depende de `comunidad_quien_publica`: quien no publica sí
+  // comenta, y es justo lo que se le promete en la línea de la pantalla.
+  if (!ctx.iglesia.comunidad.activa) volver(MENSAJE_COMUNIDAD_APAGADA);
+  if (!ctx.iglesia.comunidad.comentarios) volver(MENSAJE_COMENTARIOS_CERRADOS);
+
   const parsed = EsquemaComentario.safeParse({
     texto: campo(formData, 'texto'),
   });
@@ -281,11 +325,20 @@ export async function comentar(publicacionId: string, formData: FormData) {
 }
 
 /**
- * Borrar una publicación: el autor, o el pastor.
+ * Borrar una publicación: el autor, o quien modera.
  *
- * El pastor no puede EDITAR lo de otro —cambiarle el texto y dejar su nombre
+ * Quien modera no puede EDITAR lo de otro —cambiarle el texto y dejar su nombre
  * debajo es suplantarle— pero sí quitarlo. Es su congregación y responde ella de
  * lo que se publica dentro.
+ *
+ * Antes era «el autor o el pastor», con la comparación de rol escrita a mano.
+ * Desde la `0027` también modera quien tenga el permiso `moderar_comunidad`, y
+ * la policy `publicaciones_delete_autor_o_moderador` ya lo acepta: sin este
+ * cambio, esa persona vería el botón de borrar —la pantalla sí mira el permiso—
+ * y esta action se lo negaría.
+ *
+ * Se borra a la vez que la comunidad esté apagada o encendida: apagar es dejar
+ * de escribir, no impedir que alguien retire lo suyo.
  */
 export async function borrarPublicacion(publicacionId: string) {
   const ctx = await requireIglesiaAccion();
@@ -294,7 +347,7 @@ export async function borrarPublicacion(publicacionId: string) {
   if (!fila) volver('Esa publicación ya no existe.');
 
   const esMia = ctx.miembroId !== null && fila.autorMiembroId === ctx.miembroId;
-  if (!esMia && !esPastor(ctx)) {
+  if (!esMia && !puedeModerarComunidad(ctx)) {
     volver('Solo puedes borrar tus propias publicaciones.');
   }
 
@@ -316,7 +369,7 @@ export async function borrarPublicacion(publicacionId: string) {
   revalidatePath(DESTINO);
 }
 
-/** Borrar un comentario: su autor, o el pastor. */
+/** Borrar un comentario: su autor, o quien modera. Igual que el de arriba. */
 export async function borrarComentario(comentarioId: string) {
   const ctx = await requireIglesiaAccion();
 
@@ -336,7 +389,7 @@ export async function borrarComentario(comentarioId: string) {
   if (!fila) volver('Ese comentario ya no existe.');
 
   const esMio = ctx.miembroId !== null && fila.autorMiembroId === ctx.miembroId;
-  if (!esMio && !esPastor(ctx)) {
+  if (!esMio && !puedeModerarComunidad(ctx)) {
     volver('Solo puedes borrar tus propios comentarios.');
   }
 

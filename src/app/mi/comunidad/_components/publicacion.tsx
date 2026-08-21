@@ -28,9 +28,17 @@ import {
 export function Publicacion({
   publicacion: p,
   puedeModerar,
+  admiteComentarios,
 }: {
   publicacion: PublicacionMuro;
   puedeModerar: boolean;
+  /**
+   * Comentarios cerrados: no se pinta el formulario, pero los comentarios que
+   * ya existan se siguen leyendo y su autor los sigue pudiendo borrar. Cerrar
+   * no es borrar, y es lo mismo que hace la `0027`: quita el INSERT y deja el
+   * SELECT donde estaba.
+   */
+  admiteComentarios: boolean;
 }) {
   return (
     <article className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
@@ -172,18 +180,25 @@ export function Publicacion({
         </ul>
       )}
 
-      <form action={comentar.bind(null, p.id)} className="flex gap-2">
-        <input
-          name="texto"
-          maxLength={1000}
-          placeholder="Escribe un comentario"
-          aria-label="Escribe un comentario"
-          className="min-w-0 flex-1 rounded-lg border border-input bg-surface-alt px-3 py-2 text-[14.5px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
-        />
-        <Button type="submit" variant="outline" size="sm" className="flex-none">
-          Enviar
-        </Button>
-      </form>
+      {admiteComentarios && (
+        <form action={comentar.bind(null, p.id)} className="flex gap-2">
+          <input
+            name="texto"
+            maxLength={1000}
+            placeholder="Escribe un comentario"
+            aria-label="Escribe un comentario"
+            className="min-w-0 flex-1 rounded-lg border border-input bg-surface-alt px-3 py-2 text-[14.5px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
+          />
+          <Button
+            type="submit"
+            variant="outline"
+            size="sm"
+            className="flex-none"
+          >
+            Enviar
+          </Button>
+        </form>
+      )}
     </article>
   );
 }

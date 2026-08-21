@@ -69,6 +69,13 @@ declare
   MOV_A uuid;
   EVE_A constant uuid := 'f0000000-0000-4000-8000-00000000000a';
   EVE_B constant uuid := 'f0000000-0000-4000-8000-00000000000b';
+  REU_A constant uuid := 'f1000000-0000-4000-8000-00000000000a';
+  REU_B constant uuid := 'f1000000-0000-4000-8000-00000000000b';
+  v_ultima date;
+  ASI_A uuid;
+  -- Alguien de Betania que NO esta en el equipo de MIN_A. Se crea abajo, despues
+  -- de la prueba de numeracion correlativa, para no moverle el numero a Ruben.
+  MIE_A3 uuid;
   -- Lo que responde inscribir_en_evento. Un solo escalar a proposito: ver la
   -- cabecera de la 0024.
   v_res text;
@@ -891,6 +898,351 @@ begin
 
   execute 'reset role';
 
+  -- ==========================================================================
+  -- ASISTENCIA (HT116, HT117) -- el dato del art. 9 mas puro de la plataforma
+  --
+  -- Que una persona estuvo en un culto un domingo concreto revela su practica
+  -- religiosa con fecha. Estas comprobaciones son las que impiden que el
+  -- historico de una congregacion se lea desde otra, desde anon o desde
+  -- service_role.
+  -- ==========================================================================
+
+  insert into public.reuniones (id, iglesia_id, titulo, fecha)
+  values (REU_A, IGL_A, 'Culto test Betania', date '2026-08-16'),
+         (REU_B, IGL_B, 'Culto test Sion',    date '2026-08-16');
+
+  -- HT116: una reunion no puede colgar del ministerio de otra iglesia.
+  begin
+    insert into public.reuniones (iglesia_id, ministerio_id, titulo, fecha)
+    values (IGL_A, MIN_B, 'Ensayo cruzado', date '2026-08-16');
+    r := r || E'  FALLO una reunion de Betania acepto el ministerio de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT116%'
+                   then E'  OK   HT116 impide colgar de un ministerio ajeno\\n'
+                   else format(E'  FALLO error inesperado (HT116 ministerio): %s\\n', sqlerrm) end;
+  end;
+
+  -- HT116: ni apuntar en la lista de Betania a alguien de Sion.
+  begin
+    insert into public.asistencias (iglesia_id, reunion_id, miembro_id, presente)
+    values (IGL_A, REU_A, MIE_B1, true);
+    r := r || E'  FALLO la lista de Betania acepto a una persona de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT116%'
+                   then E'  OK   HT116 impide apuntar a alguien de otra iglesia\\n'
+                   else format(E'  FALLO error inesperado (HT116 miembro): %s\\n', sqlerrm) end;
+  end;
+
+  -- La lista de verdad: uno vino y otro no. Se guarda fila para los dos, que es
+  -- lo que distingue "no se paso lista" de "no vino nadie".
+  insert into public.asistencias (iglesia_id, reunion_id, miembro_id, presente)
+  values (IGL_A, REU_A, MIE_A1, true),
+         (IGL_A, REU_A, MIE_A2, false);
+  insert into public.asistencias (iglesia_id, reunion_id, miembro_id, presente)
+  values (IGL_B, REU_B, MIE_B1, true);
+
+  -- El trigger que resucita miembros.ultima_asistencia, muerta desde la 0000.
+  select ultima_asistencia into v_ultima from public.miembros where id = MIE_A1;
+  r := r || format(E'  %s el trigger deja la ultima asistencia (%s)\\n',
+                   case when v_ultima = date '2026-08-16' then 'OK  ' else 'FALLO' end,
+                   coalesce(v_ultima::text, 'null'));
+
+  select ultima_asistencia into v_ultima from public.miembros where id = MIE_A2;
+  r := r || format(E'  %s quien falto no tiene ultima asistencia (%s)\\n',
+                   case when v_ultima is null then 'OK  ' else 'FALLO' end,
+                   coalesce(v_ultima::text, 'null'));
+
+  -- Y se RECALCULA, no se acumula: desmarcar tiene que borrar la fecha. Con un
+  -- greatest() se quedaria clavada para siempre, y corregir una lista es la
+  -- operacion mas frecuente que va a tener esto.
+  update public.asistencias set presente = false
+   where reunion_id = REU_A and miembro_id = MIE_A1;
+  select ultima_asistencia into v_ultima from public.miembros where id = MIE_A1;
+  r := r || format(E'  %s desmarcar recalcula la ultima asistencia (%s)\\n',
+                   case when v_ultima is null then 'OK  ' else 'FALLO' end,
+                   coalesce(v_ultima::text, 'null'));
+  update public.asistencias set presente = true
+   where reunion_id = REU_A and miembro_id = MIE_A1;
+
+  -- --- Betania ve lo suyo y nada mas ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.reuniones where iglesia_id = IGL_B;
+  r := r || format(E'  %s Betania no ve las reuniones de Sion (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.asistencias where iglesia_id = IGL_B;
+  r := r || format(E'  %s Betania no ve la lista de Sion (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.asistencias where iglesia_id = IGL_A;
+  r := r || format(E'  %s Betania si ve la suya (%s)\\n',
+                   case when n = 2 then 'OK  ' else 'FALLO' end, n);
+
+  -- HT117: mover una reunion de iglesia corromperia el historico de las dos.
+  begin
+    update public.reuniones set iglesia_id = IGL_B where id = REU_A;
+    r := r || E'  FALLO una reunion cambio de iglesia\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT117%'
+                   then E'  OK   HT117 impide mover una reunion de iglesia\\n'
+                   else format(E'  FALLO error inesperado (HT117 reunion): %s\\n', sqlerrm) end;
+  end;
+
+  -- HT117: lo unico que se corrige de una asistencia es presente. Poder moverla
+  -- de persona convierte "me equivoque marcando" en "reescribo donde estuvo otro".
+  begin
+    update public.asistencias set miembro_id = MIE_A2
+     where reunion_id = REU_A and miembro_id = MIE_A1;
+    r := r || E'  FALLO una asistencia cambio de persona\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT117%'
+                   then E'  OK   HT117 impide cambiar de persona una asistencia\\n'
+                   else format(E'  FALLO error inesperado (HT117 asistencia): %s\\n', sqlerrm) end;
+  end;
+
+  execute 'reset role';
+
+  -- --- Y desde Sion, en el otro sentido. Algunas fugas solo se ven desde la
+  --     iglesia que NO esta publicada en el directorio ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.asistencias where iglesia_id = IGL_A;
+  r := r || format(E'  %s Sion no ve la lista de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- --- anon: de aqui no sale nada a la calle, ni una columna ---
+  execute 'set local role anon';
+
+  begin
+    select count(*) into n from public.reuniones;
+    r := r || format(E'  FALLO anon lee las reuniones (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a las reuniones\\n';
+  end;
+
+  begin
+    select count(*) into n from public.asistencias;
+    r := r || format(E'  FALLO anon lee la asistencia (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a la asistencia\\n';
+  end;
+
+  execute 'reset role';
+
+  -- service_role tiene BYPASSRLS: aqui no lo para ninguna policy, solo el grant.
+  execute 'set local role service_role';
+
+  begin
+    select count(*) into n from public.asistencias;
+    r := r || format(E'  FALLO service_role lee la asistencia (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   service_role no llega a la asistencia\\n';
+  end;
+
+  execute 'reset role';
+
+  -- ==========================================================================
+  -- SEGUIMIENTO (HT118, HT119) -- por que la gente dejo de venir
+  --
+  -- La asistencia dice que alguien fue al culto. Esto dice POR QUE dejo de ir:
+  -- quien esta molesto con la iglesia, quien se mudo, a quien no se localiza.
+  -- Con nombre y apellidos, y de la congregacion entera.
+  -- ==========================================================================
+
+  execute 'reset role';
+
+  insert into public.miembros (iglesia_id, nombre)
+  values (IGL_A, 'Tomas fuera del equipo');
+  select id into MIE_A3 from public.miembros
+   where nombre = 'Tomas fuera del equipo' and iglesia_id = IGL_A;
+
+  -- HT118: el ministerio tiene que ser de la misma iglesia que la fila.
+  begin
+    insert into public.seguimiento_asignaciones
+      (iglesia_id, ministerio_id, miembro_id, responsable_miembro_id)
+    values (IGL_A, MIN_B, MIE_A1, MIE_A2);
+    r := r || E'  FALLO una asignacion de Betania acepto el ministerio de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT118%'
+                   then E'  OK   HT118 impide asignar desde un ministerio ajeno\\n'
+                   else format(E'  FALLO error inesperado (HT118 ministerio): %s\\n', sqlerrm) end;
+  end;
+
+  -- HT118: ni acompanar a alguien de otra congregacion.
+  begin
+    insert into public.seguimiento_asignaciones
+      (iglesia_id, ministerio_id, miembro_id, responsable_miembro_id)
+    values (IGL_A, MIN_A, MIE_B1, MIE_A2);
+    r := r || E'  FALLO Betania acepto acompanar a una persona de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT118%'
+                   then E'  OK   HT118 impide acompanar a alguien de otra iglesia\\n'
+                   else format(E'  FALLO error inesperado (HT118 miembro): %s\\n', sqlerrm) end;
+  end;
+
+  -- HT118: repartir trabajo a quien no esta en el equipo es repartirselo a nadie.
+  begin
+    insert into public.seguimiento_asignaciones
+      (iglesia_id, ministerio_id, miembro_id, responsable_miembro_id)
+    values (IGL_A, MIN_A, MIE_A1, MIE_A3);
+    r := r || E'  FALLO se asigno a alguien que no esta en el equipo\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT118%'
+                   then E'  OK   HT118 impide asignar a quien no esta en el equipo\\n'
+                   else format(E'  FALLO error inesperado (HT118 equipo): %s\\n', sqlerrm) end;
+  end;
+
+  -- La buena, y su gemela en Sion.
+  insert into public.seguimiento_asignaciones
+    (iglesia_id, ministerio_id, miembro_id, responsable_miembro_id)
+  values (IGL_A, MIN_A, MIE_A1, MIE_A2);
+  select id into ASI_A from public.seguimiento_asignaciones
+   where iglesia_id = IGL_A and miembro_id = MIE_A1 and activo;
+
+  insert into public.seguimiento_asignaciones
+    (iglesia_id, ministerio_id, miembro_id, responsable_miembro_id)
+  values (IGL_B, MIN_B, MIE_B1, MIE_B1);
+
+  -- Una persona la acompana UNA sola: dos responsables es que la llaman dos o
+  -- que no la llama ninguna.
+  -- Ojo con el responsable que se elige aqui: la prueba de reactivacion de mas
+  -- arriba deja el vinculo de Lucia con activo = false, asi que ponerla a ella
+  -- levantaria HT118 y no la clave duplicada, y el handler de abajo no lo
+  -- cazaria. Se repite Ruben, que sigue en el equipo.
+  begin
+    insert into public.seguimiento_asignaciones
+      (iglesia_id, ministerio_id, miembro_id, responsable_miembro_id)
+    values (IGL_A, MIN_A, MIE_A1, MIE_A2);
+    r := r || E'  FALLO una persona acepto dos acompanantes a la vez\\n';
+  exception when unique_violation then
+    r := r || E'  OK   una persona no puede tener dos acompanantes activos\\n';
+  end;
+
+  -- --- La firma no se elige, se comprueba. USR_C es Ruben (MIE_A2) ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_C), true);
+  execute 'set local role hatril_app';
+
+  insert into public.seguimiento_contactos
+    (iglesia_id, ministerio_id, miembro_id, autor_miembro_id, fecha, via, resultado)
+  values (IGL_A, MIN_A, MIE_A1, MIE_A2, date '2026-08-18', 'llamada', 'no_contesta');
+  get diagnostics n = row_count;
+  r := r || format(E'  %s se puede apuntar un contacto firmado por uno mismo (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.seguimiento_contactos
+      (iglesia_id, ministerio_id, miembro_id, autor_miembro_id, fecha, via, resultado)
+    values (IGL_A, MIN_A, MIE_A1, MIE_A1, date '2026-08-18', 'visita', 'contactado');
+    r := r || E'  FALLO se puede apuntar un contacto en nombre de otro\\n';
+  exception when others then
+    r := r || E'  OK   no se puede apuntar un contacto en nombre de otro\\n';
+  end;
+
+  -- Un contacto es un hecho fechado: no hay UPDATE concedido. Reescribirlo
+  -- dejaria una mentira con fecha en vez de un intento que dejo de existir.
+  begin
+    update public.seguimiento_contactos set resultado = 'contactado'
+     where iglesia_id = IGL_A;
+    r := r || E'  FALLO se puede reescribir un contacto ya apuntado\\n';
+  exception when others then
+    r := r || E'  OK   un contacto no se puede reescribir, solo borrar\\n';
+  end;
+
+  -- El limite del unico campo libre del modulo, dicho por la base.
+  begin
+    insert into public.seguimiento_contactos
+      (iglesia_id, ministerio_id, miembro_id, autor_miembro_id, fecha, via, resultado, proximo_paso)
+    values (IGL_A, MIN_A, MIE_A1, MIE_A2, date '2026-08-19', 'llamada', 'contactado',
+            repeat('x', 201));
+    r := r || E'  FALLO el proximo paso admite mas de 200 caracteres\\n';
+  exception when check_violation then
+    r := r || E'  OK   el proximo paso esta acotado a 200 caracteres\\n';
+  end;
+
+  execute 'reset role';
+
+  -- --- HT119, desde el pastor de Betania ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  begin
+    update public.seguimiento_asignaciones set iglesia_id = IGL_B where id = ASI_A;
+    r := r || E'  FALLO una asignacion cambio de iglesia\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT119%'
+                   then E'  OK   HT119 impide mover una asignacion de iglesia\\n'
+                   else format(E'  FALLO error inesperado (HT119 iglesia): %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    update public.seguimiento_asignaciones set miembro_id = MIE_A2 where id = ASI_A;
+    r := r || E'  FALLO una asignacion cambio de persona acompanada\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT119%'
+                   then E'  OK   HT119 impide cambiar a quien se acompana\\n'
+                   else format(E'  FALLO error inesperado (HT119 persona): %s\\n', sqlerrm) end;
+  end;
+
+  select count(*) into n from public.seguimiento_asignaciones where iglesia_id = IGL_B;
+  r := r || format(E'  %s Betania no ve las asignaciones de Sion (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- --- Y desde Sion, en el otro sentido ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.seguimiento_contactos where iglesia_id = IGL_A;
+  r := r || format(E'  %s Sion no ve los contactos de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.seguimiento_asignaciones where iglesia_id = IGL_A;
+  r := r || format(E'  %s Sion no ve las asignaciones de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- --- anon y service_role: de aqui no sale nada, por ninguna puerta ---
+  execute 'set local role anon';
+
+  begin
+    select count(*) into n from public.seguimiento_contactos;
+    r := r || format(E'  FALLO anon lee los contactos (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a los contactos\\n';
+  end;
+
+  begin
+    select count(*) into n from public.seguimiento_asignaciones;
+    r := r || format(E'  FALLO anon lee las asignaciones (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a las asignaciones\\n';
+  end;
+
+  execute 'reset role';
+
+  execute 'set local role service_role';
+
+  begin
+    select count(*) into n from public.seguimiento_contactos;
+    r := r || format(E'  FALLO service_role lee los contactos (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   service_role no llega a los contactos\\n';
+  end;
+
+  execute 'reset role';
+
   -- Abortar a proposito: revierte los datos de prueba y devuelve el informe.
   raise exception '%', r;
 end $$;
@@ -964,6 +1316,41 @@ async function comprobarWithUser(): Promise<string[]> {
       tx.execute(`select importe_con_signo from movimientos limit 1`),
     );
     lineas.push('  OK   withUser() ve la columna generada importe_con_signo');
+
+    // Asistencia, por la puerta de la aplicacion. Mismo motivo que finanzas: la
+    // fase SQL prueba que `anon` y `service_role` NO llegan, y eso deja sin
+    // probar lo contrario — que `hatril_app` si. Un `revoke` sin su `grant`
+    // detras pasa las diecisiete comprobaciones de arriba y tumba la seccion
+    // entera con 42501 al abrirla.
+    await withUser(USR_A, (tx) =>
+      tx.execute(`select 1 from reuniones limit 1`),
+    );
+    lineas.push('  OK   withUser() puede consultar reuniones');
+
+    await withUser(USR_A, (tx) =>
+      tx.execute(`select 1 from asistencias limit 1`),
+    );
+    lineas.push('  OK   withUser() puede consultar asistencias');
+
+    // La columna del motor de modulos. Caza el «se me olvido aplicar la 0028»
+    // aqui y no al abrir un ministerio, que es donde se lee.
+    await withUser(USR_A, (tx) =>
+      tx.execute(`select tipo, modulos from ministerios limit 1`),
+    );
+    lineas.push('  OK   withUser() ve las columnas tipo y modulos');
+
+    // Seguimiento por la puerta de la aplicacion. Sin esto, un `revoke` sin su
+    // `grant` detras pasaria toda la fase SQL de arriba —que solo comprueba que
+    // anon y service_role NO llegan— y tumbaria la seccion al abrirla.
+    await withUser(USR_A, (tx) =>
+      tx.execute(`select 1 from seguimiento_asignaciones limit 1`),
+    );
+    lineas.push('  OK   withUser() puede consultar las asignaciones');
+
+    await withUser(USR_A, (tx) =>
+      tx.execute(`select 1 from seguimiento_contactos limit 1`),
+    );
+    lineas.push('  OK   withUser() puede consultar los contactos');
 
     // LA FUGA, CAZADA POR LA FUNCIÓN QUE USA LA APLICACIÓN.
     //

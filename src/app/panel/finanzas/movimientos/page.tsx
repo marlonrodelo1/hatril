@@ -9,6 +9,8 @@ import { formatearDineroConSigno } from '@/lib/format/dinero';
 import type { Moneda } from '@/lib/db/schema';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
+import { CabeceraPanel } from '../../_components/cabecera';
+import { Contenedor } from '../../_components/contenedor';
 
 export const metadata: Metadata = { title: 'Libro de movimientos' };
 
@@ -39,18 +41,14 @@ export default async function MovimientosPage({
 
   return (
     <>
-      <header className="flex flex-col gap-4 border-b border-border bg-surface px-5 py-4 md:flex-row md:items-center md:gap-6 md:px-8">
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
-            Libro de movimientos
-          </h1>
-          <p className="text-[13px] text-muted-foreground">
-            {filas.length === 0
-              ? 'Nada apuntado en este periodo'
-              : `${filas.length} ${filas.length === 1 ? 'movimiento' : 'movimientos'}`}
-          </p>
-        </div>
-
+      <CabeceraPanel
+        titulo="Libro de movimientos"
+        subtitulo={
+          filas.length === 0
+            ? 'Nada apuntado en este periodo'
+            : `${filas.length} ${filas.length === 1 ? 'movimiento' : 'movimientos'}`
+        }
+      >
         <Button
           render={<Link href="/panel/finanzas/movimientos/nuevo" />}
           className="flex-none"
@@ -58,9 +56,9 @@ export default async function MovimientosPage({
           <Plus strokeWidth={1.9} />
           Apuntar
         </Button>
-      </header>
+      </CabeceraPanel>
 
-      <div className="flex w-full max-w-[1400px] flex-1 flex-col gap-5 px-5 pb-10 pt-6 md:px-8">
+      <Contenedor>
         {params.error && <Aviso>{params.error}</Aviso>}
 
         {/* Los filtros van en la URL para que el enlace se pueda compartir y
@@ -167,7 +165,7 @@ export default async function MovimientosPage({
             </table>
           </div>
         )}
-      </div>
+      </Contenedor>
     </>
   );
 }

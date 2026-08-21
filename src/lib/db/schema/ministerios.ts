@@ -6,6 +6,7 @@ import {
   boolean,
   integer,
   date,
+  jsonb,
   index,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
@@ -14,6 +15,7 @@ import { sql } from 'drizzle-orm';
 import { rolEquipoEnum } from './enums';
 import { iglesias } from './iglesias';
 import { miembros } from './miembros';
+import type { ModulosGuardados } from '../../ministerios/modulos';
 
 /**
  * Un área de servicio de la iglesia: alabanza, jóvenes, niños, intercesión,
@@ -33,6 +35,50 @@ export const ministerios = pgTable(
 
     nombre: text('nombre').notNull(),
     descripcion: text('descripcion'),
+
+    /**
+     * De qué va: alabanza, consolidación, niños… Catálogo en
+     * `src/lib/ministerios/tipos.ts`.
+     *
+     * `text` y no un enum de Postgres a propósito: el conjunto no está cerrado
+     * —hay ministerios de radio, de reparto de alimentos, de «Ángeles de la
+     * Noche»— y un enum obligaría a migrar por cada tipo nuevo. Un valor que el
+     * catálogo no conozca se pinta como «Otro» en vez de romper la pantalla.
+     */
+    tipo: text('tipo').notNull().default('otro'),
+
+    /**
+     * Hacia dónde trabaja este equipo.
+     *
+     * Los tres separados y no un `descripcion` más largo porque son tres
+     * preguntas distintas y un pastor las contesta por separado: la misión es
+     * lo que el equipo hace hoy, la visión a dónde quiere llegar, y el objetivo
+     * lo concreto de esta temporada. Juntos en un textarea, se acaba
+     * escribiendo solo el primero.
+     */
+    mision: text('mision'),
+    vision: text('vision'),
+    objetivo: text('objetivo'),
+
+    /**
+     * Qué herramientas tiene encendidas: `{ agenda: { activo: true } }`.
+     *
+     * En jsonb y no en tabla propia por lo mismo que `iglesias.horarios`: se lee
+     * siempre junto a su ministerio, su RLS sería idéntica a la de esta fila, y
+     * una tabla costaría cuatro policies y dos triggers para guardar un puñado
+     * de banderas. La config por módulo —a los cuántos domingos avisar, qué día
+     * es el ensayo— necesita además forma libre.
+     *
+     * Lo escribe una sola action, validado con `EsquemaModulos`. La lectura
+     * nunca confía en el tipo: `modulosActivos()` descarta lo que no reconoce.
+     *
+     * NO se concede a `anon`: qué herramientas usa un equipo por dentro no es
+     * asunto de la web pública.
+     */
+    modulos: jsonb('modulos')
+      .$type<ModulosGuardados>()
+      .notNull()
+      .default({}),
 
     /**
      * Color de la etiqueta en el panel. Se guarda por ministerio para que el

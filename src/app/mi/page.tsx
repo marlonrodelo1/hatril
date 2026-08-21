@@ -5,11 +5,11 @@ import { Clock, Search } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUserContext } from '@/lib/auth/user-context';
+import { esDelEquipo } from '@/lib/auth/permisos';
 import { solicitudDeUsuario } from '@/lib/solicitudes/consultas';
-import { salir } from '@/app/(auth)/actions';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
-import { iniciales } from '@/lib/format/iniciales';
+import { CabeceraMiembro } from './_components/cabecera-miembro';
 
 export const metadata: Metadata = { title: 'Mi cuenta' };
 
@@ -28,8 +28,18 @@ export const metadata: Metadata = { title: 'Mi cuenta' };
  *                            ni se le deja esperando para siempre.
  *   - Sin solicitud        → al directorio.
  *
- * Con el tiempo esta ruta será el área del miembro (lo que publica su iglesia,
- * su ficha, sus ministerios), que es la que envuelve la app móvil de la v2.
+ * Y DESDE HOY ES ADEMÁS EL ÁREA DEL MIEMBRO
+ * ------------------------------------------
+ * Quien pertenece a una iglesia y no lleva nada en ella ya no aterriza en
+ * `/panel`. Allí veía un menú de ocho secciones donde no podía pulsar casi nada,
+ * con Miembros y Ministerios —el fichero de la congregación— en la primera
+ * línea. Aquí ve lo suyo: sus equipos, lo que le viene encima y sus dos puertas.
+ *
+ * Quién va a cada sitio lo decide `esDelEquipo()`, que mira las capacidades
+ * efectivas y no el nombre del rol: el pastor puede darle la caja o el devocional
+ * a alguien que sigue siendo `miembro`, y esa persona tiene que poder entrar.
+ *
+ * Esta es la ruta que envuelve la app móvil de la v2.
  */
 export default async function MiPage({
   searchParams,
@@ -45,39 +55,35 @@ export default async function MiPage({
 
   if (!user) redirect('/acceso?next=/mi');
 
-  // Con iglesia activa, esta pantalla no aplica: su sitio es el panel.
   const ctx = await getCurrentUserContext();
-  if (ctx) redirect('/panel/hoy');
+
+  // Quien lleva algo en la iglesia tiene su sitio en el panel.
+  if (ctx && esDelEquipo(ctx)) redirect('/panel/hoy');
+
+  // Y quien pertenece pero no lleva nada, a su casa: el muro.
+  //
+  // La comunidad es lo primero que tiene que ver al abrir, porque es lo único
+  // que cambia todos los días. El devocional, la agenda y su cuenta están a un
+  // toque en las pestañas. `/mi` se queda como el desvío que decide a dónde va
+  // cada quien, y por eso ya no pinta pantalla propia.
+  //
+  // El corte del consentimiento lo pone `/mi/comunidad`, igual que las otras
+  // tres pestañas: aquí no hace falta duplicarlo para redirigir.
+  if (ctx) redirect('/mi/comunidad');
 
   const solicitud = await solicitudDeUsuario(user.id);
-  const nombre =
-    (user.user_metadata?.nombre as string | undefined) ??
-    user.email?.split('@')[0] ??
-    'Tu cuenta';
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-[560px] items-center gap-3 px-5 py-3.5">
-          <Link
-            href="/"
-            className="text-[16px] font-extrabold tracking-[-0.02em] text-foreground no-underline hover:no-underline"
-          >
-            Hatril
-          </Link>
-          <span className="flex-1" />
-          <span className="flex size-8 items-center justify-center rounded-full bg-muted text-[11.5px] font-bold text-muted-foreground">
-            {iniciales(nombre)}
-          </span>
-          <form action={salir}>
-            <Button type="submit" variant="ghost" size="sm">
-              Salir
-            </Button>
-          </form>
-        </div>
-      </header>
+      {/*
+       * Sin campana: aquí solo llega quien NO tiene congregación —con iglesia
+       * activa esta pantalla redirige al panel, tres líneas más arriba—, y el
+       * menú de cuenta se queda en «Cerrar sesión» solo. Lo decide la propia
+       * cabecera al ver que no hay contexto de iglesia.
+       */}
+      <CabeceraMiembro user={user} titulo="Hatril" campana={false} />
 
-      <main className="mx-auto flex w-full max-w-[560px] flex-col gap-6 px-5 py-12">
+      <main className="mx-auto flex w-full max-w-[620px] flex-col gap-6 px-4 py-12 sm:px-5">
         {enviada && (
           <Aviso tipo="ok">
             Solicitud enviada. Te avisamos en cuanto la revisen.

@@ -13,6 +13,8 @@ import {
 } from '@/lib/suscripcion/consultas';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
+import { CabeceraPanel } from '../_components/cabecera';
+import { Contenedor } from '../_components/contenedor';
 
 export const metadata: Metadata = { title: 'Suscripción' };
 
@@ -51,16 +53,9 @@ export default async function SuscripcionPage({
 
   return (
     <>
-      <header className="flex flex-col gap-0.5 border-b border-border bg-surface px-5 py-4 md:px-8">
-        <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
-          Suscripción
-        </h1>
-        <p className="text-[13px] text-muted-foreground">
-          {etiquetaEstado(estado)}
-        </p>
-      </header>
+      <CabeceraPanel titulo="Suscripción" subtitulo={etiquetaEstado(estado)} />
 
-      <div className="flex w-full max-w-[1100px] flex-1 flex-col gap-6 px-5 pb-10 pt-6 md:px-8">
+      <Contenedor>
         {error && <Aviso>{error}</Aviso>}
 
         {!precios.ok && (
@@ -89,7 +84,7 @@ export default async function SuscripcionPage({
           Puedes cancelar cuando quieras y tu iglesia sigue funcionando hasta el
           final del periodo que hayas pagado.
         </p>
-      </div>
+      </Contenedor>
     </>
   );
 }

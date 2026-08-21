@@ -15,6 +15,8 @@ import { formatearDinero, formatearDineroConSigno } from '@/lib/format/dinero';
 import type { Moneda } from '@/lib/db/schema';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
+import { CabeceraPanel } from '../_components/cabecera';
+import { Contenedor } from '../_components/contenedor';
 import { activarFinanzas } from './actions';
 
 export const metadata: Metadata = { title: 'Finanzas' };
@@ -42,19 +44,7 @@ export default async function FinanzasPage({
 
   return (
     <>
-      <header className="flex flex-col gap-4 border-b border-border bg-surface px-5 py-4 md:flex-row md:items-center md:gap-6 md:px-8">
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
-            Finanzas
-          </h1>
-          {/* `first-letter:uppercase` y no `capitalize`: Tailwind capitaliza
-              CADA palabra, y `toLocaleDateString` en español devuelve «agosto de
-              2026», que salía como «Agosto De 2026». */}
-          <p className="text-[13px] text-muted-foreground first-letter:uppercase">
-            {etiqueta}
-          </p>
-        </div>
-
+      <CabeceraPanel titulo="Finanzas" subtitulo={conInicialMayuscula(etiqueta)}>
         <Button
           render={<Link href="/panel/finanzas/movimientos/nuevo" />}
           className="flex-none"
@@ -62,9 +52,9 @@ export default async function FinanzasPage({
           <Plus strokeWidth={1.9} />
           Apuntar movimiento
         </Button>
-      </header>
+      </CabeceraPanel>
 
-      <div className="flex w-full max-w-[1400px] flex-1 flex-col gap-5 px-5 pb-10 pt-6 md:px-8">
+      <Contenedor>
         {error && <Aviso>{error}</Aviso>}
 
         {/* Lo primero y sin filtros. Es el número por el que se abre esta
@@ -135,9 +125,22 @@ export default async function FinanzasPage({
             </Button>
           )}
         </div>
-      </div>
+      </Contenedor>
     </>
   );
+}
+
+/**
+ * «agosto de 2026» → «Agosto de 2026».
+ *
+ * Esto era un `first-letter:uppercase` en el `<p>` del subtítulo, pero el
+ * subtítulo lo pinta ahora `CabeceraPanel` y no admite clases. Se hace sobre el
+ * texto, y sigue sin poder ser el `capitalize` de Tailwind: capitaliza CADA
+ * palabra, y `toLocaleDateString` en español devuelve «agosto de 2026», que
+ * salía como «Agosto De 2026».
+ */
+function conInicialMayuscula(texto: string) {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 function Tarjeta({
@@ -210,13 +213,12 @@ function Bloque({
 function SinActivar({ error }: { error?: string }) {
   return (
     <>
-      <header className="border-b border-border bg-surface px-5 py-4 md:px-8">
-        <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
-          Finanzas
-        </h1>
-      </header>
+      <CabeceraPanel titulo="Finanzas" />
 
-      <div className="flex w-full max-w-[640px] flex-1 flex-col gap-5 px-5 pb-10 pt-6 md:px-8">
+      {/* Ancho de formulario y no de panel: aquí no hay ni tarjetas ni tabla,
+          solo un párrafo y un botón. A 1600 px el texto quedaría en una línea
+          de punta a punta de la pantalla. */}
+      <Contenedor ancho="formulario">
         {error && <Aviso>{error}</Aviso>}
 
         <div className="flex flex-col items-start gap-3 rounded-xl border border-border bg-surface p-6">
@@ -238,7 +240,7 @@ function SinActivar({ error }: { error?: string }) {
             Se crea un fondo «General» y una caja «Efectivo». Podrás añadir más.
           </p>
         </div>
-      </div>
+      </Contenedor>
     </>
   );
 }

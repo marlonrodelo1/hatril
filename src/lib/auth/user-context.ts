@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { cache } from 'react';
 import { and, eq } from 'drizzle-orm';
 import type { User } from '@supabase/supabase-js';
 
@@ -50,6 +51,23 @@ export type UserContext = {
     logoUrl: string | null;
     /** Para poder ofrecer el enlace a su web solo cuando existe de verdad. */
     webPublica: boolean;
+    /**
+     * Cómo tiene configurado el muro.
+     *
+     * Viaja en el contexto y no en una consulta aparte porque lo necesitan tres
+     * pantallas —el muro, su configuración y la web pública— y las columnas ya
+     * vienen en el mismo `select` de `iglesias` que se hace aquí de todas
+     * formas. Pedirlo suelto serían tres viajes más para cuatro booleanos.
+     *
+     * Ojo: esto sirve para decidir QUÉ SE PINTA. Lo que impide de verdad
+     * publicar con el muro apagado son las policies de la `0027`.
+     */
+    comunidad: {
+      activa: boolean;
+      quienPublica: 'todos' | 'equipo' | 'pastor';
+      comentarios: boolean;
+      fotos: boolean;
+    };
   };
   rol: RolIglesia;
   permisos: MapaPermisos;
@@ -71,8 +89,20 @@ export type UserContext = {
  * No redirige: para eso están los guards de `guard-panel.ts`. Esta función se
  * usa cuando hay que decidir qué pintar sin echar a nadie (por ejemplo, si
  * enseñar el enlace al panel desde la web pública).
+ *
+ * ENVUELTA EN `cache()` DE REACT
+ * ------------------------------
+ * Dentro de un mismo render la piden ahora tres capas —el layout del panel para
+ * el menú, la cabecera de la página para la campana y el menú de cuenta, y la
+ * propia página para sus datos— y cada llamada eran tres viajes a Postgres más
+ * el `getUser()` de Supabase. Con `cache()` se ejecuta una vez y las demás
+ * reciben la misma promesa.
+ *
+ * Ojo con el matiz: `cache()` deduplica DENTRO de un render de servidor, nunca
+ * entre peticiones ni entre personas. No es un caché de datos, no hay nada que
+ * invalidar, y no puede devolverle a alguien el contexto de otro.
  */
-export async function getCurrentUserContext(): Promise<UserContext | null> {
+export const getCurrentUserContext = cache(async function getCurrentUserContext(): Promise<UserContext | null> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -97,6 +127,10 @@ export async function getCurrentUserContext(): Promise<UserContext | null> {
       stripeSubscriptionId: iglesias.stripeSubscriptionId,
       logoUrl: iglesias.logoUrl,
       webPublica: iglesias.webPublica,
+      comunidadActiva: iglesias.comunidadActiva,
+      comunidadQuienPublica: iglesias.comunidadQuienPublica,
+      comunidadComentarios: iglesias.comunidadComentarios,
+      comunidadFotos: iglesias.comunidadFotos,
     })
     .from(iglesiaUsuarios)
     .innerJoin(iglesias, eq(iglesias.id, iglesiaUsuarios.iglesiaId))
@@ -152,6 +186,12 @@ export async function getCurrentUserContext(): Promise<UserContext | null> {
       stripeSubscriptionId: fila.stripeSubscriptionId,
       logoUrl: fila.logoUrl,
       webPublica: fila.webPublica,
+      comunidad: {
+        activa: fila.comunidadActiva,
+        quienPublica: fila.comunidadQuienPublica,
+        comentarios: fila.comunidadComentarios,
+        fotos: fila.comunidadFotos,
+      },
     },
     rol: fila.rol,
     permisos: resolverPermisos(fila.rol, fila.permisos),
@@ -161,7 +201,7 @@ export async function getCurrentUserContext(): Promise<UserContext | null> {
       .filter((m) => m.rolEquipo !== 'voluntario')
       .map((m) => m.ministerioId),
   };
-}
+});
 
 /**
  * ¿Tiene esta sesión alguna solicitud de ingreso sin resolver?

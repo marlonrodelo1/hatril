@@ -34,6 +34,18 @@ async function sesion(): Promise<string> {
   return user.id;
 }
 
+/**
+ * SIN `redirect`, Y ESO IMPORTA DESDE QUE HAY CAMPANA
+ * ---------------------------------------------------
+ * Antes terminaba con `redirect('/mi/avisos')`, que en su pantalla no se nota
+ * —ya estás ahí— pero desde el desplegable de la cabecera te sacaba del panel:
+ * pulsabas «Marcar todo» estando en Miembros y aparecías en la bandeja.
+ *
+ * `revalidatePath('/', 'layout')` en su lugar, y no el de una ruta concreta,
+ * porque el contador se pinta en la cabecera de TODAS las pantallas del panel y
+ * del área del miembro. Revalidar solo `/mi/avisos` dejaría el punto encendido
+ * en la pantalla desde la que se acaba de pulsar.
+ */
 export async function marcarTodoLeido() {
   const authUserId = await sesion();
 
@@ -44,8 +56,7 @@ export async function marcarTodoLeido() {
       .where(isNull(notificaciones.leidaAt)),
   );
 
-  revalidatePath('/mi/avisos');
-  redirect('/mi/avisos');
+  revalidatePath('/', 'layout');
 }
 
 /**
@@ -81,6 +92,6 @@ export async function abrirAviso(id: string) {
       )
     )[0]?.enlace;
 
-  revalidatePath('/mi/avisos');
+  revalidatePath('/', 'layout');
   redirect(destino ?? '/mi/avisos');
 }

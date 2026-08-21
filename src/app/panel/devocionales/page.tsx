@@ -18,6 +18,8 @@ import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CabeceraPanel } from '../_components/cabecera';
+import { Contenedor } from '../_components/contenedor';
 import {
   crearTurno,
   borrarTurno,
@@ -61,117 +63,140 @@ export default async function DevocionalesPage({
 
   return (
     <>
-      <header className="border-b border-border bg-surface px-5 py-4 md:px-8">
-        <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
-          Devocionales
-        </h1>
-        <p className="text-[13px] text-muted-foreground">
-          El versículo del día que sale en la web de la iglesia
-        </p>
-      </header>
+      <CabeceraPanel
+        titulo="Devocionales"
+        subtitulo="El versículo del día que sale en la web de la iglesia"
+      />
 
-      <div className="flex w-full max-w-[860px] flex-col gap-7 px-5 pb-16 pt-6 md:px-8">
+      <Contenedor>
         {error && <Aviso>{error}</Aviso>}
         {guardado && CONFIRMACIONES[guardado] && (
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
         )}
 
-        {puedeRepartir && (
-          <section className="flex flex-col gap-3.5 rounded-xl border border-border bg-surface p-5">
-            <div className="flex flex-col gap-0.5">
-              <h2 className="t-subtitulo">Repartir un día</h2>
-              <p className="t-label text-muted-foreground">
-                Elige la fecha y a quién le toca. Esa persona podrá escribirlo
-                desde aquí; publicar lo decides tú.
-              </p>
-            </div>
+        {/*
+         * Dos columnas a partir de `xl` (1280 px). A la izquierda el
+         * calendario, que es a lo que se entra cada día; a la derecha
+         * «Repartir un día», que se usa de vez en cuando —el pastor reparte
+         * varias semanas de una sentada y no vuelve—. Por debajo de `xl` todo
+         * apilado: partir en dos una tableta deja dos columnas estrechas y
+         * ninguna se lee bien.
+         *
+         * Solo hay segunda columna si hay algo que poner en ella: a quien no
+         * reparte no le corresponde esa tarjeta, y 380 px vacíos a la derecha
+         * son justo el hueco que se está intentando quitar.
+         *
+         * `items-start` para que la tarjeta corta no se estire hasta la altura
+         * del calendario.
+         */}
+        <div
+          className={
+            'grid items-start gap-6 ' +
+            (puedeRepartir ? 'xl:grid-cols-[minmax(0,1fr)_380px]' : '')
+          }
+        >
+          <div className="flex min-w-0 flex-col gap-6">
+            <section className="flex flex-col gap-3">
+              <h2 className="t-micro">Lo que viene</h2>
 
-            <form
-              action={crearTurno}
-              className="flex flex-wrap items-end gap-2.5"
-            >
-              <div className="flex min-w-[160px] flex-col gap-1.5">
-                <label htmlFor="fecha" className="t-label">
-                  Día
-                </label>
-                <Input id="fecha" name="fecha" type="date" required defaultValue={hoy} />
+              {proximos.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-surface px-6 py-12 text-center">
+                  <span className="flex size-12 items-center justify-center rounded-full bg-background text-muted-foreground">
+                    <BookOpen className="size-5" strokeWidth={1.5} />
+                  </span>
+                  {/* Antes decía «añade el primero arriba», y ya no está
+                      arriba: en escritorio está al lado y en móvil, debajo.
+                      Se nombra la tarjeta en vez de señalar un sitio. */}
+                  <span className="max-w-[380px] text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
+                    {puedeRepartir
+                      ? 'No hay ningún día repartido todavía. Reparte el primero en «Repartir un día».'
+                      : 'No tienes ningún devocional asignado por ahora.'}
+                  </span>
+                </div>
+              ) : (
+                proximos.map((d) => (
+                  <Tarjeta
+                    key={d.id}
+                    devocional={d}
+                    hoy={hoy}
+                    abierto={abrir === d.id}
+                    puedeRepartir={puedeRepartir}
+                    puedeEscribir={
+                      puedeEscribir &&
+                      (esPastor(ctx) || d.autorMiembroId === ctx.miembroId)
+                    }
+                    esPastorDeLaIglesia={esPastor(ctx)}
+                  />
+                ))
+              )}
+            </section>
+
+            {pasados.length > 0 && (
+              <section className="flex flex-col gap-3">
+                <h2 className="t-micro">Ya publicados</h2>
+                {pasados.map((d) => (
+                  <Tarjeta
+                    key={d.id}
+                    devocional={d}
+                    hoy={hoy}
+                    abierto={abrir === d.id}
+                    puedeRepartir={puedeRepartir}
+                    puedeEscribir={esPastor(ctx)}
+                    esPastorDeLaIglesia={esPastor(ctx)}
+                  />
+                ))}
+              </section>
+            )}
+          </div>
+
+          {puedeRepartir && (
+            <aside className="flex min-w-0 flex-col gap-3.5 rounded-xl border border-border bg-surface p-5">
+              <div className="flex flex-col gap-0.5">
+                <h2 className="t-subtitulo">Repartir un día</h2>
+                <p className="t-label text-muted-foreground">
+                  Elige la fecha y a quién le toca. Esa persona podrá escribirlo
+                  desde aquí; publicar lo decides tú.
+                </p>
               </div>
 
-              <div className="flex min-w-[200px] flex-1 flex-col gap-1.5">
-                <label htmlFor="autorMiembroId" className="t-label">
-                  Quién lo escribe
-                </label>
-                <select
-                  id="autorMiembroId"
-                  name="autorMiembroId"
-                  className="h-[42px] rounded-lg border border-input bg-surface-alt px-3 text-[15px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
-                >
-                  <option value="">Sin asignar</option>
-                  {autores.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Los tres controles apilados y no en fila: en una columna de
+                  380 px una fila se parte sola y deja el desplegable de autor
+                  en un palmo de ancho. */}
+              <form action={crearTurno} className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="fecha" className="t-label">
+                    Día
+                  </label>
+                  <Input id="fecha" name="fecha" type="date" required defaultValue={hoy} />
+                </div>
 
-              <Button type="submit">
-                <CalendarPlus strokeWidth={1.8} />
-                Añadir
-              </Button>
-            </form>
-          </section>
-        )}
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="autorMiembroId" className="t-label">
+                    Quién lo escribe
+                  </label>
+                  <select
+                    id="autorMiembroId"
+                    name="autorMiembroId"
+                    className="h-[42px] rounded-lg border border-input bg-surface-alt px-3 text-[15px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
+                  >
+                    <option value="">Sin asignar</option>
+                    {autores.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-        <section className="flex flex-col gap-3">
-          <h2 className="t-micro">Lo que viene</h2>
-
-          {proximos.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-surface px-6 py-12 text-center">
-              <span className="flex size-12 items-center justify-center rounded-full bg-background text-muted-foreground">
-                <BookOpen className="size-5" strokeWidth={1.5} />
-              </span>
-              <span className="max-w-[380px] text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
-                {puedeRepartir
-                  ? 'No hay ningún día repartido todavía. Añade el primero arriba.'
-                  : 'No tienes ningún devocional asignado por ahora.'}
-              </span>
-            </div>
-          ) : (
-            proximos.map((d) => (
-              <Tarjeta
-                key={d.id}
-                devocional={d}
-                hoy={hoy}
-                abierto={abrir === d.id}
-                puedeRepartir={puedeRepartir}
-                puedeEscribir={
-                  puedeEscribir &&
-                  (esPastor(ctx) || d.autorMiembroId === ctx.miembroId)
-                }
-                esPastorDeLaIglesia={esPastor(ctx)}
-              />
-            ))
+                <Button type="submit" className="w-fit">
+                  <CalendarPlus strokeWidth={1.8} />
+                  Añadir
+                </Button>
+              </form>
+            </aside>
           )}
-        </section>
-
-        {pasados.length > 0 && (
-          <section className="flex flex-col gap-3">
-            <h2 className="t-micro">Ya publicados</h2>
-            {pasados.map((d) => (
-              <Tarjeta
-                key={d.id}
-                devocional={d}
-                hoy={hoy}
-                abierto={abrir === d.id}
-                puedeRepartir={puedeRepartir}
-                puedeEscribir={esPastor(ctx)}
-                esPastorDeLaIglesia={esPastor(ctx)}
-              />
-            ))}
-          </section>
-        )}
-      </div>
+        </div>
+      </Contenedor>
     </>
   );
 }

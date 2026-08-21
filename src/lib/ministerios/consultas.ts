@@ -133,6 +133,18 @@ const ORDEN_ROL_EQUIPO: Record<RolEquipo, number> = {
 export type MinisterioDetalle = MinisterioResumen & {
   /** La foto que sale en la web pública. Solo hace falta en el detalle. */
   fotoUrl: string | null;
+  /** Identificador crudo. Se resuelve con `tipoDeMinisterio()`, que nunca falla. */
+  tipo: string;
+  mision: string | null;
+  vision: string | null;
+  objetivo: string | null;
+  /**
+   * El jsonb tal cual. Sale como `unknown` a propósito: quien lo consuma tiene
+   * que pasar por `modulosActivos()`, que descarta lo que no reconoce. Tiparlo
+   * aquí como `ModulosGuardados` prometería una forma que la columna no
+   * garantiza — puede haberla escrito una versión anterior del producto.
+   */
+  modulos: unknown;
   equipo: IntegranteEquipo[];
 };
 
@@ -152,6 +164,11 @@ export async function obtenerMinisterio(
         colorHex: ministerios.colorHex,
         orden: ministerios.orden,
         fotoUrl: ministerios.fotoUrl,
+        tipo: ministerios.tipo,
+        mision: ministerios.mision,
+        vision: ministerios.vision,
+        objetivo: ministerios.objetivo,
+        modulos: ministerios.modulos,
       })
       .from(ministerios)
       .where(
@@ -212,6 +229,11 @@ export async function obtenerMinisterio(
       colorHex: m.colorHex,
       orden: m.orden,
       fotoUrl: m.fotoUrl,
+      tipo: m.tipo,
+      mision: m.mision,
+      vision: m.vision,
+      objetivo: m.objetivo,
+      modulos: m.modulos,
       voluntarios: integrantes.length,
       lider: responsable
         ? { id: responsable.miembroId, nombre: responsable.nombre }
@@ -411,5 +433,67 @@ export async function resumenMinisterios(ctx: UserContext) {
       equipos: Number(equipos?.total ?? 0),
       personasSirviendo: Number(personas?.total ?? 0),
     };
+  });
+}
+
+export type MiMinisterio = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  colorHex: string;
+  objetivo: string | null;
+  /** El jsonb crudo. Se resuelve con `modulosActivos()`, que descarta lo raro. */
+  modulos: unknown;
+  /** Qué HACE aquí: «Voz y teclado». Texto libre. */
+  rolEnMinisterio: string | null;
+  /** Qué MANDA: responsable, colíder o voluntario. */
+  rolEquipo: RolEquipo;
+};
+
+/**
+ * Los ministerios en los que sirve ESTA persona.
+ *
+ * Es la consulta del área del miembro, y por eso no se parece a
+ * `listarMinisteriosConEquipo()`: aquélla es el listado del pastor y trae el
+ * equipo de cada uno. Aquí no sale ni un nombre ajeno — un voluntario de
+ * alabanza no tiene por qué ver, desde su propia pantalla de inicio, quién más
+ * está apuntado en niños.
+ *
+ * Devuelve vacío si la cuenta no tiene ficha, que es un caso real: una cuenta
+ * puede existir sin `miembros` asociado.
+ */
+export async function misMinisterios(
+  ctx: UserContext,
+): Promise<MiMinisterio[]> {
+  if (!ctx.miembroId) return [];
+
+  return withUser(ctx.user.id, async (tx) => {
+    const filas = await tx
+      .select({
+        id: ministerios.id,
+        nombre: ministerios.nombre,
+        descripcion: ministerios.descripcion,
+        colorHex: ministerios.colorHex,
+        objetivo: ministerios.objetivo,
+        modulos: ministerios.modulos,
+        rolEnMinisterio: ministerioMiembros.rolEnMinisterio,
+        rolEquipo: ministerioMiembros.rolEquipo,
+      })
+      .from(ministerioMiembros)
+      .innerJoin(
+        ministerios,
+        eq(ministerios.id, ministerioMiembros.ministerioId),
+      )
+      .where(
+        and(
+          eq(ministerioMiembros.miembroId, ctx.miembroId!),
+          eq(ministerioMiembros.activo, true),
+          eq(ministerioMiembros.iglesiaId, ctx.iglesia.id),
+          eq(ministerios.activo, true),
+        ),
+      )
+      .orderBy(asc(ministerios.orden), asc(ministerios.nombre));
+
+    return filas;
   });
 }

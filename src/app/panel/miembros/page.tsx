@@ -14,6 +14,8 @@ import {
 import { ESTADOS, type EstadoMiembro } from '@/lib/miembros/estados';
 import { iniciales } from '@/lib/format/iniciales';
 import { Button } from '@/components/ui/button';
+import { CabeceraPanel } from '../_components/cabecera';
+import { Contenedor } from '../_components/contenedor';
 import { FiltrosMiembros, BuscadorMiembros } from './_components/filtros';
 import { FichaMiembroPanel } from './_components/ficha';
 import { Paginacion } from './_components/paginacion';
@@ -56,22 +58,21 @@ export default async function MiembrosPage({
   );
   const puedeCrear = esPastor(ctx) || puede(ctx, 'editar_miembros');
 
+  // El recuento va como una sola cadena y no como JSX: la cabecera lo trunca
+  // con puntos suspensivos cuando no cabe, y para eso tiene que ser texto.
+  const subtitulo =
+    (resumen.total === 0
+      ? 'Todavía no hay nadie en el fichero'
+      : `${resumen.total} ${resumen.total === 1 ? 'persona' : 'personas'} en la iglesia`) +
+    (resumen.nuevosDelMes > 0
+      ? ` · ${resumen.nuevosDelMes} se ${resumen.nuevosDelMes === 1 ? 'ha' : 'han'} sumado este mes`
+      : '');
+
   return (
     <>
-      <header className="flex flex-col gap-4 border-b border-border bg-surface px-5 py-4 md:flex-row md:items-center md:gap-6 md:px-8">
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
-            Miembros
-          </h1>
-          <p className="text-[13px] text-muted-foreground">
-            {resumen.total === 0
-              ? 'Todavía no hay nadie en el fichero'
-              : `${resumen.total} ${resumen.total === 1 ? 'persona' : 'personas'} en la iglesia`}
-            {resumen.nuevosDelMes > 0 &&
-              ` · ${resumen.nuevosDelMes} se ${resumen.nuevosDelMes === 1 ? 'ha' : 'han'} sumado este mes`}
-          </p>
-        </div>
-
+      <CabeceraPanel titulo="Miembros" subtitulo={subtitulo}>
+        {/* El buscador solo se ve a partir de `md`. En móvil el que hay es el
+            de la barra de filtros, que es donde queda a mano. */}
         <BuscadorMiembros />
 
         {puedeCrear && (
@@ -83,9 +84,12 @@ export default async function MiembrosPage({
             Añadir miembro
           </Button>
         )}
-      </header>
+      </CabeceraPanel>
 
-      <div className="flex w-full max-w-[1400px] flex-1 flex-col gap-4 px-5 pb-10 pt-5 md:px-8">
+      {/* `gap-4` en vez de los 24 px que trae el contenedor: aquí lo que se
+          separa son los filtros de SU tabla, y con más aire parecen dos bloques
+          que no se hablan. */}
+      <Contenedor className="gap-4">
         <FiltrosMiembros ministerios={ministerios} />
 
         <div className="overflow-hidden rounded-xl border border-border bg-surface-alt">
@@ -177,8 +181,11 @@ export default async function MiembrosPage({
         {total > POR_PAGINA && (
           <Paginacion total={total} pagina={pagina} porPagina={POR_PAGINA} />
         )}
-      </div>
+      </Contenedor>
 
+      {/* La ficha va fuera del contenedor a propósito: es una capa fija sobre
+          toda la pantalla (`z-40` el fondo, `z-50` el panel), por encima de la
+          cabecera pegajosa, que se queda en `z-30`. */}
       {fichaId && <FichaMiembroPanel ctx={ctx} miembroId={fichaId} params={sp} />}
     </>
   );
@@ -241,7 +248,11 @@ function EstadoVacio({
         </Button>
       ) : (
         puedeCrear && (
-          <Button render={<Link href="/panel/miembros/nuevo" />}>
+          // `outline` porque «Añadir miembro» ya está en la cabecera, en
+          // naranja y llevando al mismo sitio. Dos botones idénticos apuntando
+          // al mismo formulario hacen dudar de si son lo mismo. La pantalla
+          // hermana de Ministerios ya lo había resuelto así.
+          <Button variant="outline" render={<Link href="/panel/miembros/nuevo" />}>
             <Plus strokeWidth={1.9} />
             Añadir la primera persona
           </Button>

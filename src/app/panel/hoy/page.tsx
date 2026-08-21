@@ -35,6 +35,8 @@ import { ESTADOS } from '@/lib/miembros/estados';
 import { iniciales } from '@/lib/format/iniciales';
 import { Button } from '@/components/ui/button';
 import { Aviso } from '@/components/aviso';
+import { CabeceraPanel } from '../_components/cabecera';
+import { Contenedor } from '../_components/contenedor';
 
 export const metadata: Metadata = { title: 'Inicio' };
 
@@ -132,18 +134,27 @@ export default async function HoyPage({
 
   const diasDeTrial = diasHasta(ctx.iglesia.trialUntil);
 
+  /*
+   * ¿Hay algo que llevar a la columna de la derecha?
+   *
+   * La caja y lo próximo son las dos cosas de esta pantalla que se MIRAN —una
+   * cifra y tres fechas— frente a lo demás, que se PULSA. Van juntas a un lado
+   * y así el resto ocupa el ancho.
+   *
+   * Pero solo si existen: a un líder de alabanza no le corresponde ninguna de
+   * las dos, y una segunda columna vacía deja justo el hueco a la derecha que
+   * se está intentando quitar. Sin ellas, una sola columna a todo lo ancho.
+   */
+  const hayLateral = finanzas !== null || eventosProximos.length > 0;
+
   return (
     <>
-      <header className="border-b border-border bg-surface px-5 py-4 md:px-8">
-        <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
-          {ctx.iglesia.nombre}
-        </h1>
-        <p className="text-[13px] text-muted-foreground">
-          {ctx.iglesia.ciudad ?? 'Panel de la iglesia'}
-        </p>
-      </header>
+      <CabeceraPanel
+        titulo={ctx.iglesia.nombre}
+        subtitulo={ctx.iglesia.ciudad ?? 'Panel de la iglesia'}
+      />
 
-      <div className="flex w-full max-w-[1000px] flex-col gap-6 px-5 pb-12 pt-5 md:px-8">
+      <Contenedor>
         {error && <Aviso>{error}</Aviso>}
 
         {bienvenida && (
@@ -166,212 +177,240 @@ export default async function HoyPage({
             </Aviso>
           )}
 
-        {/* ---------- Lo que pide algo ---------- */}
-        {hayAvisos && (
+        {/*
+         * Dos columnas a partir de `xl` (1280 px), que es un portátil normal.
+         * Por debajo, todo apilado como estaba: partir en dos una pantalla de
+         * tableta da dos columnas estrechas y ninguna se lee bien.
+         *
+         * `items-start` para que la columna corta no se estire hasta la altura
+         * de la larga; sin eso, la tarjeta de la caja crece hasta el fondo con
+         * un palmo de vacío dentro.
+         */}
+        <div
+          className={
+            'grid items-start gap-6 ' +
+            (hayLateral ? 'xl:grid-cols-[minmax(0,1fr)_360px]' : '')
+          }
+        >
+          <div className="flex min-w-0 flex-col gap-6">
+          {/* ---------- Lo que pide algo ---------- */}
+          {hayAvisos && (
+            <section className="flex flex-col gap-3">
+              <h2 className="t-micro">Te está esperando</h2>
+
+              {/* Primero lo que tiene que hacer ESTA persona, antes de lo que
+                  tiene que revisar. Un turno de devocional con fecha es lo único
+                  de esta pantalla que vence. */}
+              {misTurnos.length > 0 && (
+                <Panel
+                  Icono={BookOpen}
+                  titulo={
+                    misTurnos.length === 1
+                      ? 'Te toca escribir el devocional'
+                      : `Te tocan ${misTurnos.length} devocionales`
+                  }
+                  detalle={misTurnos
+                    .map((t) => formatearFechaLarga(t.fecha))
+                    .join(' · ')}
+                  enlace={`/panel/devocionales?abrir=${misTurnos[0]!.id}`}
+                  accion="Escribirlo"
+                />
+              )}
+
+              {solicitudes.length > 0 && (
+                <Panel
+                  Icono={Inbox}
+                  titulo={
+                    solicitudes.length === 1
+                      ? 'Una persona quiere unirse'
+                      : `${solicitudes.length} personas quieren unirse`
+                  }
+                  detalle={solicitudes
+                    .slice(0, 4)
+                    .map((s) => s.nombre)
+                    .join(', ')}
+                  enlace="/panel/solicitudes"
+                  accion="Revisar"
+                />
+              )}
+
+              {sinResponsable.length > 0 && (
+                <Panel
+                  Icono={HandHeart}
+                  titulo={
+                    sinResponsable.length === 1
+                      ? 'Un ministerio sin responsable'
+                      : `${sinResponsable.length} ministerios sin responsable`
+                  }
+                  detalle={sinResponsable.map((m) => m.nombre).join(', ')}
+                  enlace={
+                    sinResponsable.length === 1
+                      ? `/panel/ministerios/${sinResponsable[0]!.id}`
+                      : '/panel/ministerios'
+                  }
+                  accion="Asignar"
+                />
+              )}
+
+              {recienLlegados.length > 0 && (
+                <PanelRecienLlegados personas={recienLlegados} />
+              )}
+            </section>
+          )}
+
+          {/* ---------- Cómo está la congregación ---------- */}
           <section className="flex flex-col gap-3">
-            <h2 className="t-micro">Te está esperando</h2>
+            <h2 className="t-micro">La congregación</h2>
 
-            {/* Primero lo que tiene que hacer ESTA persona, antes de lo que
-                tiene que revisar. Un turno de devocional con fecha es lo único
-                de esta pantalla que vence. */}
-            {misTurnos.length > 0 && (
-              <Panel
-                Icono={BookOpen}
-                titulo={
-                  misTurnos.length === 1
-                    ? 'Te toca escribir el devocional'
-                    : `Te tocan ${misTurnos.length} devocionales`
-                }
-                detalle={misTurnos
-                  .map((t) => formatearFechaLarga(t.fecha))
-                  .join(' · ')}
-                enlace={`/panel/devocionales?abrir=${misTurnos[0]!.id}`}
-                accion="Escribirlo"
-              />
-            )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-3.5 rounded-xl border border-border bg-surface p-5">
+                <span className="t-micro">Personas</span>
+                <span className="t-cifra">{resumen.total}</span>
 
-            {solicitudes.length > 0 && (
-              <Panel
-                Icono={Inbox}
-                titulo={
-                  solicitudes.length === 1
-                    ? 'Una persona quiere unirse'
-                    : `${solicitudes.length} personas quieren unirse`
-                }
-                detalle={solicitudes
-                  .slice(0, 4)
-                  .map((s) => s.nombre)
-                  .join(', ')}
-                enlace="/panel/solicitudes"
-                accion="Revisar"
-              />
-            )}
+                {/* El desglose va DENTRO de la tarjeta del total, no en cuatro
+                    tarjetas aparte: cuatro cifras sueltas obligan a sumarlas
+                    mentalmente para saber si cuadran con el total. */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                  {(['miembro', 'nuevo', 'visitante', 'inactivo'] as const).map(
+                    (e) =>
+                      resumen.porEstado[e] > 0 ? (
+                        <span
+                          key={e}
+                          className="text-[13px] text-muted-foreground"
+                        >
+                          <strong className="font-semibold text-foreground">
+                            {resumen.porEstado[e]}
+                          </strong>{' '}
+                          {ESTADOS[e].etiqueta.toLowerCase()}
+                          {resumen.porEstado[e] === 1 ? '' : 's'}
+                        </span>
+                      ) : null,
+                  )}
+                </div>
 
-            {sinResponsable.length > 0 && (
-              <Panel
-                Icono={HandHeart}
-                titulo={
-                  sinResponsable.length === 1
-                    ? 'Un ministerio sin responsable'
-                    : `${sinResponsable.length} ministerios sin responsable`
-                }
-                detalle={sinResponsable.map((m) => m.nombre).join(', ')}
-                enlace={
-                  sinResponsable.length === 1
-                    ? `/panel/ministerios/${sinResponsable[0]!.id}`
-                    : '/panel/ministerios'
-                }
-                accion="Asignar"
-              />
-            )}
+                <span className="text-[13.5px] text-muted-foreground">
+                  {resumen.nuevosDelMes > 0
+                    ? `${resumen.nuevosDelMes} ${resumen.nuevosDelMes === 1 ? 'alta' : 'altas'} este mes`
+                    : 'Sin altas este mes'}
+                </span>
+              </div>
 
-            {recienLlegados.length > 0 && (
-              <PanelRecienLlegados personas={recienLlegados} />
-            )}
-          </section>
-        )}
+              <div className="flex flex-col gap-3.5 rounded-xl border border-border bg-surface p-5">
+                <span className="t-micro">Sirviendo en un ministerio</span>
+                <span className="t-cifra">{resumen.sirviendo}</span>
 
-        {/* ---------- Cómo está la congregación ---------- */}
-        <section className="flex flex-col gap-3">
-          <h2 className="t-micro">La congregación</h2>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-3.5 rounded-xl border border-border bg-surface p-5">
-              <span className="t-micro">Personas</span>
-              <span className="t-cifra">{resumen.total}</span>
-
-              {/* El desglose va DENTRO de la tarjeta del total, no en cuatro
-                  tarjetas aparte: cuatro cifras sueltas obligan a sumarlas
-                  mentalmente para saber si cuadran con el total. */}
-              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-                {(['miembro', 'nuevo', 'visitante', 'inactivo'] as const).map(
-                  (e) =>
-                    resumen.porEstado[e] > 0 ? (
-                      <span
-                        key={e}
-                        className="text-[13px] text-muted-foreground"
-                      >
-                        <strong className="font-semibold text-foreground">
-                          {resumen.porEstado[e]}
-                        </strong>{' '}
-                        {ESTADOS[e].etiqueta.toLowerCase()}
-                        {resumen.porEstado[e] === 1 ? '' : 's'}
-                      </span>
-                    ) : null,
+                {/* La proporción es el dato, no la cifra: 12 personas sirviendo es
+                    mucho en una congregación de 30 y muy poco en una de 400. */}
+                {resumen.total > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <div
+                      className="h-1.5 w-full overflow-hidden rounded-full bg-background"
+                      role="img"
+                      aria-label={`${sirviendoPct}% de la congregación sirve en algún ministerio`}
+                    >
+                      <div
+                        className="h-full rounded-full bg-support"
+                        style={{ width: `${sirviendoPct}%` }}
+                      />
+                    </div>
+                    <span className="text-[13.5px] text-muted-foreground">
+                      {sirviendoPct}% de la congregación
+                    </span>
+                  </div>
                 )}
               </div>
+            </div>
+          </section>
 
-              <span className="text-[13.5px] text-muted-foreground">
-                {resumen.nuevosDelMes > 0
-                  ? `${resumen.nuevosDelMes} ${resumen.nuevosDelMes === 1 ? 'alta' : 'altas'} este mes`
-                  : 'Sin altas este mes'}
+          {resumen.total === 0 && puedeCrear && (
+            <section className="flex flex-col items-start gap-3.5 rounded-xl border border-border bg-surface p-6">
+              <span className="flex size-11 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                <Users className="size-5" strokeWidth={1.7} />
               </span>
-            </div>
-
-            <div className="flex flex-col gap-3.5 rounded-xl border border-border bg-surface p-5">
-              <span className="t-micro">Sirviendo en un ministerio</span>
-              <span className="t-cifra">{resumen.sirviendo}</span>
-
-              {/* La proporción es el dato, no la cifra: 12 personas sirviendo es
-                  mucho en una congregación de 30 y muy poco en una de 400. */}
-              {resumen.total > 0 && (
-                <div className="flex flex-col gap-2">
-                  <div
-                    className="h-1.5 w-full overflow-hidden rounded-full bg-background"
-                    role="img"
-                    aria-label={`${sirviendoPct}% de la congregación sirve en algún ministerio`}
-                  >
-                    <div
-                      className="h-full rounded-full bg-support"
-                      style={{ width: `${sirviendoPct}%` }}
-                    />
-                  </div>
-                  <span className="text-[13.5px] text-muted-foreground">
-                    {sirviendoPct}% de la congregación
-                  </span>
-                </div>
-              )}
-            </div>
+              <div className="flex max-w-[520px] flex-col gap-1.5">
+                <h2 className="t-subtitulo">Empieza por la congregación</h2>
+                <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
+                  Añade a las personas que ya vienen. No hace falta que tengas
+                  todos sus datos: con el nombre basta para empezar, y lo demás se
+                  completa con el tiempo.
+                </p>
+              </div>
+              <Button render={<Link href="/panel/miembros/nuevo" />}>
+                Añadir la primera persona
+                <ArrowRight strokeWidth={1.9} />
+              </Button>
+            </section>
+          )}
           </div>
-        </section>
 
-        {/* ---------- Lo próximo ---------- */}
-        {eventosProximos.length > 0 && (
-          <section className="flex flex-col gap-3">
-            <h2 className="t-micro">Lo próximo</h2>
+          {/*
+           * La columna de la derecha: lo que se mira, no lo que se pulsa.
+           * Ancho fijo de 360 px y no una fracción, para que la tarjeta de la
+           * caja no se estire hasta ser una cifra sola en mitad de un campo de
+           * fútbol en un monitor de 2560.
+           */}
+          {hayLateral && (
+            <aside className="flex min-w-0 flex-col gap-6">
+              {/* ---------- Lo próximo ---------- */}
+                {eventosProximos.length > 0 && (
+                  <section className="flex flex-col gap-3">
+                    <h2 className="t-micro">Lo próximo</h2>
 
-            <ul className="flex flex-col gap-2">
-              {eventosProximos.map((e) => (
-                <li key={e.id}>
-                  <Link
-                    href={`/panel/eventos/${e.id}`}
-                    className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-xl border border-border bg-surface p-4 no-underline transition-colors hover:bg-surface-alt hover:no-underline"
-                  >
-                    <div className="flex min-w-0 flex-col gap-0.5">
-                      <span className="truncate text-[15.5px] font-semibold text-foreground">
-                        {e.titulo}
-                      </span>
-                      <span className="text-[13px] text-muted-foreground first-letter:uppercase">
-                        {formatearInstante(e.inicioEn, ctx.iglesia.timezone)}
-                      </span>
-                    </div>
-                    <span className="flex-none text-[13.5px] text-muted-foreground tabular-nums">
-                      {e.cupo
-                        ? `${e.ocupadas} de ${e.cupo}`
-                        : `${e.ocupadas} apuntados`}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+                    <ul className="flex flex-col gap-2">
+                      {eventosProximos.map((e) => (
+                        <li key={e.id}>
+                          <Link
+                            href={`/panel/eventos/${e.id}`}
+                            className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-xl border border-border bg-surface p-4 no-underline transition-colors hover:bg-surface-alt hover:no-underline"
+                          >
+                            <div className="flex min-w-0 flex-col gap-0.5">
+                              <span className="truncate text-[15.5px] font-semibold text-foreground">
+                                {e.titulo}
+                              </span>
+                              <span className="text-[13px] text-muted-foreground first-letter:uppercase">
+                                {formatearInstante(e.inicioEn, ctx.iglesia.timezone)}
+                              </span>
+                            </div>
+                            <span className="flex-none text-[13.5px] text-muted-foreground tabular-nums">
+                              {e.cupo
+                                ? `${e.ocupadas} de ${e.cupo}`
+                                : `${e.ocupadas} apuntados`}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
 
-        {/* ---------- La caja ---------- */}
-        {finanzas && (
-          <section className="flex flex-col gap-3">
-            <h2 className="t-micro">La caja</h2>
+                {/* ---------- La caja ---------- */}
+                {finanzas && (
+                  <section className="flex flex-col gap-3">
+                    <h2 className="t-micro">La caja</h2>
 
-            <Link
-              href="/panel/finanzas"
-              className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border bg-surface p-5 no-underline transition-colors hover:bg-surface-alt hover:no-underline"
-            >
-              <div className="flex flex-col gap-1">
-                <span className="t-micro">Entró este mes</span>
-                <span className="text-[22px] font-bold tracking-[-0.02em] tabular-nums">
-                  {finanzas.entro}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="t-micro">Salió</span>
-                <span className="text-[22px] font-bold tracking-[-0.02em] tabular-nums">
-                  {finanzas.salio}
-                </span>
-              </div>
-            </Link>
-          </section>
-        )}
-
-        {resumen.total === 0 && puedeCrear && (
-          <section className="flex flex-col items-start gap-3.5 rounded-xl border border-border bg-surface p-6">
-            <span className="flex size-11 items-center justify-center rounded-full bg-accent text-accent-foreground">
-              <Users className="size-5" strokeWidth={1.7} />
-            </span>
-            <div className="flex max-w-[520px] flex-col gap-1.5">
-              <h2 className="t-subtitulo">Empieza por la congregación</h2>
-              <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
-                Añade a las personas que ya vienen. No hace falta que tengas
-                todos sus datos: con el nombre basta para empezar, y lo demás se
-                completa con el tiempo.
-              </p>
-            </div>
-            <Button render={<Link href="/panel/miembros/nuevo" />}>
-              Añadir la primera persona
-              <ArrowRight strokeWidth={1.9} />
-            </Button>
-          </section>
-        )}
-      </div>
+                    <Link
+                      href="/panel/finanzas"
+                      className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border bg-surface p-5 no-underline transition-colors hover:bg-surface-alt hover:no-underline"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <span className="t-micro">Entró este mes</span>
+                        <span className="text-[22px] font-bold tracking-[-0.02em] tabular-nums">
+                          {finanzas.entro}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="t-micro">Salió</span>
+                        <span className="text-[22px] font-bold tracking-[-0.02em] tabular-nums">
+                          {finanzas.salio}
+                        </span>
+                      </div>
+                    </Link>
+                  </section>
+                )}
+            </aside>
+          )}
+        </div>
+      </Contenedor>
     </>
   );
 }

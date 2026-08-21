@@ -1,12 +1,13 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { ArrowLeft, Bell, Check } from 'lucide-react';
+import { Bell, Check } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/server';
 import { listarNotificaciones } from '@/lib/notificaciones/consultas';
 import { textoNotificacion } from '@/lib/notificaciones/textos';
+import { haceCuanto } from '@/lib/fecha/relativo';
 import { Button } from '@/components/ui/button';
+import { CabeceraMiembro } from '../_components/cabecera-miembro';
 import { abrirAviso, marcarTodoLeido } from './actions';
 
 export const metadata: Metadata = { title: 'Avisos' };
@@ -39,32 +40,24 @@ export default async function AvisosPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <header className="sticky top-0 z-20 border-b border-border bg-surface supports-[backdrop-filter]:bg-surface/80 supports-[backdrop-filter]:backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[620px] items-center gap-3 px-4 py-3 sm:px-5">
-          <Link
-            href="/mi"
-            aria-label="Volver"
-            className="flex size-9 flex-none items-center justify-center rounded-full text-muted-foreground no-underline hover:bg-background hover:text-foreground hover:no-underline"
-          >
-            <ArrowLeft className="size-[19px]" strokeWidth={1.8} />
-          </Link>
-
-          <span className="text-[15.5px] font-extrabold tracking-[-0.02em]">
-            Avisos
-          </span>
-
-          <span className="flex-1" />
-
-          {sinLeer > 0 && (
-            <form action={marcarTodoLeido}>
-              <Button type="submit" variant="ghost" size="sm">
-                <Check strokeWidth={1.8} />
-                Marcar todo
-              </Button>
-            </form>
-          )}
-        </div>
-      </header>
+      {/*
+       * Sin campana, y no por ahorrar: esta pantalla ES la bandeja. Una campana
+       * aquí abriría un desplegable con los mismos avisos que hay debajo y un
+       * segundo «Marcar todo» al lado del que ya está en la cabecera.
+       *
+       * El menú de cuenta sí, y es la razón de que exista `soloSalir`: aquí
+       * puede haber alguien SIN iglesia. La cabecera lo resuelve sola.
+       */}
+      <CabeceraMiembro user={user} titulo="Avisos" volver="/mi" campana={false}>
+        {sinLeer > 0 && (
+          <form action={marcarTodoLeido}>
+            <Button type="submit" variant="ghost" size="sm">
+              <Check strokeWidth={1.8} />
+              Marcar todo
+            </Button>
+          </form>
+        )}
+      </CabeceraMiembro>
 
       <main className="mx-auto flex w-full max-w-[620px] flex-col gap-2 px-4 py-5 sm:px-5">
         {avisos.length === 0 ? (
@@ -140,23 +133,4 @@ export default async function AvisosPage() {
       </main>
     </div>
   );
-}
-
-/** «Hace diez minutos», y a partir de una semana la fecha. */
-function haceCuanto(fecha: Date): string {
-  const segundos = Math.max(0, (Date.now() - fecha.getTime()) / 1000);
-
-  if (segundos < 60) return 'ahora mismo';
-
-  const minutos = Math.floor(segundos / 60);
-  if (minutos < 60) return `hace ${minutos} min`;
-
-  const horas = Math.floor(minutos / 60);
-  if (horas < 24) return `hace ${horas} h`;
-
-  const dias = Math.floor(horas / 24);
-  if (dias === 1) return 'ayer';
-  if (dias < 7) return `hace ${dias} días`;
-
-  return fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
 }

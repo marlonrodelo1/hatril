@@ -12,6 +12,8 @@ import {
   ministerios,
 } from '@/lib/db/schema';
 import { isUniqueViolation } from '@/lib/db/error';
+import { componerModulos } from '@/lib/ministerios/modulos';
+import { modulosDelTipo } from '@/lib/ministerios/tipos';
 import { VERSION_POLITICA_PRIVACIDAD } from '@/lib/rgpd/consentimiento';
 
 /**
@@ -39,12 +41,20 @@ import { VERSION_POLITICA_PRIVACIDAD } from '@/lib/rgpd/consentimiento';
  * eso se encarga Postgres.
  */
 
-/** Los cuatro ministerios que casi toda congregación tiene el primer día. */
+/**
+ * Los cuatro ministerios que casi toda congregación tiene el primer día.
+ *
+ * Cada uno con su tipo, que es lo que decide qué herramientas trae encendidas
+ * (`src/lib/ministerios/tipos.ts`). Sin tipo caerían en «Otro» y el pastor
+ * tendría que entrar en los cuatro a configurarlos antes de poder usarlos: la
+ * iglesia arrancaría con el panel vacío, que es justo lo que esta semilla existe
+ * para evitar.
+ */
 const MINISTERIOS_SEMILLA = [
-  { nombre: 'Alabanza', colorHex: '#BD4715', orden: 1 },
-  { nombre: 'Jóvenes', colorHex: '#2F5D50', orden: 2 },
-  { nombre: 'Niños', colorHex: '#B58A2B', orden: 3 },
-  { nombre: 'Intercesión', colorHex: '#6B645C', orden: 4 },
+  { nombre: 'Alabanza', tipo: 'alabanza', colorHex: '#BD4715', orden: 1 },
+  { nombre: 'Jóvenes', tipo: 'jovenes', colorHex: '#2F5D50', orden: 2 },
+  { nombre: 'Niños', tipo: 'ninos', colorHex: '#B58A2B', orden: 3 },
+  { nombre: 'Intercesión', tipo: 'intercesion', colorHex: '#6B645C', orden: 4 },
 ] as const;
 
 const DIAS_TRIAL = 7;
@@ -180,8 +190,10 @@ export async function crearIglesiaConSeeds(opts: {
           MINISTERIOS_SEMILLA.map((m) => ({
             iglesiaId: iglesia.id,
             nombre: m.nombre,
+            tipo: m.tipo,
             colorHex: m.colorHex,
             orden: m.orden,
+            modulos: componerModulos({}, modulosDelTipo(m.tipo)),
           })),
         );
 

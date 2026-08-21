@@ -1,0 +1,52 @@
+-- ===========================================================================
+-- 0034 — Un consentimiento propio para la asistencia y el seguimiento
+--
+-- Un valor nuevo en `tipo_consentimiento_enum`, y nada mas. Ninguna tabla,
+-- ninguna policy: `consentimientos` ya existe desde la 0001 con su RLS.
+--
+-- POR QUE NO VALE EL QUE YA HABIA
+-- --------------------------------
+-- El consentimiento vigente, `datos_religiosos`, dice literalmente que los
+-- datos se guardan «para que la congregacion pueda organizarse». Eso no cubre
+-- un registro nominal de a que culto fue cada persona cada domingo, ni lo que
+-- se habla con ella cuando lleva un mes sin venir. Es el mismo razonamiento por
+-- el que el diezmo nominativo sigue esperando su propio valor, escrito en
+-- ESTADO.md: casilla separada, art. 7.2, granularidad.
+--
+-- UN VALOR Y NO DOS
+-- -----------------
+-- Se penso en partirlo —`asistencia` por un lado y `seguimiento_pastoral` por
+-- otro—, y se descarto: son una sola practica pastoral, y la mitad intrusiva no
+-- funciona sin la otra. Saber quien ha dejado de venir ES el registro de
+-- asistencia mirado al reves. Dos casillas donde una se puede aceptar sin la
+-- otra producirian un estado que el producto no puede honrar: seguimiento sin
+-- asistencia no es nada.
+--
+-- La granularidad del art. 7.2 se cumple igual, porque lo que exige es separar
+-- FINALIDADES distintas, y esto es una finalidad con dos caras.
+--
+-- QUE PASA CON QUIEN SE NIEGA, QUE ES LA PARTE QUE SUELE FALTAR
+-- -------------------------------------------------------------
+-- Queda fuera de las dos listas: no aparece para pasarle lista y no aparece en
+-- el seguimiento. Lo aplica `src/lib/rgpd/consultas.ts` y lo consumen
+-- `listaParaPasar()` y `personasPorFaltas()`. Un consentimiento que se puede
+-- retirar y no cambia nada no es un consentimiento, es un adorno.
+--
+-- Y AL REVES: LA AUSENCIA DE FILA NO ES UNA NEGATIVA
+-- ---------------------------------------------------
+-- La mayoria de las fichas de una congregacion las teclea el pastor con la
+-- lista que ya tenia, y esa via —`crearMiembro`— nunca ha registrado ningun
+-- consentimiento, tampoco el de `datos_religiosos`. No es un olvido: a esas
+-- personas Hatril no las ha visto nunca, y quien responde de ese fichero es la
+-- iglesia, con su propia base del art. 9.2.d —entidad sin animo de lucro de
+-- finalidad religiosa, datos de sus miembros, no comunicados fuera— mas el
+-- encargo del art. 28 que acepta al registrarse.
+--
+-- Tratar la ausencia de fila como negativa vaciaria la lista el primer dia y
+-- dejaria el modulo inservible; tratarla como aceptacion seria mentir. Lo que se
+-- hace es lo unico honesto: la ausencia significa «aqui manda la base de la
+-- iglesia», y la fila REVOCADA significa «esta persona dijo que no» y se
+-- respeta. Esta escrito asi en /privacidad §4, y no al reves.
+-- ===========================================================================
+
+ALTER TYPE "public"."tipo_consentimiento_enum" ADD VALUE IF NOT EXISTS 'asistencia_y_seguimiento';

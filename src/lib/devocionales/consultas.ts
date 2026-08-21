@@ -238,3 +238,60 @@ export async function devocionalPublico(
     esDeHoy: d.fecha === hoy,
   };
 }
+
+/**
+ * El devocional de hoy para alguien que ya está dentro de la iglesia.
+ *
+ * Gemelo de `devocionalPublico()` y separado a propósito. Aquél va por `dbAdmin`
+ * y exige `web_publica = true`, porque sirve la página de la calle. Este va por
+ * `withUser` y NO mira esa bandera: una congregación puede tener el devocional
+ * al día y su web sin publicar, y a su gente no se le esconde por eso.
+ *
+ * Si hoy no hay, devuelve el último publicado, igual que el público: una
+ * pantalla con un hueco donde debería ir el devocional parece rota, y el de ayer
+ * sigue valiendo. `esDeHoy` deja que la pantalla lo diga.
+ */
+export async function devocionalDeHoy(ctx: UserContext): Promise<{
+  fecha: string;
+  titulo: string | null;
+  versiculo: string | null;
+  referencia: string | null;
+  cuerpo: string;
+  imagenUrl: string | null;
+  videoUrl: string | null;
+  esDeHoy: boolean;
+} | null> {
+  const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
+
+  return withUser(ctx.user.id, async (tx) => {
+    const filas = await tx
+      .select({
+        fecha: devocionales.fecha,
+        titulo: devocionales.titulo,
+        versiculo: devocionales.versiculo,
+        referencia: devocionales.referencia,
+        cuerpo: devocionales.cuerpo,
+        imagenUrl: devocionales.imagenUrl,
+        videoUrl: devocionales.videoUrl,
+      })
+      .from(devocionales)
+      .where(
+        and(
+          eq(devocionales.iglesiaId, ctx.iglesia.id),
+          eq(devocionales.publicado, true),
+          lte(devocionales.fecha, hoy),
+          // Una fila sin cuerpo NO es un devocional: es un turno asignado y sin
+          // escribir. En este módulo el turno ES la fila, así que sin este
+          // filtro la pantalla enseñaría un hueco con fecha.
+          isNotNull(devocionales.cuerpo),
+        ),
+      )
+      .orderBy(desc(devocionales.fecha))
+      .limit(1);
+
+    const d = filas[0];
+    if (!d) return null;
+
+    return { ...d, cuerpo: d.cuerpo!, esDeHoy: d.fecha === hoy };
+  });
+}

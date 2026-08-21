@@ -1,6 +1,6 @@
 # Estado de Hatril
 
-Última actualización: 20 de agosto de 2026.
+Última actualización: 21 de agosto de 2026.
 
 Este fichero se actualiza al cerrar cada sesión de trabajo. Va **dentro del
 repo** a propósito: Pidoo guardaba su detalle en ficheros `memory/` fuera del
@@ -31,7 +31,8 @@ lee al arrancar.
   contraseña.
 - **Panel**: inicio (avisos accionables arriba, cifras debajo), miembros
   (listado con filtros, ficha, alta, edición, baja),
-  ministerios (rejilla, detalle, equipo, asignar, responsable y colíderes),
+  ministerios (rejilla, detalle, equipo, asignar, responsable y colíderes,
+  tipo, misión, visión, objetivo y sus herramientas),
   solicitudes (bandeja con aprobar y rechazar), **líderes** (rol y permisos por
   persona, quitar y devolver el acceso), ajustes.
 - **Permisos**: el pastor reparte seis capacidades desde `/panel/lideres`. Los
@@ -40,6 +41,150 @@ lee al arrancar.
 - **Ministerios con varios líderes**: un responsable garantizado único por la
   base de datos, más los colíderes que hagan falta. Un líder gestiona los suyos
   y nada más (`gestionar_su_ministerio`).
+- **Ministerios que hacen algo, no solo se ven**: cada uno tiene un **tipo**
+  (alabanza, consolidación, niños, evangelismo, acción social, medios…) que al
+  elegirlo enciende sus **herramientas**, y misión, visión y objetivo. El
+  catálogo de tipos vive en `src/lib/ministerios/tipos.ts` y el de módulos en
+  `modulos.ts`; lo encendido se guarda en `ministerios.modulos`, un jsonb
+  validado con Zod por la única action que lo escribe.
+
+  No se programa una pantalla por tipo: se programan piezas y cada tipo enciende
+  las suyas, así que un ministerio de radio o de reparto de alimentos funciona
+  sin tocar código. Hoy existen **dos módulos de verdad**, `agenda` y
+  `seguimiento`; el resto no se declara hasta que se pueda pulsar.
+
+- **Reuniones y asistencia**: `/panel/reuniones`. Apuntar el culto del domingo o
+  el del jueves con su fecha, y marcar quién vino. **Se guarda fila también para
+  quien faltó**, con `presente = false`: sin eso, un domingo en el que nadie pasó
+  lista sería idéntico a uno en el que no vino nadie, y «lleva cinco domingos sin
+  venir» empezaría a mentir. Cero filas significa «no se tomó asistencia».
+
+  `miembros.ultima_asistencia` —columna que existía desde la `0000` y **no la
+  escribía nadie**— la mantiene ahora un trigger por sentencia con tabla de
+  transición, y se RECALCULA en vez de acumularse: desmarcar a alguien borra la
+  fecha en vez de dejarla clavada. Permiso propio, `registrar_asistencia`, que la
+  secretaría tiene por defecto. Verificado apuntando un culto, dejando fuera a
+  dos personas y viendo moverse la columna en la base.
+
+- **Agenda de cada ministerio**: `/panel/ministerios/[id]/agenda`. Ensayos,
+  clases y salidas del equipo, con su propia lista. Dos guards en el layout:
+  quién manda en ESE ministerio, y que el módulo esté encendido —si no, 404—. El
+  ámbito de la lista es **el equipo**, nunca la congregación, y un ensayo **no**
+  toca `ultima_asistencia`: a nadie se le consolida por faltar a un ensayo.
+
+- **Seguimiento de personas** (consolidación): dentro del ministerio que lo
+  lleve, `/panel/ministerios/[id]/seguimiento`. La congregación ordenada por
+  cuántas reuniones seguidas se ha perdido cada persona, con su teléfono, quién
+  la acompaña y lo último que se habló con ella. Dentro, asignar acompañante y
+  apuntar cada llamada, visita o mensaje.
+
+  **Se cuentan reuniones con lista tomada, no semanas de calendario.** Contra el
+  reloj, una iglesia que lleve tres semanas sin apuntar nada vería a TODA la
+  congregación como ausente, y el equipo llamaría a gente que fue el domingo
+  pasado. A la tercera llamada así, el pastor deja de fiarse de la pantalla.
+
+  **Sin campo de texto libre**, y es la decisión de todo el módulo: el motivo se
+  elige de una lista de siete —hablamos, va a volver, no contestó, se mudó, está
+  molesto con la iglesia, no hay forma de localizarle, lo lleva el pastorado—.
+  El único campo escrito a mano es «qué toca ahora», acotado a 200 caracteres
+  por un CHECK de la base y no solo por un comentario.
+
+  Tres puertas para entrar: el permiso `ver_seguimiento` —que no es defecto de
+  ningún rol, ni de secretaría—, ser responsable o colíder de ESE ministerio, y
+  que el módulo esté encendido. La firma de cada contacto la comprueba la policy
+  contra `miembro_actual()`: nadie apunta nada en nombre de otro. Y la tabla de
+  contactos **no tiene UPDATE concedido**: un contacto es un hecho fechado, y si
+  se apuntó mal se borra en vez de reescribirse.
+
+- **Área del miembro**: `/mi`, y es una **app, no una página**. Quien pertenece a
+  una iglesia y no lleva nada en ella ya no aterriza en el panel — antes veía un
+  menú de ocho secciones donde no podía pulsar casi nada, con Miembros y
+  Ministerios en la primera línea. Ahora abre y ve el muro de su congregación.
+
+  Cuatro pestañas en una barra fija: **Comunidad · Devocional · Agenda · Mi
+  cuenta**. Salieron siete candidatas en la conversación y se quedan las cuatro
+  que se usan cada semana; la web de la iglesia y Donar viven dentro de Mi
+  cuenta, que es donde se buscan las cosas de una vez al mes.
+
+  - *Comunidad* es `/mi/comunidad`, el muro que ya existía. `/mi` es ahora solo
+    el desvío que decide a dónde va cada quien.
+  - *Devocional* enseña el del día, y si no hay, el último publicado **diciéndolo**
+    — enseñar el de ayer callando hace que alguien se lo lea creyendo que es el
+    de esta mañana. Consulta propia con `withUser`, gemela de la pública: aquélla
+    exige `web_publica` porque sirve la calle, y a la gente de una congregación
+    no se le esconde su devocional por que su web esté sin publicar.
+  - *Agenda* junta los eventos de la iglesia y los ensayos de sus equipos. En el
+    panel viven separados porque los gestiona gente distinta; para un miembro son
+    la misma pregunta —qué tengo yo esta semana— y separarlas le obliga a mirar
+    en dos sitios.
+  - *Mi cuenta* trae sus ministerios con su papel y su objetivo, **Ofrendar** y
+    cerrar sesión.
+
+  **Ofrendar funciona de verdad desde el primer día** y no es una pasarela:
+  enseña el `cuenta_donativos` que esa iglesia ya publica en su web, con el
+  titular. Si la congregación no lo ha rellenado, **el botón no se pinta** — uno
+  que al pulsarlo dice «tu iglesia no ha configurado esto» le pasa el problema a
+  quien no puede resolverlo. Por Hatril no pasa dinero, que es lo que
+  `/privacidad` §3 promete.
+
+  **La barra es una pastilla flotante con glaseado**, y de dónde salió importa.
+  La referencia era un componente de shadcn con `framer-motion`, sombras de dos
+  capas, clases `dark:` y los nombres escondidos tras un tooltip. Se trajo el
+  aspecto y no la implementación: sin librería —el brief dice «sin librerías de
+  animación pesadas» y lo único que animaba era ese tooltip—, sin sombra —regla 3
+  del sistema: la profundidad se hace con bordes de 1px—, sin `dark:` —modo claro
+  únicamente— y **con los nombres siempre visibles**, porque en un móvil no hay
+  ratón y serían cuatro dibujos sin nombre en la pantalla principal.
+
+  El glaseado no es nuevo: es el `supports-[backdrop-filter]` que ya usaba
+  `CabeceraMiembro`. Va con guarda a propósito — sin `backdrop-filter`, un fondo
+  translúcido deja el texto ilegible sobre lo que haya debajo, y con la guarda
+  ese navegador cae a fondo sólido.
+
+  **Una sola barra `fixed`, no dos.** El primer intento eran una pegada abajo en
+  móvil y otra en fila arriba para escritorio, y no funciona: la barra vive en el
+  layout y cada página de `/mi` pinta su propia cabecera pegajosa, así que la
+  superior salía siempre por encima de ella. Arreglarlo obligaba a subir las tres
+  cabeceras al layout, y una de ellas es `/mi/avisos`, que funciona sin
+  membresía. Con una sola fija el orden del DOM deja de importar: ancho completo
+  en móvil, pastilla centrada en escritorio.
+
+  El layout de `/mi` **no lleva guard**, y es la excepción a la regla del repo.
+  Bajo `/mi` conviven pantallas con requisitos distintos y `/mi/avisos` tiene que
+  seguir siendo alcanzable sin membresía. Cada página pone el suyo; el layout
+  solo decide si pinta las pestañas.
+
+  Quién va a cada sitio lo decide `esDelEquipo()` en `permisos.ts`, mirando las
+  **capacidades efectivas** y no el nombre del rol: el pastor puede darle la caja
+  o el devocional a alguien que sigue siendo `miembro`, y esa persona entra al
+  panel sola. El corte vive en `panel/layout.tsx`, no en `requireIglesia()`, que
+  lo usa también `/mi/comunidad`. Y el destino de después de entrar lo decide
+  `inicioDe()` en un solo sitio: lo tenían escrito a mano tres actions como
+  `/panel/hoy`, lo que mandaba al miembro al panel para que el layout lo
+  devolviera, con su pantalla en blanco por medio.
+
+  Verificado entrando como `miembro@hatril.test`: aterriza en el muro, las cuatro
+  pestañas cargan, y `/panel/miembros` escrito a mano en la barra le devuelve.
+
+  **Lo que falta y se nota:** el repertorio del domingo, los turnos y el material
+  del equipo. Son módulos de la tanda siguiente.
+
+- **Re-consentimiento**: `/acepta`. Cuando la política cambia de fondo se sube
+  `VERSION_POLITICA_PRIVACIDAD` y el layout del panel corta el paso a quien
+  aceptó una versión anterior, hasta que lea qué ha cambiado y vuelva a decidir.
+  La casilla de la asistencia va **sin premarcar**: el considerando 32 del RGPD
+  dice que una casilla ya marcada NO es consentimiento.
+
+  Aceptar no reescribe la fila vieja, la revoca y escribe una nueva: el art. 7.1
+  obliga a poder demostrar a qué redacción dijo que sí cada persona, y un
+  `update` borraría esa prueba.
+
+  Y negarse hace algo de verdad: quien no marca la casilla desaparece de la lista
+  de asistencia y de la de seguimiento, **y se borran sus filas anteriores** en
+  las tres tablas. Sin eso, la pantalla del culto se quedaba diciendo «7 de 9»
+  con ocho personas debajo — y un número que no cuadra con la lista es un número
+  del que el pastor deja de fiarse.
+
 - **Devocionales**: calendario de turnos, redacción, imagen de fondo, enlace a
   vídeo y publicación. El devocional del día sale en la web de la iglesia.
 - **Comunidad**: el muro de la congregación en `/mi/comunidad`. Publicar con
@@ -106,12 +251,15 @@ lee al arrancar.
 | Proveedor de alojamiento en los legales | **Sin rellenar.** Lo más urgente: bloquea publicar |
 | Foto en la ficha de miembro | Va en OTRO bucket, privado y con URL firmada. El de iglesias es público |
 | Eventos y calendario | Hecho y verificado, con sus textos legales |
-| Área del miembro | `/mi` echa al panel a quien tiene iglesia. No hay vista propia |
+| Área del miembro | Hecha la base. Faltan el repertorio del domingo, los turnos y el material del equipo |
 | Stripe | Nada. El trial vence y no pasa nada |
 | Correo (Resend) | Nada. Ni bienvenida ni aviso de solicitud |
 | Exportar y borrar datos | Derecho de supresión del RGPD, sin implementar |
 | Cumpleaños de la semana en Inicio | Se puede: `fecha_nacimiento` existe. Va con `ver_datos_sensibles` y sin enseñar el año |
-| Asistencias y seguimiento pastoral | v2. Son bloques que el diseño pone en Inicio y no se pintan |
+| Asistencia a escala | **Hecha la base, no la escala.** Marcar casillas una a una no sirve para 1.500 personas. Ver «Decidido y pendiente» |
+| Notas de seguimiento en texto libre | A propósito NO están. Necesitan cifrado en reposo y base jurídica antes |
+| Legales de la asistencia y el seguimiento | Hechos: `/privacidad` §3, §4 y §6, el anexo del art. 28 en `/terminos`, y el consentimiento propio |
+| Los bloques de asistencia en Inicio | El diseño los pinta y siguen sin pintarse: el dato ya existe |
 | App móvil (Capacitor) | v2. `platform/` ya detecta el WebView |
 
 ---
@@ -141,6 +289,15 @@ escritura. Lo cierra la `0022`, que además invierte el defecto de tablas —com
 `0003` hizo con el de funciones— y revoca `service_role` en `auditoria`,
 `consentimientos` y `solicitudes_ingreso`, que era lo que este fichero llevaba
 pidiendo desde el 19-ago.
+
+**Un `alter type ... add value` no se puede usar en la misma transacción.**
+Postgres deja añadir el valor al enum, pero no escribirlo hasta que la
+transacción confirme — y una migración ES una transacción. Por eso
+`origen_asistencia_enum` nace en la `0031` con los cuatro valores (`panel`,
+`lider`, `qr`, `autoconfirmado`) aunque hoy solo se escriba el primero: hacerlo
+dentro de un año obligaría a partir la migración en dos pasadas, con meses de
+listas dentro. Un enum se completa cuando la tabla está vacía, no cuando hace
+falta.
 
 **`npm run db:migrate` no aplica nada y sale con código 0.** Sin error, sin
 mensaje y sin dejar rastro: parece que ha funcionado. Es `strict: true` en
@@ -309,12 +466,19 @@ fichero.
 
 ## Pendiente que no es código
 
-- **Identificar el proveedor de alojamiento.** `ALOJAMIENTO` en
-  `src/lib/legal/datos-responsable.ts` está sin rellenar, y mientras lo esté,
-  `/privacidad` y `/terminos` se publican con un aviso rojo encima diciendo que
-  no deben usarse. Hace falta el nombre legal y el país del centro de datos.
-  Ojo: la IP del despliegue no está en un rango europeo, así que conviene
-  comprobarlo antes de escribir «UE» en una política. Que los datos guardados
+- **Confirmar el país del centro de datos.** `ALOJAMIENTO` ya está relleno:
+  **Hostinger International Limited**, que es el nombre con el que está
+  registrado el AS47583 dueño del rango del despliegue —el hostname resuelve a
+  `srv1478310.hstgr.cloud`—. Falta afinar una sola cosa: se escribió «Alemania
+  (UE)» porque es lo que consta, y la geolocalización de la IP devuelve
+  **Francia**. Las dos son UE, así que la frase de `/privacidad` se sostiene
+  igual, pero el dato exacto hay que mirarlo en hPanel → VPS → la ficha del
+  servidor, no en una base de geolocalización.
+
+  Y de paso: **este fichero decía que la IP del despliegue «no está en un rango
+  europeo» y era falso.** `187.124.37.206` pertenece a Hostinger, AS47583, con
+  registro europeo. Era una suposición por el `187.x` —que suele ser
+  latinoamericano— que nadie había comprobado. Que los datos guardados
   estén en Supabase no exime: el contenedor de Next ve cada dato al procesar la
   petición, y eso también es tratamiento.
 - **Registrar `hatril.app`.** Los textos legales ya lo dan por hecho, y el correo
@@ -331,6 +495,69 @@ fichero.
 ---
 
 ## Decidido y pendiente de construir
+
+**Lo que queda de los legales, que ya no es el bloqueo.** Los textos están
+reescritos y revisados contra el código, y la versión subió a
+`privacidad-2026-09` con su pantalla de re-consentimiento detrás. Queda:
+
+- **`ALOJAMIENTO` sigue con [PENDIENTE]**, y es lo único que mantiene el aviso
+  rojo sobre `/privacidad` y `/terminos`. Hacen falta el nombre legal del
+  proveedor del VPS y el país del centro de datos. Ojo: la IP del despliegue no
+  parece de un rango europeo, así que conviene comprobarlo antes de escribir
+  «UE» en una política.
+- **El derecho de supresión sigue siendo manual**, como lo era antes: §4 dice
+  que se tramita escribiendo a la iglesia o a Hatril, así que el texto no miente.
+  Lo que cambia es que ese borrado a mano tiene ahora tres tablas más que
+  recordar —`asistencias`, `seguimiento_contactos` y `seguimiento_asignaciones`—
+  además de las de siempre. Lo único automatizado es el borrado de un contacto
+  suelto, y el borrado completo que dispara negarse en `/acepta`.
+- **El diezmo nominativo** sigue esperando su propio valor de consentimiento,
+  por las mismas razones de siempre.
+
+**El corte del consentimiento está en TRES sitios y no en uno.**
+`exigirConsentimientoAlDia()` se llama desde `panel/layout.tsx`, desde `/mi` y
+desde `/mi/comunidad`. No puede vivir dentro de `requireIglesia()`, que sería lo
+natural, porque `/acepta` llama a ese mismo guard y la pantalla se redirigiría a
+sí misma para siempre. Al añadir una pantalla nueva que trate datos, hay que
+acordarse. `/mi/avisos` queda fuera a propósito: a quien le rechazan la solicitud
+se le borra la membresía en el mismo movimiento, y el aviso que se lo explica
+tiene que seguir siendo alcanzable.
+
+Tres cosas de los legales que conviene no deshacer, porque costaron encontrarlas:
+
+- La casilla de la asistencia **no se premarca**. Considerando 32.
+- Negarse **borra**, no solo oculta. Filtrar las pantallas y conservar las filas
+  dejaba números que no cuadraban con las listas, y seguir enseñando un dato en
+  un recuento es seguir tratándolo.
+- `miembrosSinPermisoDeAsistencia()` excluye a quien **vio la casilla y no la
+  marcó**, no a quien nunca llegó a verla. La primera versión hacía lo segundo y
+  hacía falsa una frase de `/privacidad` §4 recién escrita; lo cazó revisar frase
+  por frase contra el código, no releer el texto.
+
+**La asistencia a escala.** Marcar casillas una a una funciona para una
+congregación de 40 o 150, que es el mercado inicial. Para 1.500 no. El dato
+tendrá que venir también de otro sitio, y por eso `asistencias.origen` ya existe
+con sus cuatro valores. Ordenadas de más sólida a menos:
+
+1. **Check-in con QR en la puerta.** La persona escanea y se marca sola. Es lo
+   que hacen las iglesias grandes, y **no necesita app**: una URL con token
+   rotatorio funciona desde cualquier móvil.
+2. **Cada líder marca su grupo.** 1.500 personas son 120 líderes marcando doce
+   cada uno. Encaja con los ministerios que ya existen y no añade infraestructura.
+3. **Buscador y filtro en la lista actual.** Con 1.500 no se hace scroll, se
+   escriben tres letras. Es lo más barato de todo.
+4. **Autoconfirmación por aviso**, como complemento.
+
+Y la regla que hace que lo anterior no destruya el dato: **quien no contesta no
+es quien no vino.** Si la autoconfirmación llega a alimentar el «lleva cinco
+domingos sin venir», el silencio tiene que seguir siendo AUSENCIA DE FILA —«no
+lo sabemos»— y nunca una fila con `presente = false`. Confundirlos pone a
+consolidación a llamar a gente que vino todas las semanas, y a la tercera
+llamada el pastor deja de fiarse del producto.
+
+Ojo con la dependencia: la autoconfirmación necesita app (Capacitor no está ni
+en `package.json`), push (cero referencias en el repo) y que la gente tenga
+cuenta (`miembros.auth_user_id` es nullable y casi ninguna ficha la tiene).
 
 **Finanzas, lo que falta.** La v1 está hecha y NO guarda nombres de donante.
 `tipo_ingreso` distingue diezmo de ofrenda para poder sumarlos por separado, pero

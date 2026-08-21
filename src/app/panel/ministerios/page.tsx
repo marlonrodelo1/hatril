@@ -12,6 +12,8 @@ import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { iniciales } from '@/lib/format/iniciales';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
+import { CabeceraPanel } from '../_components/cabecera';
+import { Contenedor } from '../_components/contenedor';
 
 export const metadata: Metadata = { title: 'Ministerios' };
 
@@ -35,30 +37,23 @@ export default async function MinisteriosPage({
 
   return (
     <>
-      <header className="flex flex-col gap-4 border-b border-border bg-surface px-5 py-4 md:flex-row md:items-center md:gap-6 md:px-8">
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
-            Ministerios
-          </h1>
-          <p className="text-[13px] text-muted-foreground">
-            {resumen.equipos === 0
-              ? 'Todavía no hay equipos'
-              : `${resumen.equipos} ${resumen.equipos === 1 ? 'equipo' : 'equipos'} · ${resumen.personasSirviendo} ${resumen.personasSirviendo === 1 ? 'persona sirviendo' : 'personas sirviendo'}`}
-          </p>
-        </div>
-
+      <CabeceraPanel
+        titulo="Ministerios"
+        subtitulo={
+          resumen.equipos === 0
+            ? 'Todavía no hay equipos'
+            : `${resumen.equipos} ${resumen.equipos === 1 ? 'equipo' : 'equipos'} · ${resumen.personasSirviendo} ${resumen.personasSirviendo === 1 ? 'persona sirviendo' : 'personas sirviendo'}`
+        }
+      >
         {puedeGestionar && (
-          <Button
-            render={<Link href="/panel/ministerios/nuevo" />}
-            className="flex-none"
-          >
+          <Button render={<Link href="/panel/ministerios/nuevo" />}>
             <Plus strokeWidth={1.9} />
             Crear ministerio
           </Button>
         )}
-      </header>
+      </CabeceraPanel>
 
-      <div className="flex w-full max-w-[1400px] flex-1 flex-col gap-5 px-5 pb-10 pt-6 md:px-8">
+      <Contenedor>
         {error && <Aviso>{error}</Aviso>}
 
         {ministerios.length === 0 ? (
@@ -133,7 +128,7 @@ export default async function MinisteriosPage({
             })}
           </div>
         )}
-      </div>
+      </Contenedor>
     </>
   );
 }
@@ -155,8 +150,12 @@ function EstadoVacio({ puedeGestionar }: { puedeGestionar: boolean }) {
         </span>
       </div>
 
+      {/* En `outline` porque cuando esto se ve, arriba se está viendo también
+          «Crear ministerio», que lleva al mismo sitio. Dos botones naranjas
+          idénticos en la misma pantalla es justo lo que el sistema de diseño
+          prohíbe: el naranja se queda en la cabecera, que está siempre. */}
       {puedeGestionar && (
-        <Button render={<Link href="/panel/ministerios/nuevo" />}>
+        <Button variant="outline" render={<Link href="/panel/ministerios/nuevo" />}>
           <Plus strokeWidth={1.9} />
           Crear el primer ministerio
         </Button>

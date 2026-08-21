@@ -135,10 +135,46 @@ export default function PrivacidadPage() {
             expreso para ello.
           </li>
           <li>
+            <strong className="font-semibold">
+              Si vienes o no a las reuniones
+            </strong>
+            , cuando tu iglesia decide llevar esa cuenta. Se apunta una reunión
+            —el culto del domingo, el de un jueves— y quién estuvo en ella y
+            quién no. Se guarda también la ausencia, porque de otro modo un
+            domingo en el que nadie pasó lista sería idéntico a uno en el que no
+            vino nadie.
+          </li>
+          <li>
+            <strong className="font-semibold">
+              Lo que se habla contigo si llevas tiempo sin aparecer
+            </strong>{' '}
+            y alguien de tu iglesia te contacta: la fecha, si fue una llamada, un
+            mensaje o una visita, y qué pasó. Ese «qué pasó» se elige de una
+            lista cerrada —hablamos, no contestó, va a volver, se mudó, está
+            molesto con la iglesia, no hay forma de localizarle, lo lleva el
+            pastorado— y{' '}
+            <strong className="font-semibold">
+              no hay ninguna casilla donde escribir sobre tu salud, tu dinero ni
+              tu situación familiar
+            </strong>
+            . El único texto libre es un recordatorio de dos líneas de qué toca
+            hacer después.
+          </li>
+          <li>
+            Los ensayos y actividades del ministerio en el que sirvas, y quién
+            fue a cada uno. Eso es del equipo y no cuenta como asistencia a los
+            cultos.
+          </li>
+          <li>
             El registro de tus consentimientos, con su fecha y la versión del
             texto que aceptaste. Es la prueba de que te preguntamos.
           </li>
         </Lista>
+        <P>
+          Lo de la asistencia y el seguimiento tiene su propio permiso, aparte
+          del general, y puedes no darlo: si no lo das, no sales en esas listas y
+          todo lo demás sigue igual.
+        </P>
         <P>
           De quien solo pide entrar desde el directorio: nombre, correo,
           teléfono si lo das, y el mensaje que escribas.
@@ -194,15 +230,36 @@ export default function PrivacidadPage() {
         <Lista>
           <li>
             <strong className="font-semibold">Tu consentimiento explícito</strong>{' '}
-            (art. 9.2.a). Es la casilla que marcas al pedir entrar, y puedes
-            retirarla cuando quieras.
+            (art. 9.2.a), cuando eres tú quien pide entrar desde el directorio:
+            es la casilla que marcas en ese formulario, y puedes retirarla cuando
+            quieras.
+          </li>
+          <li>
+            <strong className="font-semibold">
+              La base de tu propia iglesia
+            </strong>{' '}
+            (art. 9.2.d), cuando es ella la que te da de alta en su fichero
+            porque ya eras de la casa. Esa excepción permite a una entidad
+            religiosa sin ánimo de lucro tratar los datos de sus miembros,
+            siempre que no salgan de ahí. En ese caso no hay ninguna casilla que
+            hayas marcado, y decir lo contrario sería falso.
           </li>
           <li>
             <strong className="font-semibold">El contrato con tu iglesia</strong>{' '}
             (art. 6.1.b y art. 28), que es lo que nos permite prestarle el
-            servicio.
+            servicio a ella.
           </li>
         </Lista>
+        <P>
+          <strong className="font-semibold">
+            Que se apunte tu asistencia y tu seguimiento va aparte
+          </strong>
+          , con su propio permiso y su propia casilla. Lo hacemos así porque el
+          permiso general habla de guardar tus datos «para que la congregación
+          pueda organizarse», y un registro semanal de dónde estuviste no cabe en
+          esa frase. Si no lo das, o si lo retiras, dejas de aparecer en la lista
+          de asistencia y en la de seguimiento de tu iglesia.
+        </P>
         <P>
           <strong className="font-semibold">
             Si te apuntas a un evento sin ser de la iglesia
@@ -283,6 +340,18 @@ export default function PrivacidadPage() {
             hacerlo sin esperar a que pase el evento y sin tocar los datos de
             nadie más. Si no obtienes respuesta, escríbenos y lo hacemos
             nosotros.
+          </li>
+          <li>
+            Lo que se apunta de tu asistencia y de tu seguimiento vive mientras
+            seas parte de la congregación, y se va con el resto de tu ficha
+            cuando pides el borrado. Cada contacto apuntado se puede borrar suelto
+            desde la propia pantalla, sin tocar lo de nadie más. Y si retiras ese
+            permiso, no esperamos a que pidas nada:{' '}
+            <strong className="font-semibold">
+              lo que hubiera apuntado de ti en esas listas se borra en ese mismo
+              momento
+            </strong>
+            .
           </li>
           <li>
             Si una iglesia deja Hatril, sus datos se eliminan a los 60 días de

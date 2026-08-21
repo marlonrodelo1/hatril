@@ -1,11 +1,12 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
-import { Archive, ChevronLeft } from 'lucide-react';
+import { Archive } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { opciones } from '@/lib/finanzas/consultas';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
+import { CabeceraPanel } from '../../_components/cabecera';
+import { Contenedor } from '../../_components/contenedor';
 import { archivarCaja, archivarFondo, crearCaja, crearFondo } from '../actions';
 
 export const metadata: Metadata = { title: 'Fondos y cajas' };
@@ -28,20 +29,12 @@ export default async function AjustesFinanzasPage({
 
   return (
     <>
-      <header className="flex flex-col gap-1 border-b border-border bg-surface px-5 py-4 md:px-8">
-        <Link
-          href="/panel/finanzas"
-          className="flex w-fit items-center gap-1 text-[13px] font-medium text-muted-foreground no-underline hover:text-foreground hover:no-underline"
-        >
-          <ChevronLeft className="size-[15px]" strokeWidth={1.8} />
-          Finanzas
-        </Link>
-        <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
-          Fondos y cajas
-        </h1>
-      </header>
+      <CabeceraPanel
+        titulo="Fondos y cajas"
+        volver={{ href: '/panel/finanzas', texto: 'Finanzas' }}
+      />
 
-      <div className="flex w-full max-w-[820px] flex-1 flex-col gap-6 px-5 pb-10 pt-6 md:px-8">
+      <Contenedor ancho="formulario">
         {error && <Aviso>{error}</Aviso>}
 
         <Seccion
@@ -153,7 +146,7 @@ export default async function AjustesFinanzasPage({
             </Button>
           </form>
         </Seccion>
-      </div>
+      </Contenedor>
     </>
   );
 }

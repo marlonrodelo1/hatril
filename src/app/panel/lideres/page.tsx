@@ -20,6 +20,8 @@ import { listarEquipo, type FilaEquipo } from '@/lib/equipo/consultas';
 import { iniciales } from '@/lib/format/iniciales';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
+import { CabeceraPanel } from '../_components/cabecera';
+import { Contenedor } from '../_components/contenedor';
 import {
   cambiarRol,
   devolverAcceso,
@@ -61,16 +63,14 @@ export default async function LideresPage({
 
   return (
     <>
-      <header className="border-b border-border bg-surface px-5 py-4 md:px-8">
-        <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
-          Líderes
-        </h1>
-        <p className="text-[13px] text-muted-foreground">
-          Quién entra en el panel y qué puede hacer dentro
-        </p>
-      </header>
+      <CabeceraPanel
+        titulo="Líderes"
+        subtitulo="Quién entra en el panel y qué puede hacer dentro"
+      />
 
-      <div className="flex w-full max-w-[760px] flex-col gap-8 px-5 pb-16 pt-6 md:px-8">
+      {/* `gap-8` y no el de por defecto: aquí lo que se separa son secciones
+          enteras —«Con acceso» y «Sin acceso»—, no tarjetas sueltas. */}
+      <Contenedor className="gap-8">
         {error && <Aviso>{error}</Aviso>}
         {guardado && CONFIRMACIONES[guardado] && (
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
@@ -94,9 +94,20 @@ export default async function LideresPage({
             </span>
           </h2>
 
-          {conAcceso.map((p) => (
-            <TarjetaPersona key={p.iglesiaUsuarioId} persona={p} />
-          ))}
+          {/*
+           * Dos columnas a partir de `lg`, con `items-start`.
+           *
+           * Lo de `items-start` no es adorno: cada persona es un `<details>` y
+           * en una rejilla las celdas de una misma fila se estiran a la altura
+           * de la más alta. Con una abierta y su vecina cerrada, la cerrada
+           * pasaría de ser una línea a un recuadro con un palmo de vacío
+           * dentro. Con `items-start` cada tarjeta mide lo suyo.
+           */}
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+            {conAcceso.map((p) => (
+              <TarjetaPersona key={p.iglesiaUsuarioId} persona={p} />
+            ))}
+          </div>
         </section>
 
         {sinAcceso.length > 0 && (
@@ -114,35 +125,41 @@ export default async function LideresPage({
               </p>
             </div>
 
-            {sinAcceso.map((p) => (
-              <article
-                key={p.iglesiaUsuarioId}
-                className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface px-5 py-4"
-              >
-                <span className="flex size-9 flex-none items-center justify-center rounded-full bg-muted text-[12.5px] font-bold text-muted-foreground">
-                  {iniciales(p.nombre)}
-                </span>
-                <div className="flex min-w-0 flex-1 flex-col gap-px">
-                  <span className="truncate text-[15px] font-semibold">
-                    {p.nombre}
+            {/* Misma rejilla que arriba, para que las dos listas de la pantalla
+                se lean igual. Estas tarjetas no se despliegan, pero si esta
+                sección fuera a una columna y la de arriba a dos, la página
+                parecería dos pantallas pegadas. */}
+            <div className="grid items-start gap-4 lg:grid-cols-2">
+              {sinAcceso.map((p) => (
+                <article
+                  key={p.iglesiaUsuarioId}
+                  className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface px-5 py-4"
+                >
+                  <span className="flex size-9 flex-none items-center justify-center rounded-full bg-muted text-[12.5px] font-bold text-muted-foreground">
+                    {iniciales(p.nombre)}
                   </span>
-                  {p.email && (
-                    <span className="truncate text-[13px] text-muted-foreground">
-                      {p.email}
+                  <div className="flex min-w-0 flex-1 flex-col gap-px">
+                    <span className="truncate text-[15px] font-semibold">
+                      {p.nombre}
                     </span>
-                  )}
-                </div>
-                <form action={devolverAcceso.bind(null, p.iglesiaUsuarioId)}>
-                  <Button type="submit" variant="outline" size="sm">
-                    <UserPlus strokeWidth={1.7} />
-                    Devolver el acceso
-                  </Button>
-                </form>
-              </article>
-            ))}
+                    {p.email && (
+                      <span className="truncate text-[13px] text-muted-foreground">
+                        {p.email}
+                      </span>
+                    )}
+                  </div>
+                  <form action={devolverAcceso.bind(null, p.iglesiaUsuarioId)}>
+                    <Button type="submit" variant="outline" size="sm">
+                      <UserPlus strokeWidth={1.7} />
+                      Devolver el acceso
+                    </Button>
+                  </form>
+                </article>
+              ))}
+            </div>
           </section>
         )}
-      </div>
+      </Contenedor>
     </>
   );
 }
@@ -181,7 +198,9 @@ function TarjetaPersona({ persona: p }: { persona: FilaEquipo }) {
             )}
           </div>
 
-          <span className="text-[13.5px] text-muted-foreground">
+          {/* Cortado, como en las tarjetas de «Sin acceso»: a media anchura un
+              correo largo no tiene por dónde partirse y se sale de la tarjeta. */}
+          <span className="truncate text-[13.5px] text-muted-foreground">
             {p.email ?? 'Sin ficha de miembro todavía'}
           </span>
 

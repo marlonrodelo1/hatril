@@ -70,7 +70,33 @@ export type GuardHatril =
   /** El evento, quien lo crea o quien marca el pago no son de esta iglesia (`0024`). */
   | 'HT113'
   /** Una inscripción no cambia de evento, de iglesia ni de identidad (`0024`). */
-  | 'HT114';
+  | 'HT114'
+  /**
+   * Un evento no puede cambiar de iglesia (`0024`).
+   *
+   * Existía en la migración y en el test de aislamiento desde agosto, y NO
+   * estaba aquí — la misma deriva que ya se documentó arriba con HT106..HT109.
+   * La lista se queda atrás sola: nada obliga a tocar este fichero al escribir
+   * un `raise` nuevo en SQL.
+   */
+  | 'HT115'
+  /**
+   * La reunión, el ministerio, la persona o quien pasa lista no son de esta
+   * iglesia (`0030`).
+   */
+  | 'HT116'
+  /**
+   * Una reunión no cambia de iglesia, y una asistencia tampoco de reunión ni de
+   * persona (`0030`).
+   */
+  | 'HT117'
+  /**
+   * El ministerio, la persona acompañada o quien apunta no son de esta iglesia,
+   * o quien acompaña no está en el equipo de ese ministerio (`0033`).
+   */
+  | 'HT118'
+  /** Una asignación no cambia de iglesia ni de persona acompañada (`0033`). */
+  | 'HT119';
 
 /**
  * ¿Es este error uno de nuestros triggers guard?

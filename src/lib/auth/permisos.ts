@@ -107,6 +107,65 @@ export const PERMISOS = [
    * acto religioso.
    */
   'gestionar_eventos',
+  /**
+   * Pasar lista: crear las reuniones de la iglesia y apuntar quién vino.
+   *
+   * PERMISO PROPIO, Y NO UN HUECO DE `editar_miembros`
+   * --------------------------------------------------
+   * Quien pasa lista ve, semana a semana, quién estuvo en un culto y quién no.
+   * Eso es dato del art. 9 en su forma más pura —no algo de lo que se infiera la
+   * religión, sino la práctica religiosa nominal y fechada—, y es una lista
+   * distinta de la que ve quien corrige un teléfono. Colgarlo de
+   * `editar_miembros` le daría el histórico de asistencia entero a quien solo
+   * tenía que arreglar fichas.
+   *
+   * Lo lleva `secretaria` por defecto por la misma razón que `gestionar_eventos`:
+   * es quien tiene el fichero y la agenda de la iglesia delante, y sin esto el
+   * pastor acabaría pasando lista él todos los domingos.
+   *
+   * NO abre el seguimiento pastoral, que es el otro eje y llega con su propio
+   * permiso: saber quién faltó no es lo mismo que saber por qué.
+   */
+  'registrar_asistencia',
+  /**
+   * Ver por qué la gente ha dejado de venir, y apuntar lo que se habla con ella.
+   *
+   * EL PERMISO MÁS PESADO DEL CATÁLOGO, Y POR ESO ESTÁ SOLO
+   * -------------------------------------------------------
+   * `registrar_asistencia` abre QUIÉN vino. Esto abre POR QUÉ dejó de venir:
+   * quién está molesto con la iglesia, quién se mudó, a quién no se puede
+   * localizar. Con nombre y apellidos, y de la congregación entera.
+   *
+   * No es defecto de NINGÚN rol, ni siquiera de secretaría. El pastor lo reparte
+   * a mano, persona a persona, y esa fricción es el punto: si viniera puesto de
+   * fábrica con un rol, se repartiría sin que nadie decidiera repartirlo.
+   *
+   * Y no basta con tenerlo. El layout de la sección exige ADEMÁS ser responsable
+   * o colíder del ministerio que hace el seguimiento, así que dárselo por error a
+   * un tesorero no le abre absolutamente nada — el mismo diseño de dos llaves que
+   * `gestionar_su_ministerio`, donde el permiso declara la política y el dato
+   * pone el ámbito.
+   */
+  'ver_seguimiento',
+  /**
+   * Borrar publicaciones y comentarios de otros en el muro de la comunidad.
+   *
+   * NUNCA ES DEFECTO DE NINGÚN ROL, Y ESO ES DELIBERADO
+   * ---------------------------------------------------
+   * El pastor modera por ser pastor —lo resuelve `es_pastor()` en las policies,
+   * sin mirar el jsonb—. Para cualquier otra persona este permiso solo existe
+   * si alguien lo marcó a mano, así que en `iglesia_usuarios.permisos` aparece
+   * siempre como excepción explícita `{"moderar_comunidad": true}`.
+   *
+   * Eso no es un detalle de estilo: la policy de la migración `0027` lee ese
+   * jsonb tal cual, buscando el `true` literal. Si este permiso llegara a ser
+   * defecto de algún rol, la base de datos no se enteraría —los defectos por
+   * rol viven solo en este fichero— y la interfaz enseñaría un botón de borrar
+   * que la RLS rechazaría. Sale barato mantenerlo así: es el único permiso que
+   * la base de datos consulta, precisamente porque es el único que no depende
+   * de la tabla de defectos.
+   */
+  'moderar_comunidad',
 ] as const;
 
 export type Permiso = (typeof PERMISOS)[number];
@@ -172,6 +231,22 @@ export const ETIQUETAS_PERMISOS: Record<
     descripcion:
       'Apunta la ofrenda de cada culto, los diezmos y los gastos, y ve cuánto entró y salió en cada mes. Son totales: Hatril no guarda quién dio cuánto.',
   },
+  ver_seguimiento: {
+    // Se nombra lo que de verdad se está abriendo. «Seguimiento pastoral» suena
+    // a tarea, y lo que el pastor decide al marcar esta casilla es enseñarle a
+    // alguien por qué cada persona de su congregación dejó de venir.
+    titulo: 'Ver por qué la gente deja de venir',
+    descripcion:
+      'Ve quién lleva tiempo sin aparecer, con su teléfono, y lo que se ha hablado con cada persona. Es lo más delicado que guarda Hatril: dáselo solo a quien de verdad acompaña gente, y hace falta además que lleve el ministerio que hace el seguimiento.',
+  },
+  registrar_asistencia: {
+    // Se nombra el histórico y no solo el acto de marcar casillas: lo que el
+    // pastor concede aquí no es «pasar lista un domingo», es ver quién viene y
+    // quién falta, semana a semana, de toda la congregación.
+    titulo: 'Pasar lista en las reuniones',
+    descripcion:
+      'Apunta las reuniones de la iglesia y quién vino a cada una. Con ello ve el histórico de asistencia de toda la congregación, que es dato especialmente protegido por la ley.',
+  },
   gestionar_eventos: {
     // Se avisa de lo que de verdad decide el pastor al marcar esta casilla: no
     // es «crear carteles», es ver la lista de quién viene, con gente de fuera
@@ -179,6 +254,11 @@ export const ETIQUETAS_PERMISOS: Record<
     titulo: 'Organizar eventos',
     descripcion:
       'Crea retiros, congresos y conciertos, los publica en la web de la iglesia y ve quién se ha apuntado, incluidas personas que no son de la congregación.',
+  },
+  moderar_comunidad: {
+    titulo: 'Moderar la comunidad',
+    descripcion:
+      'Borra publicaciones y comentarios de cualquiera en el muro de la congregación. No puede editarlos: cambiarle el texto a alguien y dejar su nombre debajo es suplantarle.',
   },
 };
 
@@ -235,6 +315,9 @@ const NINGUNO: MapaPermisos = {
   escribir_devocionales: false,
   gestionar_finanzas: false,
   gestionar_eventos: false,
+  registrar_asistencia: false,
+  ver_seguimiento: false,
+  moderar_comunidad: false,
 };
 
 const TODOS: MapaPermisos = {
@@ -247,6 +330,9 @@ const TODOS: MapaPermisos = {
   escribir_devocionales: true,
   gestionar_finanzas: true,
   gestionar_eventos: true,
+  registrar_asistencia: true,
+  ver_seguimiento: true,
+  moderar_comunidad: true,
 };
 
 /**
@@ -285,6 +371,10 @@ const DEFECTOS_POR_ROL: Record<RolIglesia, MapaPermisos> = {
     // calendario es el mismo trabajo, y sin esto el pastor tendría que crear
     // cada evento él.
     gestionar_eventos: true,
+    // Y por lo mismo, la lista del domingo. Es la única persona de la tabla que
+    // ya ve la congregación entera con `ver_todos_los_miembros`, así que esto no
+    // le amplía a cuánta gente alcanza: le deja apuntar lo que ya tiene delante.
+    registrar_asistencia: true,
   },
   lider: { ...NINGUNO, gestionar_su_ministerio: true },
   tesorero: { ...NINGUNO, gestionar_finanzas: true },
@@ -294,6 +384,45 @@ const DEFECTOS_POR_ROL: Record<RolIglesia, MapaPermisos> = {
 /** ¿Gobierna la iglesia? Ajustes, equipo, facturación y bajas. */
 export function esPastor(ctx: { rol: RolIglesia }): boolean {
   return ctx.rol === 'pastor';
+}
+
+/**
+ * ¿Tiene algo que hacer en el panel?
+ *
+ * El panel es de quien lleva la iglesia. Un miembro raso tiene su área en `/mi`,
+ * y meterlo en `/panel` le enseña un menú de ocho secciones donde no puede
+ * pulsar casi nada — con Miembros y Ministerios en la primera línea, que son el
+ * fichero de la congregación.
+ *
+ * SE MIRA LO QUE PUEDE, NO CÓMO SE LLAMA
+ * ---------------------------------------
+ * La regla evidente era `rol !== 'miembro'`. No sirve: el pastor puede darle una
+ * capacidad suelta a alguien que sigue siendo `miembro` —llevar la caja, escribir
+ * el devocional— y esa persona necesita entrar. Y al revés, un rol con el jsonb
+ * vaciado a mano no tiene nada que hacer allí aunque se llame `lider`.
+ *
+ * Mirando las capacidades efectivas, quien recibe una entra sola y quien la
+ * pierde sale sola, sin que nadie tenga que acordarse de tocar esto.
+ */
+export function esDelEquipo(ctx: ContextoPermisos): boolean {
+  return esPastor(ctx) || PERMISOS.some((p) => puede(ctx, p));
+}
+
+/**
+ * Dónde empieza cada quien.
+ *
+ * Existe para que el destino se decida en UN sitio. Estaba escrito a mano como
+ * `/panel/hoy` en tres actions —entrar, cambiar la contraseña, aceptar la
+ * política—, y desde que el miembro raso vive en `/mi` eso significaba mandarle
+ * al panel para que el layout lo devolviera: un rebote con su pantalla en blanco
+ * por medio, que es justo lo que se ve mal.
+ *
+ * `null` es quien tiene sesión y no tiene iglesia: su sitio es `/mi`, que le
+ * cuenta en qué punto está su solicitud.
+ */
+export function inicioDe(ctx: ContextoPermisos | null): string {
+  if (!ctx) return '/mi';
+  return esDelEquipo(ctx) ? '/panel/hoy' : '/mi';
 }
 
 /**
@@ -457,6 +586,26 @@ export function puedeGestionarFinanzas(ctx: ContextoPermisos): boolean {
  */
 export function puedeGestionarEventos(ctx: ContextoPermisos): boolean {
   return esPastor(ctx) || puede(ctx, 'gestionar_eventos');
+}
+
+/**
+ * ¿Puede borrar lo que ha escrito otro en el muro?
+ *
+ * El pastor siempre, por serlo. Los demás, solo con el permiso puesto a mano —
+ * `moderar_comunidad` no es defecto de ningún rol, y la razón está escrita en el
+ * catálogo de arriba.
+ *
+ * Existe como función y no como `esPastor(ctx) || puede(ctx, …)` escrito a mano
+ * porque esa expresión hacía falta en tres sitios —la configuración del panel,
+ * el muro y sus dos actions de borrado— y la que se olvidara de la mitad
+ * derecha le enseñaría al moderador un botón que la RLS le rechaza.
+ *
+ * Es la única comprobación de permisos del repo que la base de datos también
+ * hace por su cuenta (`puede_moderar_comunidad()`, migración `0027`). Las dos
+ * miran lo mismo: el rol, o el `true` literal del jsonb.
+ */
+export function puedeModerarComunidad(ctx: ContextoPermisos): boolean {
+  return esPastor(ctx) || puede(ctx, 'moderar_comunidad');
 }
 
 /**

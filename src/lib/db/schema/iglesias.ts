@@ -22,6 +22,7 @@ import type { Red } from '../../iglesias/redes';
 import {
   estadoMembresiaEnum,
   monedaEnum,
+  comunidadQuienPublicaEnum,
   planEnum,
   rolIglesiaEnum,
 } from './enums';
@@ -178,6 +179,47 @@ export const iglesias = pgTable(
      * puede querer su ficha pública pero gestionar las altas ella misma.
      */
     aceptaSolicitudes: boolean('acepta_solicitudes').notNull().default(true),
+
+    /**
+     * La comunidad: el muro interno de la congregación.
+     *
+     * NADA DE ESTO EXISTÍA, Y ESE ERA EL PROBLEMA
+     * -------------------------------------------
+     * El muro estaba fijo en el código y en las policies: publicaba cualquier
+     * miembro activo, comentaba cualquiera, moderaba solo el pastor. No había
+     * forma de apagarlo, de restringir quién escribe ni de nombrar a otra
+     * persona para moderar. Para una congregación de cuarenta personas eso
+     * está bien; para una de cuatrocientas, o para una que solo quiere un
+     * tablón de anuncios, el muro es un problema que no se puede cerrar.
+     *
+     * LOS CUATRO DEFECTOS SON LO QUE YA PASABA
+     * ----------------------------------------
+     * Activa, todos publican, comentarios y fotos. Así ninguna iglesia que ya
+     * esté usando el muro se encuentra el lunes con algo distinto.
+     *
+     * Y OJO: ESTO NO ES DECORACIÓN DE INTERFAZ
+     * ----------------------------------------
+     * Cada uno de estos cuatro campos se aplica además en las policies de RLS
+     * de la migración `0027`. Un interruptor que solo esconde un botón lo
+     * salta cualquiera con una petición a mano — es exactamente el fallo que
+     * cuenta el `CLAUDE.md` sobre la `0012`, donde el recorte por columnas era
+     * decorativo y la API pública devolvía 200.
+     */
+    comunidadActiva: boolean('comunidad_activa').notNull().default(true),
+    comunidadQuienPublica: comunidadQuienPublicaEnum('comunidad_quien_publica')
+      .notNull()
+      .default('todos'),
+    comunidadComentarios: boolean('comunidad_comentarios')
+      .notNull()
+      .default(true),
+    /**
+     * Fotos en las publicaciones.
+     *
+     * Es el interruptor con más peso legal de los cuatro: una foto de un culto
+     * lleva caras de terceros, y hay congregaciones que prefieren no tener esa
+     * conversación. Apagarlo no borra las fotos que ya hay.
+     */
+    comunidadFotos: boolean('comunidad_fotos').notNull().default(true),
 
     // Suscripción. Los precios NO están aquí: ver `enums.ts`.
     plan: planEnum('plan').notNull().default('trial'),

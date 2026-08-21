@@ -10,6 +10,8 @@ import type { Moneda } from '@/lib/db/schema';
 import { ahoraMs } from '@/lib/fecha/ahora';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
+import { CabeceraPanel } from '../_components/cabecera';
+import { Contenedor } from '../_components/contenedor';
 import { CONFIRMACIONES } from './constantes';
 
 export const metadata: Metadata = { title: 'Eventos' };
@@ -38,28 +40,30 @@ export default async function EventosPage({
 
   return (
     <>
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-5 py-4 md:px-8">
-        <div>
-          <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
-            Eventos
-          </h1>
-          <p className="text-[13px] text-muted-foreground">
-            Retiros, congresos y todo lo que tenga fecha y hora
-          </p>
-        </div>
+      <CabeceraPanel
+        titulo="Eventos"
+        subtitulo="Retiros, congresos y todo lo que tenga fecha y hora"
+      >
         <Button render={<Link href="/panel/eventos/nuevo" />}>
           <CalendarPlus strokeWidth={1.8} />
           Crear evento
         </Button>
-      </header>
+      </CabeceraPanel>
 
-      <div className="flex w-full max-w-[1000px] flex-col gap-8 px-5 pb-16 pt-6 md:px-8">
+      {/* `gap-8` y no el gap-6 de serie: aquí lo que se separa son los dos
+          bloques de fecha —lo próximo y lo que ya pasó—, y con la misma
+          distancia que hay entre las tarjetas de dentro dejan de leerse como
+          dos grupos. */}
+      <Contenedor className="gap-8">
         {error && <Aviso>{error}</Aviso>}
         {guardado && CONFIRMACIONES[guardado] && (
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
         )}
 
         {todos.length === 0 ? (
+          /* El vacío NO va en rejilla: es un texto que se lee, y partido en una
+             columna de un tercio queda una nota estrecha con media pantalla al
+             lado. */
           <div className="flex flex-col items-start gap-3 rounded-xl border border-border bg-surface p-8">
             <h2 className="t-subtitulo">Todavía no hay ningún evento</h2>
             <p className="max-w-[52ch] text-[14.5px] leading-relaxed text-muted-foreground">
@@ -80,7 +84,7 @@ export default async function EventosPage({
             )}
           </>
         )}
-      </div>
+      </Contenedor>
     </>
   );
 }
@@ -143,12 +147,23 @@ function Seccion({
         )}
       </div>
 
-      <ul className="flex flex-col gap-2">
+      {/*
+       * Rejilla y no una tarjeta por fila. Una ficha de evento son dos líneas
+       * de texto: apiladas, en un monitor de escritorio dejan tres cuartos de
+       * ancho en blanco y obligan a bajar la vista para ver cuatro retiros.
+       *
+       * Cada grupo —lo próximo y lo pasado— tiene la suya, para que el orden
+       * cronológico no se lea en zigzag entre bloques distintos.
+       */}
+      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {eventos.map((e) => (
           <li key={e.id}>
+            {/* `h-full` para que las tarjetas de una misma fila queden a la
+                altura de la más alta: sin eso, la que no tiene lugar ni precio
+                deja un escalón. */}
             <Link
               href={`/panel/eventos/${e.id}`}
-              className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4 no-underline transition-colors hover:bg-background hover:no-underline"
+              className="flex h-full flex-col gap-2 rounded-xl border border-border bg-surface p-4 no-underline transition-colors hover:bg-background hover:no-underline"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[16px] font-bold tracking-[-0.015em] text-foreground">

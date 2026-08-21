@@ -1,9 +1,9 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowLeft } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { Aviso } from '@/components/aviso';
+import { CabeceraPanel } from '../../_components/cabecera';
+import { Contenedor } from '../../_components/contenedor';
 import { FormularioEvento } from '../_components/formulario';
 import { crearEvento } from '../actions';
 
@@ -19,23 +19,13 @@ export default async function NuevoEventoPage({
 
   return (
     <>
-      <header className="border-b border-border bg-surface px-5 py-4 md:px-8">
-        <Link
-          href="/panel/eventos"
-          className="mb-1 inline-flex items-center gap-1.5 text-[13px] text-muted-foreground no-underline hover:text-foreground hover:no-underline"
-        >
-          <ArrowLeft className="size-[15px]" strokeWidth={1.8} />
-          Eventos
-        </Link>
-        <h1 className="text-[22px] font-bold leading-tight tracking-[-0.025em]">
-          Nuevo evento
-        </h1>
-        <p className="text-[13px] text-muted-foreground">
-          Se crea sin publicar. Nadie lo ve hasta que tú lo digas.
-        </p>
-      </header>
+      <CabeceraPanel
+        titulo="Nuevo evento"
+        subtitulo="Se crea sin publicar. Nadie lo ve hasta que tú lo digas."
+        volver={{ href: '/panel/eventos', texto: 'Eventos' }}
+      />
 
-      <div className="flex w-full max-w-[620px] flex-col gap-6 px-5 pb-16 pt-6 md:px-8">
+      <Contenedor ancho="formulario">
         {error && <Aviso>{error}</Aviso>}
 
         <FormularioEvento
@@ -54,7 +44,7 @@ export default async function NuevoEventoPage({
             pagoInstrucciones: '',
           }}
         />
-      </div>
+      </Contenedor>
     </>
   );
 }

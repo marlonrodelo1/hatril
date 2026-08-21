@@ -1,13 +1,10 @@
+import { redirect } from 'next/navigation';
+
 import { requireIglesia } from '@/lib/auth/guard-panel';
-import {
-  esPastor,
-  puede,
-  puedeGestionarEventos,
-  puedeGestionarFinanzas,
-} from '@/lib/auth/permisos';
-import { contarSolicitudesPendientes } from '@/lib/solicitudes/consultas';
-import { misTurnosPendientes } from '@/lib/devocionales/consultas';
-import { sinLeer } from '@/lib/notificaciones/consultas';
+import { esDelEquipo } from '@/lib/auth/permisos';
+import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
+import { flagsDelMenu } from '@/lib/panel/menu';
+import { iniciales } from '@/lib/format/iniciales';
 import { PanelSidebar } from './_components/sidebar';
 
 /**
@@ -21,59 +18,55 @@ import { PanelSidebar } from './_components/sidebar';
  * Ojo: esto NO es lo que aísla una iglesia de otra. Eso lo hacen las policies
  * de RLS y `withUser()`. Si este guard faltara, lo peor que pasa es que se vea
  * una pantalla vacía; sin la RLS, se verían los datos de otra congregación.
+ *
+ * QUÉ SE FUE DE AQUÍ
+ * ------------------
+ * El cálculo de qué secciones tocan y sus contadores, que estaba escrito a mano
+ * en este fichero. Ahora vive en `lib/panel/menu.ts` porque lo piden dos
+ * menús —el lateral y el de móvil, que sale de la cabecera de cada página— y
+ * con el cálculo aquí el segundo no podía verlo.
+ *
+ * También se fue `sinLeer()`: el contador de avisos ya no cuelga del menú sino
+ * de la campana de la cabecera, que lo pide donde lo pinta.
  */
 export default async function PanelLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const ctx = await requireIglesia();
 
-  const puedeVerSolicitudes =
-    esPastor(ctx) || puede(ctx, 'aprobar_solicitudes');
+  // El panel es de quien lleva la iglesia. Un miembro raso tiene su área en
+  // `/mi`, y `esDelEquipo()` decide mirando las capacidades efectivas y no el
+  // nombre del rol — el porqué está en `permisos.ts`.
+  //
+  // Va aquí y no en `requireIglesia()` porque ese guard lo usa también
+  // `/mi/comunidad`, y meterlo dentro mandaría al miembro de `/mi` a `/mi` para
+  // siempre. Mismo motivo que el corte de abajo.
+  if (!esDelEquipo(ctx)) redirect('/mi');
 
-  // Con el permiso, o simplemente teniendo un turno asignado: a quien le toca
-  // el jueves tiene que poder llegar a escribirlo sin que nadie le configure
-  // nada más.
-  const puedeEscribirDevocionales =
-    esPastor(ctx) ||
-    puede(ctx, 'escribir_devocionales') ||
-    (await misTurnosPendientes(ctx)).length > 0;
+  // El corte del re-consentimiento, y va AQUÍ y no en `requireIglesia()`.
+  //
+  // Puesto en el guard cubriría también `/acepta`, que llama a lo mismo, y esa
+  // pantalla se redirigiría a sí misma para siempre. En el layout del panel
+  // corta lo que hay que cortar —todo lo que trata datos— y deja abierta la
+  // única ruta que permite salir del estado.
+  //
+  // Solo alcanza a quien ACEPTÓ una versión anterior. Quien nunca aceptó nada
+  // —toda ficha tecleada por el pastor— pasa de largo: pararle el panel a media
+  // congregación por un consentimiento que jamás se le pidió sería castigar a la
+  // iglesia por una decisión de diseño anterior. El porqué, en `rgpd/consultas.ts`.
+  await exigirConsentimientoAlDia(ctx);
 
-  // El contador solo se pide si esta persona va a ver la sección. Para un líder
-  // de alabanza sería una consulta en cada carga del panel para un número que
-  // no se pinta.
-  const puedeVerFinanzas = puedeGestionarFinanzas(ctx);
-  const puedeVerEventos = puedeGestionarEventos(ctx);
-
-  const solicitudesPendientes = puedeVerSolicitudes
-    ? await contarSolicitudesPendientes(ctx)
-    : 0;
-
-  // Este sí se pide siempre: los avisos los recibe cualquiera de la
-  // congregación, no solo quien administra. Va contra el índice parcial de la
-  // `0016`, que solo indexa las filas sin leer.
-  const avisosSinLeer = await sinLeer(ctx);
+  const flags = await flagsDelMenu(ctx);
 
   return (
     <div className="flex min-h-dvh bg-background">
       <PanelSidebar
+        flags={flags}
         iglesiaNombre={ctx.iglesia.nombre}
         iglesiaCiudad={ctx.iglesia.ciudad}
+        iglesiaIniciales={iniciales(ctx.iglesia.nombre)}
+        iglesiaLogo={ctx.iglesia.logoUrl}
         webIglesia={ctx.iglesia.webPublica ? `/i/${ctx.iglesia.slug}` : null}
-        personaNombre={
-          // El nombre que se puso al registrarse. Si por lo que sea no está,
-          // el correo antes de la arroba es mejor que un hueco en blanco.
-          (ctx.user.user_metadata?.nombre as string | undefined) ??
-          ctx.user.email?.split('@')[0] ??
-          'Tu cuenta'
-        }
-        rol={ctx.rol}
-        solicitudesPendientes={solicitudesPendientes}
-        avisosSinLeer={avisosSinLeer}
-        puedeVerSolicitudes={puedeVerSolicitudes}
-        puedeEscribirDevocionales={puedeEscribirDevocionales}
-        puedeVerFinanzas={puedeVerFinanzas}
-        puedeVerEventos={puedeVerEventos}
-        esPastorDeLaIglesia={esPastor(ctx)}
       />
 
       <main className="flex min-w-0 flex-1 flex-col">{children}</main>

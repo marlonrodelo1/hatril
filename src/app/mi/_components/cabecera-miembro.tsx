@@ -1,0 +1,140 @@
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
+import type { User } from '@supabase/supabase-js';
+
+import { getCurrentUserContext } from '@/lib/auth/user-context';
+import { esPastor, ETIQUETAS_ROLES } from '@/lib/auth/permisos';
+import { listarNotificaciones } from '@/lib/notificaciones/consultas';
+import { paraLaCampana } from '@/lib/notificaciones/campana';
+import { nombreDeLaCuenta } from '@/lib/auth/nombre';
+import { iniciales } from '@/lib/format/iniciales';
+import { MarcaIglesia } from '@/app/panel/_components/marca-iglesia';
+import { Campana } from '@/components/campana';
+import { MenuCuenta } from '@/components/menu-cuenta';
+
+/**
+ * La cabecera de cualquier pantalla del área del miembro.
+ *
+ * POR QUÉ UNA SOLA Y NO TRES
+ * --------------------------
+ * `/mi`, `/mi/avisos` y `/mi/comunidad` se pintaban cada una su `<header>`, casi
+ * iguales y copiados a mano. Ya habían divergido en lo que se ve y en lo que no:
+ * dos anchos distintos (560 y 620, así que el contenido saltaba 60 px al navegar
+ * entre ellas), una con campana hecha a mano y las otras sin nada, y un botón de
+ * «Salir» suelto donde el panel tiene un menú de cuenta entero.
+ *
+ * `/mi` NO TIENE `layout.tsx`, Y ESO NO ES UN DESCUIDO
+ * ----------------------------------------------------
+ * Un layout obligaría a resolver ahí el título de cada pantalla, y sobre todo
+ * tendría que decidir un guard común. No lo hay: `/mi/comunidad` exige
+ * `requireIglesia()` y `/mi/avisos` NO puede exigirlo bajo ningún concepto —a
+ * quien le rechazan la solicitud se le borra la membresía en el mismo movimiento
+ * y ese aviso es justo el que se lo explica—. Un componente compartido unifica
+ * la cabecera sin tocar los guards, que es lo único que aquí no se puede tocar.
+ *
+ * RECIBE EL `user` PERO NO EL CONTEXTO DE IGLESIA
+ * -----------------------------------------------
+ * Al revés que `CabeceraPanel`, que resuelve las dos cosas por su cuenta porque
+ * la usan veinticuatro pantallas. Aquí son tres, y las tres tienen el `user` en
+ * la mano: pedirlo ahorra una validación de sesión contra Supabase por render.
+ *
+ * El contexto de iglesia sí lo resuelve ella, y es a propósito: de él depende si
+ * el menú de cuenta puede ofrecer «Tus datos» o si esa persona no tiene iglesia
+ * y esos enlaces la rebotarían. Dejar esa decisión en cada página es dejar tres
+ * sitios donde equivocarse en el único caso que importa. Sale gratis porque
+ * `getCurrentUserContext` está envuelto en `cache()` de React: donde la página
+ * ya lo pidió, esta llamada no vuelve a viajar a Postgres.
+ */
+export async function CabeceraMiembro({
+  user,
+  titulo,
+  subtitulo,
+  volver,
+  campana = true,
+  logoUrl,
+  children,
+}: {
+  /** La sesión, que las tres páginas ya tienen resuelta antes de pintar nada. */
+  user: User;
+  titulo: string;
+  subtitulo?: string;
+  /** A dónde lleva la flecha de la izquierda. Sin ella, no se pinta. */
+  volver?: string;
+  /**
+   * La campana. Se apaga en las pantallas donde sobra: en `/mi/avisos`, que ya
+   * ES la bandeja, y en `/mi`, la sala de espera de quien todavía no tiene
+   * congregación.
+   */
+  campana?: boolean;
+  /**
+   * El logo de la iglesia. Sin él no se pinta nada a la izquierda, que es el
+   * caso de la sala de espera: quien todavía no tiene congregación no tiene
+   * logo que enseñar, y unas iniciales de «Hatril» ahí no dicen nada.
+   */
+  logoUrl?: string | null;
+  /** Las acciones de ESTA pantalla: «Marcar todo»… */
+  children?: React.ReactNode;
+}) {
+  const ctx = await getCurrentUserContext();
+  const nombre = nombreDeLaCuenta(user);
+
+  /*
+   * Los avisos solo se piden si hay campana que pintar. Y el número de sin leer
+   * sale de la propia lista en vez de la consulta `sinLeer()` que usa el panel:
+   * esa pide el contexto de iglesia entero y aquí puede no haberlo. Para un
+   * punto rojo el recuento exacto da igual —la lista viene cortada en 40—, y a
+   * cambio es una consulta y no dos.
+   */
+  const avisos = campana ? await listarNotificaciones(user.id) : [];
+  const pendientes = avisos.filter((a) => !a.leida).length;
+
+  return (
+    <header className="sticky top-0 z-20 border-b border-border bg-surface supports-[backdrop-filter]:bg-surface/80 supports-[backdrop-filter]:backdrop-blur-xl">
+      <div className="mx-auto flex max-w-[620px] items-center gap-3 px-4 py-3 sm:px-5">
+        {volver && (
+          <Link
+            href={volver}
+            aria-label="Volver"
+            className="flex size-9 flex-none items-center justify-center rounded-full text-muted-foreground no-underline hover:bg-background hover:text-foreground hover:no-underline"
+          >
+            <ArrowLeft className="size-[19px]" strokeWidth={1.8} />
+          </Link>
+        )}
+
+        {logoUrl && (
+          <MarcaIglesia logoUrl={logoUrl} iniciales="" nombre={titulo} />
+        )}
+
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate text-[15.5px] font-extrabold leading-tight tracking-[-0.02em]">
+            {titulo}
+          </span>
+          {subtitulo && (
+            <span className="truncate text-[12.5px] leading-tight text-muted-foreground">
+              {subtitulo}
+            </span>
+          )}
+        </span>
+
+        <span className="flex-1" />
+
+        {children}
+
+        {campana && (
+          <Campana avisos={paraLaCampana(avisos)} sinLeer={pendientes} />
+        )}
+
+        <MenuCuenta
+          nombre={nombre}
+          correo={user.email ?? ''}
+          iniciales={iniciales(nombre)}
+          rol={ctx ? ETIQUETAS_ROLES[ctx.rol].titulo : undefined}
+          esPastor={ctx !== null && esPastor(ctx)}
+          // Sin iglesia, las tres opciones del menú viven detrás de
+          // `requireIglesia()` y devolverían a esta misma persona a `/mi`.
+          soloSalir={ctx === null}
+        />
+      </div>
+    </header>
+  );
+}

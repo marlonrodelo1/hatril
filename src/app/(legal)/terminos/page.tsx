@@ -230,9 +230,35 @@ export default function TerminosPage() {
         </P>
 
         <P>
+          <strong className="font-semibold">
+            De la asistencia y del acompañamiento.
+          </strong>{' '}
+          Si activas esas herramientas: las reuniones que apuntes y quién estuvo
+          en cada una, y de quien lleve tiempo sin aparecer, quién le acompaña y
+          el registro de cada contacto —fecha, si fue llamada, mensaje o visita,
+          y el resultado elegido de una lista cerrada—. Es la categoría más
+          sensible que trata este servicio: que una persona estuviera en un culto
+          un domingo concreto revela su práctica religiosa con fecha, y el motivo
+          por el que dejó de venir dice más todavía. Se trata bajo el artículo 9
+          con las mismas obligaciones que el resto, y por eso lleva permiso
+          propio de cada persona.
+        </P>
+
+        <P>
+          El registro de contactos <strong className="font-semibold">no
+          tiene ningún campo de texto libre</strong> donde escribir el motivo, y
+          eso es a propósito: el resultado se elige de una lista. El único texto
+          que se escribe a mano ahí es un recordatorio de dos líneas de qué toca
+          hacer después, acotado a 200 caracteres. Te comprometes a no usarlo
+          para datos de salud ni de situación personal, igual que con los demás
+          campos libres.
+        </P>
+
+        <P>
           Hay campos de texto libre —la nota de una inscripción, el concepto de
-          un movimiento, las notas pastorales— donde puede acabar un dato de
-          salud o de otra naturaleza protegida. Te comprometes a no meter ahí
+          un movimiento, las notas pastorales, las notas de una reunión y el
+          «qué toca ahora» de un contacto— donde puede acabar un dato de salud o
+          de otra naturaleza protegida. Te comprometes a no meter ahí
           datos de salud, de origen étnico, de vida sexual ni de condenas
           penales, y respondes de ello.
         </P>

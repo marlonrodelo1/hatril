@@ -14,6 +14,8 @@ import { withUser } from '@/lib/db';
 import { ministerioMiembros, ministerios } from '@/lib/db/schema';
 import { esGuardHatril, isUniqueViolation } from '@/lib/db/error';
 import { COLORES_MINISTERIO } from '@/lib/ministerios/colores';
+import { componerModulos } from '@/lib/ministerios/modulos';
+import { TIPOS_MINISTERIO, modulosDelTipo } from '@/lib/ministerios/tipos';
 import {
   borrarImagenAnterior,
   subirImagenIglesia,
@@ -21,6 +23,11 @@ import {
 import { campo, campoObligatorio, campos } from '@/lib/api/formulario';
 
 const HEX_VALIDOS = COLORES_MINISTERIO.map((c) => c.hex) as [string, ...string[]];
+
+const TIPOS_VALIDOS = TIPOS_MINISTERIO.map((t) => t.id) as [string, ...string[]];
+
+/** Misión, visión y objetivo. Mismo límite: son tres párrafos, no un documento. */
+const Parrafo = z.string().trim().max(600).optional().or(z.literal(''));
 
 const EsquemaMinisterio = z.object({
   nombre: z
@@ -33,6 +40,13 @@ const EsquemaMinisterio = z.object({
   // únicamente esos no basta: una server action es un endpoint y se le puede
   // mandar cualquier cosa.
   colorHex: z.enum(HEX_VALIDOS),
+  // Mismo criterio con el tipo. En base de datos la columna es `text` sin CHECK
+  // —el catálogo tiene que poder crecer sin migrar—, así que la única puerta que
+  // impide guardar cualquier cosa es esta línea.
+  tipo: z.enum(TIPOS_VALIDOS),
+  mision: Parrafo,
+  vision: Parrafo,
+  objetivo: Parrafo,
 });
 
 function oNulo(v: string | undefined): string | null {
@@ -45,7 +59,23 @@ function leer(formData: FormData) {
     nombre: campoObligatorio(formData, 'nombre'),
     descripcion: campo(formData, 'descripcion'),
     colorHex: campoObligatorio(formData, 'colorHex'),
+    tipo: campoObligatorio(formData, 'tipo'),
+    mision: campo(formData, 'mision'),
+    vision: campo(formData, 'vision'),
+    objetivo: campo(formData, 'objetivo'),
   });
+}
+
+/**
+ * Las herramientas marcadas.
+ *
+ * Fuera de Zod a propósito: `componerModulos()` descarta lo que no está en el
+ * catálogo, así que un identificador inventado se ignora en vez de tumbar el
+ * guardado entero con un mensaje que el pastor no puede arreglar. Un valor
+ * inservible aquí no concede nada — solo no enciende nada.
+ */
+function modulosMarcados(formData: FormData): string[] {
+  return campos(formData, 'modulos');
 }
 
 export async function crearMinisterio(formData: FormData) {
@@ -75,6 +105,14 @@ export async function crearMinisterio(formData: FormData) {
           nombre: d.nombre,
           descripcion: oNulo(d.descripcion),
           colorHex: d.colorHex,
+          tipo: d.tipo,
+          mision: oNulo(d.mision),
+          vision: oNulo(d.vision),
+          objetivo: oNulo(d.objetivo),
+          // La plantilla del tipo, y solo aquí. Al editar mandan las casillas:
+          // si el tipo volviera a imponerlas, cambiar «Otro» por «Alabanza» le
+          // borraría al pastor lo que hubiera configurado a mano.
+          modulos: componerModulos({}, modulosDelTipo(d.tipo)),
           // El responsable se asigna después, desde el detalle: para elegirlo
           // hay que tener equipo, y un ministerio recién creado no lo tiene.
           orden: 100,
@@ -117,22 +155,45 @@ export async function editarMinisterio(
 
   const d = parsed.data;
 
+  const marcados = modulosMarcados(formData);
+
   try {
-    await withUser(ctx.user.id, (tx) =>
-      tx
+    await withUser(ctx.user.id, async (tx) => {
+      // Leer y escribir en la MISMA transacción. `componerModulos()` conserva la
+      // configuración que cada módulo tuviera guardada, y para conservarla hay
+      // que haberla leído: con dos `withUser()` seguidos —como todavía hacen las
+      // dos actions de la foto, más abajo— un guardado simultáneo desde otra
+      // pestaña se perdería entre medias.
+      const [actual] = await tx
+        .select({ modulos: ministerios.modulos })
+        .from(ministerios)
+        .where(
+          and(
+            eq(ministerios.id, ministerioId),
+            eq(ministerios.iglesiaId, ctx.iglesia.id),
+          ),
+        )
+        .limit(1);
+
+      await tx
         .update(ministerios)
         .set({
           nombre: d.nombre,
           descripcion: oNulo(d.descripcion),
           colorHex: d.colorHex,
+          tipo: d.tipo,
+          mision: oNulo(d.mision),
+          vision: oNulo(d.vision),
+          objetivo: oNulo(d.objetivo),
+          modulos: componerModulos(actual?.modulos, marcados),
         })
         .where(
           and(
             eq(ministerios.id, ministerioId),
             eq(ministerios.iglesiaId, ctx.iglesia.id),
           ),
-        ),
-    );
+        );
+    });
   } catch (err) {
     if (isUniqueViolation(err)) {
       redirect(
