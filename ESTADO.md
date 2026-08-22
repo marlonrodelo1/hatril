@@ -889,14 +889,17 @@ El encargo de tratamiento del art. 28 ya no está pendiente: es el apartado 7 de
 
 ## Datos de prueba
 
-Las **imágenes de la demo son paisajes generados con código** —cielo en
-degradado, sol y siluetas de montaña— y no fotos: el entorno donde se preparan
-no tiene salida a internet para descargar fotografías. Se pintan escribiendo el
-PNG a mano con `zlib` y se suben al bucket. Se ven como una imagen de verdad,
-que es lo que hacía falta para juzgar el muro y la portada.
+Las **imágenes de la demo son fotos de verdad, subidas al bucket**: los paisajes
+de Picsum —que sirve fotografías de Unsplash, con licencia de uso comercial y
+sin atribución obligatoria— y los retratos de Pravatar. Se descartó
+`loremflickr`, que sí busca por tema pero sirve Creative Commons con atribución.
 
-Las de PERFIL sí son de fuera (`randomuser.me`), y eso no vale para producción:
-la foto de un miembro es dato personal y va al bucket privado con URL firmada.
+Y se copian, no se enlazan: enlazarlas dejaría la demo dependiendo de que un
+tercero siga vivo, y le daría la visita de cada persona que abra el muro.
+
+La foto de PERFIL está hoy en el bucket público, y eso no vale para producción:
+es dato personal y va al privado con URL firmada. Lo que falta es firmarla en la
+consulta; la columna ya es la buena.
 
 `scripts/seed-demo.sql` crea las cuentas, las fichas y los ministerios, y
 `scripts/seed-muro.sql` llena el muro de Betania —siete publicaciones de cinco

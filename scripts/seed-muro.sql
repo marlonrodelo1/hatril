@@ -235,66 +235,69 @@ on conflict (iglesia_id, fecha) do update set
 
 
 -- ===========================================================================
--- Fotos de perfil de demostración
+-- Las fotos de la demostración
 --
--- POR QUÉ SON URLs DE FUERA Y NO FICHEROS DEL BUCKET
--- ---------------------------------------------------
--- Son de `randomuser.me`, un servicio gratuito de retratos para maquetas: sin
--- registro, sin clave y con licencia de uso libre para pruebas. Las caras no
--- corresponden a personas reales identificables ni a nadie de ninguna iglesia.
+-- DE DÓNDE SALEN
+-- --------------
+-- Los paisajes son de **Picsum**, que sirve fotografías de Unsplash: licencia
+-- de uso comercial y sin atribución obligatoria. Los retratos, de
+-- **Pravatar**, caras pensadas para prototipos.
 --
--- Esto es SOLO para la demostración. En producción la foto de un miembro es
--- dato personal y va al bucket privado con URL firmada, como las fotos del muro
--- —no a un dominio de terceros que además vería cada carga—. La columna
--- `foto_url` es la misma en los dos casos; lo que cambia es qué se guarda en
--- ella y quién sirve el fichero.
+-- Se descartó `loremflickr`, que sí deja buscar por tema —«church», «worship»—
+-- pero sirve fotos de Flickr con Creative Commons: casi todas exigen
+-- atribución. Meter eso en un producto que se cobra es el mismo problema que la
+-- Reina-Valera 1960, en pequeño.
 --
--- No se le pone foto a todo el mundo a propósito: en una congregación real casi
--- nadie tendrá, porque el pastor da de alta desde una lista. Con la mitad sin
--- foto se ve cómo queda el muro de verdad, mezclando retratos e iniciales de
--- color.
--- ===========================================================================
-
-update public.miembros m
-   set foto_url = v.url
-  from (values
-    ('Brandon', 'https://randomuser.me/api/portraits/men/32.jpg'),
-    ('Lucía',   'https://randomuser.me/api/portraits/women/44.jpg'),
-    ('Pilar',   'https://randomuser.me/api/portraits/women/68.jpg'),
-    ('David',   'https://randomuser.me/api/portraits/men/75.jpg'),
-    ('Amparo',  'https://randomuser.me/api/portraits/women/12.jpg')
-  ) as v(nombre, url)
- where m.nombre = v.nombre
-   and m.iglesia_id = (select id from public.iglesias where slug = 'betania');
-
-
--- ===========================================================================
--- Fotos en las publicaciones y en el devocional
+-- Y NO SE ENLAZAN, SE COPIAN
+-- --------------------------
+-- Las cuatro escenas y los cinco retratos están SUBIDOS al bucket de la
+-- iglesia. Enlazarlos desde el banco dejaría la demo dependiendo de que un
+-- tercero siga vivo, y le daría a ese tercero la visita de cada persona que
+-- abriera el muro. Se subieron con el script del scratchpad de la sesión del
+-- 22-ago-2026; si algún día hay que repetirlo, es descargar y hacer POST al
+-- endpoint `/storage/v1/object/` con la clave de servicio.
 --
--- Las tres imágenes son PAISAJES GENERADOS, no fotos de un culto: el entorno
--- donde se prepara esta demo no tiene salida a internet para descargar
--- fotografías, así que se pintaron con código —cielo en degradado, sol y
--- siluetas de montaña— y se subieron al bucket. Se ven como una imagen de
--- verdad, que es lo que hacía falta para juzgar el muro y la portada.
---
--- Ojo con las rutas: en `publicaciones.imagenes` va la RUTA dentro del bucket
--- privado, nunca una URL. La URL se firma al pintar y caduca en una hora; una
--- guardada aquí sería una cadena que dentro de sesenta minutos no abre nada.
--- El devocional es al revés: su `imagen_url` sí es una URL permanente, porque
--- vive en el bucket público y sale en la web de la calle.
+-- QUÉ VA EN CADA COLUMNA, QUE NO ES LO MISMO
+-- ------------------------------------------
+--   - `publicaciones.imagenes`: la RUTA dentro del bucket PRIVADO. Nunca una
+--     URL — se firma al pintar y caduca en una hora, así que una URL guardada
+--     aquí sería una cadena que mañana no abre nada.
+--   - `devocionales.imagen_url`: una URL permanente del bucket PÚBLICO, porque
+--     el devocional sale también en la web de la calle.
+--   - `miembros.foto_url`: hoy, URL pública. Y eso NO vale para producción: la
+--     foto de un miembro es dato personal y va al bucket privado con URL
+--     firmada, igual que las del muro. Lo que falta para eso es firmarla en la
+--     consulta; la columna ya es la buena.
 -- ===========================================================================
 
 update public.publicaciones p
    set imagenes = v.imgs::jsonb
   from (values
-    ('Gracias a todos por el domingo', '["aaaaaaaa-1111-4111-8111-000000000001/demo/campo.png"]'),
-    ('Quiero dar gracias',             '["aaaaaaaa-1111-4111-8111-000000000001/demo/amanecer.png"]'),
-    ('El ensayo de alabanza',          '["aaaaaaaa-1111-4111-8111-000000000001/demo/tarde.png"]')
+    ('Gracias a todos por el domingo', '["aaaaaaaa-1111-4111-8111-000000000001/demo/paisaje-1.jpg"]'),
+    ('Quiero dar gracias',             '["aaaaaaaa-1111-4111-8111-000000000001/demo/paisaje-2.jpg"]'),
+    ('El ensayo de alabanza',          '["aaaaaaaa-1111-4111-8111-000000000001/demo/paisaje-3.jpg"]')
   ) as v(busca, imgs)
  where p.texto like '%' || v.busca || '%'
    and p.iglesia_id = (select id from public.iglesias where slug = 'betania');
 
 update public.devocionales d
-   set imagen_url = 'https://qutoggpigkdginvburjv.supabase.co/storage/v1/object/public/iglesias-publico/aaaaaaaa-1111-4111-8111-000000000001/demo-devocional-amanecer.png'
+   set imagen_url = 'https://qutoggpigkdginvburjv.supabase.co/storage/v1/object/public/iglesias-publico/aaaaaaaa-1111-4111-8111-000000000001/demo/portada.jpg'
  where d.iglesia_id = (select id from public.iglesias where slug = 'betania')
    and d.publicado = true;
+
+-- No se le pone foto a todo el mundo a propósito: en una congregación real casi
+-- nadie tendrá, porque el pastor da de alta desde una lista. Con la mitad sin
+-- foto se ve cómo queda el muro de verdad, mezclando retratos e iniciales.
+update public.miembros m
+   set foto_url =
+     'https://qutoggpigkdginvburjv.supabase.co/storage/v1/object/public/iglesias-publico/aaaaaaaa-1111-4111-8111-000000000001/perfiles/'
+     || v.fichero
+  from (values
+    ('Brandon', 'brandon.jpg'),
+    ('Lucía',   'lucia.jpg'),
+    ('Pilar',   'pilar.jpg'),
+    ('David',   'david.jpg'),
+    ('Amparo',  'amparo.jpg')
+  ) as v(quien, fichero)
+ where m.nombre = v.quien
+   and m.iglesia_id = (select id from public.iglesias where slug = 'betania');
