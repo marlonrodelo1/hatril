@@ -232,3 +232,37 @@ on conflict (iglesia_id, fecha) do update set
   cuerpo      = excluded.cuerpo,
   imagen_url  = excluded.imagen_url,
   publicado   = true;
+
+
+-- ===========================================================================
+-- Fotos de perfil de demostración
+--
+-- POR QUÉ SON URLs DE FUERA Y NO FICHEROS DEL BUCKET
+-- ---------------------------------------------------
+-- Son de `randomuser.me`, un servicio gratuito de retratos para maquetas: sin
+-- registro, sin clave y con licencia de uso libre para pruebas. Las caras no
+-- corresponden a personas reales identificables ni a nadie de ninguna iglesia.
+--
+-- Esto es SOLO para la demostración. En producción la foto de un miembro es
+-- dato personal y va al bucket privado con URL firmada, como las fotos del muro
+-- —no a un dominio de terceros que además vería cada carga—. La columna
+-- `foto_url` es la misma en los dos casos; lo que cambia es qué se guarda en
+-- ella y quién sirve el fichero.
+--
+-- No se le pone foto a todo el mundo a propósito: en una congregación real casi
+-- nadie tendrá, porque el pastor da de alta desde una lista. Con la mitad sin
+-- foto se ve cómo queda el muro de verdad, mezclando retratos e iniciales de
+-- color.
+-- ===========================================================================
+
+update public.miembros m
+   set foto_url = v.url
+  from (values
+    ('Brandon', 'https://randomuser.me/api/portraits/men/32.jpg'),
+    ('Lucía',   'https://randomuser.me/api/portraits/women/44.jpg'),
+    ('Pilar',   'https://randomuser.me/api/portraits/women/68.jpg'),
+    ('David',   'https://randomuser.me/api/portraits/men/75.jpg'),
+    ('Amparo',  'https://randomuser.me/api/portraits/women/12.jpg')
+  ) as v(nombre, url)
+ where m.nombre = v.nombre
+   and m.iglesia_id = (select id from public.iglesias where slug = 'betania');

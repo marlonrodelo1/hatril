@@ -55,6 +55,7 @@ export function Publicacion({
     texto: c.texto,
     cuando: haceCuanto(c.createdAt),
     autorNombre: c.autorNombre,
+    autorFoto: c.autorFoto,
     esMio: c.esMio,
     meGusta: c.meGusta,
     leHeDado: c.leHeDado,
@@ -63,6 +64,7 @@ export function Publicacion({
       texto: r.texto,
       cuando: haceCuanto(r.createdAt),
       autorNombre: r.autorNombre,
+      autorFoto: r.autorFoto,
       esMio: r.esMio,
       meGusta: r.meGusta,
       leHeDado: r.leHeDado,
@@ -73,7 +75,7 @@ export function Publicacion({
   return (
     <article className="-mx-4 flex flex-col gap-3 border-y border-border bg-surface px-4 py-3.5 sm:mx-0 sm:rounded-xl sm:border sm:p-4">
       <header className="flex items-center gap-3">
-        <AvatarPersona nombre={p.autorNombre} />
+        <AvatarPersona nombre={p.autorNombre} fotoUrl={p.autorFoto} />
 
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-[14.5px] font-bold leading-tight tracking-[-0.015em]">

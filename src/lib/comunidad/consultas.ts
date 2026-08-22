@@ -37,6 +37,7 @@ export type ComentarioMuro = {
   createdAt: Date;
   autorId: string;
   autorNombre: string;
+  autorFoto: string | null;
   esMio: boolean;
   meGusta: number;
   leHeDado: boolean;
@@ -54,6 +55,7 @@ export type PublicacionMuro = {
   createdAt: Date;
   autorId: string;
   autorNombre: string;
+  autorFoto: string | null;
   esMia: boolean;
   meGusta: number;
   leHeDado: boolean;
@@ -86,6 +88,7 @@ export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
         autorId: publicaciones.autorMiembroId,
         autorNombre: miembros.nombre,
         autorApellidos: miembros.apellidos,
+        autorFoto: miembros.fotoUrl,
       })
       .from(publicaciones)
       .innerJoin(miembros, eq(miembros.id, publicaciones.autorMiembroId))
@@ -119,6 +122,7 @@ export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
           respuestaAId: publicacionesComentarios.respuestaAId,
           autorNombre: miembros.nombre,
           autorApellidos: miembros.apellidos,
+          autorFoto: miembros.fotoUrl,
         })
         .from(publicacionesComentarios)
         .innerJoin(
@@ -173,6 +177,7 @@ export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
     createdAt: c.createdAt,
     autorId: c.autorId,
     autorNombre: nombreCompleto(c.autorNombre, c.autorApellidos),
+    autorFoto: c.autorFoto,
     esMio: yo !== null && c.autorId === yo,
     meGusta: gustosComentarios.filter((g) => g.comentarioId === c.id).length,
     leHeDado:
@@ -192,6 +197,7 @@ export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
     createdAt: f.createdAt,
     autorId: f.autorId,
     autorNombre: nombreCompleto(f.autorNombre, f.autorApellidos),
+    autorFoto: f.autorFoto,
     esMia: yo !== null && f.autorId === yo,
     meGusta: gustos.filter((g) => g.publicacionId === f.id).length,
     leHeDado:
@@ -272,4 +278,29 @@ export async function autorDePublicacion(
   );
 
   return fila ? { autorMiembroId: fila.autorMiembroId, imagenes: fila.imagenes ?? [] } : null;
+}
+
+/**
+ * La foto de perfil de quien está mirando.
+ *
+ * Consulta suelta y no un campo más del contexto de usuario: `UserContext` lo
+ * pide cada pantalla del panel y de `/mi`, y esto solo lo necesita el
+ * compositor del muro. Una columna más en aquel `select` son cuarenta consultas
+ * al día que traen un dato que casi nadie usa.
+ *
+ * Devuelve null sin ficha, que es el caso de quien tiene acceso y todavía no ha
+ * sido dado de alta en el fichero.
+ */
+export async function miFotoDePerfil(ctx: UserContext): Promise<string | null> {
+  if (!ctx.miembroId) return null;
+
+  const filas = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ fotoUrl: miembros.fotoUrl })
+      .from(miembros)
+      .where(eq(miembros.id, ctx.miembroId!))
+      .limit(1),
+  );
+
+  return filas[0]?.fotoUrl ?? null;
 }

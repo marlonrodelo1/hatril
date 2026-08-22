@@ -88,10 +88,13 @@ type Previa = { url: string; nombre: string };
 
 export function Publicador({
   nombre,
+  miFoto,
   admiteFotos,
   sobreFoto = false,
 }: {
   nombre: string;
+  /** La foto de quien está mirando, para que el disparador sea suyo. */
+  miFoto?: string | null;
   /**
    * El disparador vive dentro de la portada, encima de la foto y del degradado.
    * Ahí un recuadro con `bg-surface` opaco sería un parche gris pegado sobre la
@@ -211,6 +214,7 @@ export function Publicador({
         {inputFicheros}
         <Formulario
           nombre={nombre}
+          miFoto={miFoto}
           admiteFotos={admiteFotos}
           previas={previas}
           onQuitar={quitarTodas}
@@ -241,7 +245,7 @@ export function Publicador({
           onClick={() => setAbierta(true)}
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg p-1 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/20"
         >
-          <AvatarPersona nombre={nombre} />
+          <AvatarPersona nombre={nombre} fotoUrl={miFoto} />
 
           {/* Parece un campo pero es un botón: un campo de verdad aquí haría
               escribir en el sitio equivocado —y en iOS levantaría el teclado
@@ -282,6 +286,7 @@ export function Publicador({
       >
         <Formulario
           nombre={nombre}
+          miFoto={miFoto}
           admiteFotos={admiteFotos}
           previas={previas}
           onQuitar={quitarTodas}
@@ -306,6 +311,7 @@ export function Publicador({
  */
 function Formulario({
   nombre,
+  miFoto,
   admiteFotos,
   previas,
   onQuitar,
@@ -313,6 +319,7 @@ function Formulario({
   alPublicar,
 }: {
   nombre: string;
+  miFoto?: string | null;
   admiteFotos: boolean;
   previas: Previa[];
   onQuitar: () => void;
@@ -343,7 +350,7 @@ function Formulario({
     >
       <div className="flex gap-3">
         {!enHoja && (
-          <AvatarPersona nombre={nombre} />
+          <AvatarPersona nombre={nombre} fotoUrl={miFoto} />
         )}
 
         {/*

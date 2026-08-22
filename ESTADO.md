@@ -395,7 +395,7 @@ lee al arrancar.
 | Los bloques de asistencia en Inicio | El diseño los pinta y siguen sin pintarse: el dato ya existe |
 | App móvil (Capacitor) | v2. `platform/` ya detecta el WebView |
 | Texto de la Biblia | La pantalla `/mi/biblia` está: índice de los 66 libros, buscador y capítulos. **Falta el texto**: unos 4,5 MB de la Reina-Valera 1909 en `public/biblia/rv1909/`, un JSON por libro. La RVR60 tiene derechos de Sociedades Bíblicas Unidas |
-| Foto de perfil del miembro | Los avatares son iniciales de color. Una foto de verdad necesita columna, bucket privado, URL firmada y pantalla de subida |
+| Foto de perfil del miembro | **Se pinta ya**: `miembros.foto_url` existía desde la `0000` y ahora la usan el muro, los comentarios y el compositor, con las iniciales de color debajo como respaldo. Falta la pantalla para SUBIRLA, que va al bucket privado con URL firmada. Las de la demo son de `randomuser.me`, y eso NO vale para producción: la foto de un miembro es dato personal y no puede servirla un tercero |
 
 ---
 

@@ -4,7 +4,7 @@ import { MessagesSquare } from 'lucide-react';
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { puedeModerarComunidad } from '@/lib/auth/permisos';
-import { listarMuro } from '@/lib/comunidad/consultas';
+import { listarMuro, miFotoDePerfil } from '@/lib/comunidad/consultas';
 import {
   devocionalDeHoy,
   versiculoDelDia,
@@ -74,10 +74,11 @@ export default async function ComunidadPage({
   // El versículo y el devocional SÍ se piden aunque el muro esté apagado: no son
   // del muro, son de la iglesia. Apagar la comunidad es cerrar las
   // publicaciones, no dejar a la congregación sin lo que le toca leer hoy.
-  const [muro, versiculo, devocional] = await Promise.all([
+  const [muro, versiculo, devocional, miFoto] = await Promise.all([
     config.activa ? listarMuro(ctx) : Promise.resolve([]),
     versiculoDelDia(ctx),
     devocionalDeHoy(ctx),
+    miFotoDePerfil(ctx),
   ]);
 
   const nombre = nombreDeLaCuenta(ctx.user);
@@ -143,7 +144,12 @@ export default async function ComunidadPage({
            * queda en sus dos primeras filas.
            */}
           {config.activa && puedePublicar && (
-            <Publicador nombre={nombre} admiteFotos={config.fotos} sobreFoto />
+            <Publicador
+              nombre={nombre}
+              miFoto={miFoto}
+              admiteFotos={config.fotos}
+              sobreFoto
+            />
           )}
         </CabeceraDelDia>
 

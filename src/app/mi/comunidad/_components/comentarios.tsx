@@ -15,6 +15,7 @@ export type ComentarioPintado = {
   texto: string;
   cuando: string;
   autorNombre: string;
+  autorFoto: string | null;
   esMio: boolean;
   meGusta: number;
   leHeDado: boolean;
@@ -248,7 +249,12 @@ function Comentario({
 }) {
   return (
     <div className="flex items-start gap-2.5">
-      <AvatarPersona nombre={c.autorNombre} tamano="sm" className="mt-0.5" />
+      <AvatarPersona
+        nombre={c.autorNombre}
+        fotoUrl={c.autorFoto}
+        tamano="sm"
+        className="mt-0.5"
+      />
 
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex min-w-0 flex-col rounded-xl bg-surface-alt px-3 py-2">
