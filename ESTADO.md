@@ -206,7 +206,11 @@ lee al arrancar.
   cambia por el disparador. Verificado pidiendo la página con `fetch` y mirando
   que el `<textarea>` y el botón «Publicar» están en la respuesta.
 
-  La barra de abajo tiene **tres pestañas y un hueco vacío a propósito**. Han
+  La barra de abajo tiene **tres pestañas, y una cuarta solo para el equipo**:
+  «Panel», que les devuelve a su sección. Se la ve todo el que tenga iglesia, no
+  solo el miembro raso — antes se les escondía porque «el equipo vive en el
+  panel», y al quitar la flecha de volver de la cabecera un pastor que entraba al
+  muro se quedaba sin ninguna forma de salir. Han
   vivido ahí dos cosas y las dos se fueron por lo mismo, repetir algo que ya
   estaba a la vista: «Mi cuenta» —el avatar de la cabecera abre el mismo menú— y
   un «+» de publicar que duró una tanda, porque la primera pantalla del muro ya

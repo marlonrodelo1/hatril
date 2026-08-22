@@ -2,7 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, CalendarDays, MessagesSquare } from 'lucide-react';
+import {
+  BookOpen,
+  CalendarDays,
+  LayoutDashboard,
+  MessagesSquare,
+} from 'lucide-react';
 
 /**
  * Las pestañas del área del miembro.
@@ -24,9 +29,13 @@ import { BookOpen, CalendarDays, MessagesSquare } from 'lucide-react';
  * el patrón sin copiar el motivo es como se llena una barra de botones que se
  * pisan.
  *
- * El hueco se deja libre hasta que haya un cuarto destino de verdad —«Mi
- * iglesia», «Mis ministerios», «Dar»— y no se rellena por rellenar, que es
- * justo lo que pasó las dos veces anteriores.
+ * El cuarto hueco estuvo vacío un rato, esperando un destino de verdad en vez de
+ * rellenarse por rellenarse. Lo ocupa «Panel», y SOLO para quien es del equipo:
+ * no repite nada —el panel no está en ningún otro sitio de `/mi`— y resuelve un
+ * agujero que abrimos nosotros. Al quitar la flecha de volver de la cabecera, un
+ * pastor que entraba al muro se quedaba sin ninguna forma de salir.
+ *
+ * Para el miembro raso siguen siendo tres: él no tiene panel al que volver.
  *
  * CUATRO Y NO SIETE
  * -----------------
@@ -83,8 +92,32 @@ const PESTANAS = [
   { href: '/mi/agenda', etiqueta: 'Agenda', Icono: CalendarDays },
 ] as const;
 
-export function BarraInferior() {
+/**
+ * La vuelta al panel, solo para el equipo.
+ *
+ * Fuera de `PESTANAS` porque no es una sección de `/mi`: es la puerta de salida.
+ * Y va la última a propósito — la de más a la derecha es la que menos se pulsa
+ * sin querer, y esta saca de la aplicación en la que estás.
+ */
+const AL_PANEL = {
+  href: '/panel/hoy',
+  etiqueta: 'Panel',
+  Icono: LayoutDashboard,
+} as const;
+
+export function BarraInferior({
+  esDelEquipo = false,
+}: {
+  /**
+   * Pastor, secretaría, tesorería o líder. Les aparece la cuarta pestaña, que
+   * les devuelve al panel — la única salida que tienen desde aquí desde que la
+   * cabecera perdió la flecha de volver.
+   */
+  esDelEquipo?: boolean;
+}) {
   const pathname = usePathname();
+
+  const pestanas = esDelEquipo ? [...PESTANAS, AL_PANEL] : PESTANAS;
 
   return (
     <nav
@@ -116,7 +149,7 @@ export function BarraInferior() {
         'md:inset-x-auto md:bottom-5 md:left-1/2 md:w-auto md:-translate-x-1/2'
       }
     >
-      {PESTANAS.map((p) => (
+      {pestanas.map((p) => (
         <Pestana key={p.href} pestana={p} pathname={pathname} />
       ))}
     </nav>
@@ -127,7 +160,7 @@ function Pestana({
   pestana: p,
   pathname,
 }: {
-  pestana: (typeof PESTANAS)[number];
+  pestana: (typeof PESTANAS)[number] | typeof AL_PANEL;
   pathname: string;
 }) {
   const esta = pathname === p.href || pathname.startsWith(`${p.href}/`);

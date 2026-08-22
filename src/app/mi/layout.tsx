@@ -27,14 +27,27 @@ export default async function MiLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const ctx = await getCurrentUserContext();
-  const conPestanas = Boolean(ctx) && !esDelEquipo(ctx!);
 
-  if (!conPestanas) return <>{children}</>;
+  /*
+   * LA BARRA ES PARA TODO EL QUE TENGA IGLESIA, TAMBIÉN PARA EL EQUIPO
+   *
+   * Antes se pintaba solo para el miembro raso: quien llevaba algo en la
+   * congregación «vivía en el panel y solo pasaba por aquí de rebote». Eso dejó
+   * de ser verdad el día que se quitó la flecha de volver de la cabecera —que
+   * apuntaba a `/mi`, o sea, a esta misma pantalla—: un pastor que entra al muro
+   * se quedaba sin barra Y sin flecha, es decir, sin ninguna forma de salir que
+   * no fuera escribir la dirección a mano.
+   *
+   * Ahora la ve todo el mundo, y quien es del equipo tiene además la pestaña que
+   * le devuelve al panel. Es también lo que llena el cuarto hueco de la barra,
+   * y esta vez sin repetir nada: el panel no está en ningún otro sitio de `/mi`.
+   */
+  if (!ctx) return <>{children}</>;
 
   return (
     <>
       {children}
-      <BarraInferior />
+      <BarraInferior esDelEquipo={esDelEquipo(ctx)} />
       {/*
        * El hueco de la barra, que es `fixed` y flota sobre el contenido. Sin
        * esto la última publicación del muro queda debajo de las pestañas y no
