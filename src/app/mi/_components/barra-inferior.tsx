@@ -3,39 +3,35 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  BookMarked,
   BookOpen,
   CalendarDays,
-  LayoutDashboard,
   MessagesSquare,
 } from 'lucide-react';
 
 /**
  * Las pestañas del área del miembro.
  *
- * TRES, Y EL CUARTO HUECO SE QUEDA VACÍO A PROPÓSITO
- * --------------------------------------------------
- * Aquí han vivido dos cosas que se fueron, y las dos por el mismo motivo:
- * repetían algo que ya estaba a la vista.
+ * EL CUARTO HUECO, Y LAS TRES COSAS QUE VIVIERON EN ÉL
+ * ----------------------------------------------------
+ * Ahora es «Biblia». Antes fueron dos que se fueron por el mismo motivo,
+ * repetir algo que ya estaba a la vista:
  *
  *   - **«Mi cuenta».** La cabecera de todas las pantallas de `/mi` lleva el
  *     avatar arriba a la derecha, que abre el mismo menú.
- *   - **El «+» de publicar.** Duraba una tanda. La primera pantalla del muro ya
+ *   - **El «+» de publicar.** Duró una tanda. La primera pantalla del muro ya
  *     tiene el disparador «¿Qué quieres compartir?» con su icono de foto, así
- *     que el botón de abajo hacía exactamente lo mismo dos dedos más abajo. Lo
- *     dijo Marlon en cuanto lo vio, y tenía razón.
+ *     que el botón de abajo hacía exactamente lo mismo dos dedos más abajo. En
+ *     Instagram el «+» tiene sentido porque su primera pantalla NO trae
+ *     compositor; copiar el patrón sin copiar el motivo es como se llena una
+ *     barra de botones que se pisan.
  *
- * En Instagram el «+» tiene sentido porque su primera pantalla NO trae
- * compositor: hay que ir a otro sitio para publicar. Aquí sí lo trae, y copiar
- * el patrón sin copiar el motivo es como se llena una barra de botones que se
- * pisan.
- *
- * El cuarto hueco estuvo vacío un rato, esperando un destino de verdad en vez de
- * rellenarse por rellenarse. Lo ocupa «Panel», y SOLO para quien es del equipo:
- * no repite nada —el panel no está en ningún otro sitio de `/mi`— y resuelve un
- * agujero que abrimos nosotros. Al quitar la flecha de volver de la cabecera, un
- * pastor que entraba al muro se quedaba sin ninguna forma de salir.
- *
- * Para el miembro raso siguen siendo tres: él no tiene panel al que volver.
+ * Y una tercera que duró literalmente un commit: «Panel», para devolver al
+ * equipo a su sección. Resolvía un agujero real —al quitar la flecha de volver
+ * de la cabecera, un pastor que entraba al muro se quedaba sin salida— pero lo
+ * resolvía en el sitio equivocado: la barra es la navegación del MIEMBRO, y la
+ * vuelta al panel es una cosa de cuenta. Vive en el menú del avatar, junto a
+ * «Tus datos» y «Suscripción».
  *
  * CUATRO Y NO SIETE
  * -----------------
@@ -90,34 +86,13 @@ const PESTANAS = [
   { href: '/mi/comunidad', etiqueta: 'Comunidad', Icono: MessagesSquare },
   { href: '/mi/devocional', etiqueta: 'Devocional', Icono: BookOpen },
   { href: '/mi/agenda', etiqueta: 'Agenda', Icono: CalendarDays },
+  { href: '/mi/biblia', etiqueta: 'Biblia', Icono: BookMarked },
 ] as const;
 
-/**
- * La vuelta al panel, solo para el equipo.
- *
- * Fuera de `PESTANAS` porque no es una sección de `/mi`: es la puerta de salida.
- * Y va la última a propósito — la de más a la derecha es la que menos se pulsa
- * sin querer, y esta saca de la aplicación en la que estás.
- */
-const AL_PANEL = {
-  href: '/panel/hoy',
-  etiqueta: 'Panel',
-  Icono: LayoutDashboard,
-} as const;
 
-export function BarraInferior({
-  esDelEquipo = false,
-}: {
-  /**
-   * Pastor, secretaría, tesorería o líder. Les aparece la cuarta pestaña, que
-   * les devuelve al panel — la única salida que tienen desde aquí desde que la
-   * cabecera perdió la flecha de volver.
-   */
-  esDelEquipo?: boolean;
-}) {
+
+export function BarraInferior() {
   const pathname = usePathname();
-
-  const pestanas = esDelEquipo ? [...PESTANAS, AL_PANEL] : PESTANAS;
 
   return (
     <nav
@@ -149,7 +124,7 @@ export function BarraInferior({
         'md:inset-x-auto md:bottom-5 md:left-1/2 md:w-auto md:-translate-x-1/2'
       }
     >
-      {pestanas.map((p) => (
+      {PESTANAS.map((p) => (
         <Pestana key={p.href} pestana={p} pathname={pathname} />
       ))}
     </nav>
@@ -160,7 +135,7 @@ function Pestana({
   pestana: p,
   pathname,
 }: {
-  pestana: (typeof PESTANAS)[number] | typeof AL_PANEL;
+  pestana: (typeof PESTANAS)[number];
   pathname: string;
 }) {
   const esta = pathname === p.href || pathname.startsWith(`${p.href}/`);

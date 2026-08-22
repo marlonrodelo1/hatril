@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 import { getCurrentUserContext } from '@/lib/auth/user-context';
-import { esPastor, ETIQUETAS_ROLES } from '@/lib/auth/permisos';
+import { esDelEquipo, esPastor, ETIQUETAS_ROLES } from '@/lib/auth/permisos';
 import { listarNotificaciones } from '@/lib/notificaciones/consultas';
 import { paraLaCampana } from '@/lib/notificaciones/campana';
 import { nombreDeLaCuenta } from '@/lib/auth/nombre';
@@ -161,6 +161,10 @@ export async function CabeceraMiembro({
           iniciales={iniciales(nombre)}
           rol={ctx ? ETIQUETAS_ROLES[ctx.rol].titulo : undefined}
           esPastor={ctx !== null && esPastor(ctx)}
+          // Pastor, secretaría, tesorería o líder: gente que tiene panel al que
+          // volver. El miembro raso no, y ofrecérselo sería un enlace que le
+          // rebota.
+          alPanel={ctx !== null && esDelEquipo(ctx)}
           // Sin iglesia, las tres opciones del menú viven detrás de
           // `requireIglesia()` y devolverían a esta misma persona a `/mi`.
           soloSalir={ctx === null}

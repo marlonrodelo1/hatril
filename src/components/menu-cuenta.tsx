@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CreditCard, KeyRound, LogOut, UserRound } from 'lucide-react';
+import { LayoutDashboard, CreditCard, KeyRound, LogOut, UserRound } from 'lucide-react';
 
 import {
   Popover,
@@ -56,6 +56,7 @@ export function MenuCuenta({
   rol,
   iniciales,
   esPastor = false,
+  alPanel = false,
   soloSalir = false,
 }: {
   nombre: string;
@@ -64,6 +65,19 @@ export function MenuCuenta({
   rol?: string;
   iniciales: string;
   esPastor?: boolean;
+  /**
+   * Enseña «Ir al panel», y solo se pide desde el área del miembro.
+   *
+   * Vive aquí y no en la barra de abajo porque la barra es la navegación del
+   * MIEMBRO —comunidad, devocional, agenda, biblia— y salir a la otra mitad de
+   * la aplicación es una cosa de cuenta, como «Tus datos» o «Suscripción».
+   * Estuvo un commit siendo una quinta pestaña y se veía forzado.
+   *
+   * Sin esto, quien es del equipo y entra al muro se queda sin salida: la
+   * cabecera perdió la flecha de volver el día que se descubrió que apuntaba a
+   * una ruta que redirige a la propia pantalla.
+   */
+  alPanel?: boolean;
   /** Sin iglesia detrás: solo «Cerrar sesión». Ver la cabecera del fichero. */
   soloSalir?: boolean;
 }) {
@@ -96,6 +110,11 @@ export function MenuCuenta({
 
         {!soloSalir && (
           <div className="flex flex-col p-1">
+            {alPanel && (
+              <Opcion href="/panel/hoy" Icono={LayoutDashboard}>
+                Ir al panel
+              </Opcion>
+            )}
             <Opcion href="/panel/cuenta" Icono={UserRound}>
               Tus datos
             </Opcion>

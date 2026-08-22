@@ -23,18 +23,27 @@ import { BookOpen, ChevronRight, Quote } from 'lucide-react';
  * La regla sigue valiendo para el resto de la aplicación: es la única superficie
  * con degradado, igual que el versículo era el único bloque de color.
  *
- * LAS TRES CAPAS, Y POR QUÉ SON TRES
- * ----------------------------------
- *   1. La **foto**, a tamaño completo.
- *   2. El **glaseado**, que difumina la foto entera. Sin él, una foto con mucho
- *      detalle —un culto lleno de gente— compite con el texto letra por letra.
- *   3. El **degradado**, de verde translúcido arriba a casi negro abajo. Arriba
- *      deja respirar la imagen; abajo, donde está el compositor y las líneas
- *      pequeñas, cierra hasta 0.88 para que nada dependa de qué se fotografió.
+ * LA FOTO TIENE QUE VERSE, Y ESO CAMBIÓ LOS NÚMEROS
+ * --------------------------------------------------
+ * El primer intento llevaba el velo a 0.82 y un desenfoque de 12px: el texto se
+ * leía perfecto y la imagen quedaba irreconocible —«se ve distorsionada, no se
+ * aprecia»—. Si la foto no se distingue, no hace falta foto: bastaba el verde.
  *
- * Todo con la guarda `supports-backdrop-filter`: donde no hay desenfoque, el
- * velo sube a opaco. Un translúcido sin difuminar sobre una foto con contraste
- * es exactamente el caso ilegible.
+ * Ahora son tres capas medidas al revés, empezando por lo que se quiere ver:
+ *
+ *   1. La **foto**, a tamaño completo y prácticamente limpia. El desenfoque baja
+ *      a 1.5px: quita el ruido de grano sin borrar la escena.
+ *   2. El **degradado**, que empieza en 0.25 arriba —donde la imagen tiene que
+ *      respirar— y cierra en 0.80 abajo, que es donde caen el devocional y el
+ *      compositor, las líneas pequeñas.
+ *   3. La **sombra del texto**, que es lo que sustituye a la opacidad que se ha
+ *      quitado. Sobre el trozo claro de una foto, un blanco sin sombra
+ *      desaparece; con ella se lee igual sobre cielo que sobre montaña, y NO es
+ *      la sombra que prohíbe la regla 3 —esa habla de dar profundidad a las
+ *      cajas, no de despegar una letra de su fondo.
+ *
+ * La guarda `supports-backdrop-filter` se queda para el desenfoque. El degradado
+ * no la necesita: es color plano y funciona en cualquier navegador.
  *
  * SIN FOTO NO SE INVENTA NADA
  * ---------------------------
@@ -92,12 +101,12 @@ export function CabeceraDelDia({
         className={
           'flex flex-col ' +
           (foto
-            ? 'bg-gradient-to-b from-support/80 via-[#0F1A16]/80 to-[#0B0F0D]/92 supports-backdrop-filter:from-support/62 supports-backdrop-filter:via-[#0F1A16]/72 supports-backdrop-filter:to-[#0B0F0D]/88 supports-backdrop-filter:backdrop-blur-md'
+            ? 'bg-gradient-to-b from-black/25 via-black/45 to-black/80 supports-backdrop-filter:backdrop-blur-[1.5px]'
             : 'bg-support')
         }
       >
         {versiculo && (
-          <div className="flex flex-col gap-2.5 px-4 py-5 text-white sm:px-5 sm:py-6">
+          <div className="flex flex-col gap-2.5 px-4 py-5 text-white drop-shadow-[0_1px_3px_rgb(0_0_0/0.55)] sm:px-5 sm:py-6">
             <span className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-white">
               <Quote className="size-[14px]" strokeWidth={2.2} aria-hidden />
               {versiculo.esDeHoy ? 'Versículo de hoy' : 'Versículo'}
@@ -128,7 +137,7 @@ export function CabeceraDelDia({
            */
           <Link
             href="/mi/devocional"
-            className="flex items-center gap-3 border-t border-white/15 px-4 py-3.5 text-white no-underline hover:bg-white/10 hover:no-underline sm:px-5"
+            className="flex items-center gap-3 border-t border-white/15 px-4 py-3.5 text-white no-underline drop-shadow-[0_1px_3px_rgb(0_0_0/0.55)] hover:bg-white/10 hover:no-underline sm:px-5"
           >
             <span className="flex size-10 flex-none items-center justify-center rounded-lg bg-white/15 text-white">
               <BookOpen className="size-[18px]" strokeWidth={1.7} />

@@ -1,5 +1,4 @@
 import { getCurrentUserContext } from '@/lib/auth/user-context';
-import { esDelEquipo } from '@/lib/auth/permisos';
 import { BarraInferior } from './_components/barra-inferior';
 
 /**
@@ -38,16 +37,16 @@ export default async function MiLayout({
    * se quedaba sin barra Y sin flecha, es decir, sin ninguna forma de salir que
    * no fuera escribir la dirección a mano.
    *
-   * Ahora la ve todo el mundo, y quien es del equipo tiene además la pestaña que
-   * le devuelve al panel. Es también lo que llena el cuarto hueco de la barra,
-   * y esta vez sin repetir nada: el panel no está en ningún otro sitio de `/mi`.
+   * Ahora la ve todo el mundo. La vuelta al panel para el equipo NO está en la
+   * barra —eso duró un commit— sino en el menú del avatar: la barra es la
+   * navegación del miembro, y salir a otra aplicación es una cosa de cuenta.
    */
   if (!ctx) return <>{children}</>;
 
   return (
     <>
       {children}
-      <BarraInferior esDelEquipo={esDelEquipo(ctx)} />
+      <BarraInferior />
       {/*
        * El hueco de la barra, que es `fixed` y flota sobre el contenido. Sin
        * esto la última publicación del muro queda debajo de las pestañas y no

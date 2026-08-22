@@ -206,11 +206,13 @@ lee al arrancar.
   cambia por el disparador. Verificado pidiendo la página con `fetch` y mirando
   que el `<textarea>` y el botón «Publicar» están en la respuesta.
 
-  La barra de abajo tiene **tres pestañas, y una cuarta solo para el equipo**:
-  «Panel», que les devuelve a su sección. Se la ve todo el que tenga iglesia, no
-  solo el miembro raso — antes se les escondía porque «el equipo vive en el
-  panel», y al quitar la flecha de volver de la cabecera un pastor que entraba al
-  muro se quedaba sin ninguna forma de salir. Han
+  La barra de abajo tiene **cuatro pestañas**: Comunidad, Devocional, Agenda y
+  Biblia. Se la ve todo el que tenga iglesia, no solo el miembro raso — antes se
+  les escondía porque «el equipo vive en el panel», y al quitar la flecha de
+  volver de la cabecera un pastor que entraba al muro se quedaba sin ninguna
+  forma de salir. Esa salida es ahora **«Ir al panel» en el menú del avatar**:
+  estuvo un commit siendo una quinta pestaña y se veía forzado, porque la barra
+  es la navegación del miembro y salir a la otra mitad es cosa de la cuenta. Han
   vivido ahí dos cosas y las dos se fueron por lo mismo, repetir algo que ya
   estaba a la vista: «Mi cuenta» —el avatar de la cabecera abre el mismo menú— y
   un «+» de publicar que duró una tanda, porque la primera pantalla del muro ya
@@ -392,6 +394,8 @@ lee al arrancar.
 | Legales de la asistencia y el seguimiento | Hechos: `/privacidad` §3, §4 y §6, el anexo del art. 28 en `/terminos`, y el consentimiento propio |
 | Los bloques de asistencia en Inicio | El diseño los pinta y siguen sin pintarse: el dato ya existe |
 | App móvil (Capacitor) | v2. `platform/` ya detecta el WebView |
+| Texto de la Biblia | La pantalla `/mi/biblia` está: índice de los 66 libros, buscador y capítulos. **Falta el texto**: unos 4,5 MB de la Reina-Valera 1909 en `public/biblia/rv1909/`, un JSON por libro. La RVR60 tiene derechos de Sociedades Bíblicas Unidas |
+| Foto de perfil del miembro | Los avatares son iniciales de color. Una foto de verdad necesita columna, bucket privado, URL firmada y pantalla de subida |
 
 ---
 
