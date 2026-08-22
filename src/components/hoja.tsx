@@ -8,6 +8,12 @@ import { cn } from '@/lib/utils';
 /**
  * La hoja que sube desde abajo.
  *
+ * Vivía dentro de `mi/comunidad/_components` porque allí nació, para el
+ * compositor del muro. Se mudó a `components/` en cuanto la pidió también el
+ * calendario de la agenda: una carpeta `_components` dentro de una ruta declara
+ * que eso es privado de esa ruta, y dejó de serlo. Mover es preferible a copiar
+ * —dos hojas serían dos sitios donde arreglar el mismo desbordamiento—.
+ *
  * POR QUÉ NO SE USA `DialogContent` DE `components/ui`
  * ----------------------------------------------------
  * Ese está centrado en la pantalla con `top-1/2 left-1/2 -translate-*` y un

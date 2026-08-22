@@ -383,7 +383,8 @@ lee al arrancar.
 | Proveedor de alojamiento en los legales | **Sin rellenar.** Lo más urgente: bloquea publicar |
 | Foto en la ficha de miembro | Va en OTRO bucket, privado y con URL firmada. El de iglesias es público |
 | Eventos y calendario | Hecho y verificado, con sus textos legales |
-| Área del miembro | Hecha la base. Faltan el repertorio del domingo, los turnos y el material del equipo |
+| Área del miembro | Comunidad, devocional con vídeo, **agenda como calendario** y Biblia. Faltan el repertorio del domingo, los turnos y el material del equipo |
+| Agenda | **Calendario con día, semana y mes**, los días marcados y una hoja al tocarlos. Junta los horarios semanales, los eventos y las reuniones de los ministerios de cada persona |
 | Stripe | **Hecho el circuito entero**, sin claves todavía. Ver «Qué hay que crear en Stripe» |
 | Correo (Resend) | Nada. Ni bienvenida, ni aviso de solicitud, ni el de «se te acaba la prueba» — que ahora es el que más falta hace: el aviso solo se ve entrando al panel |
 | El muro en `/mi` | A propósito NO está. Con la iglesia bloqueada, un miembro sigue leyendo su área; lo que no puede es publicar en el muro |

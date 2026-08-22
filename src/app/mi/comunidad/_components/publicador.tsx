@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { AvatarPersona } from '@/components/avatar-persona';
 import { publicar } from '../actions';
 import { MAX_IMAGENES } from '@/lib/comunidad/limites';
-import { Hoja } from './hoja';
+import { Hoja } from '@/components/hoja';
 
 /**
  * Escribir en el muro.
