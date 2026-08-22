@@ -5,6 +5,8 @@ import { ExternalLink } from 'lucide-react';
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { devocionalDeHoy } from '@/lib/devocionales/consultas';
+import { leerVideo } from '@/lib/devocionales/video';
+import { VideoDelDevocional } from './_components/video';
 import { formatearFechaLarga } from '@/lib/fecha/hoy';
 import { createClient } from '@/lib/supabase/server';
 import { CabeceraMiembro } from '../_components/cabecera-miembro';
@@ -21,6 +23,7 @@ export default async function DevocionalPage() {
   } = await supabase.auth.getUser();
 
   const d = await devocionalDeHoy(ctx);
+  const video = leerVideo(d?.videoUrl);
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
@@ -90,17 +93,31 @@ export default async function DevocionalPage() {
               {d.cuerpo}
             </p>
 
-            {d.videoUrl && (
-              <a
-                href={d.videoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex w-fit items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-[14px] font-semibold no-underline hover:bg-surface-alt hover:no-underline"
-              >
-                <ExternalLink className="size-4" strokeWidth={1.8} />
-                Verlo en vídeo
-              </a>
+            {/*
+             * El vídeo se VE aquí dentro, y no es un cambio de opinión sobre lo
+             * que dice el schema: sigue sin empotrarse un reproductor de
+             * salida. Se pinta la miniatura y solo al pulsar se carga YouTube,
+             * que es exactamente el camino que aquel comentario dejaba escrito.
+             *
+             * Si la URL no es de YouTube —Vimeo también está en la lista de
+             * dominios que acepta el panel— se queda el enlace de siempre.
+             */}
+            {video ? (
+              <VideoDelDevocional video={video} portada={d.imagenUrl} />
+            ) : (
+              d.videoUrl && (
+                <a
+                  href={d.videoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-fit items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-[14px] font-semibold no-underline hover:bg-surface-alt hover:no-underline"
+                >
+                  <ExternalLink className="size-4" strokeWidth={1.8} />
+                  Verlo en vídeo
+                </a>
+              )
             )}
+
           </article>
         )}
       </main>
