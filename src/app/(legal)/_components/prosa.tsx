@@ -103,7 +103,7 @@ export function AvisoBorrador({ children }: { children: React.ReactNode }) {
   return (
     <div
       role="alert"
-      className="mb-10 flex items-start gap-2.5 rounded-xl border border-[#E0C4C2] bg-[#F7ECEB] px-4 py-3.5 text-[14.5px] leading-relaxed text-danger"
+      className="mb-10 flex items-start gap-2.5 rounded-xl border border-danger-border bg-danger-soft px-4 py-3.5 text-[14.5px] leading-relaxed text-danger"
     >
       <AlertCircle className="mt-0.5 size-[18px] flex-none" strokeWidth={1.9} />
       <span className="text-pretty">{children}</span>

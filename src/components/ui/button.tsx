@@ -41,17 +41,17 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground hover:bg-accent-hover active:bg-[#83300E] disabled:bg-[#E6DDD2] disabled:text-[#9A9188]',
+          'bg-primary text-primary-foreground hover:bg-accent-hover active:bg-accent-active disabled:bg-disabled-bg disabled:text-disabled-fg',
         secondary:
-          'bg-support text-white hover:bg-support-hover active:bg-[#1E3B33] disabled:bg-[#E6DDD2] disabled:text-[#9A9188]',
+          'bg-support text-white hover:bg-support-hover active:bg-support-active disabled:bg-disabled-bg disabled:text-disabled-fg',
         outline:
-          'border-border bg-surface-alt text-foreground hover:bg-background active:bg-[#E5DFD4] disabled:border-[#E9E3DA] disabled:bg-[#FBF9F5] disabled:text-[#A79E93]',
+          'border-border bg-surface-alt text-foreground hover:bg-background active:bg-surface-active disabled:border-disabled-border disabled:bg-disabled-surface disabled:text-disabled-text',
         ghost:
-          'bg-transparent text-primary hover:bg-accent active:bg-[#F0D6C8] disabled:text-[#A79E93]',
+          'bg-transparent text-primary hover:bg-accent active:bg-accent-soft-active disabled:text-disabled-text',
         // Contorno en reposo, relleno solo al pulsar. Y siempre con icono: el
         // color por sí solo no avisa a quien no lo distingue.
         destructive:
-          'border-[#E0C4C2] bg-surface-alt text-danger hover:bg-[#F7ECEB] active:border-danger active:bg-danger active:text-white disabled:border-[#E9E3DA] disabled:bg-[#FBF9F5] disabled:text-[#A79E93]',
+          'border-danger-border bg-surface-alt text-danger hover:bg-danger-soft active:border-danger active:bg-danger active:text-background disabled:border-disabled-border disabled:bg-disabled-surface disabled:text-disabled-text',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {

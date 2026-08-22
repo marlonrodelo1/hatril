@@ -250,9 +250,9 @@ function Tarjeta({
           className={
             'flex-none rounded-full px-2.5 py-[5px] text-[12px] font-semibold ' +
             (d.publicado
-              ? 'bg-[#E4EDE9] text-[#2F5D50]'
+              ? 'bg-badge-success-bg text-badge-success-fg'
               : d.pendiente
-                ? 'bg-[#F6EDD9] text-[#7E5F13]'
+                ? 'bg-badge-warning-bg text-badge-warning-fg'
                 : 'bg-background text-muted-foreground')
           }
         >

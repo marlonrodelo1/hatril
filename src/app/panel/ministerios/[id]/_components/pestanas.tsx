@@ -60,7 +60,7 @@ export function PestanasMinisterio({
               'inline-flex flex-none items-center gap-2 rounded-lg border px-3.5 py-2 text-[14px] font-semibold no-underline transition-colors hover:no-underline ' +
               (esActiva
                 ? 'border-primary bg-accent text-accent-foreground'
-                : 'border-border bg-surface text-muted-foreground hover:bg-[#FBF9F5] hover:text-foreground')
+                : 'border-border bg-surface text-muted-foreground hover:bg-surface-alt hover:text-foreground')
             }
           >
             <p.Icono className="size-4" strokeWidth={1.9} aria-hidden />

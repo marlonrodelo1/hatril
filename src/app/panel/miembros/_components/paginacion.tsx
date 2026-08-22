@@ -40,7 +40,7 @@ export function Paginacion({
   const claseFlecha =
     'flex size-8 items-center justify-center rounded-lg border border-border bg-surface-alt text-foreground no-underline hover:bg-background hover:no-underline';
   const claseInerte =
-    'flex size-8 items-center justify-center rounded-lg border border-border bg-surface-alt text-[#A79E93]';
+    'flex size-8 items-center justify-center rounded-lg border border-border bg-surface-alt text-disabled-text';
 
   return (
     <div className="flex items-center justify-between gap-4 px-1">

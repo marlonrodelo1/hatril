@@ -29,7 +29,7 @@ function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
         'h-[42px] w-full min-w-0 rounded-lg border border-input bg-surface-alt px-3 text-[15px] transition-colors outline-none',
         'placeholder:text-muted-foreground',
         'focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/16',
-        'disabled:cursor-not-allowed disabled:border-[#E9E3DA] disabled:bg-background disabled:text-[#A79E93]',
+        'disabled:cursor-not-allowed disabled:border-disabled-border disabled:bg-background disabled:text-disabled-text',
         'aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/15',
         'file:inline-flex file:h-8 file:border-0 file:bg-transparent file:text-[14px] file:font-medium file:text-foreground',
         className,

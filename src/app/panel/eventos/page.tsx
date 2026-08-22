@@ -170,16 +170,16 @@ function Seccion({
                   {e.titulo}
                 </span>
                 {e.publicado ? (
-                  <Etiqueta clases="bg-[#E4EDE9] text-[#2F5D50]">
+                  <Etiqueta clases="bg-badge-success-bg text-badge-success-fg">
                     En la web
                   </Etiqueta>
                 ) : (
-                  <Etiqueta clases="bg-[#EDE8DF] text-[#6B645C]">
+                  <Etiqueta clases="bg-badge-neutral-bg text-badge-neutral-fg">
                     Sin publicar
                   </Etiqueta>
                 )}
                 {e.inscripcionesAbiertas && (
-                  <Etiqueta clases="bg-[#F7E4DA] text-[#BD4715]">
+                  <Etiqueta clases="bg-badge-accent-bg text-badge-accent-fg">
                     Admite inscripciones
                   </Etiqueta>
                 )}

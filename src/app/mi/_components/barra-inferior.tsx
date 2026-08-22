@@ -140,7 +140,11 @@ function Pestana({
         'flex flex-1 flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-semibold no-underline hover:no-underline ' +
         'md:flex-none md:flex-row md:gap-2 md:px-3.5 md:text-[14px] ' +
         (esta
-          ? 'bg-accent text-accent-foreground'
+          // `bg-accent` era el rosa palo de los hover, no el naranja de marca: la
+          // pestaña activa apenas se distinguía de las otras dos. `primary` SÍ
+          // es el naranja, y aquí no rompe la regla del único botón naranja
+          // por pantalla porque esto no es un botón, es dónde estás.
+          ? 'bg-primary text-white'
           : 'text-muted-foreground hover:bg-background/60 hover:text-foreground')
       }
     >

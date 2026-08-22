@@ -288,7 +288,7 @@ export default async function WebIglesiaPage({
           className="mx-auto max-w-[1180px] scroll-mt-20 px-4 py-14 sm:px-5 md:px-10 md:py-16 lg:py-20"
         >
           <div className="mb-8 flex flex-col gap-3">
-            <span className="t-micro text-[#9C3A11]">Cuándo nos vemos</span>
+            <span className="t-micro text-badge-accent-fg">Cuándo nos vemos</span>
             <h2 className="max-w-[600px] text-pretty text-[30px] font-extrabold leading-[1.06] tracking-[-0.035em] md:text-[38px]">
               Horarios de la semana
             </h2>
@@ -453,7 +453,7 @@ export default async function WebIglesiaPage({
                 />
                 <div
                   aria-hidden="true"
-                  className="absolute inset-0 bg-[#1A1A1A]/40"
+                  className="absolute inset-0 bg-black/45"
                 />
               </>
             )}
@@ -462,7 +462,7 @@ export default async function WebIglesiaPage({
               className={
                 'relative flex w-full max-w-[720px] flex-col gap-6 ' +
                 (devocional.imagenUrl
-                  ? 'm-3 rounded-2xl border border-white/25 bg-[#1A1A1A]/30 p-6 text-white supports-[backdrop-filter]:backdrop-blur-xl sm:m-5 sm:p-8 md:m-8 md:p-10'
+                  ? 'm-3 rounded-2xl border border-white/25 bg-black/45 p-6 text-white supports-[backdrop-filter]:backdrop-blur-xl sm:m-5 sm:p-8 md:m-8 md:p-10'
                   : 'p-6 sm:p-8 md:p-10 lg:p-12')
               }
             >
@@ -470,7 +470,7 @@ export default async function WebIglesiaPage({
                 <span
                   className={
                     't-micro ' +
-                    (devocional.imagenUrl ? '!text-white/75' : 'text-[#9C3A11]')
+                    (devocional.imagenUrl ? '!text-white/75' : 'text-badge-accent-fg')
                   }
                 >
                   {devocional.esDeHoy ? 'Devocional de hoy' : 'Último devocional'}
@@ -602,7 +602,7 @@ export default async function WebIglesiaPage({
           className="mx-auto max-w-[1180px] scroll-mt-20 px-4 py-14 sm:px-5 md:px-10 md:py-16 lg:py-20"
         >
           <div className="mb-9 flex flex-col gap-3">
-            <span className="t-micro text-[#9C3A11]">Grupos y ministerios</span>
+            <span className="t-micro text-badge-accent-fg">Grupos y ministerios</span>
             <h2 className="max-w-[600px] text-pretty text-[30px] font-extrabold leading-[1.06] tracking-[-0.035em] md:text-[38px]">
               Puedes sumarte a cualquiera
             </h2>
@@ -654,7 +654,7 @@ export default async function WebIglesiaPage({
       >
         <div className="mx-auto grid max-w-[1180px] items-center gap-8 px-4 py-14 sm:px-5 md:grid-cols-[1fr_auto] md:gap-12 md:px-10 md:py-16 lg:py-20">
           <div className="flex flex-col gap-3">
-            <span className="t-micro text-[#9C3A11]">La comunidad</span>
+            <span className="t-micro text-badge-accent-fg">La comunidad</span>
             <h2 className="max-w-[600px] text-pretty text-[30px] font-extrabold leading-[1.06] tracking-[-0.035em] md:text-[38px]">
               Lo que pasa entre domingo y domingo
             </h2>
@@ -784,7 +784,7 @@ export default async function WebIglesiaPage({
         >
           <div className="grid items-start gap-10 md:grid-cols-2">
             <div className="flex flex-col gap-4">
-              <span className="t-micro text-[#9C3A11]">Cómo llegar y contacto</span>
+              <span className="t-micro text-badge-accent-fg">Cómo llegar y contacto</span>
               <h2 className="text-pretty text-[30px] font-extrabold leading-[1.06] tracking-[-0.035em] md:text-[38px]">
                 ¿Alguna pregunta antes de venir?
               </h2>

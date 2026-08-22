@@ -25,19 +25,19 @@ export const ESTADOS: Record<
 > = {
   miembro: {
     etiqueta: 'Activo',
-    badge: 'bg-[#E4EDE9] text-[#2F5D50]',
+    badge: 'bg-badge-success-bg text-badge-success-fg',
     avatar: 'bg-muted text-muted-foreground',
   },
   nuevo: {
     etiqueta: 'Nuevo',
-    badge: 'bg-[#F7E4DA] text-[#BD4715]',
+    badge: 'bg-badge-accent-bg text-badge-accent-fg',
     // Los recién llegados destacan también en el avatar. Es la gente a la que
     // hay que contactar esta semana, y el diseño los separa del resto.
-    avatar: 'bg-[#F7E4DA] text-[#BD4715]',
+    avatar: 'bg-badge-accent-bg text-badge-accent-fg',
   },
   visitante: {
     etiqueta: 'Visitante',
-    badge: 'bg-[#F6EDD9] text-[#7E5F13]',
+    badge: 'bg-badge-warning-bg text-badge-warning-fg',
     avatar: 'bg-muted text-muted-foreground',
   },
   inactivo: {

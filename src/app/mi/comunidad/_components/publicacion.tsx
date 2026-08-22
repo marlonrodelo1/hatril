@@ -1,6 +1,6 @@
 import { Heart, Trash2 } from 'lucide-react';
 
-import { iniciales } from '@/lib/format/iniciales';
+import { AvatarPersona } from '@/components/avatar-persona';
 import { haceCuanto } from '@/lib/format/hace-cuanto';
 import { Button } from '@/components/ui/button';
 import type { PublicacionMuro } from '@/lib/comunidad/consultas';
@@ -73,9 +73,7 @@ export function Publicacion({
   return (
     <article className="-mx-4 flex flex-col gap-3 border-y border-border bg-surface px-4 py-3.5 sm:mx-0 sm:rounded-xl sm:border sm:p-4">
       <header className="flex items-center gap-3">
-        <span className="flex size-9 flex-none items-center justify-center rounded-full bg-muted text-[12px] font-bold text-muted-foreground">
-          {iniciales(p.autorNombre)}
-        </span>
+        <AvatarPersona nombre={p.autorNombre} />
 
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-[14.5px] font-bold leading-tight tracking-[-0.015em]">
@@ -145,7 +143,20 @@ export function Publicacion({
         </div>
       )}
 
-      <div className="flex items-center gap-1 border-t border-border pt-2">
+      {/*
+       * La fila de acciones la arma <Comentarios>, y el corazón entra dentro
+       * como hijo. No es un capricho de organización: el botón que despliega y
+       * el panel desplegado tienen que ser hermanos en el DOM, y el estado de
+       * «está abierto» solo puede vivir en un componente de cliente. Esta
+       * publicación es de servidor.
+       */}
+      <Comentarios
+        publicacionId={p.id}
+        comentarios={comentarios}
+        total={p.totalComentarios}
+        admiteComentarios={admiteComentarios}
+        puedeModerar={puedeModerar}
+      >
         <form action={alternarMeGusta.bind(null, p.id)}>
           <Button
             type="submit"
@@ -155,7 +166,7 @@ export function Publicacion({
             aria-label={p.leHeDado ? 'Quitar el me gusta' : 'Me gusta'}
             className={
               p.leHeDado
-                ? 'text-danger hover:bg-[#F3DEDD]'
+                ? 'text-danger hover:bg-badge-danger-bg'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }
           >
@@ -169,15 +180,8 @@ export function Publicacion({
             {p.meGusta > 0 ? p.meGusta : 'Me gusta'}
           </Button>
         </form>
+      </Comentarios>
 
-        <Comentarios
-          publicacionId={p.id}
-          comentarios={comentarios}
-          total={p.totalComentarios}
-          admiteComentarios={admiteComentarios}
-          puedeModerar={puedeModerar}
-        />
-      </div>
     </article>
   );
 }

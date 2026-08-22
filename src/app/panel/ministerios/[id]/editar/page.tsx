@@ -58,7 +58,7 @@ export default async function EditarMinisterioPage({
         />
 
         {puedeArchivar && (
-          <section className="flex flex-col gap-3 rounded-xl border border-[#E0C4C2] bg-surface p-5">
+          <section className="flex flex-col gap-3 rounded-xl border border-danger-border bg-surface p-5">
             <div className="flex flex-col gap-1.5">
               <h2 className="t-subtitulo">Cerrar el ministerio</h2>
               <p className="text-pretty text-[14px] leading-relaxed text-muted-foreground">

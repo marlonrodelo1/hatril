@@ -154,7 +154,7 @@ export function CarruselIglesia({
              */}
             <div
               aria-hidden="true"
-              className="absolute inset-0 bg-[#1A1A1A]/55"
+              className="absolute inset-0 bg-black/55"
             />
           </div>
         ))}

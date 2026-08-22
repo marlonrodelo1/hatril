@@ -351,7 +351,7 @@ export default async function MinisterioPage({
                   style={
                     p.rolEquipo === 'voluntario'
                       ? undefined
-                      : { background: color.suave, color: color.hex }
+                      : { background: color.suave, color: color.claro }
                   }
                 >
                   {p.rolEquipo === 'responsable'
@@ -435,7 +435,7 @@ export default async function MinisterioPage({
             <div className="p-4">
               <Button
                 variant="ghost"
-                className="h-[42px] w-full border border-dashed border-[#D5CCBE] text-muted-foreground hover:bg-background hover:text-foreground"
+                className="h-[42px] w-full border border-dashed border-border text-muted-foreground hover:bg-background hover:text-foreground"
                 render={<Link href="?asignar=1" scroll={false} />}
               >
                 <Plus strokeWidth={1.8} />

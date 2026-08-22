@@ -246,7 +246,7 @@ export default async function AjustesPage({
                               name="horarioDestacado"
                               value={i}
                               defaultChecked={indiceDestacado === i}
-                              className="size-[17px] flex-none cursor-pointer accent-[#BD4715]"
+                              className="size-[17px] flex-none cursor-pointer accent-primary"
                             />
                             <span className="sm:hidden">
                               Dirigir aquí a quien viene por primera vez

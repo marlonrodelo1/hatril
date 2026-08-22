@@ -78,7 +78,7 @@ export default async function AgendaPage() {
                 <li key={e.id}>
                   <Link
                     href={`/i/${ctx.iglesia.slug}/eventos/${e.id}`}
-                    className="flex items-center gap-3.5 rounded-xl border border-border bg-surface p-4 text-foreground no-underline transition-colors hover:border-[#D5CCBE] hover:bg-[#FBF9F5] hover:no-underline"
+                    className="flex items-center gap-3.5 rounded-xl border border-border bg-surface p-4 text-foreground no-underline transition-colors hover:border-support-hover hover:bg-surface-alt hover:no-underline"
                   >
                     <span className="flex size-10 flex-none items-center justify-center rounded-[10px] bg-accent text-accent-foreground">
                       <Ticket className="size-[18px]" strokeWidth={1.8} />
@@ -123,7 +123,7 @@ export default async function AgendaPage() {
                     >
                       <CalendarClock
                         className="size-[18px]"
-                        style={{ color: color.hex }}
+                        style={{ color: color.claro }}
                         strokeWidth={1.8}
                         aria-hidden
                       />

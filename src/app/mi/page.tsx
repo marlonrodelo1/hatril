@@ -92,7 +92,7 @@ export default async function MiPage({
 
         {solicitud?.estado === 'pendiente' && (
           <div className="flex flex-col items-start gap-4 rounded-xl border border-border bg-surface p-6">
-            <span className="flex size-11 items-center justify-center rounded-full bg-[#F6EDD9] text-[#7E5F13]">
+            <span className="flex size-11 items-center justify-center rounded-full bg-badge-warning-bg text-badge-warning-fg">
               <Clock className="size-5" strokeWidth={1.7} />
             </span>
 

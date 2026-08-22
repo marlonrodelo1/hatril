@@ -67,7 +67,7 @@ export default async function MinisteriosPage({
                 <Link
                   key={m.id}
                   href={`/panel/ministerios/${m.id}`}
-                  className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5 text-foreground no-underline transition-colors hover:border-[#D5CCBE] hover:bg-[#FBF9F5] hover:no-underline"
+                  className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5 text-foreground no-underline transition-colors hover:border-support-hover hover:bg-surface-alt hover:no-underline"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
@@ -92,7 +92,7 @@ export default async function MinisteriosPage({
                       </div>
                     </div>
                     <ChevronRight
-                      className="mt-2 size-4 flex-none text-[#A79E93]"
+                      className="mt-2 size-4 flex-none text-disabled-text"
                       strokeWidth={1.9}
                     />
                   </div>
@@ -119,7 +119,7 @@ export default async function MinisteriosPage({
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-lg border border-dashed border-[#D5CCBE] px-3 py-2.5 text-[13px] text-muted-foreground">
+                    <div className="rounded-lg border border-dashed border-border px-3 py-2.5 text-[13px] text-muted-foreground">
                       Sin responsable asignado
                     </div>
                   )}

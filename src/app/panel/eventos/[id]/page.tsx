@@ -330,7 +330,7 @@ export default async function EventoPage({
             </section>
 
             {/* ---------- Borrar ---------- */}
-            <section className="flex flex-col gap-4 rounded-xl border border-danger-border bg-[#F7ECEB] p-5">
+            <section className="flex flex-col gap-4 rounded-xl border border-danger-border bg-danger-soft p-5">
               <div className="flex flex-col gap-1">
                 <h2 className="t-subtitulo">Borrar</h2>
                 <p className="max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground">

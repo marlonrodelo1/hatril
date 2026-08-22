@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ImagePlus, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { iniciales } from '@/lib/format/iniciales';
+import { AvatarPersona } from '@/components/avatar-persona';
 import { publicar } from '../actions';
 import { MAX_IMAGENES } from '@/lib/comunidad/limites';
 import { Hoja } from './hoja';
@@ -223,9 +223,7 @@ export function Publicador({
           onClick={() => setAbierta(true)}
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg p-1 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/20"
         >
-          <span className="flex size-9 flex-none items-center justify-center rounded-full bg-muted text-[12px] font-bold text-muted-foreground">
-            {iniciales(nombre)}
-          </span>
+          <AvatarPersona nombre={nombre} />
 
           {/* Parece un campo pero es un botón: un campo de verdad aquí haría
               escribir en el sitio equivocado —y en iOS levantaría el teclado
@@ -315,9 +313,7 @@ function Formulario({
     >
       <div className="flex gap-3">
         {!enHoja && (
-          <span className="flex size-9 flex-none items-center justify-center rounded-full bg-muted text-[12px] font-bold text-muted-foreground">
-            {iniciales(nombre)}
-          </span>
+          <AvatarPersona nombre={nombre} />
         )}
 
         {/*

@@ -95,7 +95,7 @@ export default async function DevocionalPage() {
                 href={d.videoUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex w-fit items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-[14px] font-semibold no-underline hover:bg-[#FBF9F5] hover:no-underline"
+                className="inline-flex w-fit items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-[14px] font-semibold no-underline hover:bg-surface-alt hover:no-underline"
               >
                 <ExternalLink className="size-4" strokeWidth={1.8} />
                 Verlo en vídeo

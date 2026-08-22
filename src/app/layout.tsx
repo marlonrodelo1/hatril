@@ -40,7 +40,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   // El color de `bg-base`: sin esto, la barra del navegador en móvil se pinta
   // blanca y corta la superficie crema justo por arriba.
-  themeColor: '#F0ECE3',
+  themeColor: '#121212',
   width: 'device-width',
   initialScale: 1,
 };

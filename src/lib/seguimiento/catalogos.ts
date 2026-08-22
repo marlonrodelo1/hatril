@@ -44,19 +44,19 @@ export const RESULTADOS: Record<
   contactado: {
     etiqueta: 'Hablamos',
     ayuda: 'Se habló con la persona y no hay nada más que apuntar.',
-    badge: 'bg-[#E4EDE9] text-[#2F5D50]',
+    badge: 'bg-badge-success-bg text-badge-success-fg',
   },
   volvera: {
     etiqueta: 'Va a volver',
     ayuda: 'Dijo que cuenta con venir.',
-    badge: 'bg-[#E4EDE9] text-[#2F5D50]',
+    badge: 'bg-badge-success-bg text-badge-success-fg',
   },
   no_contesta: {
     etiqueta: 'No contestó',
     // Se dice explícitamente que esto no juzga a nadie: es la marca que más se
     // va a usar y la que más fácilmente se lee como «pasa de nosotros».
     ayuda: 'No cogió el teléfono o no abrió. Sin más.',
-    badge: 'bg-[#F6EDD9] text-[#7E5F13]',
+    badge: 'bg-badge-warning-bg text-badge-warning-fg',
   },
   se_mudo: {
     etiqueta: 'Se mudó',
@@ -66,7 +66,7 @@ export const RESULTADOS: Record<
   molesto_con_la_iglesia: {
     etiqueta: 'Está molesto con la iglesia',
     ayuda: 'Lo que una iglesia necesita saber para poder arreglarlo.',
-    badge: 'bg-[#F3E0D6] text-[#9C3A11]',
+    badge: 'bg-[#F3E0D6] text-badge-accent-fg',
   },
   sin_contacto: {
     etiqueta: 'No hay forma de localizarle',
@@ -76,7 +76,7 @@ export const RESULTADOS: Record<
   derivado_al_pastor: {
     etiqueta: 'Lo lleva el pastorado',
     ayuda: 'Excede lo que un voluntario debe llevar.',
-    badge: 'bg-[#F7E4DA] text-[#BD4715]',
+    badge: 'bg-badge-accent-bg text-badge-accent-fg',
   },
 };
 

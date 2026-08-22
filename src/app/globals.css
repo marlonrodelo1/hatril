@@ -5,65 +5,124 @@
  * Sistema de diseño de Hatril.
  *
  * Extraído de `Sistema de diseño.dc.html` (Claude Design, proyecto
- * 107021c4-dd85-485d-9cc7-34ef639d92ae). Base crema y naranja quemado, estética
- * plana y cálida.
+ * 107021c4-dd85-485d-9cc7-34ef639d92ae). Naranja quemado y verde de apoyo,
+ * estética plana.
  *
  * Tres reglas que el propio sistema declara innegociables:
  *   1. Un solo botón naranja por pantalla. Si todo es naranja, nada destaca.
  *   2. `accent` y `danger` nunca se tocan. Los errores llevan icono, no solo color.
  *   3. Sin degradados ni sombras. La profundidad se hace con bordes de 1px.
  *
- * MODO CLARO ÚNICAMENTE. El diseño no define paleta oscura y no se inventa una:
- * un modo oscuro improvisado rompería el contraste comprobado de #6B645C.
+ * MODO OSCURO ÚNICAMENTE, DESDE EL 22-AGO-2026
+ * --------------------------------------------
+ * Aquí ponía «modo claro únicamente» y que no se inventara una paleta oscura
+ * porque rompería el contraste comprobado. Marlon la pidió para toda la
+ * aplicación, así que se ha hecho — y con el aviso cumplido: la paleta oscura no
+ * es el claro invertido, es una tabla nueva medida entera. Lo que NO se puede
+ * hacer es cambiar dos variables y confiar.
+ *
+ * Lo que se aprendió al hacerlo, y que vale para cualquier cambio de paleta
+ * futuro: un token que no está expuesto como `--color-*` no existe para
+ * Tailwind, así que su color acaba escrito a mano dentro de un componente y se
+ * queda clavado. Había 79 hex sueltos en `.tsx` por esa razón, la mayoría en
+ * `button.tsx`, y todos apuntaban a variables que ya existían aquí sin utilidad
+ * que las usara.
+ *
+ * Sigue siendo UN SOLO MODO. No hay `dark:`, ni `prefers-color-scheme`, ni
+ * interruptor: hay una tabla de valores. Mantener dos temas cuesta el doble de
+ * comprobaciones de contraste y ninguna pantalla lo pedía.
  */
 
 :root {
   /* --- Tokens crudos del sistema de diseño (12 tokens, un único acento) --- */
 
-  /* Superficies y estructura */
-  --hatril-bg-base: #f0ece3; /* fondo de la aplicación */
-  --hatril-surface: #faf7f2; /* tarjetas y paneles */
-  --hatril-surface-alt: #ffffff; /* inputs y tablas */
-  --hatril-border: #e2dbd0; /* bordes y separadores */
+  /*
+   * Superficies. Tres escalones y ni uno más.
+   *
+   * En oscuro la profundidad se hace subiendo la superficie, no bajándola: el
+   * fondo es lo más oscuro, la tarjeta se levanta sobre él y el campo de texto
+   * se levanta sobre la tarjeta. Al revés que en claro, donde la tarjeta era lo
+   * más blanco y el campo bajaba.
+   *
+   * Los tres escalones están separados 6 y 10 puntos de luminancia, que es lo
+   * justo para que se distingan sin borde. Más juntos y vuelve a verse plano
+   * —el problema que se venía arrastrando—; más separados y la pantalla parece
+   * un tablero de ajedrez.
+   */
+  --hatril-bg-base: #121212; /* fondo de la aplicación */
+  --hatril-surface: #1c1c1c; /* tarjetas y paneles */
+  --hatril-surface-alt: #262626; /* inputs y tablas */
+  --hatril-surface-active: #303030; /* pulsado */
+  --hatril-border: #333333; /* bordes y separadores */
 
-  /* Texto. #6B645C da 5.4:1 sobre bg-base y 5.9:1 sobre surface (AA).
-     No existe un gris más claro en el sistema: no bajar de aquí. */
-  --hatril-text-primary: #1a1a1a;
-  --hatril-text-secondary: #6b645c;
+  /*
+   * Texto. Ni blanco puro ni gris de oficina.
+   *
+   * #F2F0EC en vez de #FFFFFF: el blanco puro sobre negro casi puro vibra —el
+   * ojo lo percibe como un borde brillante— y en un muro que se lee de noche
+   * cansa. Da 16.5:1 sobre el fondo, de sobra.
+   *
+   * El secundario da 7.3:1 sobre el fondo y 6.6:1 sobre la tarjeta. Es MÁS
+   * contraste del que había en claro (5.4 y 5.8), porque en oscuro un gris
+   * flojo se pierde mucho antes.
+   */
+  --hatril-text-primary: #f2f0ec;
+  --hatril-text-secondary: #a6a09a;
 
-  /* Marca y estado */
+  /*
+   * Marca y estado.
+   *
+   * EL NARANJA Y EL VERDE DE RELLENO NO SE HAN TOCADO
+   * -------------------------------------------------
+   * #BD4715 y #2F5D50 siguen siendo exactamente los de la marca. Como FONDO de
+   * botón funcionan igual de bien en oscuro: lo que decide ahí es el contraste
+   * con su propio texto blanco —5.1:1 y 7.5:1— y eso no depende de la página.
+   *
+   * Lo que sí cambia son los estados: en claro, pulsar oscurecía; aquí aclara.
+   * Un botón que se oscurece sobre un fondo oscuro parece que se apaga, no que
+   * responde.
+   *
+   * `danger` SÍ se aclara, y es la excepción a la regla 2. Tiene que servir de
+   * TEXTO —el corazón del muro, los mensajes de error— y #93231F sobre #1C1C1C
+   * da 1.6:1: invisible. #E0655B da 5.1:1. El rojo de marca sigue vivo como
+   * relleno en `badge-danger-fg`.
+   */
   --hatril-accent: #bd4715;
-  --hatril-accent-hover: #9c3a11;
-  --hatril-accent-active: #83300e;
-  --hatril-accent-soft: #f7e4da;
+  --hatril-accent-hover: #d2551f;
+  --hatril-accent-active: #e0672e;
+  --hatril-accent-soft: #2b1710;
+  --hatril-accent-soft-active: #3a1e14;
   --hatril-support: #2f5d50;
-  --hatril-support-hover: #26493f;
-  --hatril-support-active: #1e3b33;
-  --hatril-warning: #b58a2b;
-  --hatril-danger: #93231f;
+  --hatril-support-hover: #3a7263;
+  --hatril-support-active: #488975;
+  --hatril-warning: #d6a94f;
+  --hatril-danger: #e0655b;
 
-  /* Deshabilitado */
-  --hatril-disabled-bg: #e6ddd2;
-  --hatril-disabled-fg: #9a9188;
-  --hatril-disabled-border: #e9e3da;
-  --hatril-disabled-surface: #fbf9f5;
-  --hatril-disabled-text: #a79e93;
+  /* Deshabilitado. En oscuro no se puede «apagar» bajando el brillo, porque el
+     fondo ya está abajo: se apaga quitándole contraste al texto. */
+  --hatril-disabled-bg: #242424;
+  --hatril-disabled-fg: #6b6b6b;
+  --hatril-disabled-border: #2c2c2c;
+  --hatril-disabled-surface: #1a1a1a;
+  --hatril-disabled-text: #6b6b6b;
 
-  /* Tonos de badge: fondo suave + texto del color de estado */
-  --hatril-badge-success-bg: #e4ede9;
-  --hatril-badge-success-fg: #2f5d50;
-  --hatril-badge-warning-bg: #f6edd9;
-  --hatril-badge-warning-fg: #7e5f13;
-  --hatril-badge-accent-bg: #f7e4da;
-  --hatril-badge-accent-fg: #bd4715;
-  --hatril-badge-neutral-bg: #ede8df;
-  --hatril-badge-neutral-fg: #6b645c;
-  --hatril-badge-danger-bg: #f3dedd;
-  --hatril-badge-danger-fg: #93231f;
+  /* Tonos de badge: fondo tintado oscuro + texto del color de estado, aclarado
+     lo justo para pasar de 4.5:1 sobre su propio fondo. */
+  --hatril-badge-success-bg: #16261f;
+  --hatril-badge-success-border: #23382f;
+  --hatril-badge-success-fg: #7cbba6;
+  --hatril-badge-warning-bg: #2a2314;
+  --hatril-badge-warning-fg: #d6a94f;
+  --hatril-badge-accent-bg: #2b1710;
+  --hatril-badge-accent-fg: #e8905e;
+  --hatril-badge-neutral-bg: #262626;
+  --hatril-badge-neutral-fg: #a6a09a;
+  --hatril-badge-danger-bg: #2b1614;
+  --hatril-badge-danger-fg: #e0655b;
 
   /* Contorno del botón destructivo (no se rellena hasta pulsarlo) */
-  --hatril-danger-border: #e0c4c2;
-  --hatril-danger-soft: #f7eceb;
+  --hatril-danger-border: #4a2a27;
+  --hatril-danger-soft: #241614;
 
   /* --- Mapeo a los nombres que espera shadcn/ui --- */
   --background: var(--hatril-bg-base);
@@ -83,7 +142,9 @@
   --accent: var(--hatril-accent-soft);
   --accent-foreground: var(--hatril-accent);
   --destructive: var(--hatril-danger);
-  --destructive-foreground: #ffffff;
+  /* Sobre el rojo aclarado, el blanco da 3.4:1. El texto de un relleno rojo
+     tiene que ser el fondo de la aplicación, no blanco. */
+  --destructive-foreground: var(--hatril-bg-base);
   --border: var(--hatril-border);
   --input: var(--hatril-border);
   --ring: var(--hatril-accent);
@@ -129,13 +190,55 @@
   /* Tokens de Hatril expuestos como utilidades: bg-surface-alt, text-support… */
   --color-surface: var(--hatril-surface);
   --color-surface-alt: var(--hatril-surface-alt);
+  --color-surface-active: var(--hatril-surface-active);
   --color-accent-brand: var(--hatril-accent);
   --color-accent-hover: var(--hatril-accent-hover);
+  --color-accent-active: var(--hatril-accent-active);
   --color-accent-soft: var(--hatril-accent-soft);
+  --color-accent-soft-active: var(--hatril-accent-soft-active);
   --color-support: var(--hatril-support);
   --color-support-hover: var(--hatril-support-hover);
+  --color-support-active: var(--hatril-support-active);
   --color-warning: var(--hatril-warning);
   --color-danger: var(--hatril-danger);
+  --color-danger-border: var(--hatril-danger-border);
+  --color-danger-soft: var(--hatril-danger-soft);
+
+  /*
+   * Los cuatro del estado deshabilitado.
+   *
+   * NO ESTABAN EXPUESTOS, Y ESO SE PAGÓ
+   * -----------------------------------
+   * Existían como variables desde el primer día, pero sin `--color-*` no hay
+   * utilidad de Tailwind que los use, así que `button.tsx` acabó con nueve
+   * colores escritos a mano —`disabled:bg-[#E6DDD2]`, `disabled:text-[#9A9188]`,
+   * `active:bg-[#83300E]`…— repetidos variante por variante.
+   *
+   * Daba igual mientras la aplicación fuera de un solo tono. Al pasarla a
+   * oscuro, cada uno de esos hex se queda clavado en su color claro: un botón
+   * deshabilitado blanco hueso sobre una tarjeta casi negra. Exponerlos aquí es
+   * lo que permite que el cambio de paleta se propague solo.
+   */
+  --color-disabled-bg: var(--hatril-disabled-bg);
+  --color-disabled-fg: var(--hatril-disabled-fg);
+  --color-disabled-border: var(--hatril-disabled-border);
+  --color-disabled-surface: var(--hatril-disabled-surface);
+  --color-disabled-text: var(--hatril-disabled-text);
+
+  /* Los badges. Mismo motivo que los de arriba: existían como variables y no
+     como utilidad, así que sus colores acababan escritos a mano en las
+     pantallas y no seguían el cambio de paleta. */
+  --color-badge-success-bg: var(--hatril-badge-success-bg);
+  --color-badge-success-fg: var(--hatril-badge-success-fg);
+  --color-badge-success-border: var(--hatril-badge-success-border);
+  --color-badge-warning-bg: var(--hatril-badge-warning-bg);
+  --color-badge-warning-fg: var(--hatril-badge-warning-fg);
+  --color-badge-accent-bg: var(--hatril-badge-accent-bg);
+  --color-badge-accent-fg: var(--hatril-badge-accent-fg);
+  --color-badge-neutral-bg: var(--hatril-badge-neutral-bg);
+  --color-badge-neutral-fg: var(--hatril-badge-neutral-fg);
+  --color-badge-danger-bg: var(--hatril-badge-danger-bg);
+  --color-badge-danger-fg: var(--hatril-badge-danger-fg);
 
   --font-sans: var(--font-jakarta), system-ui, sans-serif;
 
@@ -215,7 +318,7 @@
     width: 17px;
     height: 17px;
     flex: none;
-    border: 1.5px solid #c9bfaf;
+    border: 1.5px solid var(--hatril-border);
     border-radius: 4px;
     background: var(--hatril-surface-alt);
     cursor: pointer;

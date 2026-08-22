@@ -72,7 +72,7 @@ export default async function AgendaPage({
               <li key={r.id}>
                 <Link
                   href={`/panel/ministerios/${id}/agenda/${r.id}`}
-                  className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 text-foreground no-underline transition-colors hover:border-[#D5CCBE] hover:bg-[#FBF9F5] hover:no-underline md:px-5"
+                  className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 text-foreground no-underline transition-colors hover:border-support-hover hover:bg-surface-alt hover:no-underline md:px-5"
                 >
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="truncate text-[16px] font-bold tracking-[-0.015em]">
@@ -106,7 +106,7 @@ export default async function AgendaPage({
                   )}
 
                   <ChevronRight
-                    className="size-4 flex-none text-[#A79E93]"
+                    className="size-4 flex-none text-disabled-text"
                     strokeWidth={1.9}
                     aria-hidden
                   />

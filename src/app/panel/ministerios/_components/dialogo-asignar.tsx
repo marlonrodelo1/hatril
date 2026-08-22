@@ -61,7 +61,7 @@ export function DialogoAsignar({
         href={cerrar}
         scroll={false}
         aria-label="Cerrar"
-        className="fixed inset-0 z-40 bg-[#1A1A1A]/34"
+        className="fixed inset-0 z-40 bg-black/45"
       />
 
       <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10">
@@ -154,7 +154,7 @@ export function DialogoAsignar({
               )}
             </div>
 
-            <div className="flex items-center gap-3 border-t border-border bg-[#F5F1EA] px-5 py-4">
+            <div className="flex items-center gap-3 border-t border-border bg-surface-alt px-5 py-4">
               <span className="flex-1 text-[13.5px] text-muted-foreground">
                 {n === 0
                   ? 'Nadie marcado todavía'

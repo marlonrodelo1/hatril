@@ -27,8 +27,8 @@ export function Aviso({
       className={
         'flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-[13.5px] leading-snug ' +
         (esError
-          ? 'border-[#E0C4C2] bg-[#F7ECEB] text-danger'
-          : 'border-[#C7DAD3] bg-[#E4EDE9] text-support')
+          ? 'border-danger-border bg-danger-soft text-danger'
+          : 'border-badge-success-border bg-badge-success-bg text-badge-success-fg')
       }
     >
       <Icono className="mt-px size-4 shrink-0" strokeWidth={1.9} />

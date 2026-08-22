@@ -138,7 +138,7 @@ export function FiltrosMiembros({
                 type="button"
                 onClick={c.quitar}
                 aria-label={`Quitar ${c.etiqueta}`}
-                className="flex size-[19px] cursor-pointer items-center justify-center rounded-full text-accent-foreground hover:bg-[#F0D0BE]"
+                className="flex size-[19px] cursor-pointer items-center justify-center rounded-full text-accent-foreground hover:bg-accent-soft-active"
               >
                 <X className="size-3.5" strokeWidth={2.4} />
               </button>

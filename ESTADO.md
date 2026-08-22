@@ -261,6 +261,12 @@ lee al arrancar.
   Sociedades Bíblicas Unidas y no entra en el producto —el seed usa la RV1909,
   que es de dominio público—.
 
+  **Los comentarios se despliegan bajo su publicación**, no en una hoja. Van ya
+  tres formas: siempre abiertos —con veinte, la publicación siguiente quedaba a
+  tres pantallazos—, en hoja modal —tapaba la pantalla y al cerrarla se perdía
+  el sitio— y así. La hoja sigue viva para el compositor, que es donde una capa
+  modal sí se justifica: se abre para escribir, no para leer de pasada.
+
   Las publicaciones van **a sangre en el móvil** y vuelven a ser tarjetas a
   partir de `sm`. Y el muro de demostración se llena con `scripts/seed-muro.sql`:
   siete publicaciones de cinco personas con sus comentarios, respuestas y me
@@ -375,6 +381,20 @@ lee al arrancar.
 ---
 
 ## Trampas que ya han costado tiempo
+
+**Cambiar la paleta enseña dónde NO están los tokens.** Al pasar la aplicación a
+oscuro aparecieron 79 colores escritos a mano en `.tsx` —17 solo en
+`button.tsx`— y casi todos apuntaban a variables que YA existían en
+`globals.css`. El motivo es siempre el mismo: la variable estaba definida pero no
+expuesta como `--color-*`, así que no había utilidad de Tailwind que la usara y
+quien escribió la pantalla puso el hex a mano. Mientras hubo un solo tema no se
+notó; al cambiarlo, cada uno de esos hex se quedó clavado en su color claro.
+
+Y una que solo se ve midiendo: **un tono de marca que funciona como relleno no
+tiene por qué funcionar como texto.** #BD4715 con letra blanca encima da 5.1:1
+—perfecto para un botón— pero como color de TEXTO sobre #1C1C1C da 3.4:1, y
+#93231F da 1.6:1. Por eso `danger` se aclaró a #E0655B y los ministerios
+ganaron un tercer color (`claro`) además de `hex` y `suave`.
 
 **Las policies se suman con OR, y los GRANT por columna solo recortan a `anon`.**
 Dos policies escritas para el visitante —`iglesias_select_directorio` y

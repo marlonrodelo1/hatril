@@ -46,7 +46,7 @@ export default async function InscripcionListaPage({
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-16">
       <div className="flex w-full max-w-[520px] flex-col items-start gap-5 rounded-xl border border-border bg-surface p-7">
-        <span className="flex size-11 items-center justify-center rounded-full bg-[#E4EDE9] text-[#2F5D50]">
+        <span className="flex size-11 items-center justify-center rounded-full bg-badge-success-bg text-badge-success-fg">
           <Check className="size-[22px]" strokeWidth={2.2} />
         </span>
 

@@ -192,11 +192,26 @@ Tokens en `src/app/globals.css`. Plus Jakarta Sans.
 Tres reglas que el propio sistema declara innegociables:
 
 1. Un solo botón naranja por pantalla.
-2. `accent` (#BD4715) y `danger` (#93231F) nunca se tocan. Los errores llevan
-   icono, no solo color.
+2. `accent` (#BD4715) no se toca. Los errores llevan icono, no solo color.
 3. Sin degradados ni sombras. La profundidad se hace con bordes de 1px.
 
-**Modo claro únicamente.** El diseño no define paleta oscura y no se inventa una.
+**Modo OSCURO únicamente, desde el 22-ago-2026.** Aquí ponía lo contrario y que
+no se inventara una paleta oscura. Marlon la pidió para toda la aplicación.
+
+Tres cosas que hay que saber antes de tocar un color:
+
+- **El naranja y el verde de relleno son los mismos.** #BD4715 y #2F5D50 siguen
+  intactos: como fondo de botón, lo que decide es el contraste con su propio
+  texto blanco (5.1:1 y 7.5:1), y eso no depende del fondo de la página.
+- **`danger` SÍ cambió**, y es la excepción a la regla 2. Tiene que servir de
+  TEXTO —el corazón del muro, los errores— y #93231F sobre #1C1C1C da 1.6:1:
+  invisible. Ahora es #E0655B, que da 5.1:1. El rojo de marca sigue vivo como
+  relleno en `badge-danger-fg`.
+- **Un token sin `--color-*` no existe para Tailwind.** Es lo que hizo que
+  hubiera 79 colores escritos a mano en `.tsx`, todos apuntando a variables que
+  ya estaban definidas pero sin utilidad que las usara. Al cambiar la paleta, cada
+  uno de esos hex se queda clavado en su valor viejo. **Al añadir un token,
+  exponerlo.**
 
 Faltan por diseñar: login, registro, onboarding, super admin, directorio de
 iglesias, área del miembro y todas las vistas móviles.

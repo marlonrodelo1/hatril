@@ -75,7 +75,7 @@ export function GruposApilados({
                       razón: el texto tiene que leerse sobre cualquier foto. */}
                   <div
                     aria-hidden="true"
-                    className="absolute inset-0 bg-[#1A1A1A]/55"
+                    className="absolute inset-0 bg-black/55"
                   />
                 </>
               ) : null}
@@ -98,7 +98,7 @@ export function GruposApilados({
 
                 <h3
                   className="text-pretty text-[clamp(28px,7.5vw,44px)] font-extrabold leading-[1.05] tracking-[-0.03em]"
-                  style={{ color: g.fotoUrl ? '#fff' : color.hex }}
+                  style={{ color: g.fotoUrl ? '#fff' : color.claro }}
                 >
                   {g.nombre}
                 </h3>
@@ -107,7 +107,7 @@ export function GruposApilados({
                   <p
                     className="max-w-[520px] text-pretty text-[15.5px] leading-relaxed md:text-[17px]"
                     style={{
-                      color: g.fotoUrl ? 'rgb(255 255 255 / 0.85)' : '#1A1A1A',
+                      color: g.fotoUrl ? 'rgb(255 255 255 / 0.85)' : 'var(--hatril-text-primary)',
                     }}
                   >
                     {g.descripcion}

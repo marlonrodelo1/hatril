@@ -88,7 +88,7 @@ export default async function SeguimientoPage({
                 <li key={p.miembroId}>
                   <Link
                     href={`/panel/ministerios/${id}/seguimiento/${p.miembroId}`}
-                    className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 text-foreground no-underline transition-colors hover:border-[#D5CCBE] hover:bg-[#FBF9F5] hover:no-underline md:px-5"
+                    className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 text-foreground no-underline transition-colors hover:border-support-hover hover:bg-surface-alt hover:no-underline md:px-5"
                   >
                     <span
                       className={`flex size-10 flex-none items-center justify-center rounded-full text-[12px] font-bold ${ESTADOS[p.estado].avatar}`}
@@ -142,7 +142,7 @@ export default async function SeguimientoPage({
                     <Faltas n={p.faltasSeguidas} />
 
                     <ChevronRight
-                      className="size-4 flex-none text-[#A79E93]"
+                      className="size-4 flex-none text-disabled-text"
                       strokeWidth={1.9}
                       aria-hidden
                     />
