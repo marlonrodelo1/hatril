@@ -127,15 +127,25 @@ export default async function ComunidadPage({
             devocional && {
               titulo: devocional.titulo,
               fecha: devocional.fecha,
-              // El extracto se corta aquí, en el servidor, además del
-              // `line-clamp` de la tarjeta: un cuerpo de tres mil caracteres
-              // viajaría entero al navegador para enseñar cuarenta.
+              // El extracto se corta aquí, en el servidor, además del recorte de
+              // la portada: un cuerpo de tres mil caracteres viajaría entero al
+              // navegador para enseñar cuarenta.
               cuerpo: devocional.cuerpo.slice(0, 180),
               imagenUrl: devocional.imagenUrl,
               esDeHoy: devocional.esDeHoy,
             }
           }
-        />
+        >
+          {/*
+           * El compositor cierra la portada, dentro del mismo marco que el
+           * versículo y el devocional. Solo si esta persona puede publicar: con
+           * la comunidad apagada o el muro cerrado al equipo, la portada se
+           * queda en sus dos primeras filas.
+           */}
+          {config.activa && puedePublicar && (
+            <Publicador nombre={nombre} admiteFotos={config.fotos} sobreFoto />
+          )}
+        </CabeceraDelDia>
 
         {!config.activa ? (
           /*
@@ -161,11 +171,11 @@ export default async function ComunidadPage({
           </div>
         ) : (
           <>
-            {puedePublicar ? (
-              <Publicador nombre={nombre} admiteFotos={config.fotos} />
-            ) : (
-              /* Sobrio y sin regañar: es una decisión de la iglesia sobre su
-                 muro, no un castigo a quien lee. */
+            {/* Quien no puede publicar se entera aquí, y sobrio: es una
+                decisión de la iglesia sobre su muro, no un castigo a quien
+                lee. Quien SÍ puede tiene el compositor arriba, en la
+                portada. */}
+            {!puedePublicar && (
               <p className="text-pretty rounded-xl border border-border bg-surface px-4 py-3.5 text-[13.5px] leading-relaxed text-muted-foreground">
                 {porQueNoPuedesPublicar(ctx)}
               </p>

@@ -228,7 +228,18 @@ lee al arrancar.
   volvía aquí: un botón que parecía llevar a algún sitio y no llevaba a ninguno.
   La de `/mi/avisos` sí se queda, pero ahora apunta al muro y no a ese rebote.
 
-  **Arriba del muro, lo del día**: el versículo primero y el devocional debajo,
+  **Arriba del muro hay una PORTADA**: una sola pieza con la foto del devocional
+  de fondo, un degradado encima y, dentro, el versículo, el devocional y el
+  compositor. Eran tres bloques sueltos en fila y se leían como tres cosas sin
+  relación.
+
+  El degradado **rompe la regla 3 del sistema** —«sin degradados ni sombras»— y
+  es deliberado: sobre una foto cualquiera el texto necesita que el fondo se
+  oscurezca justo donde él está, y un velo plano de la opacidad suficiente para
+  el peor punto de la imagen apaga la foto entera. Es la única superficie de la
+  aplicación con degradado, igual que era el único bloque de color.
+
+  Y lo de antes, que sigue valiendo: el versículo primero y el devocional debajo,
   y los dos pueden faltar por separado. No hizo falta tabla nueva: `devocionales`
   ya tenía `versiculo` y `referencia` desde la `0012`, y una fila sin cuerpo ya
   era un turno a medio llenar. Una iglesia que solo quiera publicar el versículo

@@ -193,7 +193,10 @@ Tres reglas que el propio sistema declara innegociables:
 
 1. Un solo botón naranja por pantalla.
 2. `accent` (#BD4715) no se toca. Los errores llevan icono, no solo color.
-3. Sin degradados ni sombras. La profundidad se hace con bordes de 1px.
+3. Sin sombras. La profundidad se hace con bordes de 1px. **Sin degradados,
+   con una excepción**: la portada del muro, donde el texto va sobre una foto y
+   un velo plano tendría que apagar la imagen entera para garantizar el peor
+   punto. Si aparece una segunda, es que la regla se está deshaciendo sola.
 
 **Modo OSCURO únicamente, desde el 22-ago-2026.** Aquí ponía lo contrario y que
 no se inventara una paleta oscura. Marlon la pidió para toda la aplicación.

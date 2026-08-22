@@ -89,8 +89,19 @@ type Previa = { url: string; nombre: string };
 export function Publicador({
   nombre,
   admiteFotos,
+  sobreFoto = false,
 }: {
   nombre: string;
+  /**
+   * El disparador vive dentro de la portada, encima de la foto y del degradado.
+   * Ahí un recuadro con `bg-surface` opaco sería un parche gris pegado sobre la
+   * imagen: lo que se quiere es un cristal, como el resto de la portada.
+   *
+   * Solo cambia el disparador. La hoja que se abre al pulsarlo es una capa
+   * aparte y sigue siendo opaca — un formulario translúcido sobre un muro en
+   * movimiento no hay quien lo lea.
+   */
+  sobreFoto?: boolean;
   /**
    * Fotos apagadas: ni botón ni input. La policy de la `0027` rechaza el INSERT
    * con imágenes, así que ofrecerlo sería un botón que siempre da error. Las que
@@ -217,7 +228,14 @@ export function Publicador({
        * la foto dentro, y un botón dentro de otro botón no es HTML válido: el
        * navegador lo desarma y el de dentro deja de responder.
        */}
-      <div className="flex w-full items-center gap-2 rounded-xl border border-border bg-surface p-2 sm:p-2.5">
+      <div
+        className={
+          'flex w-full items-center gap-2 rounded-xl ' +
+          (sobreFoto
+            ? 'border border-white/20 bg-white/10 p-1.5 supports-backdrop-filter:backdrop-blur-sm'
+            : 'border border-border bg-surface p-2 sm:p-2.5')
+        }
+      >
         <button
           type="button"
           onClick={() => setAbierta(true)}
@@ -228,7 +246,14 @@ export function Publicador({
           {/* Parece un campo pero es un botón: un campo de verdad aquí haría
               escribir en el sitio equivocado —y en iOS levantaría el teclado
               sobre una caja de una línea—. */}
-          <span className="min-w-0 flex-1 truncate rounded-full bg-surface-alt px-4 py-2.5 text-[15px] text-muted-foreground">
+          <span
+            className={
+              'min-w-0 flex-1 truncate rounded-full px-4 py-2.5 text-[15px] ' +
+              (sobreFoto
+                ? 'bg-white/12 text-white/80'
+                : 'bg-surface-alt text-muted-foreground')
+            }
+          >
             ¿Qué quieres compartir?
           </span>
         </button>
@@ -237,7 +262,12 @@ export function Publicador({
           <label
             htmlFor={ID_FOTOS}
             aria-label="Subir una foto"
-            className="flex size-10 flex-none cursor-pointer items-center justify-center rounded-lg text-accent outline-none hover:bg-accent/10 focus-within:ring-3 focus-within:ring-ring/20"
+            className={
+              'flex size-10 flex-none cursor-pointer items-center justify-center rounded-lg outline-none focus-within:ring-3 focus-within:ring-ring/20 ' +
+              (sobreFoto
+                ? 'text-white hover:bg-white/15'
+                : 'text-accent hover:bg-accent/10')
+            }
           >
             <ImagePlus className="size-[21px]" strokeWidth={1.8} />
           </label>
