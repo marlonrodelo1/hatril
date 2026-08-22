@@ -7,7 +7,7 @@ import { esDelEquipo, esPastor, ETIQUETAS_ROLES } from '@/lib/auth/permisos';
 import { listarNotificaciones } from '@/lib/notificaciones/consultas';
 import { paraLaCampana } from '@/lib/notificaciones/campana';
 import { nombreDeLaCuenta } from '@/lib/auth/nombre';
-import { iniciales } from '@/lib/format/iniciales';
+import { miFotoDePerfil } from '@/lib/miembros/foto';
 import { MarcaIglesia } from '@/app/panel/_components/marca-iglesia';
 import { Campana } from '@/components/campana';
 import { MenuCuenta } from '@/components/menu-cuenta';
@@ -85,6 +85,10 @@ export async function CabeceraMiembro({
    * punto rojo el recuento exacto da igual —la lista viene cortada en 40—, y a
    * cambio es una consulta y no dos.
    */
+  // La foto de quien mira, para que el avatar de la cabecera sea el suyo y no
+  // dos letras. Solo se pide si hay contexto: sin iglesia no hay ficha.
+  const miFoto = ctx ? await miFotoDePerfil(ctx) : null;
+
   const avisos = campana ? await listarNotificaciones(user.id) : [];
   const pendientes = avisos.filter((a) => !a.leida).length;
 
@@ -158,7 +162,7 @@ export async function CabeceraMiembro({
         <MenuCuenta
           nombre={nombre}
           correo={user.email ?? ''}
-          iniciales={iniciales(nombre)}
+          fotoUrl={miFoto}
           rol={ctx ? ETIQUETAS_ROLES[ctx.rol].titulo : undefined}
           esPastor={ctx !== null && esPastor(ctx)}
           // Pastor, secretaría, tesorería o líder: gente que tiene panel al que

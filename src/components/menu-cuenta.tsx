@@ -8,6 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { AvatarPersona } from '@/components/avatar-persona';
 import { salir } from '@/app/(auth)/actions';
 
 /**
@@ -54,7 +55,7 @@ export function MenuCuenta({
   nombre,
   correo,
   rol,
-  iniciales,
+  fotoUrl,
   esPastor = false,
   alPanel = false,
   soloSalir = false,
@@ -63,7 +64,12 @@ export function MenuCuenta({
   correo: string;
   /** El título del rol, ya traducido. Sin iglesia no hay rol que enseñar. */
   rol?: string;
-  iniciales: string;
+  /**
+   * La foto de la ficha. Sin ella se pintan las iniciales sobre su color, que
+   * es lo que ve casi toda la congregación: el pastor da de alta desde una
+   * lista, no subiendo retratos.
+   */
+  fotoUrl?: string | null;
   esPastor?: boolean;
   /**
    * Enseña «Ir al panel», y solo se pide desde el área del miembro.
@@ -83,11 +89,21 @@ export function MenuCuenta({
 }) {
   return (
     <Popover>
+      {/*
+       * El disparador ES el avatar, así que con foto tiene que pintar la foto y
+       * sin ella las iniciales de color — igual que en el muro. Antes pintaba
+       * siempre un círculo gris con dos letras, y quedaba como el único sitio de
+       * la pantalla donde una persona no tenía cara.
+       *
+       * `AvatarPersona` ya resuelve los dos casos y deja las iniciales debajo
+       * por si la foto no llega, así que aquí solo hay que dejarle sitio: el
+       * botón pierde su fondo y su tamaño, que ahora los pone el avatar.
+       */}
       <PopoverTrigger
-        className="flex size-9 flex-none cursor-pointer items-center justify-center rounded-full bg-muted text-[12px] font-bold text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/20 data-popup-open:bg-accent data-popup-open:text-accent-foreground"
+        className="flex flex-none cursor-pointer rounded-full outline-none transition-opacity hover:opacity-85 focus-visible:ring-3 focus-visible:ring-ring/20"
         aria-label="Tu cuenta"
       >
-        {iniciales}
+        <AvatarPersona nombre={nombre} fotoUrl={fotoUrl} />
       </PopoverTrigger>
 
       <PopoverContent className="flex w-[264px] max-w-[calc(100vw-24px)] flex-col">

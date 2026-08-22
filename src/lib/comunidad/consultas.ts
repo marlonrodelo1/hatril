@@ -279,28 +279,3 @@ export async function autorDePublicacion(
 
   return fila ? { autorMiembroId: fila.autorMiembroId, imagenes: fila.imagenes ?? [] } : null;
 }
-
-/**
- * La foto de perfil de quien está mirando.
- *
- * Consulta suelta y no un campo más del contexto de usuario: `UserContext` lo
- * pide cada pantalla del panel y de `/mi`, y esto solo lo necesita el
- * compositor del muro. Una columna más en aquel `select` son cuarenta consultas
- * al día que traen un dato que casi nadie usa.
- *
- * Devuelve null sin ficha, que es el caso de quien tiene acceso y todavía no ha
- * sido dado de alta en el fichero.
- */
-export async function miFotoDePerfil(ctx: UserContext): Promise<string | null> {
-  if (!ctx.miembroId) return null;
-
-  const filas = await withUser(ctx.user.id, (tx) =>
-    tx
-      .select({ fotoUrl: miembros.fotoUrl })
-      .from(miembros)
-      .where(eq(miembros.id, ctx.miembroId!))
-      .limit(1),
-  );
-
-  return filas[0]?.fotoUrl ?? null;
-}

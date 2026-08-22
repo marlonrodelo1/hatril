@@ -8,6 +8,7 @@ import { listarNotificaciones, sinLeer } from '@/lib/notificaciones/consultas';
 import { paraLaCampana } from '@/lib/notificaciones/campana';
 import { nombreDeLaCuenta } from '@/lib/auth/nombre';
 import { iniciales } from '@/lib/format/iniciales';
+import { miFotoDePerfil } from '@/lib/miembros/foto';
 // Las dos viven en `src/components` y no aquí al lado: las comparte la cabecera
 // del área del miembro, que no puede importar de la carpeta privada del panel.
 import { Campana } from '@/components/campana';
@@ -54,9 +55,12 @@ export async function CabeceraPanel({
   const ctx = await requireIglesia();
   const flags = await flagsDelMenu(ctx);
 
-  const [avisos, pendientes] = await Promise.all([
+  const [avisos, pendientes, miFoto] = await Promise.all([
     listarNotificaciones(ctx.user.id),
     sinLeer(ctx),
+    // La foto de quien mira. Va en el mismo Promise.all que los avisos: es
+    // una consulta más y no tiene por qué esperar a las otras dos.
+    miFotoDePerfil(ctx),
   ]);
 
   const nombre = nombreDeLaCuenta(ctx.user);
@@ -68,7 +72,7 @@ export async function CabeceraPanel({
         nombre={nombre}
         correo={ctx.user.email ?? ''}
         rol={ETIQUETAS_ROLES[ctx.rol].titulo}
-        iniciales={iniciales(nombre)}
+        fotoUrl={miFoto}
         esPastor={esPastor(ctx)}
       />
     </>

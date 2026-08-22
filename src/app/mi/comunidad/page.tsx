@@ -4,7 +4,8 @@ import { MessagesSquare } from 'lucide-react';
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { puedeModerarComunidad } from '@/lib/auth/permisos';
-import { listarMuro, miFotoDePerfil } from '@/lib/comunidad/consultas';
+import { listarMuro } from '@/lib/comunidad/consultas';
+import { miFotoDePerfil } from '@/lib/miembros/foto';
 import {
   devocionalDeHoy,
   versiculoDelDia,
