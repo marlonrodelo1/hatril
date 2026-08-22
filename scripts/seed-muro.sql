@@ -266,3 +266,35 @@ update public.miembros m
   ) as v(nombre, url)
  where m.nombre = v.nombre
    and m.iglesia_id = (select id from public.iglesias where slug = 'betania');
+
+
+-- ===========================================================================
+-- Fotos en las publicaciones y en el devocional
+--
+-- Las tres imágenes son PAISAJES GENERADOS, no fotos de un culto: el entorno
+-- donde se prepara esta demo no tiene salida a internet para descargar
+-- fotografías, así que se pintaron con código —cielo en degradado, sol y
+-- siluetas de montaña— y se subieron al bucket. Se ven como una imagen de
+-- verdad, que es lo que hacía falta para juzgar el muro y la portada.
+--
+-- Ojo con las rutas: en `publicaciones.imagenes` va la RUTA dentro del bucket
+-- privado, nunca una URL. La URL se firma al pintar y caduca en una hora; una
+-- guardada aquí sería una cadena que dentro de sesenta minutos no abre nada.
+-- El devocional es al revés: su `imagen_url` sí es una URL permanente, porque
+-- vive en el bucket público y sale en la web de la calle.
+-- ===========================================================================
+
+update public.publicaciones p
+   set imagenes = v.imgs::jsonb
+  from (values
+    ('Gracias a todos por el domingo', '["aaaaaaaa-1111-4111-8111-000000000001/demo/campo.png"]'),
+    ('Quiero dar gracias',             '["aaaaaaaa-1111-4111-8111-000000000001/demo/amanecer.png"]'),
+    ('El ensayo de alabanza',          '["aaaaaaaa-1111-4111-8111-000000000001/demo/tarde.png"]')
+  ) as v(busca, imgs)
+ where p.texto like '%' || v.busca || '%'
+   and p.iglesia_id = (select id from public.iglesias where slug = 'betania');
+
+update public.devocionales d
+   set imagen_url = 'https://qutoggpigkdginvburjv.supabase.co/storage/v1/object/public/iglesias-publico/aaaaaaaa-1111-4111-8111-000000000001/demo-devocional-amanecer.png'
+ where d.iglesia_id = (select id from public.iglesias where slug = 'betania')
+   and d.publicado = true;

@@ -54,7 +54,7 @@ export default async function MiLayout({
        * alguien se queja. En escritorio el hueco es menor: la barra es una
        * pastilla despegada del fondo.
        */}
-      <div className="h-[84px] md:h-[92px]" aria-hidden />
+      <div className="h-[76px] md:h-[88px]" aria-hidden />
     </>
   );
 }

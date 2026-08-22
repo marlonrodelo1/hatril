@@ -145,20 +145,30 @@ function Pestana({
       href={p.href}
       aria-current={esta ? 'page' : undefined}
       className={
-        'flex flex-1 flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-semibold no-underline hover:no-underline ' +
-        'md:flex-none md:flex-row md:gap-2 md:px-3.5 md:text-[14px] ' +
+        'flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10.5px] font-semibold no-underline hover:no-underline ' +
+        'md:flex-none md:flex-row md:gap-2 md:px-3 md:py-2 md:text-[13.5px] ' +
         (esta
-          // `bg-accent` era el rosa palo de los hover, no el naranja de marca: la
-          // pestaña activa apenas se distinguía de las otras dos. `primary` SÍ
-          // es el naranja, y aquí no rompe la regla del único botón naranja
-          // por pantalla porque esto no es un botón, es dónde estás.
-          ? 'bg-primary text-white'
-          : 'text-muted-foreground hover:bg-background/60 hover:text-foreground')
+          /*
+           * CRISTAL NARANJA, NO NARANJA MACIZO
+           *
+           * Pasó por dos versiones antes: `bg-accent` —el rosa palo de los
+           * hover, que casi no se distinguía de las otras pestañas— y naranja
+           * relleno con letra blanca, que sí destacaba pero se veía como un
+           * botón pegado dentro de otro botón.
+           *
+           * Ahora es el mismo naranja de marca al 22% con su propio desenfoque:
+           * deja pasar el color que haya debajo, va a juego con el cristal de la
+           * barra y no compite con el único botón naranja de la pantalla. La
+           * letra usa el naranja aclarado de los badges —#E8905E, 6:1 sobre este
+           * fondo—, porque el de marca sobre su propio velo se queda en 2:1.
+           */
+          ? 'border border-primary/35 bg-primary/22 text-badge-accent-fg supports-backdrop-filter:backdrop-blur-sm'
+          : 'border border-transparent text-muted-foreground hover:bg-background/60 hover:text-foreground')
       }
     >
       <p.Icono
-        className="size-[21px] md:size-4"
-        strokeWidth={esta ? 2 : 1.7}
+        className="size-[19px] md:size-4"
+        strokeWidth={esta ? 2.1 : 1.7}
         aria-hidden
       />
       {p.etiqueta}
