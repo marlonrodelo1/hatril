@@ -185,8 +185,23 @@ lee al arrancar.
   con ocho personas debajo — y un número que no cuadra con la lista es un número
   del que el pastor deja de fiarse.
 
-- **Devocionales**: calendario de turnos, redacción, imagen de fondo, enlace a
-  vídeo y publicación. El devocional del día sale en la web de la iglesia.
+- **Devocionales**: calendario de turnos, redacción, imagen de fondo, vídeo y
+  publicación. El devocional del día sale en la web de la iglesia.
+
+  La pantalla del miembro se rehízo: **la foto es la portada** —a sangre, con
+  fecha y título encima, el mismo patrón que el muro—, el devocional **va
+  firmado** por quien lo escribió con su cara, el versículo destaca con su
+  comilla y su barra de color, hay **botón de compartir** y, al pie, el
+  **archivo** de los anteriores, que se abren con `?d=fecha`. Antes, lo que se
+  publicó ayer dejaba de existir en cuanto salía el de hoy.
+
+  El **vídeo se ve dentro**: miniatura con botón de play que solo carga YouTube
+  al pulsarlo, en `youtube-nocookie.com`. Con foto propia, la pantalla no habla
+  con Google hasta que alguien decide verlo.
+
+  Lo que se comparte es el TEXTO, no el enlace: `/mi/devocional` está detrás de
+  sesión y membresía, así que mandar la dirección sería mandar a la gente a una
+  pantalla de acceso.
 - **Comunidad**: el muro de la congregación en `/mi/comunidad`. Publicar con
   texto y hasta cuatro fotos, me gusta, comentarios con **respuestas de un solo
   nivel** y su propio me gusta, y borrado por el autor o por el pastor. Solo

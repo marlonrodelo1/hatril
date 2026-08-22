@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, asc, desc, eq, gte, isNotNull, isNull, lte, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNotNull, isNull, lte, ne, or } from 'drizzle-orm';
 
 import { withUser } from '@/lib/db';
 import { dbAdmin } from '@/lib/db';
@@ -370,4 +370,133 @@ export async function versiculoDelDia(ctx: UserContext): Promise<{
       esDeHoy: v.fecha === hoy,
     };
   });
+}
+
+/**
+ * El devocional que se está leyendo, con su autor.
+ *
+ * PARA QUÉ OTRA FUNCIÓN, HABIENDO `devocionalDeHoy`
+ * -------------------------------------------------
+ * Aquella contesta a «qué toca leer ahora» y no sabe hacer nada más. Esta
+ * contesta a «enséñame ESTE», que es lo que hace falta en cuanto la pantalla
+ * deja de tener un solo devocional y gana su archivo. Sin `fecha` se comporta
+ * igual que la otra —el último publicado— para que abrir la pantalla siga sin
+ * pedir nada.
+ *
+ * TRAE EL AUTOR, Y ESO NO ES DECORACIÓN
+ * -------------------------------------
+ * Un devocional lo escribe alguien de la congregación, con su nombre y su cara.
+ * Sin autor, la pantalla parece una circular de la iglesia; con él, es Marta la
+ * que te está hablando. Es la misma razón por la que el muro firma cada
+ * publicación.
+ *
+ * El `leftJoin` es a propósito: `autor_miembro_id` es opcional —un devocional
+ * puede haberse escrito antes de que existiera el turno— y un `innerJoin` lo
+ * haría desaparecer de la pantalla.
+ */
+export async function devocionalParaLeer(
+  ctx: UserContext,
+  fecha?: string,
+): Promise<{
+  fecha: string;
+  titulo: string | null;
+  versiculo: string | null;
+  referencia: string | null;
+  cuerpo: string;
+  imagenUrl: string | null;
+  videoUrl: string | null;
+  autorNombre: string | null;
+  autorFoto: string | null;
+  esDeHoy: boolean;
+} | null> {
+  const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
+
+  return withUser(ctx.user.id, async (tx) => {
+    const filas = await tx
+      .select({
+        fecha: devocionales.fecha,
+        titulo: devocionales.titulo,
+        versiculo: devocionales.versiculo,
+        referencia: devocionales.referencia,
+        cuerpo: devocionales.cuerpo,
+        imagenUrl: devocionales.imagenUrl,
+        videoUrl: devocionales.videoUrl,
+        autorNombre: miembros.nombre,
+        autorApellidos: miembros.apellidos,
+        autorFoto: miembros.fotoUrl,
+      })
+      .from(devocionales)
+      .leftJoin(miembros, eq(miembros.id, devocionales.autorMiembroId))
+      .where(
+        and(
+          eq(devocionales.iglesiaId, ctx.iglesia.id),
+          eq(devocionales.publicado, true),
+          isNotNull(devocionales.cuerpo),
+          // Con fecha, ese día exacto. Sin ella, el más reciente que no sea del
+          // futuro: un devocional programado para el domingo no se lee el jueves.
+          fecha
+            ? eq(devocionales.fecha, fecha)
+            : lte(devocionales.fecha, hoy),
+        ),
+      )
+      .orderBy(desc(devocionales.fecha))
+      .limit(1);
+
+    const d = filas[0];
+    if (!d) return null;
+
+    return {
+      fecha: d.fecha,
+      titulo: d.titulo,
+      versiculo: d.versiculo,
+      referencia: d.referencia,
+      cuerpo: d.cuerpo!,
+      imagenUrl: d.imagenUrl,
+      videoUrl: d.videoUrl,
+      autorNombre: d.autorNombre
+        ? [d.autorNombre, d.autorApellidos].filter(Boolean).join(' ')
+        : null,
+      autorFoto: d.autorFoto,
+      esDeHoy: d.fecha === hoy,
+    };
+  });
+}
+
+/**
+ * Los devocionales anteriores, para el archivo del pie de la pantalla.
+ *
+ * Sin el archivo, lo que se publicó ayer deja de existir en cuanto sale el de
+ * hoy — y un devocional es justo la clase de texto que alguien quiere releer el
+ * jueves. `excepto` quita el que ya se está leyendo, que si no sale dos veces en
+ * la misma pantalla.
+ */
+export async function devocionalesAnteriores(
+  ctx: UserContext,
+  excepto: string,
+  limite = 6,
+): Promise<
+  { fecha: string; titulo: string | null; imagenUrl: string | null }[]
+> {
+  const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
+
+  return withUser(ctx.user.id, (tx) =>
+    tx
+      .select({
+        fecha: devocionales.fecha,
+        titulo: devocionales.titulo,
+        imagenUrl: devocionales.imagenUrl,
+      })
+      .from(devocionales)
+      .where(
+        and(
+          eq(devocionales.iglesiaId, ctx.iglesia.id),
+          eq(devocionales.publicado, true),
+          isNotNull(devocionales.cuerpo),
+          lte(devocionales.fecha, hoy),
+          ne(devocionales.fecha, excepto),
+        ),
+      )
+      .orderBy(desc(devocionales.fecha))
+      .limit(limite),
+  );
 }
