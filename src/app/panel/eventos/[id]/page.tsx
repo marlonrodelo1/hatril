@@ -198,8 +198,9 @@ export default async function EventoPage({
                                 de pago con treinta personas sin pagar eran
                                 treinta naranjas en columna. El naranja de esta
                                 pantalla es «Publicar en la web», que es único.
-                                El verde sigue distinguiendo pagada de no
-                                pagada, que es la información que da el color. */}
+                                Relleno carbón frente a contorno sigue
+                                distinguiendo pagada de no pagada, y el texto
+                                del botón lo dice sin depender del color. */}
                             <Button
                               type="submit"
                               size="sm"

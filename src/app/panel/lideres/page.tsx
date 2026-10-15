@@ -212,7 +212,7 @@ function TarjetaPersona({ persona: p }: { persona: FilaEquipo }) {
           )}
         </div>
 
-        <span className="flex-none rounded-full bg-background px-2.5 py-[5px] text-[12px] font-semibold text-muted-foreground">
+        <span className="flex-none rounded-full bg-muted px-2.5 py-[5px] text-[12px] font-semibold text-muted-foreground">
           {ETIQUETAS_ROLES[p.rol].titulo}
         </span>
       </summary>

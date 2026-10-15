@@ -101,7 +101,7 @@ export default async function DevocionalesPage({
 
               {proximos.length === 0 ? (
                 <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-surface px-6 py-12 text-center">
-                  <span className="flex size-12 items-center justify-center rounded-full bg-background text-muted-foreground">
+                  <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
                     <BookOpen className="size-5" strokeWidth={1.5} />
                   </span>
                   {/* Antes decía «añade el primero arriba», y ya no está
@@ -253,7 +253,7 @@ function Tarjeta({
               ? 'bg-badge-success-bg text-badge-success-fg'
               : d.pendiente
                 ? 'bg-badge-warning-bg text-badge-warning-fg'
-                : 'bg-background text-muted-foreground')
+                : 'bg-muted text-muted-foreground')
           }
         >
           {d.publicado ? 'Publicado' : d.pendiente ? 'Pendiente' : 'Borrador'}
@@ -381,7 +381,7 @@ function Tarjeta({
             <span className="t-label">Imagen de fondo</span>
 
             {d.imagenUrl && (
-              <div className="h-[120px] overflow-hidden rounded-lg border border-border bg-background">
+              <div className="h-[120px] overflow-hidden rounded-lg border border-border bg-surface-alt">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={d.imagenUrl}
@@ -401,7 +401,7 @@ function Tarjeta({
                 required
                 accept="image/jpeg,image/png,image/webp"
                 aria-label="Elegir la imagen del devocional"
-                className="min-w-0 flex-1 text-[13px] text-muted-foreground file:mr-2.5 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-surface-alt file:px-2.5 file:py-1.5 file:text-[13px] file:font-medium file:text-foreground hover:file:bg-background"
+                className="min-w-0 flex-1 text-[13px] text-muted-foreground file:mr-2.5 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-surface-alt file:px-2.5 file:py-1.5 file:text-[13px] file:font-medium file:text-foreground hover:file:bg-surface-active"
               />
               <Button type="submit" variant="outline" size="sm">
                 <Upload strokeWidth={1.7} />

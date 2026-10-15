@@ -242,7 +242,7 @@ export function FormularioMinisterio({
             {MODULOS_MINISTERIO.map((m) => (
               <label
                 key={m.id}
-                className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5 hover:bg-background has-checked:border-primary"
+                className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5 hover:bg-surface-active has-checked:border-primary"
               >
                 <input
                   type="checkbox"

@@ -16,8 +16,8 @@ export type EstadoMiembro = (typeof estadoMiembroEnum.enumValues)[number];
  * primera que se despiste enseña «miembro» en minúscula al lado de «Activo» y
  * parecen dos cosas distintas.
  *
- * Los colores salen del sistema de diseño; las clases usan los hex directos
- * porque son tonos de badge que no están mapeados a tokens de shadcn.
+ * Los colores son tokens de `globals.css` (`badge-*` y `muted`) y no hex,
+ * para que sigan solos cada cambio de paleta.
  */
 export const ESTADOS: Record<
   EstadoMiembro,

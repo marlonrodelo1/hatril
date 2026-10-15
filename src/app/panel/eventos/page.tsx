@@ -163,7 +163,7 @@ function Seccion({
                 deja un escalón. */}
             <Link
               href={`/panel/eventos/${e.id}`}
-              className="flex h-full flex-col gap-2 rounded-xl border border-border bg-surface p-4 no-underline transition-colors hover:bg-background hover:no-underline"
+              className="flex h-full flex-col gap-2 rounded-xl border border-border bg-surface p-4 no-underline transition-colors hover:bg-surface-alt hover:no-underline"
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[16px] font-bold tracking-[-0.015em] text-foreground">

@@ -26,16 +26,22 @@ import {
  * coronar, porque el layout ha mandado la sesión a `/suscripcion`.
  *
  * El icono acompaña al color porque el sistema de diseño no deja distinguir un
- * aviso solo por el color, y `accent` no se toca.
+ * aviso solo por el color, y el naranja de marca no se toca.
+ *
+ * Ese naranja es `primary`, no `accent`: en shadcn `accent` es el fondo suave de
+ * los hover. Con él la franja y el icono salieron invisibles desde el primer
+ * día (1.1:1 sobre el crema), en las tres paletas. El enlace va en
+ * `accent-foreground` porque el naranja de marca sobre este velo se queda en
+ * 4.46:1, y el texto es de 13px.
  */
 export function AvisoSuscripcion({ ctx }: { ctx: UserContext }) {
   const estado = leerEstadoSuscripcion(ctx.iglesia);
   if (!convieneAvisar(estado)) return null;
 
   return (
-    <div className="flex items-start gap-2.5 border-b border-accent/40 bg-accent/5 px-5 py-2.5 text-[13px] leading-snug sm:px-8">
+    <div className="flex items-start gap-2.5 border-b border-primary/40 bg-primary/5 px-5 py-2.5 text-[13px] leading-snug sm:px-8">
       <TriangleAlert
-        className="mt-px size-4 flex-none text-accent"
+        className="mt-px size-4 flex-none text-primary"
         strokeWidth={1.9}
       />
       <span>
@@ -43,7 +49,7 @@ export function AvisoSuscripcion({ ctx }: { ctx: UserContext }) {
         {esPastor(ctx) ? (
           <Link
             href="/panel/suscripcion"
-            className="font-semibold underline underline-offset-2"
+            className="font-semibold text-accent-foreground underline underline-offset-2"
           >
             Elegir plan
           </Link>

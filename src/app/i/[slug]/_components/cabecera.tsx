@@ -27,7 +27,7 @@ export type Donativos = { cuenta: string; titular: string | null };
  * Antes eran dos cosas encajadas: una banda de cristal a todo lo ancho y, dentro,
  * otra cápsula con borde para el menú. Dos bordes de 1px a cuatro píxeles de
  * distancia, que es justo lo que el sistema de diseño evita. Ahora el borde es
- * uno: el de la píldora. El menú de dentro solo aporta la marca verde que se
+ * uno: el de la píldora. El menú de dentro solo aporta la marca carbón que se
  * mueve.
  *
  * Y flotando se ve que hay página debajo sin necesidad de tapar nada, que es lo
@@ -126,6 +126,12 @@ export function CabeceraIglesia({
          * píldora mide 52 y sigue siendo una barra, no un bloque. El cristal es
          * el único sitio de la página donde el efecto significa algo, porque
          * aquí el contenido pasa de verdad por debajo.
+         *
+         * Al 96 % y no al 80. Lo que pasa por debajo al bajar es la foto del
+         * hero con su velo negro, y una píldora clara translúcida encima de algo
+         * oscuro se agrisa: al 80 la ciudad y el menú, en gris secundario, se
+         * quedaban en 3.1:1. Al 96 aguantan 4.5 incluso sobre negro puro. En
+         * oscuro no pasaba porque la píldora y el velo eran del mismo lado.
          */}
         {/*
          * En escritorio son tres columnas: identidad, menú y acción. La del
@@ -137,7 +143,7 @@ export function CabeceraIglesia({
          * es lo último que puede recortarse en su propia web; que el menú quede
          * unos píxeles a un lado no lo nota nadie.
          */}
-        <div className="flex items-center gap-2 rounded-full border border-border bg-surface-alt p-1.5 supports-[backdrop-filter]:bg-surface-alt/80 supports-[backdrop-filter]:backdrop-blur-xl md:gap-4 xl:grid xl:grid-cols-[auto_1fr_auto] xl:gap-3 2xl:gap-4">
+        <div className="flex items-center gap-2 rounded-full border border-border bg-surface-alt p-1.5 supports-[backdrop-filter]:bg-surface-alt/96 supports-[backdrop-filter]:backdrop-blur-xl md:gap-4 xl:grid xl:grid-cols-[auto_1fr_auto] xl:gap-3 2xl:gap-4">
           {/* Identidad. `min-w-0` para que el nombre pueda encogerse: sin él, un
               nombre largo empuja al botón fuera de la píldora en un móvil de
               320px. */}
@@ -181,9 +187,9 @@ export function CabeceraIglesia({
 
           <div className="flex flex-none items-center gap-2 xl:justify-end">
             {/*
-             * UN SOLO BOTÓN AQUÍ, Y VERDE.
+             * UN SOLO BOTÓN AQUÍ, Y CARBÓN.
              *
-             * Verde y no naranja porque en la primera pantalla ya hay un «Cómo
+             * `secondary` y no naranja porque en la primera pantalla ya hay un «Cómo
              * llegar» naranja dentro del hero, y el sistema de diseño admite un
              * solo naranja por pantalla: dos iguales compitiendo y ninguno
              * destaca.
@@ -269,10 +275,10 @@ export function CabeceraIglesia({
                 onClick={() => setAbierto(false)}
                 aria-current={activa === s.href ? 'true' : undefined}
                 className={
-                  'flex min-h-[48px] items-center rounded-2xl px-4 text-[15px] font-bold no-underline transition-colors hover:no-underline active:bg-background ' +
+                  'flex min-h-[48px] items-center rounded-2xl px-4 text-[15px] font-bold no-underline transition-colors hover:no-underline active:bg-surface-active ' +
                   (activa === s.href
                     ? 'bg-support text-white'
-                    : 'text-foreground hover:bg-background')
+                    : 'text-foreground hover:bg-surface-active')
                 }
               >
                 {s.texto}
@@ -326,7 +332,7 @@ export function CabeceraIglesia({
             <Link
               href="/mi"
               onClick={() => setAbierto(false)}
-              className="mt-1 flex min-h-[48px] items-center gap-3 rounded-2xl border-t border-border px-4 pt-3 text-[15px] font-bold text-foreground no-underline transition-colors hover:bg-background hover:text-foreground hover:no-underline active:bg-background"
+              className="mt-1 flex min-h-[48px] items-center gap-3 rounded-2xl border-t border-border px-4 pt-3 text-[15px] font-bold text-foreground no-underline transition-colors hover:bg-surface-active hover:text-foreground hover:no-underline active:bg-surface-active"
             >
               <UserRound strokeWidth={1.8} className="size-[19px]" />
               Mi cuenta
@@ -406,7 +412,7 @@ function VentanaDonar({
 }
 
 /**
- * Las secciones en escritorio, con la marca verde que se mueve.
+ * Las secciones en escritorio, con la marca carbón que se mueve.
  *
  * La marca va DETRÁS de los enlaces y el texto de encima pasa a blanco. La
  * referencia original resolvía lo mismo con `mix-blend-difference`, que invierte
@@ -414,8 +420,8 @@ function VentanaDonar({
  * efecto secundario, que era invertir también el fondo de la cabecera al
  * desplazarse.
  *
- * Verde `support` y no el naranja de marca porque en esta misma píldora ya está
- * «Cómo llegar».
+ * `support`, el carbón, y no el naranja de marca porque en esta misma píldora ya
+ * está «Cómo llegar».
  */
 function MenuEscritorio({
   secciones,
@@ -482,10 +488,13 @@ function MenuEscritorio({
               // 40px es justo lo que faltaba a 1024 para que el icono de cuenta
               // entrara sin cortar el nombre de la iglesia. A partir de 1280
               // sobra sitio y vuelve a respirar.
-              'block whitespace-nowrap rounded-full px-3 py-2 text-[12.5px] font-bold uppercase tracking-[0.06em] no-underline transition-colors hover:no-underline xl:px-4 ' +
+              'block whitespace-nowrap rounded-full px-3 py-2 text-[12.5px] font-bold uppercase tracking-[0.06em] no-underline transition-colors duration-300 ease-out hover:no-underline xl:px-4 ' +
               (marcada === s.href
                 ? 'text-white'
-                : 'text-muted-foreground hover:text-white focus-visible:text-white')
+                : // Al pasar por encima, `encima` ya mueve la marca y cae en la
+                  // rama de arriba. Esto solo cuenta antes de hidratar, cuando no
+                  // hay marca debajo: en blanco sobre la píldora crema daba 1.1:1.
+                  'text-muted-foreground hover:text-foreground focus-visible:text-foreground')
             }
           >
             {s.texto}

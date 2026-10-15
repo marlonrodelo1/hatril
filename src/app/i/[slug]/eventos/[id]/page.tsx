@@ -81,7 +81,7 @@ export default async function EventoPublicoPage({
           <Link
             href={`/i/${slug}`}
             aria-label={`Volver a ${iglesia.nombre}`}
-            className="flex size-9 flex-none items-center justify-center rounded-full text-muted-foreground no-underline hover:bg-background hover:text-foreground hover:no-underline"
+            className="flex size-9 flex-none items-center justify-center rounded-full text-muted-foreground no-underline hover:bg-surface-active hover:text-foreground hover:no-underline"
           >
             <ArrowLeft className="size-[19px]" strokeWidth={1.8} />
           </Link>

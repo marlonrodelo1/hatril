@@ -300,11 +300,15 @@ export default async function HoyPage({
                 <span className="t-cifra">{resumen.sirviendo}</span>
 
                 {/* La proporción es el dato, no la cifra: 12 personas sirviendo es
-                    mucho en una congregación de 30 y muy poco en una de 400. */}
+                    mucho en una congregación de 30 y muy poco en una de 400.
+
+                    La pista va en `muted` y no en `background`: en crema el
+                    fondo de la página es casi el blanco de la tarjeta (1.05:1)
+                    y la barra se quedaba sin el largo con el que compararse. */}
                 {resumen.total > 0 && (
                   <div className="flex flex-col gap-2">
                     <div
-                      className="h-1.5 w-full overflow-hidden rounded-full bg-background"
+                      className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
                       role="img"
                       aria-label={`${sirviendoPct}% de la congregación sirve en algún ministerio`}
                     >
@@ -430,7 +434,7 @@ function Panel({
 }) {
   return (
     <article className="flex flex-wrap items-center gap-3.5 rounded-xl border border-border bg-surface px-5 py-4">
-      <span className="flex size-10 flex-none items-center justify-center rounded-lg bg-background text-support">
+      <span className="flex size-10 flex-none items-center justify-center rounded-lg bg-muted text-support">
         <Icono className="size-[19px]" strokeWidth={1.7} />
       </span>
 
@@ -456,7 +460,7 @@ function PanelRecienLlegados({ personas }: { personas: RecienLlegado[] }) {
   return (
     <article className="flex flex-col gap-4 rounded-xl border border-border bg-surface px-5 py-4">
       <div className="flex flex-wrap items-center gap-3.5">
-        <span className="flex size-10 flex-none items-center justify-center rounded-lg bg-background text-support">
+        <span className="flex size-10 flex-none items-center justify-center rounded-lg bg-muted text-support">
           <UserPlus className="size-[19px]" strokeWidth={1.7} />
         </span>
 
@@ -481,7 +485,7 @@ function PanelRecienLlegados({ personas }: { personas: RecienLlegado[] }) {
           <li key={p.id}>
             <Link
               href={`/panel/miembros?ficha=${p.id}`}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-alt py-1 pl-1 pr-3 text-[13.5px] font-medium text-foreground no-underline hover:bg-background hover:no-underline"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-alt py-1 pl-1 pr-3 text-[13.5px] font-medium text-foreground no-underline hover:bg-surface-active hover:no-underline"
             >
               <span
                 className={`flex size-6 items-center justify-center rounded-full text-[10.5px] font-bold ${ESTADOS[p.estado].avatar}`}

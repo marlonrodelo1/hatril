@@ -151,10 +151,12 @@ function TarjetaTamano({
       {exceso && (
         // Aviso, no bloqueo: las fichas siguen ahí y se pueden crear más. El
         // icono acompaña al color porque el sistema de diseño no permite
-        // distinguir un dato solo por color.
-        <p className="mt-1 flex items-start gap-2 rounded-lg border border-accent/40 bg-accent/5 p-3 text-[13px] leading-relaxed text-foreground">
+        // distinguir un dato solo por color. `primary` y no `accent`, que en
+        // shadcn es el fondo suave de los hover: con él la caja y el icono no
+        // se veían sobre el blanco (1.2:1).
+        <p className="mt-1 flex items-start gap-2 rounded-lg border border-primary/40 bg-primary/5 p-3 text-[13px] leading-relaxed text-foreground">
           <TriangleAlert
-            className="mt-0.5 size-[16px] flex-none text-accent"
+            className="mt-0.5 size-[16px] flex-none text-primary"
             strokeWidth={1.9}
           />
           <span>
@@ -222,7 +224,7 @@ function TarjetaPlan({
       {/* Se dice que este plan NO le sirve antes de que lo elija y descubra el
           aviso después de pagar. */}
       {!cabe && (
-        <p className="text-[12.5px] leading-snug text-accent">
+        <p className="text-[12.5px] leading-snug text-primary">
           Tu iglesia tiene {cuentan} personas: no cabe en este plan.
         </p>
       )}

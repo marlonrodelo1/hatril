@@ -152,7 +152,7 @@ export default async function DirectorioPage({
 function Vacio({ busqueda, total }: { busqueda?: string; total: number }) {
   return (
     <div className="flex flex-col items-center gap-3.5 rounded-xl border border-border bg-surface px-6 py-16 text-center">
-      <span className="flex size-13 items-center justify-center rounded-full bg-background text-muted-foreground">
+      <span className="flex size-13 items-center justify-center rounded-full bg-muted text-muted-foreground">
         <SearchX className="size-6" strokeWidth={1.5} />
       </span>
 

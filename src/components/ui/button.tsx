@@ -45,13 +45,17 @@ const buttonVariants = cva(
         secondary:
           'bg-support text-white hover:bg-support-hover active:bg-support-active disabled:bg-disabled-bg disabled:text-disabled-fg',
         outline:
-          'border-border bg-surface-alt text-foreground hover:bg-background active:bg-surface-active disabled:border-disabled-border disabled:bg-disabled-surface disabled:text-disabled-text',
+          'border-border bg-surface-alt text-foreground hover:bg-surface-active active:bg-border disabled:border-disabled-border disabled:bg-disabled-surface disabled:text-disabled-text',
         ghost:
-          'bg-transparent text-primary hover:bg-accent active:bg-accent-soft-active disabled:text-disabled-text',
+          'bg-transparent text-primary hover:bg-accent hover:text-accent-foreground active:bg-accent-soft-active active:text-accent-foreground disabled:text-disabled-text',
         // Contorno en reposo, relleno solo al pulsar. Y siempre con icono: el
         // color por sí solo no avisa a quien no lo distingue.
+        //
+        // Al pulsar, la letra es `destructive-foreground` (blanco, 6.0:1) y no
+        // `background`: lo de escribir con el color de la página era para el
+        // rojo claro del modo oscuro, donde el blanco no llegaba.
         destructive:
-          'border-danger-border bg-surface-alt text-danger hover:bg-danger-soft active:border-danger active:bg-danger active:text-background disabled:border-disabled-border disabled:bg-disabled-surface disabled:text-disabled-text',
+          'border-danger-border bg-surface-alt text-danger hover:bg-danger-soft active:border-danger active:bg-danger active:text-destructive-foreground disabled:border-disabled-border disabled:bg-disabled-surface disabled:text-disabled-text',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {

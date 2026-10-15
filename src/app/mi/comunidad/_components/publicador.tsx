@@ -254,7 +254,7 @@ export function Publicador({
             className={
               'min-w-0 flex-1 truncate rounded-full px-4 py-2.5 text-[15px] ' +
               (sobreFoto
-                ? 'bg-white/12 text-white/80'
+                ? 'bg-white/12 text-white/90'
                 : 'bg-surface-alt text-muted-foreground')
             }
           >
@@ -270,7 +270,9 @@ export function Publicador({
               'flex size-10 flex-none cursor-pointer items-center justify-center rounded-lg outline-none focus-within:ring-3 focus-within:ring-ring/20 ' +
               (sobreFoto
                 ? 'text-white hover:bg-white/15'
-                : 'text-accent hover:bg-accent/10')
+                : // `primary` y no `accent`: el `accent` de shadcn es el fondo
+                  // suave, y como color de icono sobre la tarjeta no se ve.
+                  'text-primary hover:bg-accent')
             }
           >
             <ImagePlus className="size-[21px]" strokeWidth={1.8} />
@@ -398,7 +400,7 @@ function Formulario({
           <button
             type="button"
             onClick={onQuitar}
-            className="flex size-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-[12px] font-semibold text-muted-foreground hover:bg-background"
+            className="flex size-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-[12px] font-semibold text-muted-foreground hover:bg-surface-active"
           >
             <X className="size-4" strokeWidth={1.8} />
             Quitar
@@ -423,9 +425,9 @@ function Formulario({
              Apunta al input que vive fuera, en `Publicador`. */
           <label
             htmlFor={ID_FOTOS}
-            className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-border bg-surface-alt px-3.5 text-[13.5px] font-semibold text-foreground hover:bg-background"
+            className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-border bg-surface-alt px-3.5 text-[13.5px] font-semibold text-foreground hover:bg-surface-active"
           >
-            <ImagePlus className="size-[17px] text-accent" strokeWidth={1.8} />
+            <ImagePlus className="size-[17px] text-primary" strokeWidth={1.8} />
             Fotos
           </label>
         )}

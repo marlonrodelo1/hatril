@@ -393,7 +393,7 @@ export default async function WebIglesiaPage({
           Entre los horarios y el devocional a propósito: los horarios son lo
           que se repite cada semana y esto es lo que pasa UNA vez, así que se
           leen seguidos. Y el orden de este bloque tiene que ser el mismo que el
-          del array `secciones`: la marca verde del menú recorre ese array y se
+          del array `secciones`: la marca del menú recorre ese array y se
           queda con la última sección que ha pasado la línea de lectura, así que
           si discrepan se queda pegada en la equivocada. */}
       {eventosDeLaIglesia.length > 0 && (
@@ -697,7 +697,7 @@ export default async function WebIglesiaPage({
            *
            * DENTRO DE UN MARCO, Y NO SUELTA
            * -------------------------------
-           * El dibujo trae su propio fondo azul claro, que sobre el crema de esta
+           * El dibujo trae su propio fondo azul claro, que sobre el blanco de esta
            * sección se vería como un parche pegado. Con el borde de 1px y las
            * esquinas redondeadas del sistema pasa a leerse como un cuadro: el
            * color de dentro ya no compite con el de la página, está enmarcado.
@@ -875,7 +875,7 @@ export default async function WebIglesiaPage({
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`${iglesia.nombre} en ${titulo}`}
-                    className="flex h-8 items-center rounded-full border border-border bg-surface-alt px-3.5 text-[13px] font-semibold text-muted-foreground no-underline transition-colors hover:bg-background hover:text-foreground hover:no-underline"
+                    className="flex h-8 items-center rounded-full border border-border bg-surface-alt px-3.5 text-[13px] font-semibold text-muted-foreground no-underline transition-colors hover:bg-surface-active hover:text-foreground hover:no-underline"
                   >
                     {titulo}
                   </a>
@@ -949,7 +949,7 @@ function DatoContacto({
   return (
     <a
       href={href}
-      className="-mx-2 flex items-start gap-3 rounded-lg px-2 py-2 no-underline hover:bg-background hover:no-underline"
+      className="-mx-2 flex items-start gap-3 rounded-lg px-2 py-2 no-underline hover:bg-surface-active hover:no-underline"
     >
       {contenido}
     </a>

@@ -128,7 +128,7 @@ export default async function ReunionPage({
               <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 {congregacion.map((p) => (
                   <li key={p.miembroId}>
-                    <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-surface-alt px-3.5 py-2.5 hover:bg-background has-checked:border-primary has-checked:bg-accent">
+                    <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-surface-alt px-3.5 py-2.5 hover:bg-surface-active has-checked:border-primary has-checked:bg-accent">
                       <input
                         type="checkbox"
                         name="presentes"

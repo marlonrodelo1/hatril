@@ -70,7 +70,7 @@ export default async function MovimientoPage({
             esto tendrá que pasar a ser un asiento de corrección. */}
         <form action={borrarMovimiento} className="border-t border-border pt-5">
           <input type="hidden" name="id" value={m.id} />
-          <Button type="submit" variant="ghost" className="text-danger">
+          <Button type="submit" variant="ghost" className="text-danger hover:bg-badge-danger-bg hover:text-danger">
             <Trash2 className="size-[16px]" strokeWidth={1.8} />
             Borrar este movimiento
           </Button>

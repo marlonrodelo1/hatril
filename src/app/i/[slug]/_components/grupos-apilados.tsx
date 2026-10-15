@@ -81,12 +81,16 @@ export function GruposApilados({
               ) : null}
 
               <div className="relative flex flex-col gap-3">
+                {/* Sin foto, la letra va en `claro` y no en `hex`: `claro` es el
+                    tono que `colores.ts` mide contra su fondo, y el hex dorado
+                    sobre blanco se queda en 3.2:1. Con foto, el blanco depende
+                    del velo y no del tema. */}
                 <span
                   className="inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-[12.5px] font-bold uppercase tracking-[0.06em]"
                   style={
                     g.fotoUrl
                       ? { background: 'rgb(255 255 255 / 0.15)', color: '#fff' }
-                      : { background: '#fff', color: color.hex }
+                      : { background: 'var(--hatril-surface)', color: color.claro }
                   }
                 >
                   <span

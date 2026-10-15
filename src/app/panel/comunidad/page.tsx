@@ -203,7 +203,7 @@ export default async function ComunidadPanelPage({
             </section>
 
             <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5">
-              <span className="flex size-9 items-center justify-center rounded-lg bg-background text-support">
+              <span className="flex size-9 items-center justify-center rounded-lg bg-muted text-support">
                 <ShieldCheck className="size-[18px]" strokeWidth={1.7} />
               </span>
 
@@ -317,7 +317,7 @@ function Opcion({
         'flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition-colors ' +
         (actual === valor
           ? 'border-primary bg-accent'
-          : 'border-border bg-surface-alt hover:bg-background')
+          : 'border-border bg-surface-alt hover:bg-surface-active')
       }
     >
       <input

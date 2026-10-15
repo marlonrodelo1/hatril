@@ -27,7 +27,8 @@ import { BookOpen, ChevronRight, Quote } from 'lucide-react';
  * --------------------------------------------------
  * El primer intento llevaba el velo a 0.82 y un desenfoque de 12px: el texto se
  * leía perfecto y la imagen quedaba irreconocible —«se ve distorsionada, no se
- * aprecia»—. Si la foto no se distingue, no hace falta foto: bastaba el verde.
+ * aprecia»—. Si la foto no se distingue, no hace falta foto: bastaba el fondo
+ * liso.
  *
  * Ahora son tres capas medidas al revés, empezando por lo que se quiere ver:
  *
@@ -47,8 +48,9 @@ import { BookOpen, ChevronRight, Quote } from 'lucide-react';
  *
  * SIN FOTO NO SE INVENTA NADA
  * ---------------------------
- * Se queda el verde de marca liso, que es lo que había antes. Una portada con
- * un hueco gris donde debería ir la imagen se lee como un fallo de carga.
+ * Se queda el secundario liso —el carbón de Claude, que antes era el verde de
+ * marca— con el texto en blanco encima. Una portada con un hueco gris donde
+ * debería ir la imagen se lee como un fallo de carga.
  */
 export function CabeceraDelDia({
   versiculo,

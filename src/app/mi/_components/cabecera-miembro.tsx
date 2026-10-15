@@ -93,44 +93,32 @@ export async function CabeceraMiembro({
   const pendientes = avisos.filter((a) => !a.leida).length;
 
   /*
-   * EN VERDE, Y NO EN BLANCO COMO EL RESTO DE CABECERAS
-   * ---------------------------------------------------
-   * El área del miembro se veía —textualmente— «muy gris, no la veo viva»:
-   * crema sobre crema en todas las superficies y ni un punto de color hasta el
-   * bloque del versículo. Esta es la primera franja que se ve al abrir la
-   * aplicación, así que es donde más rinde el color.
+   * CREMA, COMO EL RESTO DE LA APLICACIÓN
+   * -------------------------------------
+   * Fue verde `support` desde que el área se veía —textualmente— «muy gris, no
+   * la veo viva», y el 15-oct a Marlon dejó de gustarle: pidió la paleta de
+   * Claude, crema con naranja quemado. La cabecera de Claude es del color de la
+   * página, y aquí también.
    *
-   * Verde `support` y no naranja por lo de siempre: el naranja es de las
-   * acciones, y una cabecera naranja competiría con el único botón de cada
-   * pantalla.
+   * Lo que impide que vuelva lo de «muy gris» ya no es la cabecera: debajo
+   * está la portada con foto del día, y la pestaña activa lleva el naranja.
    *
-   * LOS DOS BOTONES DE DENTRO NO SE SABEN VERDES
-   * --------------------------------------------
-   * `Campana` y `MenuCuenta` son componentes compartidos con el panel, y allí
-   * la cabecera sigue siendo clara: llevan `text-muted-foreground`, que sobre
-   * verde no se lee. Se recolorean desde aquí con selectores descendentes en
-   * vez de añadirles una prop de tono que habría que pasar por las veinticuatro
-   * pantallas del panel para no usarla en ninguna.
+   * Glaseado con guarda, igual que la barra de abajo: sin `backdrop-filter` un
+   * fondo translúcido deja el texto ilegible sobre lo que pase por debajo al
+   * desplazar, y con la guarda ese navegador cae a crema sólido.
    *
-   * Sus desplegables NO se ven afectados, y es lo que hace que esto sea seguro:
-   * Base UI los pinta en un portal, fuera de este `header`, así que el selector
-   * no los alcanza y siguen siendo oscuros sobre blanco.
+   * Los dos botones de la derecha, `Campana` y `MenuCuenta`, vuelven a su
+   * aspecto de siempre, el del panel: ya no hay fondo de color que les obligue
+   * a vestirse de blanco.
    */
   return (
-    <header
-      className={
-        'sticky top-0 z-20 border-b border-support-hover bg-support text-white ' +
-        // Los dos botones de la derecha, vestidos para el fondo verde.
-        '[&_button]:text-white/85 hover:[&_button]:bg-white/15 hover:[&_button]:text-white ' +
-        '[&_button]:data-popup-open:bg-white/20 [&_button]:data-popup-open:text-white'
-      }
-    >
+    <header className="sticky top-0 z-20 border-b border-border bg-background supports-backdrop-filter:bg-background/85 supports-backdrop-filter:backdrop-blur-xl">
       <div className="mx-auto flex max-w-[620px] items-center gap-3 px-4 py-3 sm:px-5">
         {volver && (
           <Link
             href={volver}
             aria-label="Volver"
-            className="flex size-9 flex-none items-center justify-center rounded-full text-white/85 no-underline hover:bg-white/15 hover:text-white hover:no-underline"
+            className="flex size-9 flex-none items-center justify-center rounded-full text-muted-foreground no-underline hover:bg-surface-active hover:text-foreground hover:no-underline"
           >
             <ArrowLeft className="size-[19px]" strokeWidth={1.8} />
           </Link>
@@ -145,7 +133,7 @@ export async function CabeceraMiembro({
             {titulo}
           </span>
           {subtitulo && (
-            <span className="truncate text-[12.5px] leading-tight text-white/85">
+            <span className="truncate text-[12.5px] leading-tight text-muted-foreground">
               {subtitulo}
             </span>
           )}

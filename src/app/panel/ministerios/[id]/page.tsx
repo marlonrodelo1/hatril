@@ -252,7 +252,7 @@ export default async function MinisterioPage({
             </div>
 
             {ministerio.fotoUrl && (
-              <div className="h-[160px] overflow-hidden rounded-lg border border-border bg-background">
+              <div className="h-[160px] overflow-hidden rounded-lg border border-border bg-surface-alt">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={ministerio.fotoUrl}
@@ -272,7 +272,7 @@ export default async function MinisterioPage({
                 required
                 accept="image/jpeg,image/png,image/webp"
                 aria-label="Elegir la foto del grupo"
-                className="min-w-0 flex-1 text-[13px] text-muted-foreground file:mr-2.5 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-surface-alt file:px-2.5 file:py-1.5 file:text-[13px] file:font-medium file:text-foreground hover:file:bg-background"
+                className="min-w-0 flex-1 text-[13px] text-muted-foreground file:mr-2.5 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-surface-alt file:px-2.5 file:py-1.5 file:text-[13px] file:font-medium file:text-foreground hover:file:bg-surface-active"
               />
               <Button type="submit" variant="outline" size="sm">
                 <Upload strokeWidth={1.7} />
@@ -347,7 +347,7 @@ export default async function MinisterioPage({
                   className={
                     'whitespace-nowrap rounded-full px-2.5 py-[5px] text-[12px] font-semibold ' +
                     (p.rolEquipo === 'voluntario'
-                      ? 'bg-background text-muted-foreground'
+                      ? 'bg-muted text-muted-foreground'
                       : '')
                   }
                   style={
@@ -437,7 +437,7 @@ export default async function MinisterioPage({
             <div className="p-4">
               <Button
                 variant="ghost"
-                className="h-[42px] w-full border border-dashed border-border text-muted-foreground hover:bg-background hover:text-foreground"
+                className="h-[42px] w-full border border-dashed border-border text-muted-foreground hover:bg-surface-alt hover:text-foreground"
                 render={<Link href="?asignar=1" scroll={false} />}
               >
                 <Plus strokeWidth={1.8} />

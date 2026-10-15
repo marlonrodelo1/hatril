@@ -26,33 +26,42 @@
  * -----------------------------------------------------
  * Nada de `hsl(hash % 360)`, que es lo que se hace normalmente y produce el
  * fucsia y el amarillo flúor que ninguna de las cuarenta pantallas tiene. Son
- * seis parejas fondo/texto derivadas de los colores que ya existen en el sistema
- * —el naranja de marca, el verde de apoyo, el rojo, el ámbar del aviso— más dos
- * vecinos que hacían falta para que seis personas seguidas no repitan.
+ * seis parejas fondo/texto: las cuatro de las insignias —naranja de marca,
+ * verde del «hecho», ámbar del aviso y rojo— más dos vecinos que hacían falta
+ * para que seis personas seguidas no repitan. En el mismo orden que antes, para
+ * que quien era verde lo siga siendo.
  *
- * Cada pareja se comprobó contra AA: el texto es de 12px en negrita, así que
- * necesita 4.5:1 y todas pasan de 6:1 sobre su propio fondo. Son fondos OSCUROS
- * tintados con letra clara, no al revés: sobre una tarjeta casi negra, seis
- * círculos pastel serían seis manchas de luz peleándose con el texto.
+ * Fondo tintado claro y letra oscura del mismo tono, como las insignias. En el
+ * oscuro del 22-ago eran al revés, escritos en hex, y con la paleta crema se
+ * habrían quedado como seis manchas casi negras. Por eso las cuatro primeras
+ * apuntan a la variable de `globals.css` en vez de copiar su valor: siguen
+ * solas el próximo cambio. Las dos últimas no tienen token y son las que habría
+ * que repasar a mano.
+ *
+ * Las variables solo existen dentro de la página: en un correo o en una imagen
+ * generada en el servidor no resolverían.
+ *
+ * El texto es de 11–12px en negrita, así que necesita 4.5:1. Medidas sobre su
+ * propio fondo con la paleta del 15-oct: 5.6, 6.7, 6.8, 7.3, 6.5 y 6.6.
  */
 
 export type ColorAvatar = { fondo: string; texto: string };
 
 const TONOS: readonly ColorAvatar[] = [
-  // Naranja de marca. 6.4:1 sobre su propio fondo.
-  { fondo: '#3a2018', texto: '#e8945f' },
-  // Verde de apoyo. 6.8:1.
-  { fondo: '#1b3229', texto: '#79c0a6' },
-  // Ámbar del aviso. 7.2:1.
-  { fondo: '#332a16', texto: '#d9b45f' },
-  // Rojo, el color del corazón que le gusta a Marlon. 6.1:1.
-  { fondo: '#3a1d1b', texto: '#e88078' },
+  // Naranja de marca.
+  { fondo: 'var(--hatril-badge-accent-bg)', texto: 'var(--hatril-badge-accent-fg)' },
+  // Verde del estado «hecho»: el de apoyo ya no es verde.
+  { fondo: 'var(--hatril-badge-success-bg)', texto: 'var(--hatril-badge-success-fg)' },
+  // Ámbar del aviso.
+  { fondo: 'var(--hatril-badge-warning-bg)', texto: 'var(--hatril-badge-warning-fg)' },
+  // Rojo, el color del corazón que le gusta a Marlon.
+  { fondo: 'var(--hatril-badge-danger-bg)', texto: 'var(--hatril-badge-danger-fg)' },
   // Azul pizarra: no está en la paleta de marca, y hace falta un frío que no
-  // sea el verde para que dos personas seguidas no se confundan. 6.5:1.
-  { fondo: '#1d2a38', texto: '#82aeda' },
+  // sea el verde para que dos personas seguidas no se confundan.
+  { fondo: '#e3eaf1', texto: '#305477' },
   // Morado apagado, mismo motivo. Apagado a propósito: un violeta saturado
-  // sería el único color de la aplicación que no viene de ningún sitio. 6.3:1.
-  { fondo: '#2a2338', texto: '#a995d6' },
+  // sería el único color de la aplicación que no viene de ningún sitio.
+  { fondo: '#eae7f1', texto: '#58477e' },
 ];
 
 export function colorAvatar(nombre: string): ColorAvatar {

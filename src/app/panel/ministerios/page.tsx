@@ -67,7 +67,7 @@ export default async function MinisteriosPage({
                 <Link
                   key={m.id}
                   href={`/panel/ministerios/${m.id}`}
-                  className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5 text-foreground no-underline transition-colors hover:border-support-hover hover:bg-surface-alt hover:no-underline"
+                  className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5 text-foreground no-underline transition-colors hover:border-foreground/20 hover:bg-surface-alt hover:no-underline"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
@@ -136,7 +136,7 @@ export default async function MinisteriosPage({
 function EstadoVacio({ puedeGestionar }: { puedeGestionar: boolean }) {
   return (
     <div className="flex flex-col items-center gap-3.5 rounded-xl border border-border bg-surface px-6 py-16 text-center">
-      <span className="flex size-13 items-center justify-center rounded-full bg-background text-muted-foreground">
+      <span className="flex size-13 items-center justify-center rounded-full bg-muted text-muted-foreground">
         <HandHeart className="size-6" strokeWidth={1.5} />
       </span>
 

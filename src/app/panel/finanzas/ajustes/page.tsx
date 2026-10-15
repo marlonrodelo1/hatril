@@ -78,7 +78,7 @@ export default async function AjustesFinanzasPage({
                 required
                 maxLength={60}
                 placeholder="Misiones"
-                className="h-10 rounded-lg border border-border bg-background px-3 text-[15px] text-foreground"
+                className="h-10 rounded-lg border border-border bg-surface-alt px-3 text-[15px] text-foreground"
               />
             </label>
             <Button type="submit" variant="outline" className="h-10">
@@ -122,7 +122,7 @@ export default async function AjustesFinanzasPage({
                 required
                 maxLength={60}
                 placeholder="Cuenta Bancolombia"
-                className="h-10 rounded-lg border border-border bg-background px-3 text-[15px] text-foreground"
+                className="h-10 rounded-lg border border-border bg-surface-alt px-3 text-[15px] text-foreground"
               />
             </label>
             <label className="flex flex-col gap-1 text-[12.5px] font-medium text-muted-foreground">
@@ -130,7 +130,7 @@ export default async function AjustesFinanzasPage({
               <select
                 name="tipo"
                 defaultValue="banco"
-                className="h-10 rounded-lg border border-border bg-background px-2.5 text-[15px] text-foreground"
+                className="h-10 rounded-lg border border-border bg-surface-alt px-2.5 text-[15px] text-foreground"
               >
                 <option value="efectivo">Efectivo</option>
                 <option value="banco">Cuenta de banco</option>

@@ -151,7 +151,7 @@ export default async function MiembrosPage({
                         {m.ministerios.slice(0, 2).map((min) => (
                           <span
                             key={min.id}
-                            className="whitespace-nowrap rounded-full bg-background px-2.5 py-1 text-[12px] font-semibold text-muted-foreground"
+                            className="whitespace-nowrap rounded-full bg-muted px-2.5 py-1 text-[12px] font-semibold text-muted-foreground"
                           >
                             {min.nombre}
                           </span>
@@ -227,7 +227,7 @@ function EstadoVacio({
 
   return (
     <div className="flex flex-col items-center gap-3.5 px-6 py-16 text-center">
-      <span className="flex size-13 items-center justify-center rounded-full bg-background text-muted-foreground">
+      <span className="flex size-13 items-center justify-center rounded-full bg-muted text-muted-foreground">
         <Icono className="size-6" strokeWidth={1.5} />
       </span>
 

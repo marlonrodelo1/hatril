@@ -96,7 +96,7 @@ export default async function AceptaPage() {
               {TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS}
             </p>
 
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5 hover:bg-background has-checked:border-primary has-checked:bg-accent">
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5 hover:bg-surface-active has-checked:border-primary has-checked:bg-accent">
               {/*
                * SIN `defaultChecked`, y no es un olvido: el considerando 32 del
                * RGPD dice que el silencio, las casillas ya marcadas y la

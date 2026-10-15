@@ -103,7 +103,7 @@ export async function FichaMiembroPanel({
             href={cerrar}
             scroll={false}
             aria-label="Cerrar la ficha"
-            className="flex size-[34px] flex-none items-center justify-center rounded-lg text-muted-foreground no-underline hover:bg-background hover:text-foreground hover:no-underline"
+            className="flex size-[34px] flex-none items-center justify-center rounded-lg text-muted-foreground no-underline hover:bg-surface-active hover:text-foreground hover:no-underline"
           >
             <X className="size-[18px]" strokeWidth={1.9} />
           </Link>
@@ -192,7 +192,7 @@ export async function FichaMiembroPanel({
                 {miembro.ministerios.map((m) => (
                   <span
                     key={m.id}
-                    className="rounded-full bg-background px-3 py-1.5 text-[13px] font-semibold text-muted-foreground"
+                    className="rounded-full bg-muted px-3 py-1.5 text-[13px] font-semibold text-muted-foreground"
                   >
                     {m.nombre}
                   </span>
@@ -225,12 +225,16 @@ function Capa({
   return (
     <>
       {/* El fondo es un enlace y no un div con onClick: sin JavaScript sigue
-          cerrando, y el teclado lo alcanza con el tabulador. */}
+          cerrando, y el teclado lo alcanza con el tabulador.
+
+          Al 30 % y no al 45 que pedía el oscuro: sobre crema el 45 deja la
+          página en gris medio, y el panel blanco ya se separa solo. Negro y no
+          `foreground`, para que el velo no cambie si cambia el tema. */}
       <Link
         href={cerrar}
         scroll={false}
         aria-label="Cerrar"
-        className="fixed inset-0 z-40 bg-black/45"
+        className="fixed inset-0 z-40 bg-black/30"
       />
       <aside
         role="dialog"
@@ -276,7 +280,7 @@ function AccionEnlace({
   return (
     <a
       href={href}
-      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface-alt px-3.5 text-[13.5px] font-semibold text-foreground no-underline hover:bg-background hover:no-underline"
+      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface-alt px-3.5 text-[13.5px] font-semibold text-foreground no-underline hover:bg-surface-active hover:no-underline"
     >
       <Icono className="size-4" strokeWidth={1.7} />
       {children}

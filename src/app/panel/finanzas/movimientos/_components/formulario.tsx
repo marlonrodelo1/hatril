@@ -82,7 +82,7 @@ export function FormularioMovimiento({
               'h-11 cursor-pointer rounded-lg border text-[15px] font-semibold transition-colors ' +
               (tipo === 'ingreso'
                 ? 'border-foreground bg-foreground text-background'
-                : 'border-border bg-surface text-muted-foreground hover:bg-background')
+                : 'border-border bg-surface text-muted-foreground hover:bg-surface-alt')
             }
           >
             Entra
@@ -95,7 +95,7 @@ export function FormularioMovimiento({
               'h-11 cursor-pointer rounded-lg border text-[15px] font-semibold transition-colors ' +
               (tipo === 'gasto'
                 ? 'border-foreground bg-foreground text-background'
-                : 'border-border bg-surface text-muted-foreground hover:bg-background')
+                : 'border-border bg-surface text-muted-foreground hover:bg-surface-alt')
             }
           >
             Sale
@@ -110,7 +110,7 @@ export function FormularioMovimiento({
           type="date"
           required
           defaultValue={valores.fecha}
-          className="h-11 w-full rounded-lg border border-border bg-background px-3 text-[15px] text-foreground"
+          className="h-11 w-full rounded-lg border border-border bg-surface-alt px-3 text-[15px] text-foreground"
         />
       </Campo>
 
@@ -124,7 +124,7 @@ export function FormularioMovimiento({
           autoComplete="off"
           placeholder="250.000"
           defaultValue={valores.importe}
-          className="h-11 w-full rounded-lg border border-border bg-background px-3 text-[17px] font-semibold tabular-nums text-foreground"
+          className="h-11 w-full rounded-lg border border-border bg-surface-alt px-3 text-[17px] font-semibold tabular-nums text-foreground"
         />
       </Campo>
 
@@ -147,7 +147,7 @@ export function FormularioMovimiento({
             tipo === 'ingreso' ? 'Ofrenda del culto' : 'Recibo de la luz'
           }
           defaultValue={valores.concepto}
-          className="h-11 w-full rounded-lg border border-border bg-background px-3 text-[15px] text-foreground"
+          className="h-11 w-full rounded-lg border border-border bg-surface-alt px-3 text-[15px] text-foreground"
         />
       </Campo>
 
@@ -175,7 +175,7 @@ export function FormularioMovimiento({
               id="fondoId"
               name="fondoId"
               defaultValue={valores.fondoId ?? fondos[0]?.id}
-              className="h-11 w-full rounded-lg border border-border bg-background px-3 text-[15px] text-foreground"
+              className="h-11 w-full rounded-lg border border-border bg-surface-alt px-3 text-[15px] text-foreground"
             >
               {fondos.map((f) => (
                 <option key={f.id} value={f.id}>
@@ -190,7 +190,7 @@ export function FormularioMovimiento({
               id="cajaId"
               name="cajaId"
               defaultValue={valores.cajaId ?? cajas[0]?.id}
-              className="h-11 w-full rounded-lg border border-border bg-background px-3 text-[15px] text-foreground"
+              className="h-11 w-full rounded-lg border border-border bg-surface-alt px-3 text-[15px] text-foreground"
             >
               {cajas.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -205,7 +205,7 @@ export function FormularioMovimiento({
               id="metodoPago"
               name="metodoPago"
               defaultValue={valores.metodoPago ?? 'efectivo'}
-              className="h-11 w-full rounded-lg border border-border bg-background px-3 text-[15px] text-foreground"
+              className="h-11 w-full rounded-lg border border-border bg-surface-alt px-3 text-[15px] text-foreground"
             >
               <option value="efectivo">Efectivo</option>
               <option value="transferencia">Transferencia</option>
@@ -224,7 +224,7 @@ export function FormularioMovimiento({
                 id="tipoIngreso"
                 name="tipoIngreso"
                 defaultValue={valores.tipoIngreso ?? 'ofrenda'}
-                className="h-11 w-full rounded-lg border border-border bg-background px-3 text-[15px] text-foreground"
+                className="h-11 w-full rounded-lg border border-border bg-surface-alt px-3 text-[15px] text-foreground"
               >
                 <option value="ofrenda">Ofrenda</option>
                 <option value="diezmo">Diezmo</option>
@@ -245,7 +245,7 @@ export function FormularioMovimiento({
               type="text"
               maxLength={100}
               defaultValue={valores.referencia}
-              className="h-11 w-full rounded-lg border border-border bg-background px-3 text-[15px] text-foreground"
+              className="h-11 w-full rounded-lg border border-border bg-surface-alt px-3 text-[15px] text-foreground"
             />
           </Campo>
         </div>

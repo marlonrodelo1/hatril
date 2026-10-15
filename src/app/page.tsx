@@ -266,7 +266,7 @@ function Bloque({
   // sombras y sin tarjetas flotando.
   return (
     <div className="flex flex-col items-start gap-3 bg-surface px-0 py-5 md:px-6">
-      <span className="flex size-10 items-center justify-center rounded-lg bg-background text-support">
+      <span className="flex size-10 items-center justify-center rounded-lg bg-muted text-support">
         <Icono className="size-5" strokeWidth={1.7} />
       </span>
       <h3 className="t-subtitulo text-balance">{titulo}</h3>

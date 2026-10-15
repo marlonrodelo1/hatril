@@ -74,7 +74,7 @@ export default async function MovimientosPage({
               type="date"
               name="desde"
               defaultValue={desde}
-              className="h-9 rounded-lg border border-border bg-background px-2.5 text-[14px] text-foreground"
+              className="h-9 rounded-lg border border-border bg-surface-alt px-2.5 text-[14px] text-foreground"
             />
           </label>
           <label className="flex flex-col gap-1 text-[12.5px] font-medium text-muted-foreground">
@@ -83,7 +83,7 @@ export default async function MovimientosPage({
               type="date"
               name="hasta"
               defaultValue={hasta}
-              className="h-9 rounded-lg border border-border bg-background px-2.5 text-[14px] text-foreground"
+              className="h-9 rounded-lg border border-border bg-surface-alt px-2.5 text-[14px] text-foreground"
             />
           </label>
           <label className="flex flex-col gap-1 text-[12.5px] font-medium text-muted-foreground">
@@ -91,7 +91,7 @@ export default async function MovimientosPage({
             <select
               name="fondo"
               defaultValue={params.fondo ?? ''}
-              className="h-9 rounded-lg border border-border bg-background px-2.5 text-[14px] text-foreground"
+              className="h-9 rounded-lg border border-border bg-surface-alt px-2.5 text-[14px] text-foreground"
             >
               <option value="">Todos</option>
               {listaFondos.map((f) => (
@@ -106,7 +106,7 @@ export default async function MovimientosPage({
           </Button>
           <a
             href={`/panel/finanzas/exportar?desde=${desde}&hasta=${hasta}${params.fondo ? `&fondo=${params.fondo}` : ''}`}
-            className="flex h-9 items-center rounded-lg border border-border bg-surface-alt px-3 text-[13.5px] font-semibold text-foreground no-underline hover:bg-background hover:no-underline"
+            className="flex h-9 items-center rounded-lg border border-border bg-surface-alt px-3 text-[13.5px] font-semibold text-foreground no-underline hover:bg-surface-active hover:no-underline"
           >
             Descargar CSV
           </a>

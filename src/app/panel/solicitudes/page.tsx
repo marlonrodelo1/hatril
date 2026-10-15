@@ -30,7 +30,7 @@ export default async function SolicitudesPage() {
       <Contenedor>
         {solicitudes.length === 0 ? (
           <div className="flex flex-col items-center gap-3.5 rounded-xl border border-border bg-surface px-6 py-16 text-center">
-            <span className="flex size-13 items-center justify-center rounded-full bg-background text-muted-foreground">
+            <span className="flex size-13 items-center justify-center rounded-full bg-muted text-muted-foreground">
               <Inbox className="size-6" strokeWidth={1.5} />
             </span>
             <div className="flex max-w-[400px] flex-col gap-1.5">
@@ -111,7 +111,7 @@ export default async function SolicitudesPage() {
                         la aprobación, que es justo lo contrario de lo que se está
                         escribiendo. */}
                     {/*
-                     * `secondary` —el verde de apoyo— y no el naranja de
+                     * `secondary` —el carbón de apoyo— y no el naranja de
                      * marca.
                      *
                      * «Aprobar» está dentro del `map` de solicitudes: con seis
@@ -121,12 +121,10 @@ export default async function SolicitudesPage() {
                      * naranja por pantalla, y una acción que se repite por
                      * fila no puede ser esa.
                      *
-                     * El verde no es un color inventado para el hueco: es el
-                     * `support` del sistema, el mismo con el que se pintan los
-                     * badges de «bien». Y aquí significa lo que parece —dejar
-                     * entrar a alguien—, así que además de cumplir la regla
-                     * dice algo. «Rechazar» se queda en `outline`, que es lo
-                     * que mantiene la jerarquía entre las dos.
+                     * Fue verde hasta el 15-oct, cuando `support` pasó a ser
+                     * el carbón de Claude. Lo que se mantiene es el relleno: un
+                     * botón macizo pesa más que el contorno de «Rechazar», y
+                     * esa es la jerarquía entre las dos.
                      */}
                     <form action={aprobarSolicitud.bind(null, s.id)}>
                       <Button type="submit" variant="secondary">

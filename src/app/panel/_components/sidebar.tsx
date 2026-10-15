@@ -177,7 +177,7 @@ export function PanelSidebar({
           title={encogida ? 'Ensanchar el menú' : 'Encoger el menú'}
           aria-label={encogida ? 'Ensanchar el menú' : 'Encoger el menú'}
           aria-expanded={!encogida}
-          className="flex size-[30px] flex-none cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+          className="flex size-[30px] flex-none cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-active hover:text-foreground"
         >
           {encogida ? (
             <PanelLeftOpen className="size-[17px]" strokeWidth={1.6} />
@@ -262,9 +262,12 @@ export function PanelSidebar({
                           'group relative flex h-9 items-center gap-[11px] rounded-md text-[13.5px] no-underline transition-colors hover:no-underline ' +
                           (encogida ? 'justify-center px-0' : 'px-3') +
                           ' ' +
+                          // Hover en `surface-alt` y no en `background`: en
+                          // crema el fondo de la página casi no se separa del
+                          // blanco del menú (1.05:1) y el hover no se veía.
                           (activa
                             ? 'bg-accent font-semibold text-accent-foreground'
-                            : 'font-medium text-muted-foreground hover:bg-background hover:text-foreground')
+                            : 'font-medium text-muted-foreground hover:bg-surface-alt hover:text-foreground')
                         }
                       >
                         <Icono
@@ -319,7 +322,7 @@ export function PanelSidebar({
           rel="noopener noreferrer"
           title={encogida ? 'Ver la web de la iglesia' : undefined}
           className={
-            'mb-3 flex h-9 flex-none items-center justify-center gap-2 rounded-lg border border-border bg-surface-alt text-[13px] font-semibold text-foreground no-underline transition-colors hover:bg-background hover:no-underline ' +
+            'mb-3 flex h-9 flex-none items-center justify-center gap-2 rounded-lg border border-border bg-surface-alt text-[13px] font-semibold text-foreground no-underline transition-colors hover:bg-surface-active hover:no-underline ' +
             (encogida ? 'mx-2 px-0' : 'mx-3')
           }
         >

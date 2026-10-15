@@ -36,7 +36,7 @@ export const metadata: Metadata = { title: 'Devocional' };
  *   - **Se firma.** Un devocional lo escribe alguien de la congregación, con su
  *     nombre y su cara. Sin autor parece una circular; con él, es Marta la que
  *     te está hablando.
- *   - **El versículo destaca de verdad**, con su comilla y el color de marca, en
+ *   - **El versículo destaca de verdad**, con su comilla y su barra de color, en
  *     vez de una caja gris más entre otras cajas grises.
  *   - **Se puede compartir**, que es lo que la gente hace con un devocional que
  *     le ha llegado.
@@ -170,10 +170,15 @@ export default async function DevocionalPage({
                * pasaba de largo.
                */
               <blockquote className="relative flex flex-col gap-2 rounded-xl border border-border bg-surface p-5 pl-6">
-                <span className="absolute inset-y-4 left-0 w-1 rounded-full bg-support-active" />
+                {/* En el naranja de marca, igual que la comilla y la cita. Fue
+                    verde mientras el verde era el segundo color de la marca; con
+                    la paleta de Claude ya no hay verde de marca, y uno aquí se
+                    leería como «correcto». El naranja como texto da 5.0:1 sobre
+                    la tarjeta blanca. */}
+                <span className="absolute inset-y-4 left-0 w-1 rounded-full bg-primary" />
 
                 <Quote
-                  className="size-[18px] text-badge-success-fg"
+                  className="size-[18px] text-primary"
                   strokeWidth={2.2}
                   aria-hidden
                 />
@@ -183,7 +188,7 @@ export default async function DevocionalPage({
                 </p>
 
                 {d.referencia && (
-                  <cite className="text-[13.5px] font-semibold not-italic text-badge-success-fg">
+                  <cite className="text-[13.5px] font-semibold not-italic text-primary">
                     {d.referencia}
                   </cite>
                 )}

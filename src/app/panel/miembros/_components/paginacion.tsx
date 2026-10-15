@@ -38,7 +38,7 @@ export function Paginacion({
   const hasta = Math.min(pagina * porPagina, total);
 
   const claseFlecha =
-    'flex size-8 items-center justify-center rounded-lg border border-border bg-surface-alt text-foreground no-underline hover:bg-background hover:no-underline';
+    'flex size-8 items-center justify-center rounded-lg border border-border bg-surface-alt text-foreground no-underline hover:bg-surface-active hover:no-underline';
   const claseInerte =
     'flex size-8 items-center justify-center rounded-lg border border-border bg-surface-alt text-disabled-text';
 

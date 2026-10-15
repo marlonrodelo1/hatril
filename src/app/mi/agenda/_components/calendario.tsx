@@ -44,14 +44,22 @@ const ICONOS: Record<TipoDeDia, React.ElementType> = {
 /**
  * El punto de color de cada tipo, para la rejilla.
  *
- * El turno va en blanco y no en un color más: es lo único de la rejilla que es
- * de la persona y no de la iglesia, y el blanco sobre el fondo oscuro es lo que
- * más destaca sin gastar el naranja, que está reservado a las acciones.
+ * El turno va en el color del texto y no en un color más: es lo único de la
+ * rejilla que es de la persona y no de la iglesia, y el casi negro sobre la
+ * tarjeta blanca es lo que más destaca sin gastar el naranja, que está
+ * reservado a las acciones.
+ *
+ * Por eso el culto ya no puede ir en `support-active`: con el carbón de Claude
+ * ese token ES el casi negro del texto, y culto y turno salían idénticos. Va en
+ * el verde de su propio icono. El ministerio va en el azul secundario de
+ * Claude, `info`: en ámbar quedaba a 1.2:1 del naranja del evento, dos
+ * tostados casi iguales en un punto de 6px. Azul y naranja se separan por tono
+ * aunque se parezcan en luminosidad, también con daltonismo.
  */
 const PUNTOS: Record<TipoDeDia, string> = {
-  culto: 'bg-support-active',
+  culto: 'bg-badge-success-fg',
   evento: 'bg-primary',
-  ministerio: 'bg-badge-warning-fg',
+  ministerio: 'bg-info',
   turno: 'bg-foreground',
 };
 
@@ -170,13 +178,18 @@ export function FilaOcurrencia({ ocurrencia: o }: { ocurrencia: Ocurrencia }) {
 
   const cuerpo = (
     <>
+      {/* El fondo es un token y solo el color del icono va en línea, que es lo
+          único que se decide en tiempo de ejecución. Un blanco translúcido,
+          como el que había, solo se ve sobre una tarjeta oscura. */}
       <span
-        className="flex size-9 flex-none items-center justify-center rounded-lg"
-        style={
-          o.color
-            ? { backgroundColor: 'rgb(255 255 255 / 0.06)', color: o.color }
-            : undefined
+        className={
+          'flex size-9 flex-none items-center justify-center rounded-lg' +
+          // `surface-active` y no `surface-alt`: este último es el hover de
+          // la fila entera, y al pasar el ratón el cuadrado del icono
+          // desaparecía.
+          (o.color ? ' bg-surface-active' : '')
         }
+        style={o.color ? { color: o.color } : undefined}
       >
         <Icono
           className={'size-[18px] ' + (o.color ? '' : colorDeTipo(o.tipo))}

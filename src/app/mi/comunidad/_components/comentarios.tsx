@@ -181,7 +181,7 @@ export function Comentarios({
                     type="button"
                     onClick={() => setRespondiendo(null)}
                     aria-label="Cancelar la respuesta"
-                    className="flex size-6 flex-none cursor-pointer items-center justify-center rounded-full outline-none hover:bg-background focus-visible:ring-3 focus-visible:ring-ring/20"
+                    className="flex size-6 flex-none cursor-pointer items-center justify-center rounded-full outline-none hover:bg-surface-active focus-visible:ring-3 focus-visible:ring-ring/20"
                   >
                     <X className="size-[14px]" strokeWidth={2} />
                   </button>

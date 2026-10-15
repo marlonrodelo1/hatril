@@ -189,32 +189,42 @@ están definidas en ningún archivo.
 De Claude Design, proyecto `107021c4-dd85-485d-9cc7-34ef639d92ae`.
 Tokens en `src/app/globals.css`. Plus Jakarta Sans.
 
+**La paleta es la de Claude en claro, desde el 15-oct-2026**: crema de fondo y
+naranja quemado de acento. Es la tercera. La primera fue la de Claude Design
+(naranja #BD4715 y verde #2F5D50). El 22-ago pasó a oscuro, y el 15-oct a Marlon
+dejaron de gustarle el verde de la cabecera y el naranja de la barra. Se le
+enseñaron cuatro paletas nuevas y las descartó: «usa los colores de Claude, el
+crema con el naranja quemado». Los valores salen de la hoja de estilos de
+claude.ai, no de memoria; el detalle está en la cabecera de `globals.css`.
+
 Tres reglas que el propio sistema declara innegociables:
 
 1. Un solo botón naranja por pantalla.
-2. `accent` (#BD4715) no se toca. Los errores llevan icono, no solo color.
+2. Los errores llevan icono, no solo color. Ahora importa el doble: el rojo de
+   error (#B53333) y el naranja de marca (#B15435) son vecinos de tono.
 3. Sin sombras. La profundidad se hace con bordes de 1px. **Sin degradados,
    con una excepción**: la portada del muro, donde el texto va sobre una foto y
    un velo plano tendría que apagar la imagen entera para garantizar el peor
    punto. Si aparece una segunda, es que la regla se está deshaciendo sola.
 
-**Modo OSCURO únicamente, desde el 22-ago-2026.** Aquí ponía lo contrario y que
-no se inventara una paleta oscura. Marlon la pidió para toda la aplicación.
+Un solo modo, el claro. No hay `dark:` ni interruptor.
 
 Tres cosas que hay que saber antes de tocar un color:
 
-- **El naranja y el verde de relleno son los mismos.** #BD4715 y #2F5D50 siguen
-  intactos: como fondo de botón, lo que decide es el contraste con su propio
-  texto blanco (5.1:1 y 7.5:1), y eso no depende del fondo de la página.
-- **`danger` SÍ cambió**, y es la excepción a la regla 2. Tiene que servir de
-  TEXTO —el corazón del muro, los errores— y #93231F sobre #1C1C1C da 1.6:1:
-  invisible. Ahora es #E0655B, que da 5.1:1. El rojo de marca sigue vivo como
-  relleno en `badge-danger-fg`.
-- **Un token sin `--color-*` no existe para Tailwind.** Es lo que hizo que
-  hubiera 79 colores escritos a mano en `.tsx`, todos apuntando a variables que
-  ya estaban definidas pero sin utilidad que las usara. Al cambiar la paleta, cada
-  uno de esos hex se queda clavado en su valor viejo. **Al añadir un token,
-  exponerlo.**
+- **El naranja es un punto más oscuro que el de Claude.** El relleno de Claude,
+  #C6613F, con letra blanca da 4.05:1, y aquí se pide 4.5 porque lleva texto
+  («Publicar»), no un icono. Se bajó la luminosidad sin tocar el tono:
+  #B15435, 5.0:1. Sobre su propio fondo suave se queda en 4.15, así que lo que
+  se escribe encima de `bg-accent` va con `text-accent-foreground` (#92442A).
+- **Ya no hay verde.** `support` es el carbón de Claude (#3D3D3A): el botón
+  secundario relleno y oscuro. Un segundo color de marca competía con el
+  naranja, que era justo la queja.
+- **Un token sin `--color-*` no existe para Tailwind**, y un color escrito
+  pensando en el fondo (`text-white/85`, `bg-white/15`) es un color escrito a
+  mano aunque no lleve almohadilla. Las dos cosas se quedan clavadas al cambiar
+  la paleta: hubo 79 hex sueltos al pasar a oscuro y un puñado de blancos al
+  volver a claro. **Al añadir un token, exponerlo.** El blanco y el negro solo
+  valen encima de una foto o de un relleno de color.
 
 Faltan por diseñar: login, registro, onboarding, super admin, directorio de
 iglesias, área del miembro y todas las vistas móviles.

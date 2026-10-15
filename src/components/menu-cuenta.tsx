@@ -154,7 +154,7 @@ export function MenuCuenta({
           <form action={salir}>
             <button
               type="submit"
-              className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13.5px] font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+              className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13.5px] font-medium text-muted-foreground transition-colors hover:bg-surface-alt hover:text-foreground"
             >
               <LogOut className="size-[16px] flex-none" strokeWidth={1.7} />
               Cerrar sesión
@@ -178,7 +178,7 @@ function Opcion({
   return (
     <Link
       href={href}
-      className="flex items-center gap-2.5 rounded-md px-3 py-2 text-[13.5px] font-medium text-muted-foreground no-underline transition-colors hover:bg-background hover:text-foreground hover:no-underline"
+      className="flex items-center gap-2.5 rounded-md px-3 py-2 text-[13.5px] font-medium text-muted-foreground no-underline transition-colors hover:bg-surface-alt hover:text-foreground hover:no-underline"
     >
       <Icono className="size-[16px] flex-none" strokeWidth={1.7} />
       {children}

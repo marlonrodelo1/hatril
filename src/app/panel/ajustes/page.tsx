@@ -358,7 +358,7 @@ export default async function AjustesPage({
                         key={url}
                         className="flex flex-col gap-2 rounded-lg border border-border bg-surface-alt p-2"
                       >
-                        <div className="relative h-[90px] overflow-hidden rounded-md border border-border bg-background">
+                        <div className="relative h-[90px] overflow-hidden rounded-md border border-border bg-surface-alt">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={url}
@@ -399,7 +399,7 @@ export default async function AjustesPage({
                       multiple
                       accept="image/jpeg,image/png,image/webp"
                       aria-label="Elegir fotos de la iglesia"
-                      className="min-w-0 flex-1 text-[13px] text-muted-foreground file:mr-2.5 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-surface file:px-2.5 file:py-1.5 file:text-[13px] file:font-medium file:text-foreground hover:file:bg-background"
+                      className="min-w-0 flex-1 text-[13px] text-muted-foreground file:mr-2.5 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-surface file:px-2.5 file:py-1.5 file:text-[13px] file:font-medium file:text-foreground hover:file:bg-surface-active"
                     />
                     <Button type="submit" variant="outline" size="sm">
                       <Upload strokeWidth={1.7} />
@@ -501,7 +501,7 @@ function CampoImagen({
       </div>
 
       <div
-        className={`flex ${alto} items-center justify-center overflow-hidden rounded-lg border border-border bg-background`}
+        className={`flex ${alto} items-center justify-center overflow-hidden rounded-lg border border-border bg-surface-alt`}
       >
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -528,7 +528,7 @@ function CampoImagen({
           required
           accept="image/jpeg,image/png,image/webp"
           aria-label={`Elegir ${titulo.toLowerCase()}`}
-          className="min-w-0 flex-1 text-[13px] text-muted-foreground file:mr-2.5 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-surface file:px-2.5 file:py-1.5 file:text-[13px] file:font-medium file:text-foreground hover:file:bg-background"
+          className="min-w-0 flex-1 text-[13px] text-muted-foreground file:mr-2.5 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-surface file:px-2.5 file:py-1.5 file:text-[13px] file:font-medium file:text-foreground hover:file:bg-surface-active"
         />
         <Button type="submit" variant="outline" size="sm">
           <Upload strokeWidth={1.7} />

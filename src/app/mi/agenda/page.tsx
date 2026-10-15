@@ -202,9 +202,10 @@ type Vista = 'dia' | 'semana' | 'mes';
 /**
  * Un turno con sus dos botones.
  *
- * El de confirmar va en verde y no en naranja: puede haber tres turnos en la
- * lista, y la regla del sistema es un solo botón naranja por pantalla. El verde
- * es el color de apoyo, y «ahí estaré» es exactamente eso.
+ * El de confirmar va en el secundario y no en naranja: puede haber tres turnos
+ * en la lista, y la regla del sistema es un solo botón naranja por pantalla. El
+ * secundario —el carbón, desde que dejó de ser verde— es el color de apoyo, y
+ * «ahí estaré» es exactamente eso.
  *
  * Contestado ya, los botones se van y queda el estado con un enlace a cambiarlo:
  * dejar «No puedo» a la vista de quien confirmó invita a pulsarlo sin querer.
@@ -328,8 +329,11 @@ function Selector({ vista, ancla }: { vista: Vista; ancla: string }) {
           aria-current={vista === o.id ? 'true' : undefined}
           className={
             'flex-1 rounded-lg py-2 text-center text-[13.5px] font-semibold no-underline transition-colors hover:no-underline ' +
+            // El mismo par que la pestaña activa de la barra de abajo. El
+            // naranja translúcido era cosa del fondo oscuro: sobre blanco sale
+            // un rosa que no está en la paleta.
             (vista === o.id
-              ? 'bg-primary/22 text-badge-accent-fg'
+              ? 'bg-accent text-accent-foreground'
               : 'text-muted-foreground hover:bg-surface-alt hover:text-foreground')
           }
         >

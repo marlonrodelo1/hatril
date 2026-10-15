@@ -91,7 +91,7 @@ export default async function AvisosPage() {
                     'flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-colors hover:bg-surface ' +
                     (a.leida
                       ? 'border-border bg-surface'
-                      : 'border-support bg-surface-alt')
+                      : 'border-border bg-surface-alt')
                   }
                 >
                   {/* El punto de sin leer, que además lleva texto para quien no

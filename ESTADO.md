@@ -27,6 +27,18 @@ lee al arrancar.
 
 ## Qué funciona, verificado ejecutándolo
 
+- **La paleta es la de Claude en claro, desde el 15-oct**: crema #FAF9F5,
+  tarjetas blancas y naranja quemado #B15435. Sustituye al oscuro del 22-ago,
+  que a su vez sustituyó al naranja y verde de Claude Design. Marlon descartó
+  antes cuatro propuestas (azul, oro, vino y ciruela). Ya no hay verde de marca:
+  el secundario es el carbón #3D3D3A, y el azul #2C84DB solo existe para
+  distinguir categorías. Valores sacados de la hoja de estilos de claude.ai,
+  contrastes medidos uno a uno; el porqué está en la cabecera de `globals.css`.
+  Revisado en el navegador: muro, devocional, agenda, cuenta, panel, web
+  pública, portada y acceso. Quedan sin arreglar, a propósito, tres contrastes
+  que ya eran bajos antes del cambio: los días del mes vecino en el calendario
+  (2.6:1), la inscripción cancelada de un evento con `opacity-60` y la muestra
+  del color Dorado de ministerio sobre su fondo suave (2.7:1).
 - **Acceso**: entrar, registrar iglesia, crear cuenta personal, recuperar
   contraseña.
 - **Panel**: inicio (avisos accionables arriba, cifras debajo), miembros

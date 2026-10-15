@@ -101,7 +101,7 @@ export default async function BibliaPage({
                   <Link
                     key={n}
                     href={`/mi/biblia?libro=${libro.slug}&cap=${n}`}
-                    className="flex h-11 items-center justify-center rounded-lg border border-border bg-surface text-[14.5px] font-semibold text-foreground no-underline tabular-nums hover:border-support-hover hover:bg-surface-alt hover:no-underline"
+                    className="flex h-11 items-center justify-center rounded-lg border border-border bg-surface text-[14.5px] font-semibold text-foreground no-underline tabular-nums hover:border-foreground/20 hover:bg-surface-alt hover:no-underline"
                   >
                     {n}
                   </Link>

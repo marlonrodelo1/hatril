@@ -116,10 +116,12 @@ export function BarraInferior() {
          * `backdrop-saturate`, que revive el color que atraviesa en vez de
          * dejarlo lavado.
          *
-         * No baja de 0.7: por debajo, el texto de las pestañas empieza a
-         * pelearse con una foto del domingo que pase por detrás.
+         * Era 0.7 en oscuro. En crema sube a 0.92, y es un número medido, no
+         * un gusto: el caso peor es una foto casi negra pasando por debajo, y
+         * con el blanco al 70 % el texto gris de las pestañas se queda en 2.4:1.
+         * Al 92 % da 4.56. Las pestañas miden 10.5px: necesitan 4.5 enteros.
          */
-        'bg-surface supports-backdrop-filter:bg-surface/70 supports-backdrop-filter:backdrop-blur-2xl supports-backdrop-filter:backdrop-saturate-150 ' +
+        'bg-surface supports-backdrop-filter:bg-surface/92 supports-backdrop-filter:backdrop-blur-2xl supports-backdrop-filter:backdrop-saturate-150 ' +
         // Escritorio: pastilla centrada del ancho de su contenido.
         'md:inset-x-auto md:bottom-5 md:left-1/2 md:w-auto md:-translate-x-1/2'
       }
@@ -149,21 +151,21 @@ function Pestana({
         'md:flex-none md:flex-row md:gap-2 md:px-3 md:py-2 md:text-[13.5px] ' +
         (esta
           /*
-           * CRISTAL NARANJA, NO NARANJA MACIZO
+           * NARANJA SUAVE Y OPACO
            *
-           * Pasó por dos versiones antes: `bg-accent` —el rosa palo de los
-           * hover, que casi no se distinguía de las otras pestañas— y naranja
-           * relleno con letra blanca, que sí destacaba pero se veía como un
-           * botón pegado dentro de otro botón.
+           * Pasó por tres versiones antes: `bg-accent` casi invisible, naranja
+           * relleno con letra blanca —un botón pegado dentro de otro botón— y,
+           * en oscuro, naranja al 22 % translúcido. A Marlon no le gustaba ese
+           * naranja, y con la paleta de Claude vuelve a ser el fondo suave
+           * `accent` (#F5E7DF), ahora con borde para que se distinga.
            *
-           * Ahora es el mismo naranja de marca al 22% con su propio desenfoque:
-           * deja pasar el color que haya debajo, va a juego con el cristal de la
-           * barra y no compite con el único botón naranja de la pantalla. La
-           * letra usa el naranja aclarado de los badges —#E8905E, 6:1 sobre este
-           * fondo—, porque el de marca sobre su propio velo se queda en 2:1.
+           * Opaco y no translúcido: con un velo, el color de la pestaña depende
+           * de lo que pase por debajo, y el contraste del texto también. La letra
+           * es `accent-foreground` (#92442A, 5.6:1 sobre este fondo) y no el
+           * naranja de marca, que sobre su propio fondo suave se queda en 4.15.
            */
-          ? 'border border-primary/35 bg-primary/22 text-badge-accent-fg supports-backdrop-filter:backdrop-blur-sm'
-          : 'border border-transparent text-muted-foreground hover:bg-background/60 hover:text-foreground')
+          ? 'border border-primary/30 bg-accent text-accent-foreground'
+          : 'border border-transparent text-muted-foreground hover:bg-surface-active hover:text-foreground')
       }
     >
       <p.Icono

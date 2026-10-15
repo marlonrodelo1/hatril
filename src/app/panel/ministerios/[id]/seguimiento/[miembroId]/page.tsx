@@ -205,7 +205,7 @@ export default async function PersonaEnSeguimientoPage({
               {RESULTADOS_ELEGIBLES.map((r, i) => (
                 <label
                   key={r}
-                  className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3 hover:bg-background has-checked:border-primary has-checked:bg-accent"
+                  className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3 hover:bg-surface-active has-checked:border-primary has-checked:bg-accent"
                 >
                   <input
                     type="radio"

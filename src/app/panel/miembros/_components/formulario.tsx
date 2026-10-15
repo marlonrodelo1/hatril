@@ -151,7 +151,7 @@ export function FormularioMiembro({
               {ministerios.map((m) => (
                 <label
                   key={m.id}
-                  className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-surface-alt px-3.5 py-2.5 text-[14px] font-medium hover:bg-background"
+                  className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-surface-alt px-3.5 py-2.5 text-[14px] font-medium hover:bg-surface-active"
                 >
                   <input
                     type="checkbox"

@@ -63,8 +63,13 @@ export function Campana({
 }) {
   return (
     <Popover>
+      {/*
+       * Pulsado en `surface-active` y no en `background`: la cabecera del
+       * miembro ES del color de la página, y ahí el pulsado no se veía (1.0:1).
+       * El escalón de pulsado se distingue en las dos cabeceras.
+       */}
       <PopoverTrigger
-        className="relative flex size-9 flex-none cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-background hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/20 data-popup-open:bg-background data-popup-open:text-foreground"
+        className="relative flex size-9 flex-none cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-surface-active hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/20 data-popup-open:bg-surface-active data-popup-open:text-foreground"
         aria-label={sinLeer > 0 ? `Avisos, ${sinLeer} sin leer` : 'Avisos'}
       >
         <Bell className="size-[19px]" strokeWidth={1.7} />
@@ -83,7 +88,7 @@ export function Campana({
             <form action={marcarTodoLeido}>
               <button
                 type="submit"
-                className="flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-[12.5px] font-semibold text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                className="flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-[12.5px] font-semibold text-muted-foreground transition-colors hover:bg-surface-alt hover:text-foreground"
               >
                 <Check className="size-3.5" strokeWidth={2} />
                 Marcar todo
@@ -107,7 +112,7 @@ export function Campana({
               <form key={a.id} action={abrirAviso.bind(null, a.id)}>
                 <button
                   type="submit"
-                  className="flex w-full cursor-pointer items-start gap-2.5 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-background"
+                  className="flex w-full cursor-pointer items-start gap-2.5 border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-surface-alt"
                 >
                   <span className="mt-[7px] flex size-2 flex-none items-center justify-center">
                     {!a.leida && (
@@ -147,7 +152,7 @@ export function Campana({
         {avisos.length > 0 && (
           <Link
             href="/mi/avisos"
-            className="flex-none border-t border-border px-4 py-2.5 text-center text-[13px] font-semibold text-foreground no-underline transition-colors hover:bg-background hover:no-underline"
+            className="flex-none border-t border-border px-4 py-2.5 text-center text-[13px] font-semibold text-foreground no-underline transition-colors hover:bg-surface-alt hover:no-underline"
           >
             Verlos todos
           </Link>

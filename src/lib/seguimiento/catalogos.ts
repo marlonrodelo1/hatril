@@ -66,7 +66,10 @@ export const RESULTADOS: Record<
   molesto_con_la_iglesia: {
     etiqueta: 'Está molesto con la iglesia',
     ayuda: 'Lo que una iglesia necesita saber para poder arreglarlo.',
-    badge: 'bg-[#F3E0D6] text-badge-accent-fg',
+    // Un escalón más tostado que «Lo lleva el pastorado» para que las dos
+    // insignias naranjas no sean la misma. Era el hex `#F3E0D6`, y pasó todo el
+    // modo oscuro como una pastilla clara: con token sigue a la paleta.
+    badge: 'bg-accent-soft-active text-badge-accent-fg',
   },
   sin_contacto: {
     etiqueta: 'No hay forma de localizarle',

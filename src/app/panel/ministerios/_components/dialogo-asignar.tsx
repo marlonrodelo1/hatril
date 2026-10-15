@@ -57,11 +57,13 @@ export function DialogoAsignar({
 
   return (
     <>
+      {/* Al 30 % y no al 45 del oscuro: sobre crema el 45 apaga la página
+          entera, y el diálogo blanco ya se distingue sin tanto velo. */}
       <Link
         href={cerrar}
         scroll={false}
         aria-label="Cerrar"
-        className="fixed inset-0 z-40 bg-black/45"
+        className="fixed inset-0 z-40 bg-black/30"
       />
 
       <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10">
@@ -87,7 +89,7 @@ export function DialogoAsignar({
               href={cerrar}
               scroll={false}
               aria-label="Cerrar"
-              className="flex size-8 flex-none items-center justify-center rounded-lg text-muted-foreground no-underline hover:bg-background hover:text-foreground hover:no-underline"
+              className="flex size-8 flex-none items-center justify-center rounded-lg text-muted-foreground no-underline hover:bg-surface-active hover:text-foreground hover:no-underline"
             >
               <X className="size-[17px]" strokeWidth={2} />
             </Link>
@@ -127,7 +129,7 @@ export function DialogoAsignar({
                       key={c.id}
                       className={
                         'flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 ' +
-                        (marcado ? 'bg-accent' : 'hover:bg-background')
+                        (marcado ? 'bg-accent' : 'hover:bg-surface-alt')
                       }
                     >
                       <input
@@ -183,7 +185,7 @@ export function DialogoAsignar({
 function Vacio({ texto }: { texto: string }) {
   return (
     <div className="flex flex-col items-center gap-3 px-2 py-10 text-center">
-      <span className="flex size-11 items-center justify-center rounded-full bg-background text-muted-foreground">
+      <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
         <UserPlus className="size-5" strokeWidth={1.5} />
       </span>
       <p className="max-w-[300px] text-[14.5px] leading-relaxed text-muted-foreground">

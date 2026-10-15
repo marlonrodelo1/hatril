@@ -72,14 +72,16 @@ export function MenuMovil({
   return (
     <Dialog.Root open={abierto} onOpenChange={setAbierto}>
       <Dialog.Trigger
-        className="flex size-9 flex-none cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-background hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/20 md:hidden"
+        className="flex size-9 flex-none cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-surface-active hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/20 md:hidden"
         aria-label="Abrir el menú"
       >
         <Menu className="size-[21px]" strokeWidth={1.7} />
       </Dialog.Trigger>
 
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-foreground/25 data-closed:animate-out data-closed:fade-out-0 data-open:animate-in data-open:fade-in-0" />
+        {/* Negro y no `foreground`: en el oscuro, un velo del color del texto
+            salía blanquecino. Un velo no debe depender del tema. */}
+        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/25 data-closed:animate-out data-closed:fade-out-0 data-open:animate-in data-open:fade-in-0" />
 
         <Dialog.Popup className="fixed inset-y-0 left-0 z-50 flex h-dvh w-[280px] max-w-[85vw] flex-col border-r border-border bg-surface outline-none data-closed:animate-out data-closed:slide-out-to-left data-open:animate-in data-open:slide-in-from-left">
           <div className="flex flex-none items-center gap-[11px] border-b border-border px-4 py-4">
@@ -101,7 +103,7 @@ export function MenuMovil({
             </div>
 
             <Dialog.Close
-              className="flex size-[30px] flex-none cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+              className="flex size-[30px] flex-none cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-active hover:text-foreground"
               aria-label="Cerrar el menú"
             >
               <X className="size-[18px]" strokeWidth={1.7} />
@@ -158,7 +160,7 @@ export function MenuMovil({
               href={webIglesia}
               target="_blank"
               rel="noopener noreferrer"
-              className="m-3 flex h-10 flex-none items-center justify-center gap-2 rounded-lg border border-border bg-surface-alt text-[13.5px] font-semibold text-foreground no-underline transition-colors hover:bg-background hover:no-underline"
+              className="m-3 flex h-10 flex-none items-center justify-center gap-2 rounded-lg border border-border bg-surface-alt text-[13.5px] font-semibold text-foreground no-underline transition-colors hover:bg-surface-active hover:no-underline"
             >
               <ExternalLink className="size-[15px] flex-none" strokeWidth={1.8} />
               Ver la web de la iglesia

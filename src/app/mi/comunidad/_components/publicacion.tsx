@@ -168,7 +168,7 @@ export function Publicacion({
             aria-label={p.leHeDado ? 'Quitar el me gusta' : 'Me gusta'}
             className={
               p.leHeDado
-                ? 'text-danger hover:bg-badge-danger-bg'
+                ? 'text-danger hover:bg-badge-danger-bg hover:text-danger'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }
           >
