@@ -78,6 +78,10 @@ declare
   -- Alguien de Betania que NO esta en el equipo de MIN_A. Se crea abajo, despues
   -- de la prueba de numeracion correlativa, para no moverle el numero a Ruben.
   MIE_A3 uuid;
+  -- Turnos (0037). Un culto en cada iglesia y una asignacion en Betania.
+  TUR_A uuid;
+  TUR_B uuid;
+  TAS_A uuid;
   -- Lo que responde inscribir_en_evento. Un solo escalar a proposito: ver la
   -- cabecera de la 0024.
   v_res text;
@@ -1351,6 +1355,198 @@ begin
 
   execute 'reset role';
 
+  -- ==========================================================================
+  -- TURNOS (HT122, HT123) -- quien sirve en cada culto y en que puesto
+  --
+  -- Menos que la asistencia, pero el calendario de cada persona semana a semana
+  -- sigue siendo practica religiosa nominal y fechada. Lo que importa aqui es
+  -- lo de siempre: que no cruce de iglesia, y que no se pueda poner en un
+  -- cuadrante a quien no esta en el equipo.
+  --
+  -- Ojo: la prueba de reactivacion de mas arriba deja a Lucia (MIE_A1) fuera
+  -- del equipo de MIN_A. Quien sigue dentro es Ruben (MIE_A2).
+  -- ==========================================================================
+
+  -- HT122: el ministerio tiene que ser de la iglesia del turno.
+  begin
+    insert into public.turnos (iglesia_id, ministerio_id, titulo, fecha, hora)
+    values (IGL_A, MIN_B, 'Culto', date '2026-10-18', time '11:00');
+    r := r || E'  FALLO un turno de Betania acepto el ministerio de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT122%'
+                   then E'  OK   HT122 impide un turno con el ministerio de otra iglesia\\n'
+                   else format(E'  FALLO error inesperado (HT122 turno): %s\\n', sqlerrm) end;
+  end;
+
+  insert into public.turnos (iglesia_id, ministerio_id, titulo, fecha, hora)
+  values (IGL_A, MIN_A, 'Culto', date '2026-10-18', time '11:00')
+  returning id into TUR_A;
+
+  insert into public.turnos (iglesia_id, ministerio_id, titulo, fecha, hora)
+  values (IGL_B, MIN_B, 'Culto', date '2026-10-18', time '11:00')
+  returning id into TUR_B;
+
+  -- Un equipo sirve una vez en cada culto.
+  begin
+    insert into public.turnos (iglesia_id, ministerio_id, titulo, fecha, hora)
+    values (IGL_A, MIN_A, 'Culto repetido', date '2026-10-18', time '11:00');
+    r := r || E'  FALLO el mismo equipo acepto dos turnos en el mismo culto\\n';
+  exception when unique_violation then
+    r := r || E'  OK   un equipo no tiene dos turnos en el mismo culto\\n';
+  end;
+
+  -- Y sin hora tambien: es lo que compra el nulls not distinct.
+  insert into public.turnos (iglesia_id, ministerio_id, titulo, fecha)
+  values (IGL_A, MIN_A, 'Vigilia', date '2026-12-31');
+  begin
+    insert into public.turnos (iglesia_id, ministerio_id, titulo, fecha)
+    values (IGL_A, MIN_A, 'Vigilia otra vez', date '2026-12-31');
+    r := r || E'  FALLO dos turnos de todo el dia el mismo dia no chocan\\n';
+  exception when unique_violation then
+    r := r || E'  OK   dos turnos sin hora el mismo dia tambien chocan\\n';
+  end;
+
+  -- HT122: ni una persona de otra iglesia...
+  begin
+    insert into public.turno_asignaciones (iglesia_id, turno_id, miembro_id, puesto)
+    values (IGL_A, TUR_A, MIE_B1, 'Guitarra');
+    r := r || E'  FALLO Betania acepto poner en su turno a alguien de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT122%'
+                   then E'  OK   HT122 impide poner en un turno a alguien de otra iglesia\\n'
+                   else format(E'  FALLO error inesperado (HT122 persona): %s\\n', sqlerrm) end;
+  end;
+
+  -- ...ni un turno de otra iglesia...
+  begin
+    insert into public.turno_asignaciones (iglesia_id, turno_id, miembro_id, puesto)
+    values (IGL_A, TUR_B, MIE_A2, 'Guitarra');
+    r := r || E'  FALLO una asignacion de Betania acepto el turno de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT122%'
+                   then E'  OK   HT122 impide colgar una asignacion de un turno ajeno\\n'
+                   else format(E'  FALLO error inesperado (HT122 turno ajeno): %s\\n', sqlerrm) end;
+  end;
+
+  -- ...ni a alguien de la iglesia que no esta en el equipo.
+  begin
+    insert into public.turno_asignaciones (iglesia_id, turno_id, miembro_id, puesto)
+    values (IGL_A, TUR_A, MIE_A3, 'Guitarra');
+    r := r || E'  FALLO se puso en un turno a alguien que no esta en el equipo\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT122%'
+                   then E'  OK   HT122 impide poner en un turno a quien no esta en el equipo\\n'
+                   else format(E'  FALLO error inesperado (HT122 equipo): %s\\n', sqlerrm) end;
+  end;
+
+  insert into public.turno_asignaciones (iglesia_id, turno_id, miembro_id, puesto)
+  values (IGL_A, TUR_A, MIE_A2, 'Guitarra')
+  returning id into TAS_A;
+
+  -- La misma persona dos veces en el mismo puesto es un doble clic.
+  begin
+    insert into public.turno_asignaciones (iglesia_id, turno_id, miembro_id, puesto)
+    values (IGL_A, TUR_A, MIE_A2, 'guitarra');
+    r := r || E'  FALLO la misma persona entro dos veces en el mismo puesto\\n';
+  exception when unique_violation then
+    r := r || E'  OK   la misma persona no entra dos veces en el mismo puesto\\n';
+  end;
+
+  -- --- HT123 y lo que si se puede cambiar, desde el pastor de Betania ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  begin
+    update public.turnos set iglesia_id = IGL_B where id = TUR_A;
+    r := r || E'  FALLO un turno cambio de iglesia\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT123%'
+                   then E'  OK   HT123 impide mover un turno de iglesia\\n'
+                   else format(E'  FALLO error inesperado (HT123 iglesia): %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    update public.turnos set ministerio_id = MIN_B where id = TUR_A;
+    r := r || E'  FALLO un turno cambio de ministerio\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT123%'
+                   then E'  OK   HT123 impide mover un turno de ministerio\\n'
+                   else format(E'  FALLO error inesperado (HT123 ministerio): %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    update public.turno_asignaciones set miembro_id = MIE_A1 where id = TAS_A;
+    r := r || E'  FALLO una asignacion cambio de persona\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT123%'
+                   then E'  OK   HT123 impide cambiar la persona de una asignacion\\n'
+                   else format(E'  FALLO error inesperado (HT123 persona): %s\\n', sqlerrm) end;
+  end;
+
+  update public.turno_asignaciones
+     set respuesta = 'confirmado', respondido_at = now()
+   where id = TAS_A;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s la respuesta de un turno se puede cambiar (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.turnos where iglesia_id = IGL_B;
+  r := r || format(E'  %s Betania no ve los turnos de Sion (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- --- Y desde Sion, en el otro sentido ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.turnos where iglesia_id = IGL_A;
+  r := r || format(E'  %s Sion no ve los turnos de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.turno_asignaciones where iglesia_id = IGL_A;
+  r := r || format(E'  %s Sion no ve quien sirve en Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  update public.turno_asignaciones set respuesta = 'no_puede' where id = TAS_A;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s Sion no puede contestar por nadie de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- --- anon y service_role: de aqui no sale nada, por ninguna puerta ---
+  execute 'set local role anon';
+
+  begin
+    select count(*) into n from public.turnos;
+    r := r || format(E'  FALLO anon lee los turnos (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a los turnos\\n';
+  end;
+
+  begin
+    select count(*) into n from public.turno_asignaciones;
+    r := r || format(E'  FALLO anon lee quien sirve (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a quien sirve\\n';
+  end;
+
+  execute 'reset role';
+
+  execute 'set local role service_role';
+
+  begin
+    select count(*) into n from public.turno_asignaciones;
+    r := r || format(E'  FALLO service_role lee quien sirve (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   service_role no llega a quien sirve\\n';
+  end;
+
+  execute 'reset role';
+
   -- Abortar a proposito: revierte los datos de prueba y devuelve el informe.
   raise exception '%', r;
 end $$;
@@ -1459,6 +1655,16 @@ async function comprobarWithUser(): Promise<string[]> {
       tx.execute(`select 1 from seguimiento_contactos limit 1`),
     );
     lineas.push('  OK   withUser() puede consultar los contactos');
+
+    // Turnos, por lo mismo: la fase SQL solo prueba que anon y service_role NO
+    // llegan. Que la aplicacion SI llegue es lo que se rompe en silencio.
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from turnos limit 1`));
+    lineas.push('  OK   withUser() puede consultar los turnos');
+
+    await withUser(USR_A, (tx) =>
+      tx.execute(`select 1 from turno_asignaciones limit 1`),
+    );
+    lineas.push('  OK   withUser() puede consultar quien sirve en cada turno');
 
     // LA FUGA, CAZADA POR LA FUNCIÓN QUE USA LA APLICACIÓN.
     //

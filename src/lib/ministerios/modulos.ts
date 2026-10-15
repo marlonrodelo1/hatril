@@ -1,4 +1,9 @@
-import { CalendarClock, HeartHandshake, type LucideIcon } from 'lucide-react';
+import {
+  CalendarCheck,
+  CalendarClock,
+  HeartHandshake,
+  type LucideIcon,
+} from 'lucide-react';
 import { z } from 'zod';
 
 /**
@@ -28,11 +33,11 @@ import { z } from 'zod';
  *
  * SOLO ESTÁ LO QUE FUNCIONA
  * -------------------------
- * Dos módulos, y son los dos que existen de verdad. Repertorio de canciones,
- * turnos de rotación, inventario de instrumentos, vínculo con las familias y
- * peticiones de oración están decididos y NO se declaran aquí hasta que se
- * puedan pulsar. Un interruptor que enciende una pestaña vacía hace parecer
- * roto un producto que funciona — la misma regla que `panel/secciones.ts`.
+ * Tres módulos, y son los tres que existen de verdad. Repertorio de canciones,
+ * material del equipo, inventario, vínculo con las familias y peticiones de
+ * oración están decididos y NO se declaran aquí hasta que se puedan pulsar. Un
+ * interruptor que enciende una pestaña vacía hace parecer roto un producto que
+ * funciona — la misma regla que `panel/secciones.ts`.
  */
 
 type ModuloDeclarado = {
@@ -50,6 +55,18 @@ export const MODULOS_MINISTERIO = [
     descripcion:
       'Ensayos, reuniones y actividades del ministerio, con quién vino a cada una.',
     Icono: CalendarClock,
+  },
+  {
+    /*
+     * Antes que el seguimiento en el catálogo, y el orden es el de las
+     * pestañas: el cuadrante es lo que un equipo de alabanza o de ujieres abre
+     * cada semana, y el seguimiento lo usa un solo tipo de ministerio.
+     */
+    id: 'turnos',
+    nombre: 'Turnos',
+    descripcion:
+      'Quién sirve en cada culto y en qué puesto. Cada persona lo ve en su agenda y confirma si puede.',
+    Icono: CalendarCheck,
   },
   {
     id: 'seguimiento',
@@ -141,6 +158,49 @@ export function componerModulos(
 /** El módulo, o `null` si el identificador no está en el catálogo. */
 export function moduloPorId(id: string): ModuloMinisterio | null {
   return POR_ID.get(id) ?? null;
+}
+
+/**
+ * La configuración guardada de un módulo, sin `activo`, o `{}` si no hay.
+ *
+ * Es la otra mitad del `catchall` de `Config`: cada módulo guarda aquí lo suyo
+ * —los puestos de los turnos, por ejemplo— y quien lo lee valida con su propio
+ * esquema. Esta función no sabe qué forma tiene la config de nadie, y por eso
+ * devuelve `unknown` por clave.
+ */
+export function configDeModulo(
+  valor: unknown,
+  modulo: ModuloId,
+): Record<string, unknown> {
+  const leido = EsquemaModulos.safeParse(valor);
+  if (!leido.success) return {};
+  const config: Record<string, unknown> = { ...leido.data[modulo] };
+  delete config.activo;
+  return config;
+}
+
+/**
+ * El jsonb con la configuración de UN módulo cambiada y todo lo demás intacto.
+ *
+ * Conserva `activo` tal como estaba: guardar los puestos de los turnos no puede
+ * encender ni apagar la herramienta. Solo se llama desde dentro de un módulo
+ * encendido —su layout da 404 si no lo está—, así que la clave ya existe; el
+ * `false` de respaldo es para que un uso equivocado apague en vez de encender.
+ *
+ * Ojo con `{}`: escribir aquí en un ministerio sin configurar lo sacaría de
+ * `sinConfigurar()`, y el formulario de editar dejaría de proponerle la
+ * plantilla de su tipo. Por eso tampoco se llama nunca con un módulo apagado.
+ */
+export function conConfigDeModulo(
+  anterior: unknown,
+  modulo: ModuloId,
+  config: Record<string, unknown>,
+): ModulosGuardados {
+  const leido = EsquemaModulos.safeParse(anterior);
+  const previo: ModulosGuardados = leido.success ? leido.data : {};
+  const activo = previo[modulo]?.activo ?? false;
+
+  return { ...previo, [modulo]: { ...previo[modulo], ...config, activo } };
 }
 
 /**

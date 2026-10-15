@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, Church, Users } from 'lucide-react';
+import { CalendarCheck, CalendarDays, Church, Users } from 'lucide-react';
 
 import type { Ocurrencia, TipoDeDia } from '@/lib/agenda/calendario';
 import { Hoja } from '@/components/hoja';
@@ -38,13 +38,21 @@ const ICONOS: Record<TipoDeDia, React.ElementType> = {
   culto: Church,
   evento: CalendarDays,
   ministerio: Users,
+  turno: CalendarCheck,
 };
 
-/** El punto de color de cada tipo, para la rejilla. */
+/**
+ * El punto de color de cada tipo, para la rejilla.
+ *
+ * El turno va en blanco y no en un color más: es lo único de la rejilla que es
+ * de la persona y no de la iglesia, y el blanco sobre el fondo oscuro es lo que
+ * más destaca sin gastar el naranja, que está reservado a las acciones.
+ */
 const PUNTOS: Record<TipoDeDia, string> = {
   culto: 'bg-support-active',
   evento: 'bg-primary',
   ministerio: 'bg-badge-warning-fg',
+  turno: 'bg-foreground',
 };
 
 export function CalendarioMes({
@@ -211,7 +219,9 @@ function colorDeTipo(t: TipoDeDia): string {
     ? 'text-badge-success-fg'
     : t === 'evento'
       ? 'text-badge-accent-fg'
-      : 'text-badge-warning-fg';
+      : t === 'turno'
+        ? 'text-foreground'
+        : 'text-badge-warning-fg';
 }
 
 function tituloDelDia(fecha: string): string {

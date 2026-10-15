@@ -253,6 +253,20 @@
       "when": 1787338690374,
       "tag": "0035_comentarios_respuestas_y_me_gusta",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792057149750,
+      "tag": "0036_turnos",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792057191771,
+      "tag": "0037_turnos_rls",
+      "breakpoints": true
     }
   ]
 }

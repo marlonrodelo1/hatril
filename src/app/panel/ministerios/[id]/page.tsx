@@ -297,9 +297,11 @@ export default async function MinisterioPage({
         )}
 
         {/*
-         * El diseño pone aquí una segunda columna con «Próximos turnos». Sale
-         * del módulo de eventos, que es de la v2. Se deja el ancho completo al
-         * equipo en lugar de reservar media pantalla a un hueco.
+         * El diseño pone aquí una segunda columna con «Próximos turnos». Los
+         * turnos existen ya, pero como pestaña propia del ministerio y solo
+         * cuando el equipo tiene el módulo encendido: repetirlos aquí los
+         * pintaría dos veces a quien los usa y como un hueco a quien no. El
+         * ancho completo se queda para el equipo.
          */}
         <section className="overflow-hidden rounded-xl border border-border bg-surface">
           <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">

@@ -56,5 +56,19 @@ export function textoNotificacion(
         titulo: 'Te toca escribir el devocional',
         detalle: datos.fecha ? `Es para el ${datos.fecha}.` : null,
       };
+
+    case 'turno_asignado':
+      return {
+        titulo: `Te toca servir en ${datos.ministerio ?? 'tu equipo'}`,
+        // El día primero: es lo que la persona necesita saber para contestar,
+        // y en la campana solo se lee la primera línea entera.
+        detalle: [datos.fecha, datos.puesto].filter(Boolean).join(' · ') || null,
+      };
+
+    case 'turno_no_puede':
+      return {
+        titulo: `${quien} no puede servir en ${datos.ministerio ?? 'el equipo'}`,
+        detalle: datos.fecha ? `Hay que cubrir el ${datos.fecha}.` : null,
+      };
   }
 }

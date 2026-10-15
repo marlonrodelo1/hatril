@@ -105,7 +105,17 @@ export type GuardHatril =
    */
   | 'HT120'
   /** El comentario o la persona del «me gusta» no son de esta iglesia (`0035`). */
-  | 'HT121';
+  | 'HT121'
+  /**
+   * El ministerio, el turno, la persona o quien asigna no son de esta iglesia,
+   * o la persona no está en el equipo de ese ministerio (`0037`).
+   */
+  | 'HT122'
+  /**
+   * Un turno no cambia de iglesia ni de ministerio, y una asignación tampoco de
+   * turno ni de persona (`0037`).
+   */
+  | 'HT123';
 
 /**
  * ¿Es este error uno de nuestros triggers guard?

@@ -1,6 +1,6 @@
 # Estado de Hatril
 
-Última actualización: 21 de agosto de 2026.
+Última actualización: 15 de octubre de 2026.
 
 Este fichero se actualiza al cerrar cada sesión de trabajo. Va **dentro del
 repo** a propósito: Pidoo guardaba su detalle en ficheros `memory/` fuera del
@@ -50,8 +50,49 @@ lee al arrancar.
 
   No se programa una pantalla por tipo: se programan piezas y cada tipo enciende
   las suyas, así que un ministerio de radio o de reparto de alimentos funciona
-  sin tocar código. Hoy existen **dos módulos de verdad**, `agenda` y
-  `seguimiento`; el resto no se declara hasta que se pueda pulsar.
+  sin tocar código. Hoy existen **tres módulos de verdad**, `agenda`, `turnos`
+  y `seguimiento`; el resto no se declara hasta que se pueda pulsar.
+
+  Qué trae cada tipo de salida: Alabanza, Niños e Intercesión, agenda y
+  turnos; Ujieres y Medios, turnos y agenda; Consolidación y Evangelismo,
+  agenda y seguimiento; Jóvenes, Acción social y Otro, solo agenda. Siguen sin
+  diferenciarse de verdad hasta que lleguen repertorio, material e inventario.
+
+- **Turnos** (cuadrante de servicio): `/panel/ministerios/[id]/turnos`. Quién
+  sirve en cada culto y en qué puesto. Verificado de punta a punta ejecutándolo
+  como `lider@` y `miembro@`: planificar seis domingos, poner gente en cada
+  puesto, el aviso que le llega a la persona, contestar «no puedo» desde su
+  agenda, el aviso que eso le manda al responsable, marcar a mano a quien no
+  tiene la aplicación y copiar el cuadrante de un domingo al siguiente.
+
+  - **Los cultos salen del horario semanal**, no de un formulario en blanco: en
+    «Planificar» se marcan con un dedo los de las próximas seis semanas, con el
+    culto destacado de la iglesia ya marcado. Lo que no está en el horario
+    —una vigilia— se crea a mano debajo.
+  - **Los puestos** («Guitarra», «Puerta principal») viven en la configuración
+    del módulo (`ministerios.modulos.turnos.puestos`) y cada tipo trae los
+    suyos de salida (`tipos.ts`). La asignación **copia el texto**, no apunta al
+    puesto: renombrar «Voces» a «Coros» no reescribe el pasado, y el turno viejo
+    enseña «Voces» con su gente y la marca de que ya no está en la lista.
+  - **«Sin contestar» cuenta como cubierto y «no puede» como hueco.** Mucha
+    gente del equipo no usa la aplicación; si su silencio contara como hueco, el
+    cuadrante saldría medio vacío con el equipo completo. Por eso el responsable
+    puede marcar la respuesta de cualquiera («me lo dijo por WhatsApp»).
+  - **Solo gente del equipo**, y lo dice la base (HT122): asignar a alguien de
+    fuera abriría una puerta lateral al fichero de la iglesia.
+  - **El desplegable avisa y no prohíbe** si esa persona ya sirve en otro equipo
+    a la misma hora: en una iglesia pequeña es lo normal.
+  - **Para el miembro**, en `/mi/agenda`: un bloque «Te toca servir» arriba con
+    «Ahí estaré» y «No puedo», el turno en el calendario con su punto blanco, y
+    la ficha del turno en `/mi/agenda/turno/[id]` con quién más sirve. Fuera del
+    equipo es un 404. Las respuestas ajenas no se enseñan: eso es entre cada
+    persona y quien lleva el equipo.
+  - **Avisos**: `turno_asignado` (uno por persona y turno, no por puesto) y
+    `turno_no_puede`, que va al responsable y a los colíderes. El «confirmo» no
+    avisa a nadie, a propósito.
+  - **Sin `auditar()` en las asignaciones**, por lo mismo que la asistencia: es
+    el calendario religioso de cada persona, y `auditoria` se lee entera y no se
+    puede borrar. `turnos` sí se audita, como `reuniones`.
 
 - **Reuniones y asistencia**: `/panel/reuniones`. Apuntar el culto del domingo o
   el del jueves con su fecha, y marcar quién vino. **Se guarda fila también para
@@ -388,6 +429,13 @@ lee al arrancar.
   lea ni escriba en el muro de Betania, HT107, la moderación del pastor y que
   `anon` no llegue.
 
+  Las veinte más nuevas son de turnos: HT122 en sus tres formas (ministerio,
+  persona y turno de otra iglesia, y persona fuera del equipo), HT123 (ni
+  iglesia, ni ministerio, ni persona cambian), los dos índices únicos —también
+  el de dos turnos sin hora el mismo día—, que Sion no vea ni conteste nada de
+  Betania, y que ni `anon` ni `service_role` lleguen. Más dos que entran por
+  `withUser()` de verdad. 142 comprobaciones en total.
+
   **Pendiente**: el test sigue sin cubrir `devocionales`, que es tabla nueva con
   RLS propia.
 
@@ -395,10 +443,11 @@ lee al arrancar.
 
 | Pieza | Estado |
 |---|---|
-| Proveedor de alojamiento en los legales | **Sin rellenar.** Lo más urgente: bloquea publicar |
+| Proveedor de alojamiento en los legales | Relleno (Hostinger). Falta confirmar en hPanel el país del centro de datos: pone Alemania y la IP geolocaliza en Francia |
+| Módulos de ministerio | **Turnos hecho.** Siguen repertorio (alabanza), material del equipo e inventario. Peticiones de oración y la ficha de los niños esperan una decisión legal: salud y menores |
 | Foto en la ficha de miembro | Va en OTRO bucket, privado y con URL firmada. El de iglesias es público |
 | Eventos y calendario | Hecho y verificado, con sus textos legales |
-| Área del miembro | Comunidad, devocional con vídeo, **agenda como calendario** y Biblia. Faltan el repertorio del domingo, los turnos y el material del equipo |
+| Área del miembro | Comunidad, devocional con vídeo, **agenda como calendario con sus turnos** y Biblia. Faltan el repertorio del domingo y el material del equipo |
 | Agenda | **Calendario con día, semana y mes**, los días marcados y una hoja al tocarlos. Junta los horarios semanales, los eventos y las reuniones de los ministerios de cada persona |
 | Stripe | **Hecho el circuito entero**, sin claves todavía. Ver «Qué hay que crear en Stripe» |
 | Correo (Resend) | Nada. Ni bienvenida, ni aviso de solicitud, ni el de «se te acaba la prueba» — que ahora es el que más falta hace: el aviso solo se ve entrando al panel |
@@ -416,6 +465,29 @@ lee al arrancar.
 ---
 
 ## Trampas que ya han costado tiempo
+
+**`drizzle-kit generate` arrastra lo que se escribió a mano.** La 0034 y la 0035
+se escribieron como migraciones a mano y su snapshot no recogió lo que creaban,
+así que al generar la 0036 el SQL traía de propina un `create table` y un `add
+value` que ya existían: aplicada tal cual, se habría caído entera. Se recortó a
+mano y su snapshot ya está al día. Al generar, **leer el SQL antes de aplicar**
+siempre, y quitar lo que no sea de esa tanda.
+
+**El periodo de prueba de la demo caduca, y con él todo el panel.** Betania
+venció el 23-ago y, pasada la gracia, `/panel` entero mandaba a `/suscripcion`:
+no había forma de enseñar nada. Se alargó a mano hasta el **15-nov-2026** por
+`DATABASE_URL` (HT112 impide hacerlo desde una sesión, a propósito). Cuando
+vuelva a pasar, es eso y no un fallo del muro.
+
+**Dos turnos «sin hora» no chocaban.** En SQL dos NULL nunca son iguales, así
+que el índice único de (ministerio, fecha, hora) dejaba duplicar una vigilia de
+todo el día. Va como `unique nulls not distinct`, que es Postgres 15+.
+
+**Un desplegable largo saca la página por la derecha en el móvil.** La columna
+implícita de una rejilla mide lo que su contenido más ancho, y un `<select>`
+mide lo que su opción más larga. En el cuadrante, «Lucía Ferrer Ramos — Voz y
+teclado» sacaba la pantalla 20 px. Escribir `grid-cols-1`, que es
+`minmax(0, 1fr)`, aunque parezca el defecto.
 
 **Cambiar la paleta enseña dónde NO están los tokens.** Al pasar la aplicación a
 oscuro aparecieron 79 colores escritos a mano en `.tsx` —17 solo en
@@ -928,7 +1000,11 @@ Siete cuentas, contraseña `Hatril2026`:
 `@hatril.test`.
 
 `lider@` es responsable de Alabanza: es la cuenta con la que se comprueba que el
-permiso acotado deja gestionar un ministerio y ninguno más. Y Niños tiene
+permiso acotado deja gestionar un ministerio y ninguno más. Alabanza tiene
+turnos planificados los domingos del 18-oct al 22-nov, con gente en los dos
+primeros, y `miembro@` (Lucía) sirve en Voces: es la pareja para probar los
+turnos desde los dos lados. `lider@` y `secretaria@` ya aceptaron la política
+`privacidad-2026-09`; las demás cuentas pasan antes por `/acepta`. Y Niños tiene
 responsable **y** colíder, que es el caso que el modelo viejo no podía guardar.
 
 Dos iglesias: **Betania** (Bogotá, publicada) y **Sion** (Madrid, sin publicar).

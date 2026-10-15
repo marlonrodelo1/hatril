@@ -1,9 +1,14 @@
 import 'server-only';
 
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNull, ne, sql } from 'drizzle-orm';
 
 import { dbAdmin } from '@/lib/db';
-import { iglesiaUsuarios, notificaciones } from '@/lib/db/schema';
+import {
+  iglesiaUsuarios,
+  ministerioMiembros,
+  notificaciones,
+  type tipoNotificacionEnum,
+} from '@/lib/db/schema';
 import { resolverPermisos } from '@/lib/auth/permisos';
 
 /**
@@ -28,13 +33,13 @@ import { resolverPermisos } from '@/lib/auth/permisos';
  * error, que es la peor de las dos situaciones.
  */
 
-export type TipoNotificacion =
-  | 'solicitud_recibida'
-  | 'solicitud_aprobada'
-  | 'solicitud_rechazada'
-  | 'comentario_en_publicacion'
-  | 'me_gusta_en_publicacion'
-  | 'turno_devocional';
+/**
+ * Sale del enum de Postgres y no de una lista escrita aquí. Era una unión a
+ * mano, y es la misma deriva que `GuardHatril` documenta en `db/error.ts`: un
+ * valor nuevo en el schema no obligaba a tocar este fichero. Así, añadir un
+ * tipo rompe el `switch` de `textos.ts` hasta que alguien le escribe su frase.
+ */
+export type TipoNotificacion = (typeof tipoNotificacionEnum.enumValues)[number];
 
 type Aviso = {
   iglesiaId: string;
@@ -147,6 +152,43 @@ export async function cuentasQueAprueban(
   return filas
     .filter((f) => resolverPermisos(f.rol, f.permisos).aprobar_solicitudes)
     .map((f) => f.authUserId);
+}
+
+/**
+ * Las cuentas de quien lleva un ministerio: su responsable y sus colíderes.
+ *
+ * Es a quien hay que avisar cuando alguien del equipo dice que no puede servir.
+ * Por `dbAdmin` por lo mismo que `cuentaDeMiembro`: quien provoca el aviso es un
+ * voluntario, y no tiene por qué poder leer quién tiene acceso a la aplicación.
+ *
+ * Los que no tienen cuenta se quedan fuera sin más: un responsable que no usa
+ * la aplicación no puede recibir el aviso, y es lo normal en muchas iglesias.
+ */
+export async function cuentasQueLlevanElMinisterio(
+  iglesiaId: string,
+  ministerioId: string,
+): Promise<string[]> {
+  const filas = await dbAdmin
+    .select({ authUserId: iglesiaUsuarios.authUserId })
+    .from(ministerioMiembros)
+    .innerJoin(
+      iglesiaUsuarios,
+      and(
+        eq(iglesiaUsuarios.miembroId, ministerioMiembros.miembroId),
+        eq(iglesiaUsuarios.iglesiaId, ministerioMiembros.iglesiaId),
+      ),
+    )
+    .where(
+      and(
+        eq(ministerioMiembros.iglesiaId, iglesiaId),
+        eq(ministerioMiembros.ministerioId, ministerioId),
+        eq(ministerioMiembros.activo, true),
+        ne(ministerioMiembros.rolEquipo, 'voluntario'),
+        eq(iglesiaUsuarios.estado, 'activo'),
+      ),
+    );
+
+  return [...new Set(filas.map((f) => f.authUserId))];
 }
 
 /**

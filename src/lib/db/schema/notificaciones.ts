@@ -40,6 +40,10 @@ export const tipoNotificacionEnum = pgEnum('tipo_notificacion_enum', [
   'comentario_en_publicacion',
   'me_gusta_en_publicacion',
   'turno_devocional',
+  /** Te han puesto a servir en un culto. Uno por turno, no uno por puesto. */
+  'turno_asignado',
+  /** Alguien del equipo ha dicho que no puede. Va a quien lleva el equipo. */
+  'turno_no_puede',
 ]);
 
 export const notificaciones = pgTable(

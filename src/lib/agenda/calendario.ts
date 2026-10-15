@@ -7,6 +7,9 @@ import { eventos, iglesias, ministerios, reuniones } from '@/lib/db/schema';
 import type { HorarioSemanal } from '@/lib/db/schema/iglesias';
 import type { UserContext } from '@/lib/auth/user-context';
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
+import { misTurnos } from '@/lib/turnos/consultas';
+import { ETIQUETA_RESPUESTA } from '@/lib/turnos/respuestas';
+import { comoFecha, cultosEntre, sumarDias } from './horarios';
 
 /**
  * Todo lo que le pasa a una congregación, día a día.
@@ -24,6 +27,9 @@ import { colorDeMinisterio } from '@/lib/ministerios/colores';
  *      los tres días, no solo en el primero.
  *   3. **Las reuniones de ministerio** (`reuniones`): fecha concreta, y solo las
  *      de los equipos donde sirve quien mira.
+ *   4. **Sus turnos** (`turnos`): los cultos en los que le toca servir, con su
+ *      puesto. El culto sale además por el horario, y es a propósito: uno dice
+ *      que hay culto y el otro que esa persona va a estar en la puerta.
  *
  * POR QUÉ SE GENERAN LAS REPETICIONES Y NO SE GUARDAN
  * ---------------------------------------------------
@@ -35,7 +41,7 @@ import { colorDeMinisterio } from '@/lib/ministerios/colores';
  * muro.
  */
 
-export type TipoDeDia = 'culto' | 'evento' | 'ministerio';
+export type TipoDeDia = 'culto' | 'evento' | 'ministerio' | 'turno';
 
 export type Ocurrencia = {
   /** `YYYY-MM-DD` en la zona de la iglesia. */
@@ -51,52 +57,14 @@ export type Ocurrencia = {
   enlace?: string;
 };
 
-/** Los siete días como los escribe el formulario de horarios de la iglesia. */
-const DIAS = [
-  'domingo',
-  'lunes',
-  'martes',
-  'miércoles',
-  'jueves',
-  'viernes',
-  'sábado',
-];
-
-/**
- * De «Miércoles» al 0-6 de `Date.getUTCDay()`.
- *
- * Sin acentos y en minúsculas, porque el campo es de texto libre en el panel y
- * una iglesia puede haber escrito «Miercoles». Devuelve null si no se reconoce:
- * un horario mal escrito no sale en el calendario, pero no tumba la pantalla.
+/*
+ * Los días de la semana, `comoFecha` y `sumarDias` viven ahora en
+ * `horarios.ts`: los turnos necesitan la misma expansión del horario semanal,
+ * y dos copias de «qué día cae el culto del miércoles» acaban discrepando. Se
+ * reexportan aquí porque las pantallas de la agenda ya los importaban de este
+ * fichero.
  */
-function diaDeLaSemana(nombre: string): number | null {
-  const limpio = nombre
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim();
-
-  const i = DIAS.findIndex(
-    (d) => d.normalize('NFD').replace(/[̀-ͯ]/g, '') === limpio,
-  );
-  return i >= 0 ? i : null;
-}
-
-/** `YYYY-MM-DD` sin pasar por la zona horaria del servidor. */
-export function comoFecha(d: Date): string {
-  return [
-    d.getUTCFullYear(),
-    String(d.getUTCMonth() + 1).padStart(2, '0'),
-    String(d.getUTCDate()).padStart(2, '0'),
-  ].join('-');
-}
-
-/** Suma días a una fecha `YYYY-MM-DD`. */
-export function sumarDias(fecha: string, dias: number): string {
-  const d = new Date(fecha + 'T00:00:00Z');
-  d.setUTCDate(d.getUTCDate() + dias);
-  return comoFecha(d);
-}
+export { comoFecha, sumarDias };
 
 /**
  * Todo lo que hay entre dos fechas, ordenado por día y hora.
@@ -110,7 +78,7 @@ export async function agendaEntre(
   hasta: string,
   ministerioIds: string[],
 ): Promise<Ocurrencia[]> {
-  const [filasEventos, filasReuniones, filasIglesia] = await Promise.all([
+  const [filasEventos, filasReuniones, filasIglesia, filasTurnos] = await Promise.all([
     /*
      * Por `dbAdmin` y no `withUser`, igual que `eventosPublicos`: un evento
      * publicado es información abierta —sale en la web de la calle— y la
@@ -177,6 +145,8 @@ export async function agendaEntre(
         .where(eq(iglesias.id, ctx.iglesia.id))
         .limit(1),
     ),
+
+    misTurnos(ctx, desde, hasta),
   ]);
 
   const salida: Ocurrencia[] = [];
@@ -188,23 +158,14 @@ export async function agendaEntre(
    * las cuarenta pantallas del producto.
    */
   const horarios = (filasIglesia[0]?.horarios ?? []) as HorarioSemanal[];
-  for (
-    let f = desde;
-    f <= hasta;
-    f = sumarDias(f, 1)
-  ) {
-    const dow = new Date(f + 'T00:00:00Z').getUTCDay();
-
-    for (const h of horarios) {
-      if (diaDeLaSemana(h.dia) !== dow) continue;
-      salida.push({
-        fecha: f,
-        hora: h.hora || null,
-        titulo: h.nombre,
-        detalle: h.detalle ?? null,
-        tipo: 'culto',
-      });
-    }
+  for (const c of cultosEntre(horarios, desde, hasta)) {
+    salida.push({
+      fecha: c.fecha,
+      hora: c.hora,
+      titulo: c.titulo,
+      detalle: c.detalle,
+      tipo: 'culto',
+    });
   }
 
   // --- Los eventos, repartidos por los días que ocupan ---
@@ -240,6 +201,19 @@ export async function agendaEntre(
       tipo: 'ministerio',
       color: colorDeMinisterio(r.ministerioColor).claro,
       enlace: `/mi/agenda`,
+    });
+  }
+
+  // --- Mis turnos: el equipo y el puesto delante, el estado detrás ---
+  for (const t of filasTurnos) {
+    salida.push({
+      fecha: t.fecha,
+      hora: t.hora,
+      titulo: `${t.ministerio.nombre} · ${t.puestos.join(', ')}`,
+      detalle: `${t.titulo} · ${ETIQUETA_RESPUESTA[t.respuesta].miembro}`,
+      tipo: 'turno',
+      color: colorDeMinisterio(t.ministerio.colorHex).claro,
+      enlace: `/mi/agenda/turno/${t.id}`,
     });
   }
 

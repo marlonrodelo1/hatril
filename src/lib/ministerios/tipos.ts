@@ -33,6 +33,15 @@ type TipoDeclarado = {
   nombre: string;
   descripcion: string;
   modulos: readonly ModuloId[];
+  /**
+   * Los puestos con los que arrancan los turnos de un equipo de este tipo.
+   *
+   * Van en todos los tipos, también en los que no encienden turnos de salida:
+   * el pastor puede encenderlos a mano en cualquier ministerio, y un cuadrante
+   * que se abre sin ningún puesto es una pantalla en blanco que no explica qué
+   * hacer. Después el responsable los cambia por los suyos.
+   */
+  puestos: readonly string[];
 };
 
 export const TIPOS_MINISTERIO = [
@@ -40,7 +49,16 @@ export const TIPOS_MINISTERIO = [
     id: 'alabanza',
     nombre: 'Alabanza',
     descripcion: 'Música y canto en los cultos. Ensayos y equipo de sonido.',
-    modulos: ['agenda'],
+    modulos: ['agenda', 'turnos'],
+    puestos: [
+      'Dirección',
+      'Voces',
+      'Guitarra',
+      'Bajo',
+      'Batería',
+      'Teclado',
+      'Sonido',
+    ],
   },
   {
     id: 'consolidacion',
@@ -48,30 +66,35 @@ export const TIPOS_MINISTERIO = [
     descripcion:
       'Acompañar a quien llega nuevo y a quien ha dejado de venir, para que nadie se pierda por el camino.',
     modulos: ['seguimiento', 'agenda'],
+    puestos: ['Bienvenida', 'Consolidación'],
   },
   {
     id: 'ninos',
     nombre: 'Niños',
     descripcion: 'Escuela dominical y actividades de los más pequeños.',
-    modulos: ['agenda'],
+    modulos: ['agenda', 'turnos'],
+    puestos: ['Maestro o maestra', 'Auxiliar', 'Recepción de niños'],
   },
   {
     id: 'jovenes',
     nombre: 'Jóvenes',
     descripcion: 'Reuniones, campamentos y actividades de la juventud.',
     modulos: ['agenda'],
+    puestos: ['Dirección', 'Alabanza', 'Recepción'],
   },
   {
     id: 'intercesion',
     nombre: 'Intercesión',
     descripcion: 'Oración por la iglesia, por sus necesidades y por su gente.',
-    modulos: ['agenda'],
+    modulos: ['agenda', 'turnos'],
+    puestos: ['Antes del culto', 'Durante el culto', 'Ministración'],
   },
   {
     id: 'ujieres',
     nombre: 'Ujieres y protocolo',
     descripcion: 'Recibir, acomodar y que el culto transcurra con orden.',
-    modulos: ['agenda'],
+    modulos: ['turnos', 'agenda'],
+    puestos: ['Puerta principal', 'Pasillo', 'Ofrenda', 'Parqueadero'],
   },
   {
     id: 'evangelismo',
@@ -79,18 +102,27 @@ export const TIPOS_MINISTERIO = [
     descripcion:
       'Salidas, visitas y el contacto con quien todavía no es de la casa.',
     modulos: ['agenda', 'seguimiento'],
+    puestos: ['Equipo de calle', 'Visitas'],
   },
   {
     id: 'accion_social',
     nombre: 'Acción social',
     descripcion: 'Reparto de alimentos, ayuda a familias y salidas a la calle.',
     modulos: ['agenda'],
+    puestos: ['Reparto', 'Cocina', 'Recogida'],
   },
   {
     id: 'medios',
     nombre: 'Medios y comunicación',
     descripcion: 'Sonido, transmisión, redes sociales y radio.',
-    modulos: ['agenda'],
+    modulos: ['turnos', 'agenda'],
+    puestos: [
+      'Sonido',
+      'Proyección',
+      'Cámara',
+      'Transmisión',
+      'Redes sociales',
+    ],
   },
   {
     id: 'otro',
@@ -98,6 +130,7 @@ export const TIPOS_MINISTERIO = [
     descripcion:
       'Cualquier equipo que no encaje arriba. Enciende tú lo que necesite.',
     modulos: ['agenda'],
+    puestos: ['Equipo'],
   },
 ] as const satisfies readonly TipoDeclarado[];
 
@@ -124,4 +157,9 @@ export function tipoDeMinisterio(id: string | null | undefined): TipoMinisterio 
 /** Los módulos que enciende una plantilla. */
 export function modulosDelTipo(id: string | null | undefined): ModuloId[] {
   return [...tipoDeMinisterio(id).modulos];
+}
+
+/** Los puestos con los que arrancan sus turnos. */
+export function puestosDelTipo(id: string | null | undefined): string[] {
+  return [...tipoDeMinisterio(id).puestos];
 }
