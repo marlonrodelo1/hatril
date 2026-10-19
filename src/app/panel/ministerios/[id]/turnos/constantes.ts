@@ -15,4 +15,9 @@ export const CONFIRMACIONES: Record<string, string> = {
   respuesta: 'Respuesta apuntada.',
   copiado: 'Copiado. Le ha llegado el aviso a quien tiene la aplicación.',
   puestos: 'Puestos guardados.',
+  // Los de la lista de canciones, que vive en esta misma pantalla aunque sus
+  // actions sean del repertorio.
+  cancion: 'Canción añadida a la lista.',
+  'cancion-quitada': 'Quitada de la lista.',
+  tono: 'Tono cambiado para este culto.',
 };

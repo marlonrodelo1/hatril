@@ -115,7 +115,17 @@ export type GuardHatril =
    * Un turno no cambia de iglesia ni de ministerio, y una asignación tampoco de
    * turno ni de persona (`0037`).
    */
-  | 'HT123';
+  | 'HT123'
+  /**
+   * El ministerio, el turno o la canción no son de esta iglesia, o la canción no
+   * es del repertorio del equipo de ese turno (`0039`).
+   */
+  | 'HT124'
+  /**
+   * Una canción no cambia de iglesia ni de equipo, y una fila de la lista
+   * tampoco de culto ni de canción (`0039`).
+   */
+  | 'HT125';
 
 /**
  * ¿Es este error uno de nuestros triggers guard?

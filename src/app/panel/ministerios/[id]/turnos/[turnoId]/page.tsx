@@ -1,10 +1,26 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { Copy, Trash2, UserMinus, UserPlus } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  Copy,
+  Plus,
+  Trash2,
+  UserMinus,
+  UserPlus,
+  X,
+} from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { obtenerMinisterio } from '@/lib/ministerios/consultas';
+import { tieneModulo } from '@/lib/ministerios/modulos';
+import {
+  cancionesDelTurno,
+  cancionesParaElegir,
+  type CancionEnTurno,
+} from '@/lib/repertorio/consultas';
 import {
   obtenerTurno,
   otrosTurnosDelDia,
@@ -31,6 +47,12 @@ import {
   quitarDelTurno,
 } from '../actions';
 import { CONFIRMACIONES } from '../constantes';
+import {
+  agregarCancionAlTurno,
+  cambiarTonoDelDia,
+  moverCancion,
+  quitarCancionDelTurno,
+} from '../../repertorio/actions';
 
 export const metadata: Metadata = { title: 'Turno' };
 
@@ -71,12 +93,22 @@ export default async function TurnoPage({
   // responsable de alabanza vería el cuadrante de niños cambiando un uuid.
   if (!ministerio || !turno || turno.ministerioId !== id) notFound();
 
-  const [otros, paraCopiar] = await Promise.all([
+  // La lista de canciones solo si el equipo tiene el repertorio encendido: un
+  // equipo de ujieres no tiene nada que tocar, y un bloque vacío de «Canciones»
+  // en su cuadrante se leería como algo que falta.
+  const conRepertorio = tieneModulo(ministerio.modulos, 'repertorio');
+
+  const [otros, paraCopiar, lista, repertorio] = await Promise.all([
     otrosTurnosDelDia(ctx, turno),
     turno.personas.length === 0
       ? turnoParaCopiar(ctx, turno, id)
       : Promise.resolve(null),
+    conRepertorio ? cancionesDelTurno(ctx, turnoId) : Promise.resolve([]),
+    conRepertorio ? cancionesParaElegir(ctx, id) : Promise.resolve([]),
   ]);
+
+  const enLaLista = new Set(lista.map((c) => c.id));
+  const candidatas = repertorio.filter((c) => !enLaLista.has(c.id));
 
   const base = `/panel/ministerios/${id}/turnos`;
 
@@ -241,6 +273,100 @@ export default async function TurnoPage({
           </ul>
         )}
 
+        {conRepertorio && (
+          <section
+            id="canciones"
+            className="flex scroll-mt-24 flex-col gap-3 rounded-xl border border-border bg-surface p-4 md:px-5"
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-[15.5px] font-bold tracking-[-0.012em]">
+                Canciones
+              </h2>
+              <Link
+                href={`/panel/ministerios/${id}/repertorio`}
+                className="text-[13px] font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Ir al repertorio
+              </Link>
+            </div>
+
+            {lista.length === 0 ? (
+              <p className="text-[14.5px] text-muted-foreground">
+                Todavía no hay canciones para este culto. El equipo las verá en
+                su agenda, con su tono y dónde escucharlas.
+              </p>
+            ) : (
+              <ol className="flex flex-col gap-1.5">
+                {lista.map((c, i) => (
+                  <FilaCancion
+                    key={c.filaId}
+                    cancion={c}
+                    posicion={i + 1}
+                    esPrimera={i === 0}
+                    esUltima={i === lista.length - 1}
+                    acciones={{
+                      subir: moverCancion.bind(null, id, turnoId, c.filaId, 'arriba'),
+                      bajar: moverCancion.bind(null, id, turnoId, c.filaId, 'abajo'),
+                      quitar: quitarCancionDelTurno.bind(null, id, turnoId, c.filaId),
+                      tono: cambiarTonoDelDia.bind(null, id, turnoId, c.filaId),
+                    }}
+                  />
+                ))}
+              </ol>
+            )}
+
+            {candidatas.length > 0 ? (
+              <form
+                action={agregarCancionAlTurno.bind(null, id, turnoId)}
+                className="flex flex-wrap items-center gap-2"
+              >
+                <select
+                  name="cancionId"
+                  required
+                  defaultValue=""
+                  aria-label="Canción para este culto"
+                  className="h-9 min-w-0 flex-1 basis-56 rounded-lg border border-input bg-surface-alt px-2.5 text-[14.5px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
+                >
+                  <option value="" disabled>
+                    Añadir una canción…
+                  </option>
+                  {candidatas.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.titulo}
+                      {c.autor ? ` — ${c.autor}` : ''}
+                      {c.tono ? ` (${c.tono})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <Input
+                  name="tono"
+                  maxLength={12}
+                  placeholder="Tono"
+                  aria-label="Tono para este culto, si no es el de siempre"
+                  className="h-9 w-20"
+                />
+                <Button type="submit" variant="outline" size="sm">
+                  <Plus strokeWidth={1.8} />
+                  Añadir
+                </Button>
+              </form>
+            ) : (
+              repertorio.length === 0 && (
+                <p className="text-[14px] text-muted-foreground">
+                  El repertorio está vacío.{' '}
+                  <Link
+                    href={`/panel/ministerios/${id}/repertorio/nueva`}
+                    className="underline"
+                  >
+                    Apunta las canciones del equipo
+                  </Link>{' '}
+                  y vuelve aquí.
+                </p>
+              )
+            )}
+          </section>
+        )}
+
         <details className="group rounded-xl border border-border bg-surface">
           <summary className="cursor-pointer list-none px-5 py-4 text-[15px] font-semibold marker:hidden">
             Cambiar el día, el nombre o las notas
@@ -389,6 +515,115 @@ function FilaPersona({
             className="text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <UserMinus strokeWidth={1.7} />
+          </Button>
+        </form>
+      </span>
+    </li>
+  );
+}
+
+/**
+ * Una canción de la lista: su número, cómo se llama, el tono de ese día y los
+ * botones para moverla o quitarla.
+ *
+ * En dos filas en el móvil: el título arriba, y debajo el tono y los botones.
+ * En una sola, cinco controles al lado de un título lo dejan en tres letras.
+ *
+ * El campo del tono enseña de fondo el de siempre: vacío es «el de siempre», y
+ * escribir uno es cambiarlo solo para este culto.
+ */
+function FilaCancion({
+  cancion: c,
+  posicion,
+  esPrimera,
+  esUltima,
+  acciones,
+}: {
+  cancion: CancionEnTurno;
+  posicion: number;
+  esPrimera: boolean;
+  esUltima: boolean;
+  acciones: {
+    subir: () => Promise<void>;
+    bajar: () => Promise<void>;
+    quitar: () => Promise<void>;
+    tono: (formData: FormData) => Promise<void>;
+  };
+}) {
+  const claseIcono = 'text-muted-foreground hover:bg-muted hover:text-foreground';
+
+  return (
+    <li className="flex flex-col gap-2 rounded-lg border border-border bg-surface-alt px-3 py-2.5 sm:flex-row sm:items-center">
+      <span className="flex min-w-0 flex-1 items-baseline gap-2.5">
+        <span className="w-5 flex-none text-right text-[13px] font-bold tabular-nums text-muted-foreground">
+          {posicion}
+        </span>
+        <span className="min-w-0 truncate text-[14.5px] font-semibold">
+          {c.titulo}
+          {c.autor && (
+            <span className="font-normal text-muted-foreground"> · {c.autor}</span>
+          )}
+        </span>
+      </span>
+
+      <span className="flex flex-none items-center gap-1 pl-7 sm:pl-0">
+        <form action={acciones.tono} className="flex items-center gap-1">
+          <Input
+            name="tono"
+            maxLength={12}
+            defaultValue={c.tonoDelDia ?? ''}
+            placeholder={c.tono ?? 'Tono'}
+            aria-label={`Tono de ${c.titulo} en este culto`}
+            className="h-8 w-16 px-2 text-center text-[14px]"
+          />
+          <Button
+            type="submit"
+            variant="ghost"
+            size="icon-sm"
+            title="Guardar el tono"
+            aria-label={`Guardar el tono de ${c.titulo}`}
+            className={claseIcono}
+          >
+            <Check strokeWidth={1.8} />
+          </Button>
+        </form>
+
+        <form action={acciones.subir}>
+          <Button
+            type="submit"
+            variant="ghost"
+            size="icon-sm"
+            disabled={esPrimera}
+            title="Subir"
+            aria-label={`Subir ${c.titulo}`}
+            className={claseIcono}
+          >
+            <ArrowUp strokeWidth={1.8} />
+          </Button>
+        </form>
+        <form action={acciones.bajar}>
+          <Button
+            type="submit"
+            variant="ghost"
+            size="icon-sm"
+            disabled={esUltima}
+            title="Bajar"
+            aria-label={`Bajar ${c.titulo}`}
+            className={claseIcono}
+          >
+            <ArrowDown strokeWidth={1.8} />
+          </Button>
+        </form>
+        <form action={acciones.quitar}>
+          <Button
+            type="submit"
+            variant="ghost"
+            size="icon-sm"
+            title="Quitar de la lista"
+            aria-label={`Quitar ${c.titulo} de la lista`}
+            className={claseIcono}
+          >
+            <X strokeWidth={1.8} />
           </Button>
         </form>
       </span>

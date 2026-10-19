@@ -49,7 +49,7 @@ export const TIPOS_MINISTERIO = [
     id: 'alabanza',
     nombre: 'Alabanza',
     descripcion: 'Música y canto en los cultos. Ensayos y equipo de sonido.',
-    modulos: ['agenda', 'turnos'],
+    modulos: ['agenda', 'turnos', 'repertorio'],
     puestos: [
       'Dirección',
       'Voces',

@@ -1,9 +1,12 @@
 import type { Metadata } from 'next';
+import { ExternalLink } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { turnoParaMiembro } from '@/lib/turnos/consultas';
+import { cancionesDelTurno } from '@/lib/repertorio/consultas';
+import { sitioDe } from '@/lib/repertorio/enlaces';
 import { ETIQUETA_RESPUESTA } from '@/lib/turnos/respuestas';
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { formatearFechaLarga } from '@/lib/fecha/hoy';
@@ -41,6 +44,13 @@ export default async function TurnoMiembroPage({
 
   const turno = await turnoParaMiembro(ctx, id);
   if (!turno) notFound();
+
+  // Después de comprobar que el turno es de su equipo, y no en paralelo: la
+  // lista solo se pide para quien ya ha pasado esa puerta.
+  //
+  // Sin mirar si el repertorio está encendido. Si el equipo lo apagó, la lista
+  // de un domingo que ya se preparó sigue siendo lo que se va a tocar.
+  const canciones = await cancionesDelTurno(ctx, turno.id);
 
   const supabase = await createClient();
   const {
@@ -130,6 +140,66 @@ export default async function TurnoMiembroPage({
           )}
         </section>
 
+        {canciones.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <h2 className="px-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Qué se toca
+            </h2>
+            <ol className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
+              {canciones.map((c, i) => {
+                const tono = c.tonoDelDia ?? c.tono;
+                return (
+                  <li
+                    key={c.filaId}
+                    className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-b-0"
+                  >
+                    <div className="flex items-baseline gap-3">
+                      <span className="w-4 flex-none text-right text-[13px] font-bold tabular-nums text-muted-foreground">
+                        {i + 1}
+                      </span>
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="text-[15px] font-semibold leading-snug">
+                          {c.titulo}
+                        </span>
+                        {c.autor && (
+                          <span className="text-[13px] text-muted-foreground">
+                            {c.autor}
+                          </span>
+                        )}
+                      </span>
+                      {tono && (
+                        // El tono es lo que el músico viene a mirar: en grande
+                        // y a la derecha, donde el ojo lo encuentra sin leer.
+                        <span className="flex-none rounded-md bg-badge-neutral-bg px-2 py-0.5 text-[14px] font-bold text-foreground">
+                          {tono}
+                        </span>
+                      )}
+                    </div>
+
+                    {(c.enlaceAudio || c.enlacePartitura || c.notas) && (
+                      <div className="flex flex-col gap-1.5 pl-7">
+                        {c.notas && (
+                          <p className="text-pretty text-[13.5px] leading-snug text-muted-foreground">
+                            {c.notas}
+                          </p>
+                        )}
+                        <div className="flex flex-wrap gap-x-4 gap-y-1">
+                          {c.enlaceAudio && (
+                            <EnlaceFuera href={c.enlaceAudio} texto="Escuchar" />
+                          )}
+                          {c.enlacePartitura && (
+                            <EnlaceFuera href={c.enlacePartitura} texto="Acordes" />
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        )}
+
         <section className="flex flex-col gap-2">
           <h2 className="px-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Quién sirve
@@ -159,5 +229,27 @@ export default async function TurnoMiembroPage({
         </section>
       </main>
     </div>
+  );
+}
+
+/**
+ * Un enlace que sale de Hatril, con el sitio escrito al lado.
+ *
+ * Quien pulsa «Escuchar» tiene que ver antes de pulsar a dónde va: es la
+ * diferencia entre el YouTube de siempre y una web que alguien pegó en el
+ * repertorio. Y en otra pestaña, para no perder el turno al volver.
+ */
+function EnlaceFuera({ href, texto }: { href: string; texto: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-foreground underline-offset-4 hover:underline"
+    >
+      <ExternalLink className="size-3.5 text-muted-foreground" strokeWidth={2} aria-hidden />
+      {texto}
+      <span className="font-normal text-muted-foreground">{sitioDe(href)}</span>
+    </a>
   );
 }

@@ -147,6 +147,37 @@ export async function listarTurnos(
   });
 }
 
+/**
+ * ¿Es este turno de este ministerio?
+ *
+ * Es el tercer cinturón de las actions que tocan algo colgado de un turno: el
+ * guard comprueba el ministerio de la URL y esto que el turno sea de él. Sin
+ * ello, el responsable de jóvenes —que solo lleva lo suyo— cambiaría la lista
+ * de canciones de alabanza mandando el uuid de su turno a mano, y ni la RLS
+ * (misma iglesia) ni HT124 (canción y turno del mismo equipo, el de alabanza)
+ * lo pararían.
+ */
+export async function turnoEsDelMinisterio(
+  ctx: UserContext,
+  turnoId: string,
+  ministerioId: string,
+): Promise<boolean> {
+  const filas = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ id: turnos.id })
+      .from(turnos)
+      .where(
+        and(
+          eq(turnos.id, turnoId),
+          eq(turnos.iglesiaId, ctx.iglesia.id),
+          eq(turnos.ministerioId, ministerioId),
+        ),
+      )
+      .limit(1),
+  );
+  return filas.length > 0;
+}
+
 export type TurnoDetalle = TurnoResumen & { ministerioId: string };
 
 /** Un turno con su gente. `null` si no existe o es de otra iglesia. */

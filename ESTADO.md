@@ -62,13 +62,15 @@ lee al arrancar.
 
   No se programa una pantalla por tipo: se programan piezas y cada tipo enciende
   las suyas, así que un ministerio de radio o de reparto de alimentos funciona
-  sin tocar código. Hoy existen **tres módulos de verdad**, `agenda`, `turnos`
-  y `seguimiento`; el resto no se declara hasta que se pueda pulsar.
+  sin tocar código. Hoy existen **cuatro módulos de verdad**, `agenda`,
+  `turnos`, `repertorio` y `seguimiento`; el resto no se declara hasta que se
+  pueda pulsar.
 
-  Qué trae cada tipo de salida: Alabanza, Niños e Intercesión, agenda y
-  turnos; Ujieres y Medios, turnos y agenda; Consolidación y Evangelismo,
-  agenda y seguimiento; Jóvenes, Acción social y Otro, solo agenda. Siguen sin
-  diferenciarse de verdad hasta que lleguen repertorio, material e inventario.
+  Qué trae cada tipo de salida: Alabanza, agenda, turnos y repertorio; Niños e
+  Intercesión, agenda y turnos; Ujieres y Medios, turnos y agenda;
+  Consolidación y Evangelismo, agenda y seguimiento; Jóvenes, Acción social y
+  Otro, solo agenda. Siguen sin diferenciarse del todo hasta que lleguen
+  material e inventario.
 
 - **Turnos** (cuadrante de servicio): `/panel/ministerios/[id]/turnos`. Quién
   sirve en cada culto y en qué puesto. Verificado de punta a punta ejecutándolo
@@ -105,6 +107,32 @@ lee al arrancar.
   - **Sin `auditar()` en las asignaciones**, por lo mismo que la asistencia: es
     el calendario religioso de cada persona, y `auditoria` se lee entera y no se
     puede borrar. `turnos` sí se audita, como `reuniones`.
+
+- **Repertorio**: `/panel/ministerios/[id]/repertorio`. Las canciones del
+  equipo y la lista de cada culto. Verificado ejecutándolo como `lider@` y
+  `miembro@`, también en un móvil de 375 px: alta con un enlace sin `https://`
+  (se completa), un `javascript:` rechazado con su mensaje, la lista del 18-oct
+  con tres canciones y una en otro tono, subir una de puesto, archivar y
+  recuperar, y borrar una que no había sonado.
+
+  - **Sin letra ni acordes dentro**, a propósito: casi todo lo que se canta
+    tiene derechos, y guardarlo convertiría a Hatril en quien lo publica. Se
+    guardan dos ENLACES —para escucharla y para los acordes— y solo
+    `http(s)://`, por Zod y por un CHECK: un `javascript:` se pintaría como
+    enlace en el móvil de cada músico.
+  - **Del equipo, no de la iglesia.** Cada repertorio cuelga de su ministerio,
+    y HT124 impide que la lista de alabanza lleve una canción de otro equipo:
+    sería leer por la puerta lateral un repertorio ajeno.
+  - **La lista cuelga del turno**, así que el músico la ve en la ficha de su
+    turno («Qué se toca», con el tono grande a la derecha y los enlaces con el
+    sitio escrito). El responsable la monta dentro del propio turno: añadir,
+    subir y bajar, quitar, y el tono de ESE domingo si no es el de siempre.
+  - **Una canción que ya sonó no se borra, se archiva.** La clave ajena de
+    `turno_canciones` es NO ACTION a propósito, y la pantalla solo ofrece
+    borrar si nunca salió en una lista.
+  - «Cuándo se cantó» cuenta solo hasta hoy: un domingo planificado no es un
+    domingo en que sonara.
+  - Sin `auditar()`: es material de trabajo del equipo, no un dato de nadie.
 
 - **Reuniones y asistencia**: `/panel/reuniones`. Apuntar el culto del domingo o
   el del jueves con su fecha, y marcar quién vino. **Se guarda fila también para
@@ -446,7 +474,12 @@ lee al arrancar.
   iglesia, ni ministerio, ni persona cambian), los dos índices únicos —también
   el de dos turnos sin hora el mismo día—, que Sion no vea ni conteste nada de
   Betania, y que ni `anon` ni `service_role` lleguen. Más dos que entran por
-  `withUser()` de verdad. 142 comprobaciones en total.
+  `withUser()` de verdad.
+
+  Y dieciocho del repertorio: HT124 (una canción de otra iglesia o de OTRO
+  EQUIPO en la lista), HT125, los dos índices únicos, el CHECK que rechaza un
+  `javascript:`, que una canción que ya sonó no se pueda borrar, y las puertas
+  de siempre. 160 comprobaciones en total.
 
   **Pendiente**: el test sigue sin cubrir `devocionales`, que es tabla nueva con
   RLS propia.
@@ -456,10 +489,10 @@ lee al arrancar.
 | Pieza | Estado |
 |---|---|
 | Proveedor de alojamiento en los legales | Relleno (Hostinger). Falta confirmar en hPanel el país del centro de datos: pone Alemania y la IP geolocaliza en Francia |
-| Módulos de ministerio | **Turnos hecho.** Siguen repertorio (alabanza), material del equipo e inventario. Peticiones de oración y la ficha de los niños esperan una decisión legal: salud y menores |
+| Módulos de ministerio | **Turnos y repertorio hechos.** Siguen material del equipo e inventario. Peticiones de oración y la ficha de los niños esperan una decisión legal: salud y menores |
 | Foto en la ficha de miembro | Va en OTRO bucket, privado y con URL firmada. El de iglesias es público |
 | Eventos y calendario | Hecho y verificado, con sus textos legales |
-| Área del miembro | Comunidad, devocional con vídeo, **agenda como calendario con sus turnos** y Biblia. Faltan el repertorio del domingo y el material del equipo |
+| Área del miembro | Comunidad, devocional con vídeo, **agenda como calendario con sus turnos y lo que se toca cada domingo** y Biblia. Falta el material del equipo |
 | Agenda | **Calendario con día, semana y mes**, los días marcados y una hoja al tocarlos. Junta los horarios semanales, los eventos y las reuniones de los ministerios de cada persona |
 | Stripe | **Hecho el circuito entero**, sin claves todavía. Ver «Qué hay que crear en Stripe» |
 | Correo (Resend) | Nada. Ni bienvenida, ni aviso de solicitud, ni el de «se te acaba la prueba» — que ahora es el que más falta hace: el aviso solo se ve entrando al panel |
@@ -1015,7 +1048,8 @@ Siete cuentas, contraseña `Hatril2026`:
 permiso acotado deja gestionar un ministerio y ninguno más. Alabanza tiene
 turnos planificados los domingos del 18-oct al 22-nov, con gente en los dos
 primeros, y `miembro@` (Lucía) sirve en Voces: es la pareja para probar los
-turnos desde los dos lados. `lider@` y `secretaria@` ya aceptaron la política
+turnos desde los dos lados. Su repertorio tiene tres canciones, y las tres
+están en la lista del 18-oct (una en otro tono). `lider@` y `secretaria@` ya aceptaron la política
 `privacidad-2026-09`; las demás cuentas pasan antes por `/acepta`. Y Niños tiene
 responsable **y** colíder, que es el caso que el modelo viejo no podía guardar.
 

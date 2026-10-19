@@ -82,6 +82,12 @@ declare
   TUR_A uuid;
   TUR_B uuid;
   TAS_A uuid;
+  -- Repertorio (0039). Un segundo equipo en Betania, para probar que la lista
+  -- de alabanza no admite canciones del repertorio de otro equipo.
+  MIN_A2 constant uuid := 'e0000000-0000-4000-8000-0000000000a2';
+  CAN_A uuid;
+  CAN_A2 uuid;
+  CAN_B uuid;
   -- Lo que responde inscribir_en_evento. Un solo escalar a proposito: ver la
   -- cabecera de la 0024.
   v_res text;
@@ -1547,6 +1553,179 @@ begin
 
   execute 'reset role';
 
+  -- ==========================================================================
+  -- REPERTORIO (HT124, HT125) -- las canciones de un equipo y la lista de cada
+  -- culto
+  --
+  -- Una cancion no es un dato de nadie. Lo que importa es que no cruce de
+  -- iglesia y que la lista de alabanza no pueda llevar canciones de otro
+  -- equipo: seria leer por la puerta lateral un repertorio ajeno.
+  -- ==========================================================================
+
+  insert into public.ministerios (id, iglesia_id, nombre)
+  values (MIN_A2, IGL_A, 'Jovenes test');
+
+  -- HT124: el ministerio de la cancion es de su iglesia.
+  begin
+    insert into public.canciones (iglesia_id, ministerio_id, titulo)
+    values (IGL_A, MIN_B, 'Cancion cruzada');
+    r := r || E'  FALLO una cancion de Betania acepto el ministerio de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT124%'
+                   then E'  OK   HT124 impide una cancion con el ministerio de otra iglesia\\n'
+                   else format(E'  FALLO error inesperado (HT124 cancion): %s\\n', sqlerrm) end;
+  end;
+
+  insert into public.canciones (iglesia_id, ministerio_id, titulo, autor, tono)
+  values (IGL_A, MIN_A, 'Way Maker', 'Sinach', 'E')
+  returning id into CAN_A;
+
+  insert into public.canciones (iglesia_id, ministerio_id, titulo)
+  values (IGL_A, MIN_A2, 'Cancion de jovenes')
+  returning id into CAN_A2;
+
+  insert into public.canciones (iglesia_id, ministerio_id, titulo)
+  values (IGL_B, MIN_B, 'Cancion de Sion')
+  returning id into CAN_B;
+
+  -- La misma cancion dos veces en el repertorio es un doble clic.
+  begin
+    insert into public.canciones (iglesia_id, ministerio_id, titulo, autor)
+    values (IGL_A, MIN_A, 'way maker', 'SINACH');
+    r := r || E'  FALLO la misma cancion entro dos veces en el repertorio\\n';
+  exception when unique_violation then
+    r := r || E'  OK   la misma cancion no entra dos veces en un repertorio\\n';
+  end;
+
+  -- Un enlace que no es web se pintaria como enlace en el movil de cada musico.
+  begin
+    insert into public.canciones (iglesia_id, ministerio_id, titulo, enlace_audio)
+    values (IGL_A, MIN_A, 'Con enlace raro', 'javascript:alert(1)');
+    r := r || E'  FALLO una cancion acepto un enlace javascript:\\n';
+  exception when check_violation then
+    r := r || E'  OK   un enlace que no es http(s) no se guarda\\n';
+  end;
+
+  -- HT124: ni una cancion de otra iglesia en la lista...
+  begin
+    insert into public.turno_canciones (iglesia_id, turno_id, cancion_id, orden)
+    values (IGL_A, TUR_A, CAN_B, 1);
+    r := r || E'  FALLO la lista de Betania acepto una cancion de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT124%'
+                   then E'  OK   HT124 impide una cancion de otra iglesia en la lista\\n'
+                   else format(E'  FALLO error inesperado (HT124 iglesia): %s\\n', sqlerrm) end;
+  end;
+
+  -- ...ni una del repertorio de otro equipo de la misma iglesia.
+  begin
+    insert into public.turno_canciones (iglesia_id, turno_id, cancion_id, orden)
+    values (IGL_A, TUR_A, CAN_A2, 1);
+    r := r || E'  FALLO la lista de alabanza acepto una cancion de otro equipo\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT124%'
+                   then E'  OK   HT124 impide en la lista una cancion de otro equipo\\n'
+                   else format(E'  FALLO error inesperado (HT124 equipo): %s\\n', sqlerrm) end;
+  end;
+
+  insert into public.turno_canciones (iglesia_id, turno_id, cancion_id, orden)
+  values (IGL_A, TUR_A, CAN_A, 1);
+
+  begin
+    insert into public.turno_canciones (iglesia_id, turno_id, cancion_id, orden)
+    values (IGL_A, TUR_A, CAN_A, 2);
+    r := r || E'  FALLO la misma cancion entro dos veces en una lista\\n';
+  exception when unique_violation then
+    r := r || E'  OK   la misma cancion no entra dos veces en una lista\\n';
+  end;
+
+  -- Una cancion que ya sono no se borra: se perderia ese domingo. Se archiva.
+  begin
+    delete from public.canciones where id = CAN_A;
+    r := r || E'  FALLO se borro una cancion que ya salio en una lista\\n';
+  exception when foreign_key_violation then
+    r := r || E'  OK   una cancion que ya sono no se puede borrar\\n';
+  end;
+
+  -- --- HT125, desde el pastor de Betania ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  begin
+    update public.canciones set ministerio_id = MIN_A2 where id = CAN_A;
+    r := r || E'  FALLO una cancion cambio de equipo\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT125%'
+                   then E'  OK   HT125 impide mover una cancion de equipo\\n'
+                   else format(E'  FALLO error inesperado (HT125 equipo): %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    update public.turno_canciones set cancion_id = CAN_A2 where cancion_id = CAN_A;
+    r := r || E'  FALLO una fila de la lista cambio de cancion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT125%'
+                   then E'  OK   HT125 impide cambiar la cancion de una fila de la lista\\n'
+                   else format(E'  FALLO error inesperado (HT125 cancion): %s\\n', sqlerrm) end;
+  end;
+
+  update public.turno_canciones set orden = 3, tono = 'D' where cancion_id = CAN_A;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s el orden y el tono de una fila se pueden cambiar (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.canciones where iglesia_id = IGL_B;
+  r := r || format(E'  %s Betania no ve el repertorio de Sion (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- --- Y desde Sion ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.canciones where iglesia_id = IGL_A;
+  r := r || format(E'  %s Sion no ve el repertorio de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.turno_canciones where iglesia_id = IGL_A;
+  r := r || format(E'  %s Sion no ve las listas de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- --- anon y service_role ---
+  execute 'set local role anon';
+
+  begin
+    select count(*) into n from public.canciones;
+    r := r || format(E'  FALLO anon lee el repertorio (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega al repertorio\\n';
+  end;
+
+  begin
+    select count(*) into n from public.turno_canciones;
+    r := r || format(E'  FALLO anon lee las listas (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a las listas\\n';
+  end;
+
+  execute 'reset role';
+
+  execute 'set local role service_role';
+
+  begin
+    select count(*) into n from public.canciones;
+    r := r || format(E'  FALLO service_role lee el repertorio (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   service_role no llega al repertorio\\n';
+  end;
+
+  execute 'reset role';
+
   -- Abortar a proposito: revierte los datos de prueba y devuelve el informe.
   raise exception '%', r;
 end $$;
@@ -1665,6 +1844,14 @@ async function comprobarWithUser(): Promise<string[]> {
       tx.execute(`select 1 from turno_asignaciones limit 1`),
     );
     lineas.push('  OK   withUser() puede consultar quien sirve en cada turno');
+
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from canciones limit 1`));
+    lineas.push('  OK   withUser() puede consultar el repertorio');
+
+    await withUser(USR_A, (tx) =>
+      tx.execute(`select 1 from turno_canciones limit 1`),
+    );
+    lineas.push('  OK   withUser() puede consultar las listas de canciones');
 
     // LA FUGA, CAZADA POR LA FUNCIÓN QUE USA LA APLICACIÓN.
     //

@@ -2,6 +2,7 @@ import {
   CalendarCheck,
   CalendarClock,
   HeartHandshake,
+  ListMusic,
   type LucideIcon,
 } from 'lucide-react';
 import { z } from 'zod';
@@ -33,11 +34,11 @@ import { z } from 'zod';
  *
  * SOLO ESTÁ LO QUE FUNCIONA
  * -------------------------
- * Tres módulos, y son los tres que existen de verdad. Repertorio de canciones,
- * material del equipo, inventario, vínculo con las familias y peticiones de
- * oración están decididos y NO se declaran aquí hasta que se puedan pulsar. Un
- * interruptor que enciende una pestaña vacía hace parecer roto un producto que
- * funciona — la misma regla que `panel/secciones.ts`.
+ * Cuatro módulos, y son los cuatro que existen de verdad. Material del equipo,
+ * inventario, vínculo con las familias y peticiones de oración están decididos
+ * y NO se declaran aquí hasta que se puedan pulsar. Un interruptor que enciende
+ * una pestaña vacía hace parecer roto un producto que funciona — la misma regla
+ * que `panel/secciones.ts`.
  */
 
 type ModuloDeclarado = {
@@ -67,6 +68,17 @@ export const MODULOS_MINISTERIO = [
     descripcion:
       'Quién sirve en cada culto y en qué puesto. Cada persona lo ve en su agenda y confirma si puede.',
     Icono: CalendarCheck,
+  },
+  {
+    /*
+     * Detrás de los turnos y no antes: la lista del domingo cuelga del turno, y
+     * en las pestañas se lee mejor «quién va» y después «qué se toca».
+     */
+    id: 'repertorio',
+    nombre: 'Repertorio',
+    descripcion:
+      'Las canciones del equipo con su tono y sus enlaces, y la lista de cada culto.',
+    Icono: ListMusic,
   },
   {
     id: 'seguimiento',
