@@ -70,7 +70,7 @@ export default async function TurnosPage({
       </CabeceraPanel>
 
       <Contenedor>
-        <PestanasMinisterio ministerio={ministerio} activa="turnos" />
+        <PestanasMinisterio ctx={ctx} ministerio={ministerio} activa="turnos" />
 
         {error && <Aviso>{error}</Aviso>}
         {guardado && CONFIRMACIONES[guardado] && (

@@ -160,7 +160,20 @@ export async function editarReunionDeMinisterio(
   redirect(`${base}/${reunionId}?guardado=editada`);
 }
 
-/** Quién del equipo vino. Solo alcanza al equipo, nunca a la congregación. */
+/**
+ * Quién del equipo vino. Solo alcanza al equipo, nunca a la congregación.
+ *
+ * Las filas salen de `listaDelEquipo()` y NO de los uuid que trae el
+ * formulario, igual que en `guardarLista` de las reuniones. Es lo que hace que
+ * el permiso de asistencia valga también aquí: quien lo negó no está en esa
+ * lista, así que su uuid colado en un POST fabricado no encuentra fila que
+ * escribir — ni «vino» ni «no vino», que también es un dato suyo.
+ *
+ * Y la reunión tiene que ser de ESTE ministerio. Sin eso, un colíder mandaba el
+ * uuid del culto del domingo y reescribía la asistencia de su equipo en ese
+ * culto —con `ultima_asistencia` detrás— sin tener `registrar_asistencia`. Se
+ * comprueba dos veces, y no sobra ninguna: ver los comentarios de abajo.
+ */
 export async function guardarListaDelEquipo(
   ministerioId: string,
   reunionId: string,
@@ -172,8 +185,12 @@ export async function guardarListaDelEquipo(
   const presentes = new Set(campos(formData, 'presentes'));
   const equipo = await listaDelEquipo(ctx, reunionId, ministerioId);
 
+  // Vacía no quiere decir solo «equipo sin gente»: también sale así si todos
+  // los que hay negaron el permiso, o si la reunión no es de este ministerio
+  // —`listaDelEquipo` cruza las dos cosas—. De ahí que el mensaje no diga cuál
+  // es: decir que el equipo está vacío sería falso en los otros dos casos.
   if (equipo.length === 0) {
-    volver('Este equipo todavía no tiene a nadie.', destino);
+    volver('No hay nadie en este equipo a quien pasar lista.', destino);
   }
 
   const filas = equipo.map((p) => ({
@@ -185,9 +202,28 @@ export async function guardarListaDelEquipo(
     registradoPorMiembroId: ctx.miembroId,
   }));
 
+  let esDelMinisterio = false;
   try {
-    await withUser(ctx.user.id, (tx) =>
-      tx
+    esDelMinisterio = await withUser(ctx.user.id, async (tx) => {
+      // Otra vez el cruce, ahora en la MISMA transacción que escribe. El de
+      // `listaDelEquipo` corrió en otra, y entre las dos nada en la base congela
+      // `reuniones.ministerio_id`: HT117 (0030) solo congela `iglesia_id`. La
+      // comprobación que de verdad protege la escritura es la que va con ella.
+      const [reunion] = await tx
+        .select({ id: reuniones.id })
+        .from(reuniones)
+        .where(
+          and(
+            eq(reuniones.id, reunionId),
+            eq(reuniones.iglesiaId, ctx.iglesia.id),
+            eq(reuniones.ministerioId, ministerioId),
+          ),
+        )
+        .limit(1);
+
+      if (!reunion) return false;
+
+      await tx
         .insert(asistencias)
         .values(filas)
         .onConflictDoUpdate({
@@ -197,13 +233,20 @@ export async function guardarListaDelEquipo(
             origen: sql`excluded.origen`,
             registradoPorMiembroId: sql`excluded.registrado_por_miembro_id`,
           },
-        }),
-    );
+        });
+
+      return true;
+    });
   } catch (err) {
     if (esGuardHatril(err, 'HT116')) {
       volver('Esa reunión o esa persona no son de tu iglesia.', destino);
     }
     throw err;
+  }
+
+  // Al listado y no a `destino`: la ficha de una reunión ajena da 404.
+  if (!esDelMinisterio) {
+    volver('Esa reunión no es de este ministerio.', agenda(ministerioId));
   }
 
   // Sin `revalidatePath('/panel/miembros')`, al revés que la lista del culto:

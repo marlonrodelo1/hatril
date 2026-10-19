@@ -41,8 +41,8 @@
  * -------------------------------
  * `gestionar_su_ministerio` dice «esta persona lleva lo suyo», y nada más. QUÉ
  * es lo suyo sale del dato —de qué ministerios lidera—, no del jsonb. Separados
- * así, dárselo por error a un tesorero no le abre absolutamente nada, porque no
- * lidera ninguno.
+ * así, el permiso puede venir puesto a todo el mundo: a quien no lidera ninguno
+ * no le abre absolutamente nada.
  */
 
 /**
@@ -73,7 +73,14 @@ export const PERMISOS = [
   'aprobar_solicitudes',
   /** Ver fecha de nacimiento, dirección, estado civil y notas. */
   'ver_datos_sensibles',
-  /** Llevar los ministerios que lidera. Acotado por el dato, no por el permiso. */
+  /**
+   * Llevar los ministerios que lidera. Acotado por el dato, no por el permiso.
+   *
+   * Es defecto de TODOS los roles —el porqué, en `DEFECTOS_POR_ROL`—, así que
+   * lo que de verdad lo concede es nombrar a alguien responsable o colíder. Lo
+   * único que tiene sentido guardar de él en el jsonb es el `false` de quien el
+   * pastor quiere dejar fuera aunque lidere.
+   */
   'gestionar_su_ministerio',
   /** Escribir el devocional que sale en la web de la iglesia. */
   'escribir_devocionales',
@@ -142,9 +149,11 @@ export const PERMISOS = [
    *
    * Y no basta con tenerlo. El layout de la sección exige ADEMÁS ser responsable
    * o colíder del ministerio que hace el seguimiento, así que dárselo por error a
-   * un tesorero no le abre absolutamente nada — el mismo diseño de dos llaves que
+   * un tesorero no le abre absolutamente nada — el mismo diseño que
    * `gestionar_su_ministerio`, donde el permiso declara la política y el dato
-   * pone el ámbito.
+   * pone el ámbito. La diferencia está en el defecto: aquel viene puesto para
+   * todos porque solo deja llevar lo propio; este no viene para nadie, porque
+   * lo que abre es lo más delicado de la congregación.
    */
   'ver_seguimiento',
   /**
@@ -214,9 +223,15 @@ export const ETIQUETAS_PERMISOS: Record<
       'Datos especialmente protegidos por la ley. Dáselo solo a quien lo necesite para su trabajo: cada consulta queda registrada con su nombre.',
   },
   gestionar_su_ministerio: {
+    // El pastor lo va a ver marcado hasta en el tesorero. Sin explicar que
+    // solo abre algo a quien lidera, parece que está repartiendo los
+    // ministerios a todo el mundo, y desmarcarlo en todas las fichas devolvería
+    // el fallo de antes: nombrar colíder a alguien y que no pueda entrar. Que
+    // viene puesto para todos no se repite aquí: `/panel/lideres` lo pinta en
+    // su propio grupo con ese encabezado (`PERMISOS_DE_TODOS`).
     titulo: 'Llevar sus propios ministerios',
     descripcion:
-      'Quien sea responsable o colíder de un ministerio puede editarlo y mover a su gente, solo dentro de ese ministerio. No le deja crear ministerios nuevos ni tocar los de los demás.',
+      'Solo abre algo a quien sea responsable o colíder de un ministerio: entra al panel a llevarlo —editarlo y mover a su gente— sin que tengas que cambiarle el rol. No le deja crear ministerios ni tocar los de los demás. Desmárcalo solo si alguien lidera y no quieres que lo gestione desde aquí.',
   },
   escribir_devocionales: {
     titulo: 'Escribir el devocional',
@@ -297,13 +312,14 @@ export const ETIQUETAS_ROLES: Record<
   miembro: {
     titulo: 'Miembro',
     descripcion:
-      'Solo lo suyo. Es lo que recibe quien entra desde el directorio público.',
+      'Solo lo suyo. Es lo que recibe quien entra desde el directorio público. Si lo nombras responsable o colíder de un ministerio, entra al panel a llevarlo sin cambiarle el rol.',
   },
 };
 
 /**
- * Lo que puede alguien recién aceptado: nada más que lo suyo. Se empieza
- * cerrado y el pastor abre lo que quiera, no al revés.
+ * La base de cada rol: nada. Se empieza cerrado y el pastor abre lo que quiera,
+ * no al revés. Alguien recién aceptado recibe esto más `gestionar_su_ministerio`,
+ * que sin liderar nada sigue sin abrirle nada más que lo suyo.
  */
 const NINGUNO: MapaPermisos = {
   ver_todos_los_miembros: false,
@@ -343,11 +359,6 @@ const TODOS: MapaPermisos = {
  * pasaría por la pantalla de equipo antes de poder delegar nada, y acabaría
  * dándole el rol de pastor «para que funcione».
  *
- * `lider` nace con `gestionar_su_ministerio` y con nada más, porque es justo lo
- * que el rol significa. VER su ministerio ya lo tenía por ámbito (ver
- * `ambitoMiembros`), que no es un permiso sino la consecuencia de a qué
- * ministerios pertenece; esto es la otra mitad, qué puede ESCRIBIR ahí dentro.
- *
  * `tesorero` no toca personas: lleva la caja y nada más. El rol existía vacío
  * desde la `0000` esperando justo esto, así que estrenarlo no cuesta migrar ni
  * una fila — el jsonb guarda excepciones sobre el defecto, y quien ya era
@@ -358,6 +369,32 @@ const TODOS: MapaPermisos = {
  * es inocuo por ser agregado. En una congregación de treinta personas, el total
  * de un culto más saber quién faltó ese domingo se acerca bastante al dato
  * nominal. El agregado protege a escala, y esto se vende a iglesias pequeñas.
+ *
+ * `gestionar_su_ministerio` LO LLEVAN TODOS
+ * -----------------------------------------
+ * Hasta el 19-oct solo venía con `lider`, y eso pedía dos llaves para una sola
+ * puerta: el rol y el dato. Nombrar responsable de un ministerio a alguien con
+ * rol `miembro` —lo normal: el pastor nombra a la persona, no le reconfigura la
+ * cuenta— no le dejaba entrar. `panel/layout.tsx` le devolvía a `/mi`, no veía
+ * ni turnos ni repertorio, y encima le llegaban avisos de turnos con enlace al
+ * panel que rebotaban.
+ *
+ * Puede ir en todos porque por sí solo no abre nada: el ámbito lo pone
+ * `ministeriosQueLidera`, y a quien no lidera ninguno el permiso no le da ni una
+ * fila. Lo que decide quién lleva un ministerio pasa a ser nombrarle en él. Y
+ * por eso mismo `esDelEquipo` no lo cuenta a secas, o la congregación entera
+ * entraría al panel.
+ *
+ * VER su ministerio ya venía por ámbito (ver `ambitoMiembros`), que no es un
+ * permiso sino la consecuencia de a qué ministerios pertenece; esto es la otra
+ * mitad, qué puede ESCRIBIR ahí dentro.
+ *
+ * No ha hecho falta migrar: el jsonb guarda excepciones. El `{}` de un miembro
+ * pasa a significar «sí» solo; el `true` explícito que alguien tuviera sigue
+ * valiendo `true` (redundante, y `excepcionesSobreDefecto` lo quita la próxima
+ * vez que el pastor guarde); y el `false` explícito sigue siendo «aunque lidere,
+ * no». Con esto `lider` y `miembro` nacen con el mismo mapa: lo que aún separa
+ * los dos roles es el muro en modo «equipo», que la `0027` decide por rol.
  */
 const DEFECTOS_POR_ROL: Record<RolIglesia, MapaPermisos> = {
   pastor: TODOS,
@@ -375,11 +412,32 @@ const DEFECTOS_POR_ROL: Record<RolIglesia, MapaPermisos> = {
     // ya ve la congregación entera con `ver_todos_los_miembros`, así que esto no
     // le amplía a cuánta gente alcanza: le deja apuntar lo que ya tiene delante.
     registrar_asistencia: true,
+    gestionar_su_ministerio: true,
   },
   lider: { ...NINGUNO, gestionar_su_ministerio: true },
-  tesorero: { ...NINGUNO, gestionar_finanzas: true },
-  miembro: NINGUNO,
+  tesorero: {
+    ...NINGUNO,
+    gestionar_finanzas: true,
+    gestionar_su_ministerio: true,
+  },
+  miembro: { ...NINGUNO, gestionar_su_ministerio: true },
 };
+
+/**
+ * Los permisos que trae puestos cualquier rol. Hoy, solo
+ * `gestionar_su_ministerio`.
+ *
+ * Los pide `/panel/lideres` para no contarlos en el «puede · N de M» de cada
+ * persona: uno que lleva todo el mundo no dice nada de lo que el pastor le ha
+ * dado a esa en concreto, y con él dentro un miembro raso salía «1 de 12».
+ *
+ * Calculado desde `DEFECTOS_POR_ROL` y no escrito a mano para que no pueda
+ * discrepar de la tabla: el día que un defecto cambie, el recuento lo sigue
+ * solo.
+ */
+export const PERMISOS_DE_TODOS: readonly Permiso[] = PERMISOS.filter((p) =>
+  ROLES_IGLESIA.every((rol) => DEFECTOS_POR_ROL[rol][p]),
+);
 
 /** ¿Gobierna la iglesia? Ajustes, equipo, facturación y bajas. */
 export function esPastor(ctx: { rol: RolIglesia }): boolean {
@@ -402,10 +460,83 @@ export function esPastor(ctx: { rol: RolIglesia }): boolean {
  * vaciado a mano no tiene nada que hacer allí aunque se llame `lider`.
  *
  * Mirando las capacidades efectivas, quien recibe una entra sola y quien la
- * pierde sale sola, sin que nadie tenga que acordarse de tocar esto.
+ * pierde sale sola, sin que nadie tenga que acordarse de tocar esto. Pero no
+ * cualquier capacidad: solo las que abren una sección (`ABRE_UNA_SECCION`).
+ *
+ * `gestionar_su_ministerio` CUENTA SOLO SI LIDERA ALGO
+ * ----------------------------------------------------
+ * Es defecto de todos los roles, así que contarlo a secas metería en el panel a
+ * la congregación entera. Ese permiso dice «puede llevar lo suyo», y quien no
+ * lidera nada no tiene nada suyo que llevar: se mira junto al dato, como en
+ * `puedeGestionarMinisterio`. Al revés funciona igual de solo: el día que el
+ * pastor le nombra colíder, entra; el día que le quita, sale.
  */
 export function esDelEquipo(ctx: ContextoPermisos): boolean {
-  return esPastor(ctx) || PERMISOS.some((p) => puede(ctx, p));
+  if (esPastor(ctx)) return true;
+  if (abreAlgunaSeccion(ctx)) return true;
+  return (
+    puede(ctx, 'gestionar_su_ministerio') &&
+    ctx.ministeriosQueLidera.length > 0
+  );
+}
+
+/**
+ * Qué permisos dan, por sí solos, una sección del panel donde ejercerlos.
+ *
+ * Antes `esDelEquipo` e `inicioDe` contaban cualquier permiso salvo
+ * `gestionar_su_ministerio`, y eso metía en el mismo saco tres que no abren
+ * ninguna pantalla:
+ *
+ *   - `ver_datos_sensibles` y `ver_seguimiento` modifican lo que ya se ve: más
+ *     columnas en las fichas que ya alcanza, una pestaña más en el ministerio
+ *     que ya lleva. Sin otra puerta, no hay dónde usarlos.
+ *   - `moderar_comunidad` se ejerce en el muro, que vive en `/mi`. En
+ *     `/panel/comunidad` solo se lee la configuración.
+ *
+ * Con ellos contados, una líder de un solo equipo a la que el pastor le dio
+ * `ver_datos_sensibles` para conocer a su gente aterrizaba en `/panel/hoy` —el
+ * resumen de una iglesia de la que casi nada le toca— y no en su ministerio. Y
+ * a quien solo modera, sin liderar nada, el panel le recibía con un menú en el
+ * que nada era suyo.
+ *
+ * `gestionar_su_ministerio` va como `false` aunque sí abra algo, porque lo que
+ * abre lo decide el dato y no el permiso: lo resuelven aparte `esDelEquipo` e
+ * `inicioDe`, mirando `ministeriosQueLidera`.
+ *
+ * `Record` y no una lista de los que abren, por lo mismo que
+ * `ETIQUETAS_PERMISOS`: un permiso nuevo no compila hasta que alguien decide de
+ * qué lado cae, mirando `lib/panel/secciones.ts`. En una lista se quedaría
+ * fuera en silencio, y daría una sección a alguien que no podría entrar al
+ * panel a usarla.
+ */
+const ABRE_UNA_SECCION: Record<Permiso, boolean> = {
+  // Miembros, con la congregación entera en vez de solo sus equipos.
+  ver_todos_los_miembros: true,
+  // Miembros: dar de alta y corregir fichas.
+  editar_miembros: true,
+  // Ministerios para crearlos y editarlos, y Módulos.
+  gestionar_ministerios: true,
+  aprobar_solicitudes: true,
+  escribir_devocionales: true,
+  gestionar_finanzas: true,
+  gestionar_eventos: true,
+  // Reuniones.
+  registrar_asistencia: true,
+  ver_datos_sensibles: false,
+  gestionar_su_ministerio: false,
+  ver_seguimiento: false,
+  moderar_comunidad: false,
+};
+
+/**
+ * ¿Tiene algún permiso que le dé una sección del panel por sí solo?
+ *
+ * La comparten `esDelEquipo` e `inicioDe`, que tienen que estar de acuerdo
+ * sobre qué es «solo lidera»: si una contara un permiso que la otra no, alguien
+ * entraría al panel por una razón y aterrizaría en un sitio pensado para otra.
+ */
+function abreAlgunaSeccion(ctx: ContextoPermisos): boolean {
+  return PERMISOS.some((p) => ABRE_UNA_SECCION[p] && puede(ctx, p));
 }
 
 /**
@@ -419,10 +550,30 @@ export function esDelEquipo(ctx: ContextoPermisos): boolean {
  *
  * `null` es quien tiene sesión y no tiene iglesia: su sitio es `/mi`, que le
  * cuenta en qué punto está su solicitud.
+ *
+ * QUIEN SOLO LLEVA UN MINISTERIO EMPIEZA EN ÉL
+ * --------------------------------------------
+ * Para el colíder de un equipo que no tiene nada más, `/panel/hoy` es el resumen
+ * de una iglesia de la que casi nada le toca, y lo que viene a hacer queda a dos
+ * clics. Con un solo ministerio el destino es evidente; con dos no hay uno que
+ * elegir por él, y el bloque «Lo que llevas» del menú se los pone delante.
+ *
+ * El pastor queda fuera aunque dirija un solo equipo, y quien tiene un permiso
+ * que le abre otra sección también: su trabajo no cabe en un ministerio, y
+ * empezar en uno le escondería el resto. Los que no abren nada por sí solos
+ * —ver datos sensibles, el seguimiento, moderar— no le sacan de su ministerio:
+ * amplían lo que ya ve o se ejercen en el muro (ver `ABRE_UNA_SECCION`).
  */
 export function inicioDe(ctx: ContextoPermisos | null): string {
   if (!ctx) return '/mi';
-  return esDelEquipo(ctx) ? '/panel/hoy' : '/mi';
+  if (!esDelEquipo(ctx)) return '/mi';
+
+  const soloLleva = !esPastor(ctx) && !abreAlgunaSeccion(ctx);
+  if (soloLleva && ctx.ministeriosQueLidera.length === 1) {
+    return `/panel/ministerios/${ctx.ministeriosQueLidera[0]}`;
+  }
+
+  return '/panel/hoy';
 }
 
 /**

@@ -30,6 +30,14 @@ import type { ModuloId } from './modulos';
 
 type TipoDeclarado = {
   id: string;
+  /**
+   * No es solo una etiqueta. Es el nombre con que nace el ministerio al pulsar
+   * «Activar» en `/panel/modulos` —y sale en la web pública de la iglesia—, y
+   * es como el catálogo reconoce los que se crearon antes de que hubiera tipos
+   * (`repartirPorTipo()`). Cambiarlo cambia las dos cosas: un «Niños» guardado
+   * como «Otro» dejaría de contar, y «Activar» crearía otro equipo al lado con
+   * el nombre nuevo. Lo que se quiera contar de más, en la descripción.
+   */
   nombre: string;
   descripcion: string;
   modulos: readonly ModuloId[];

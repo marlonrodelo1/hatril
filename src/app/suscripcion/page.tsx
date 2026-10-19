@@ -97,12 +97,18 @@ export default async function MuroSuscripcionPage({
         // ponerle un botón que le va a rebotar es hacerle perder el tiempo dos
         // veces. Se le dice quién lo resuelve y se le deja su área, que sigue
         // siendo suya.
+        //
+        // A `/mi/comunidad` y no a `/mi`: `/mi` manda al equipo al panel, y el
+        // panel, con la iglesia bloqueada, lo devuelve aquí. Para un tesorero o
+        // un colíder el botón era un callejón sin salida. La comunidad solo pide
+        // `requireIglesia()`, que no mira la suscripción, y es lo primero que ve
+        // cualquier miembro al entrar.
         <div className="flex flex-col gap-3">
           <p className="max-w-prose text-[14px] leading-relaxed">
             Esto lo resuelve el pastor de la congregación desde su panel.
           </p>
           <Link
-            href="/mi"
+            href="/mi/comunidad"
             className="w-fit rounded-lg border border-border bg-surface px-4 py-2 text-[13.5px] font-medium hover:bg-muted"
           >
             Ir a mi área

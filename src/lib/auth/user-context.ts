@@ -1,11 +1,16 @@
 import 'server-only';
 
 import { cache } from 'react';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import type { User } from '@supabase/supabase-js';
 
 import { dbAdmin } from '@/lib/db';
-import { iglesias, iglesiaUsuarios, ministerioMiembros } from '@/lib/db/schema';
+import {
+  iglesias,
+  iglesiaUsuarios,
+  ministerioMiembros,
+  ministerios,
+} from '@/lib/db/schema';
 import { createClient } from '@/lib/supabase/server';
 import {
   resolverPermisos,
@@ -80,6 +85,16 @@ export type UserContext = {
    * `gestionar_su_ministerio`: sin esto, ese permiso no significaría nada.
    */
   ministeriosQueLidera: string[];
+  /**
+   * Los mismos que `ministeriosQueLidera`, con lo que hace falta para pintarlos
+   * en el bloque «Lo que llevas» del menú.
+   *
+   * Aparte, y no en lugar de la lista de ids, porque `ContextoPermisos` es
+   * estructural: cualquier contexto futuro lo cumple con tres listas de ids, y
+   * obligarle a traer nombres y colores para decidir un permiso mezclaría qué
+   * se puede con qué se pinta.
+   */
+  ministeriosQueLlevo: { id: string; nombre: string; colorHex: string }[];
 };
 
 /**
@@ -146,6 +161,16 @@ export const getCurrentUserContext = cache(async function getCurrentUserContext(
         eq(iglesias.activa, true),
       ),
     )
+    // Con orden, y la membresía más antigua primero. Sin `order by`, Postgres
+    // no promete qué fila devuelve un `limit 1`, y una cuenta en dos iglesias
+    // —el unique es por pareja, así que la base lo admite— podía caer en una
+    // en un clic y en la otra en el siguiente. La más antigua porque es la de
+    // casa: que aparezca una segunda membresía, venga de donde venga, no debe
+    // cambiarle el panel a nadie sin avisar.
+    //
+    // El `id` desempata: `now()` es la hora de la transacción, y dos altas
+    // hechas en la misma —el seed— comparten `created_at`.
+    .orderBy(asc(iglesiaUsuarios.createdAt), asc(iglesiaUsuarios.id))
     .limit(1);
 
   const fila = filas[0];
@@ -154,22 +179,47 @@ export const getCurrentUserContext = cache(async function getCurrentUserContext(
   // Los ministerios en los que sirve. Solo hace falta si NO ve la congregación
   // entera, pero se resuelve siempre: son dos consultas por render de panel, y
   // hacerlo condicional obligaría a cada llamante a saber si le toca pedirlo.
-  const ministerios = fila.miembroId
+  const equipos = fila.miembroId
     ? await dbAdmin
         .select({
           ministerioId: ministerioMiembros.ministerioId,
           // Del MISMO viaje. Saber cuáles lidera no cuesta una consulta más:
           // cuesta una columna, y las filas ya venían.
           rolEquipo: ministerioMiembros.rolEquipo,
+          // Y por lo mismo el nombre y el color, que pinta el bloque «Lo que
+          // llevas» del menú. Pedirlos aparte sería un viaje más en cada carga
+          // del panel para dos palabras y un punto.
+          nombre: ministerios.nombre,
+          colorHex: ministerios.colorHex,
         })
         .from(ministerioMiembros)
+        .innerJoin(
+          ministerios,
+          eq(ministerios.id, ministerioMiembros.ministerioId),
+        )
         .where(
           and(
             eq(ministerioMiembros.miembroId, fila.miembroId),
+            // Redundante: HT102 no deja colgar de una ficha un ministerio de
+            // otra iglesia. Se pone igual porque esto va por `dbAdmin`, sin RLS
+            // debajo, y ahora trae NOMBRES que se pintan. Si la coherencia
+            // fallara algún día, que no sea enseñando un equipo ajeno.
+            eq(ministerioMiembros.iglesiaId, fila.iglesiaId),
             eq(ministerioMiembros.activo, true),
+            // Un ministerio apagado no da ámbito ni mando. `archivarMinisterio`
+            // ya da de baja al equipo entero, pero no es el único camino a
+            // `activo = false` —basta un UPDATE a mano—, y sin esto el menú
+            // ofrecería un enlace a un ministerio que la iglesia ya no tiene, y
+            // `inicioDe` podría mandar a alguien a él.
+            eq(ministerios.activo, true),
           ),
         )
+        // El orden del listado de Ministerios: el bloque del menú sale en el
+        // mismo orden en que el pastor los ve y los colocó.
+        .orderBy(asc(ministerios.orden), asc(ministerios.nombre))
     : [];
+
+  const lidera = equipos.filter((m) => m.rolEquipo !== 'voluntario');
 
   return {
     user,
@@ -196,10 +246,13 @@ export const getCurrentUserContext = cache(async function getCurrentUserContext(
     rol: fila.rol,
     permisos: resolverPermisos(fila.rol, fila.permisos),
     miembroId: fila.miembroId,
-    ministerioIds: ministerios.map((m) => m.ministerioId),
-    ministeriosQueLidera: ministerios
-      .filter((m) => m.rolEquipo !== 'voluntario')
-      .map((m) => m.ministerioId),
+    ministerioIds: equipos.map((m) => m.ministerioId),
+    ministeriosQueLidera: lidera.map((m) => m.ministerioId),
+    ministeriosQueLlevo: lidera.map((m) => ({
+      id: m.ministerioId,
+      nombre: m.nombre,
+      colorHex: m.colorHex,
+    })),
   };
 });
 
@@ -225,6 +278,11 @@ export async function getMembresiaPendiente(authUserId: string): Promise<{
         eq(iglesiaUsuarios.estado, 'pendiente'),
       ),
     )
+    // El mismo orden que `getCurrentUserContext`, y por lo mismo: con dos
+    // solicitudes abiertas a la vez —el unique es por pareja—, sin `order by`
+    // la pantalla podía nombrar una iglesia en una carga y otra en la
+    // siguiente.
+    .orderBy(asc(iglesiaUsuarios.createdAt), asc(iglesiaUsuarios.id))
     .limit(1);
 
   const fila = filas[0];

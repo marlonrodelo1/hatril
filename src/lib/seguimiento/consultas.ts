@@ -212,6 +212,32 @@ export async function personasPorFaltas(
   });
 }
 
+/**
+ * ¿Sale esta persona en la lista de seguimiento de este ministerio?
+ *
+ * Es la puerta de las actions que ESCRIBEN sobre alguien, y responde con
+ * `personasPorFaltas()` a propósito en vez de con una consulta propia contra
+ * `miembros`: la ficha de `[miembroId]` ya decide con esa función si existe, y
+ * una segunda consulta para la misma pregunta acabaría dando otra respuesta.
+ *
+ * Hace falta por el permiso de asistencia. `/privacidad` §4 promete que quien no
+ * lo da deja de aparecer también en el seguimiento, y `/acepta` borra sus
+ * contactos y su acompañante al negarlo. La lista ya no le enseñaba, pero las
+ * actions aceptaban su uuid en un POST fabricado y volvían a crear justo lo que
+ * se acababa de borrar.
+ *
+ * Cuesta lo mismo que pintar la lista, y la action redirige a una página que la
+ * vuelve a pintar: no es el sitio donde ahorrar una consulta.
+ */
+export async function estaEnSeguimiento(
+  ctx: UserContext,
+  ministerioId: string,
+  miembroId: string,
+): Promise<boolean> {
+  const personas = await personasPorFaltas(ctx, ministerioId);
+  return personas.some((p) => p.miembroId === miembroId);
+}
+
 export type ContactoRegistrado = {
   id: string;
   fecha: string;

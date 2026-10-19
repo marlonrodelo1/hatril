@@ -118,13 +118,22 @@ export default async function ReunionDeMinisterioPage({
               </p>
             </div>
 
-            {equipo.length === 0 ? (
+            {/* Lista vacía no es lo mismo que equipo vacío: también sale así si
+                todos los que hay negaron el permiso de asistencia, o tienen la
+                ficha archivada. La invitación a sumar gente solo es verdad en
+                el primer caso, y saberlo no cuesta nada: el equipo ya vino con
+                el ministerio. En el resto, el texto neutro de la action. */}
+            {equipo.length === 0 && ministerio.equipo.length === 0 ? (
               <p className="text-[14.5px] leading-relaxed text-muted-foreground">
                 Este ministerio todavía no tiene a nadie.{' '}
                 <Link href={`/panel/ministerios/${id}`} className="underline">
                   Súmale gente al equipo
                 </Link>{' '}
                 y vuelve aquí.
+              </p>
+            ) : equipo.length === 0 ? (
+              <p className="text-[14.5px] leading-relaxed text-muted-foreground">
+                No hay nadie en este equipo a quien pasar lista.
               </p>
             ) : (
               <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">

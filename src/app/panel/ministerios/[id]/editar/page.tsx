@@ -36,7 +36,12 @@ export default async function EditarMinisterioPage({
   // Cerrar un ministerio sigue siendo del permiso global: un líder puede llevar
   // el suyo, no borrarlo del panel de la iglesia. Sin esto vería un botón rojo
   // que solo le devolvería «no tienes permiso».
-  const puedeArchivar = esPastor(ctx) || puede(ctx, 'gestionar_ministerios');
+  //
+  // Lo mismo con el tipo y las herramientas, que enciende el pastor: al líder
+  // el formulario se los enseña como texto. `editarMinisterio` los ignora
+  // igualmente si se los manda; esto es para que no vea casillas que no hacen
+  // nada.
+  const gobierna = esPastor(ctx) || puede(ctx, 'gestionar_ministerios');
 
   return (
     <>
@@ -55,9 +60,10 @@ export default async function EditarMinisterioPage({
           accion={guardar}
           ministerio={ministerio}
           error={error}
+          puedeCambiarHerramientas={gobierna}
         />
 
-        {puedeArchivar && (
+        {gobierna && (
           <section className="flex flex-col gap-3 rounded-xl border border-danger-border bg-surface p-5">
             <div className="flex flex-col gap-1.5">
               <h2 className="t-subtitulo">Cerrar el ministerio</h2>

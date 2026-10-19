@@ -75,7 +75,7 @@ export default async function RepertorioPage({
       </CabeceraPanel>
 
       <Contenedor>
-        <PestanasMinisterio ministerio={ministerio} activa="repertorio" />
+        <PestanasMinisterio ctx={ctx} ministerio={ministerio} activa="repertorio" />
 
         {error && <Aviso>{error}</Aviso>}
         {guardado && CONFIRMACIONES[guardado] && (

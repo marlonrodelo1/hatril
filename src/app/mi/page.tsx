@@ -5,7 +5,7 @@ import { Clock, Search } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUserContext } from '@/lib/auth/user-context';
-import { esDelEquipo } from '@/lib/auth/permisos';
+import { esDelEquipo, inicioDe } from '@/lib/auth/permisos';
 import { solicitudDeUsuario } from '@/lib/solicitudes/consultas';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,8 @@ export const metadata: Metadata = { title: 'Mi cuenta' };
  *
  * Quién va a cada sitio lo decide `esDelEquipo()`, que mira las capacidades
  * efectivas y no el nombre del rol: el pastor puede darle la caja o el devocional
- * a alguien que sigue siendo `miembro`, y esa persona tiene que poder entrar.
+ * a alguien que sigue siendo `miembro`, o nombrarle colíder de un ministerio, y
+ * esa persona tiene que poder entrar.
  *
  * Esta es la ruta que envuelve la app móvil de la v2.
  */
@@ -57,8 +58,18 @@ export default async function MiPage({
 
   const ctx = await getCurrentUserContext();
 
-  // Quien lleva algo en la iglesia tiene su sitio en el panel.
-  if (ctx && esDelEquipo(ctx)) redirect('/panel/hoy');
+  // Quien lleva algo en la iglesia tiene su sitio en el panel, y en qué punto
+  // del panel lo decide `inicioDe`: a quien solo lleva un ministerio, el suyo.
+  // Aquí estaba escrito `/panel/hoy` a mano. No es el único sitio que lo
+  // escribe: otros desvíos y el «Ir al panel» del menú de cuenta siguen
+  // mandando ahí, y a quien solo lleva un ministerio le dejan en el resumen en
+  // vez de en lo suyo. Antes de dar por hecho que un camino pasa por
+  // `inicioDe`, busca la ruta.
+  //
+  // El `esDelEquipo` va delante y no sobra: para un miembro raso `inicioDe`
+  // devuelve `/mi`, que es esta misma pantalla, y redirigirle ahí sería un
+  // bucle.
+  if (ctx && esDelEquipo(ctx)) redirect(inicioDe(ctx));
 
   // Y quien pertenece pero no lleva nada, a su casa: el muro.
   //
@@ -77,7 +88,7 @@ export default async function MiPage({
     <div className="flex min-h-dvh flex-col bg-background">
       {/*
        * Sin campana: aquí solo llega quien NO tiene congregación —con iglesia
-       * activa esta pantalla redirige al panel, tres líneas más arriba—, y el
+       * activa esta pantalla redirige, al panel o al muro, más arriba—, y el
        * menú de cuenta se queda en «Cerrar sesión» solo. Lo decide la propia
        * cabecera al ver que no hay contexto de iglesia.
        */}

@@ -1,6 +1,12 @@
 import Link from 'next/link';
 import { Users } from 'lucide-react';
 
+import {
+  esPastor,
+  puede,
+  puedeGestionarMinisterio,
+  type ContextoPermisos,
+} from '@/lib/auth/permisos';
 import { modulosActivos } from '@/lib/ministerios/modulos';
 import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
 
@@ -18,20 +24,46 @@ import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
  * «Equipo» y la otra la única herramienta no son una navegación, son dos
  * enlaces. El componente decide eso solo, para que ninguna pantalla tenga que
  * acordarse.
+ *
+ * Y SOLO LO QUE ESA PERSONA PUEDE ABRIR
+ * -------------------------------------
+ * El equipo lo ve cualquiera de la iglesia; las herramientas, quien lleva el
+ * ministerio. Antes las pestañas de módulo salían a todos, y a quien solo
+ * miraba Turnos o Repertorio le rebotaban con «no tienes permiso» al pulsarlas.
+ * Cada condición de aquí copia la del `layout.tsx` de ese módulo: si se separan,
+ * vuelve el rebote o desaparece una pestaña que sí abriría.
+ *
+ * Quien solo mira se queda con «El equipo», y por la regla de arriba no se
+ * pinta la barra.
  */
 export function PestanasMinisterio({
+  ctx,
   ministerio,
   activa,
 }: {
+  ctx: ContextoPermisos;
   ministerio: MinisterioDetalle;
   /** `'equipo'` es la pantalla base; el resto, el id del módulo. */
   activa: string;
 }) {
   const base = `/panel/ministerios/${ministerio.id}`;
 
+  // `requireGestionMinisterio`, la puerta de todos los layouts de módulo.
+  const gestiona = puedeGestionarMinisterio(ctx, ministerio.id);
+  // `requirePermiso('ver_seguimiento')`, la puerta de más del layout de
+  // seguimiento: llevar el ministerio no basta para leer por qué alguien dejó
+  // de venir.
+  const veSeguimiento = esPastor(ctx) || puede(ctx, 'ver_seguimiento');
+
+  const herramientas = gestiona
+    ? modulosActivos(ministerio.modulos).filter(
+        (m) => m.id !== 'seguimiento' || veSeguimiento,
+      )
+    : [];
+
   const pestanas = [
     { id: 'equipo', etiqueta: 'El equipo', href: base, Icono: Users },
-    ...modulosActivos(ministerio.modulos).map((m) => ({
+    ...herramientas.map((m) => ({
       id: m.id,
       etiqueta: m.nombre,
       href: `${base}/${m.id}`,

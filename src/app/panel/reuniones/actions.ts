@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { requirePermisoAccion } from '@/lib/auth/guard-panel';
@@ -125,6 +125,8 @@ export async function editarReunion(reunionId: string, formData: FormData) {
         and(
           eq(reuniones.id, reunionId),
           eq(reuniones.iglesiaId, ctx.iglesia.id),
+          // Solo las de la congregación: las de un equipo las lleva su agenda.
+          isNull(reuniones.ministerioId),
         ),
       ),
   );
@@ -156,7 +158,7 @@ export async function guardarLista(reunionId: string, formData: FormData) {
   const congregacion = await listaParaPasar(ctx, reunionId);
 
   if (congregacion.length === 0) {
-    volver('No hay nadie en el fichero a quien pasar lista.', destino);
+    volver('No hay nadie a quien pasar lista en esa reunión.', destino);
   }
 
   const filas = congregacion.map((p) => ({
@@ -218,6 +220,8 @@ export async function borrarReunion(reunionId: string) {
         and(
           eq(reuniones.id, reunionId),
           eq(reuniones.iglesiaId, ctx.iglesia.id),
+          // Solo las de la congregación: las de un equipo las lleva su agenda.
+          isNull(reuniones.ministerioId),
         ),
       ),
   );

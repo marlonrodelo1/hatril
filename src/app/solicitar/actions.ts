@@ -13,7 +13,8 @@ import { isUniqueViolation } from '@/lib/db/error';
 import { checkRateLimit, getClientIp } from '@/lib/api/rate-limit';
 import { validarPassword, traducirErrorAuth } from '@/lib/auth/password';
 import { normalizarTelefono } from '@/lib/telefono/normalizar';
-import { campo, campoObligatorio } from '@/lib/api/formulario';
+import { campo, campoObligatorio, casilla } from '@/lib/api/formulario';
+import { VERSION_POLITICA_PRIVACIDAD } from '@/lib/rgpd/consentimiento';
 import {
   cuentasQueAprueban,
   emitirNotificaciones,
@@ -47,9 +48,12 @@ const EsquemaSolicitud = z.object({
   nombre: z.string().trim().min(2, 'Escribe tu nombre.').max(120),
   telefono: z.string().trim().max(40).optional().or(z.literal('')),
   mensaje: z.string().trim().max(600).optional().or(z.literal('')),
-  consentimiento: z.literal('on', {
+  consentimiento: z.literal(true, {
     message: 'Tienes que aceptar para poder enviar la solicitud.',
   }),
+  // Opcional de verdad: sin marcar también se puede entrar. Por eso es un
+  // booleano y no un `literal(true)` como la de arriba.
+  asistencia: z.boolean(),
 });
 
 export async function solicitarIngreso(formData: FormData) {
@@ -58,7 +62,8 @@ export async function solicitarIngreso(formData: FormData) {
     nombre: campoObligatorio(formData, 'nombre'),
     telefono: campo(formData, 'telefono'),
     mensaje: campo(formData, 'mensaje'),
-    consentimiento: formData.get('consentimiento'),
+    consentimiento: casilla(formData, 'consentimiento'),
+    asistencia: casilla(formData, 'asistencia'),
   });
 
   const slug = String(formData.get('slug') ?? '');
@@ -112,6 +117,10 @@ export async function solicitarIngreso(formData: FormData) {
           email: user.email ?? null,
           telefono: normalizarTelefono(d.telefono || null, 'CO'),
           mensaje: d.mensaje || null,
+          // Las dos, siempre. NULL en cualquiera significa «no consta» y aprobar
+          // lo trata como tal: ver las columnas en el schema.
+          aceptaAsistencia: d.asistencia,
+          versionTexto: VERSION_POLITICA_PRIVACIDAD,
         })
         .returning({ id: solicitudesIngreso.id });
 

@@ -1,7 +1,11 @@
 import 'server-only';
 
 import { redirect } from 'next/navigation';
+import { and, eq } from 'drizzle-orm';
+import { z } from 'zod';
 
+import { withUser } from '@/lib/db';
+import { ministerios } from '@/lib/db/schema';
 import {
   getCurrentUserContext,
   type UserContext,
@@ -128,10 +132,52 @@ export async function requireGestionMinisterio(
   ministerioId: string,
 ): Promise<UserContext> {
   const ctx = await requireIglesia();
-  if (!puedeGestionarMinisterio(ctx, ministerioId)) {
+  if (
+    !puedeGestionarMinisterio(ctx, ministerioId) ||
+    !(await esMinisterioDeSuIglesia(ctx, ministerioId))
+  ) {
     redirect('/panel/ministerios?error=' + encodeURIComponent(MENSAJE_SIN_PERMISO));
   }
   return ctx;
+}
+
+/**
+ * ¿Es este ministerio de la iglesia del contexto?
+ *
+ * PARECE REDUNDANTE CON LA RLS Y NO LO ES
+ * ---------------------------------------
+ * La RLS de `ministerio_miembros` y compañía pide `pertenece_a_iglesia()`, que
+ * es «tiene membresía activa en ESA iglesia», no «es la iglesia con la que está
+ * trabajando ahora». Una cuenta activa en dos congregaciones pasa la RLS en las
+ * dos. Y `puedeGestionarMinisterio` deja pasar al pastor y a
+ * `gestionar_ministerios` con CUALQUIER id: era el pastor de la iglesia A
+ * vaciando el equipo de Alabanza de la B, donde es un miembro más, con un id
+ * sacado de una URL.
+ *
+ * Para el líder acotado ya lo cubría `ministeriosQueLidera`, que sale solo de
+ * la iglesia del contexto; esto lo cierra para los otros dos caminos. Una
+ * consulta por pantalla y por action de ministerio, contra la clave primaria.
+ */
+async function esMinisterioDeSuIglesia(
+  ctx: UserContext,
+  ministerioId: string,
+): Promise<boolean> {
+  // Un id que no es uuid haría fallar el cast en Postgres con un 500.
+  if (!z.string().uuid().safeParse(ministerioId).success) return false;
+
+  const filas = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ id: ministerios.id })
+      .from(ministerios)
+      .where(
+        and(
+          eq(ministerios.id, ministerioId),
+          eq(ministerios.iglesiaId, ctx.iglesia.id),
+        ),
+      )
+      .limit(1),
+  );
+  return filas.length > 0;
 }
 
 // ============================================
@@ -205,7 +251,10 @@ export async function requireGestionMinisterioAccion(
 ): Promise<UserContext> {
   const ctx = await requireIglesiaAccion({ sinMuro: true });
   exigirPoderEscribir(ctx, destinoError);
-  if (!puedeGestionarMinisterio(ctx, ministerioId)) {
+  if (
+    !puedeGestionarMinisterio(ctx, ministerioId) ||
+    !(await esMinisterioDeSuIglesia(ctx, ministerioId))
+  ) {
     redirect(
       `${destinoError}?error=` +
         encodeURIComponent('No tienes permiso para hacer eso.'),

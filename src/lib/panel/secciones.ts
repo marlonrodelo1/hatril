@@ -11,9 +11,11 @@ import {
   CalendarCheck,
   Share2,
   MessagesSquare,
+  Blocks,
   type LucideIcon,
 } from 'lucide-react';
 
+import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import type { FlagsDelMenu } from './menu';
 
 /**
@@ -44,18 +46,58 @@ import type { FlagsDelMenu } from './menu';
  * que tiene que ver con pagar. Las dos rutas siguen existiendo.
  */
 
+/**
+ * Una entrada del menú: con icono o con punto de color, nunca las dos cosas.
+ *
+ * El punto es para los ministerios de «Lo que llevas». Cada uno tiene ya su
+ * color en el fichero —el de su ficha y su etiqueta en Miembros—, y es lo que
+ * los distingue de un vistazo; el mismo icono repetido tres veces no
+ * distinguiría nada.
+ */
 export type Seccion = {
   href: string;
   etiqueta: string;
-  Icono: LucideIcon;
   aviso: number;
-};
+} & (
+  | { Icono: LucideIcon; punto?: undefined }
+  | { punto: string; Icono?: undefined }
+);
 
 export type Bloque = {
   /** Sin encabezado el bloque no se puede plegar: es el de arriba del todo. */
   titulo?: string;
   secciones: Seccion[];
 };
+
+/**
+ * Qué entrada se marca para la ruta abierta: la de `href` más largo que la
+ * contiene.
+ *
+ * Con «Lo que llevas», `/panel/ministerios/<id>/turnos` cae dentro de dos
+ * entradas: la del ministerio y Ministerios. Marcar las dos dice que se está en
+ * dos sitios a la vez, y además abre a la fuerza el bloque de la congregación.
+ * Gana la más concreta. En el ministerio de otro equipo, que no tiene entrada
+ * propia, sigue marcándose Ministerios.
+ *
+ * Contener y no coincidir, para que la ficha de un miembro (`/panel/miembros/…`)
+ * mantenga Miembros marcado: con igualdad exacta, entrar en una ficha apaga el
+ * menú entero y no se sabe dónde se está.
+ *
+ * Vive aquí y no en cada menú por lo mismo que `construirMenu`: escrita dos
+ * veces, el día que cambie se cambiaría en uno solo.
+ */
+export function hrefActivo(bloques: Bloque[], pathname: string): string | null {
+  let activo: string | null = null;
+
+  for (const { secciones } of bloques) {
+    for (const { href } of secciones) {
+      const contiene = pathname === href || pathname.startsWith(`${href}/`);
+      if (contiene && href.length > (activo?.length ?? 0)) activo = href;
+    }
+  }
+
+  return activo;
+}
 
 export function construirMenu(flags: FlagsDelMenu): Bloque[] {
   const {
@@ -66,9 +108,11 @@ export function construirMenu(flags: FlagsDelMenu): Bloque[] {
     puedeVerEventos,
     puedeVerReuniones,
     esPastorDeLaIglesia,
+    ministeriosQueLlevo,
+    puedeActivarModulos,
   } = flags;
 
-  return [
+  const bloques: Bloque[] = [
     {
       secciones: [
         { href: '/panel/hoy', etiqueta: 'Inicio', Icono: House, aviso: 0 },
@@ -83,6 +127,25 @@ export function construirMenu(flags: FlagsDelMenu): Bloque[] {
             ]
           : []),
       ],
+    },
+    // Lo que lleva, justo debajo de Inicio y antes que el fichero de la
+    // iglesia: para el colíder que no tiene nada más es lo único del menú que
+    // es suyo, y para el pastor que además dirige un equipo es el atajo a lo de
+    // cada semana. Una entrada por ministerio y no una por módulo: las
+    // herramientas de cada equipo son pestañas dentro de su pantalla.
+    //
+    // Sin ministerios el bloque se queda vacío y el filtro del final lo quita.
+    {
+      titulo: 'Lo que llevas',
+      secciones: ministeriosQueLlevo.map((m) => ({
+        href: `/panel/ministerios/${m.id}`,
+        etiqueta: m.nombre,
+        // Por la paleta y no el hex tal cual: uno guardado que no esté en ella
+        // cae al gris, como en la ficha del ministerio, en vez de pintar un
+        // color que el sistema de diseño no tiene.
+        punto: colorDeMinisterio(m.colorHex).hex,
+        aviso: 0,
+      })),
     },
     {
       titulo: 'La congregación',
@@ -187,6 +250,19 @@ export function construirMenu(flags: FlagsDelMenu): Bloque[] {
           Icono: Share2,
           aviso: 0,
         },
+        // Junto a Ajustes y no al lado de Ministerios: decidir qué usa la
+        // iglesia se hace una vez, no cada semana. `Blocks` porque son piezas
+        // que se encienden, y no se parece a ningún icono de los de arriba.
+        ...(puedeActivarModulos
+          ? [
+              {
+                href: '/panel/modulos',
+                etiqueta: 'Módulos',
+                Icono: Blocks,
+                aviso: 0,
+              },
+            ]
+          : []),
         ...(esPastorDeLaIglesia
           ? [
               {
@@ -199,7 +275,9 @@ export function construirMenu(flags: FlagsDelMenu): Bloque[] {
           : []),
       ],
     },
-    // Un bloque puede quedarse vacío: un líder de alabanza no ve ni finanzas ni
-    // ajustes, y solo le queda Compartir.
-  ].filter((b) => b.secciones.length > 0);
+    // Un bloque puede quedarse vacío —«Lo que llevas» en quien no lidera
+    // nada—, y vacío sería un encabezado suelto que no lleva a ningún sitio.
+  ];
+
+  return bloques.filter((b) => b.secciones.length > 0);
 }

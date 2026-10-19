@@ -34,8 +34,11 @@ export default async function ReunionPage({
   const { id } = await params;
   const { error, guardado } = await searchParams;
 
+  // Un ensayo o una reunión de un equipo no se abren por aquí: son de la
+  // agenda de su ministerio, con su lista y su guard. Con el id escrito a mano,
+  // esta pantalla pintaba la congregación entera para meterla en esa lista.
   const reunion = await obtenerReunion(ctx, id);
-  if (!reunion) notFound();
+  if (!reunion || reunion.ministerio) notFound();
 
   const congregacion = await listaParaPasar(ctx, id);
 

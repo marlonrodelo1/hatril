@@ -25,6 +25,11 @@
 --
 -- Dos iglesias: Betania (publicada, en el directorio) y Sion (sin publicar,
 -- para comprobar que no aparece en el buscador ni tiene web pública).
+--
+-- Hay una cuenta más, colider@hatril.test, en `scripts/seed-base-comun.sql`:
+-- un colíder con rol `miembro`, su ministerio de Acción social y la ficha para
+-- probar el enlace al aprobar una solicitud. Va después de este fichero, que
+-- es quien crea Betania.
 -- ============================================================================
 
 create or replace function public._seed_usuario(
@@ -153,8 +158,11 @@ values
  ('aaaaaaaa-1111-4111-8111-000000000001','11111111-1111-4111-8111-000000000005','miembro','pendiente',null,null)
 on conflict (iglesia_id, auth_user_id) do nothing;
 
-insert into public.solicitudes_ingreso (iglesia_id, auth_user_id, nombre, email, telefono, mensaje)
-values ('aaaaaaaa-1111-4111-8111-000000000001','11111111-1111-4111-8111-000000000005','Nuria Cabrera Ledo','visita@hatril.test','+573001234576','Vengo los domingos desde marzo, me presentó Marta. Me gustaría estar al día de lo que hacéis.')
+-- Con la casilla de asistencia y la versión que leyó, como las escribe ya
+-- `/solicitar` (migración 0040). Sin ellas, en una base nueva aprobarla no
+-- registraría ningún consentimiento y el caso de prueba saldría distinto.
+insert into public.solicitudes_ingreso (iglesia_id, auth_user_id, nombre, email, telefono, mensaje, acepta_asistencia, version_texto)
+values ('aaaaaaaa-1111-4111-8111-000000000001','11111111-1111-4111-8111-000000000005','Nuria Cabrera Ledo','visita@hatril.test','+573001234576','Vengo los domingos desde marzo, me presentó Marta. Me gustaría estar al día de lo que hacéis.', true, 'privacidad-2026-09')
 on conflict do nothing;
 
 insert into public.ministerios (id, iglesia_id, nombre, descripcion, color_hex, orden)

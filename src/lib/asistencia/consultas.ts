@@ -211,6 +211,23 @@ export async function listaParaPasar(
   const sinPermiso = await miembrosSinPermisoDeAsistencia(ctx);
 
   return withUser(ctx.user.id, async (tx) => {
+    // Solo un culto de la congregación. El espejo de lo que hace
+    // `listaDelEquipo` con las del equipo: con el id de un ensayo, esto
+    // devolvía la congregación entera y `guardarLista` la escribía en la lista
+    // de ese equipo. Lista vacía = nada que pintar ni que escribir.
+    const [culto] = await tx
+      .select({ id: reuniones.id })
+      .from(reuniones)
+      .where(
+        and(
+          eq(reuniones.id, reunionId),
+          eq(reuniones.iglesiaId, ctx.iglesia.id),
+          isNull(reuniones.ministerioId),
+        ),
+      )
+      .limit(1);
+    if (!culto) return [];
+
     const filas = await tx
       .select({
         miembroId: miembros.id,
@@ -258,12 +275,38 @@ export async function listaParaPasar(
  *
  * Con una sola función y un `ministerioId?` opcional, olvidarse de pasarlo en
  * una pantalla nueva abriría la congregación entera sin que nada fallara.
+ *
+ * Lo que SÍ comparten es el permiso de asistencia, y al principio aquí no se
+ * aplicaba. `/privacidad` §4 promete que quien no lo da no sale en las listas, y
+ * `/acepta` borra sus marcas al negarlo; pero esta lista seguía enseñándole, y
+ * `guardarListaDelEquipo` —que escribe una fila por cada persona de aquí—
+ * volvía a crear en el siguiente ensayo justo lo que se acababa de borrar. Que
+ * sea un ensayo y no un culto no cambia nada: sigue siendo un registro nominal
+ * de dónde estuvo alguien que dijo que no.
+ *
+ * LA REUNIÓN TIENE QUE SER DE ESTE MINISTERIO, Y LO DICE EL JOIN
+ * --------------------------------------------------------------
+ * Al principio esto cruzaba el equipo con CUALQUIER `reunionId`, y como
+ * `guardarListaDelEquipo` escribe una fila por cada persona de aquí, un colíder
+ * —y colíder puede serlo cualquier miembro— mandaba el uuid del culto del
+ * domingo y sobrescribía la asistencia de su equipo en una reunión de la
+ * congregación. Eso pide `registrar_asistencia`, y además mueve
+ * `miembros.ultima_asistencia`, que solo cuenta las reuniones sin ministerio.
+ * La RLS no lo para: las dos reuniones son de su iglesia.
+ *
+ * El cruce va aquí y no solo en la action para que la página y la action no
+ * puedan separarse: las dos leen esta lista, y una reunión ajena da una lista
+ * vacía —nada que pintar y nada que escribir— en vez de un equipo colgado de
+ * una reunión que no es la suya. Va en el JOIN y no en una consulta previa
+ * porque así no hay forma de leer al equipo sin pasar por él.
  */
 export async function listaDelEquipo(
   ctx: UserContext,
   reunionId: string,
   ministerioId: string,
 ): Promise<FilaDeLista[]> {
+  const sinPermiso = await miembrosSinPermisoDeAsistencia(ctx);
+
   return withUser(ctx.user.id, async (tx) => {
     const filas = await tx
       .select({
@@ -274,12 +317,20 @@ export async function listaDelEquipo(
         presente: asistencias.presente,
       })
       .from(ministerioMiembros)
+      .innerJoin(
+        reuniones,
+        and(
+          eq(reuniones.id, reunionId),
+          eq(reuniones.ministerioId, ministerioMiembros.ministerioId),
+          eq(reuniones.iglesiaId, ministerioMiembros.iglesiaId),
+        ),
+      )
       .innerJoin(miembros, eq(miembros.id, ministerioMiembros.miembroId))
       .leftJoin(
         asistencias,
         and(
           eq(asistencias.miembroId, miembros.id),
-          eq(asistencias.reunionId, reunionId),
+          eq(asistencias.reunionId, reuniones.id),
         ),
       )
       .where(
@@ -292,12 +343,14 @@ export async function listaDelEquipo(
       )
       .orderBy(asc(miembros.nombre), asc(miembros.apellidos));
 
-    return filas.map((f) => ({
-      miembroId: f.miembroId,
-      nombre: [f.nombre, f.apellidos].filter(Boolean).join(' '),
-      estado: f.estado,
-      presente: f.presente,
-    }));
+    return filas
+      .filter((f) => !sinPermiso.has(f.miembroId))
+      .map((f) => ({
+        miembroId: f.miembroId,
+        nombre: [f.nombre, f.apellidos].filter(Boolean).join(' '),
+        estado: f.estado,
+        presente: f.presente,
+      }));
   });
 }
 

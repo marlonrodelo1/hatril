@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ESTADOS, ESTADOS_ELEGIBLES } from '@/lib/miembros/estados';
 import type { FichaMiembro } from '@/lib/miembros/consultas';
+import type { RolEquipo } from '@/lib/db/schema';
 
 /**
  * Formulario de alta y edición de una persona.
@@ -32,16 +33,29 @@ export function FormularioMiembro({
   accion,
   miembro,
   ministerios,
+  liderazgo = [],
+  puedeSacarLideres = false,
   puedeVerSensibles,
   error,
 }: {
   accion: (formData: FormData) => Promise<void>;
   miembro?: FichaMiembro;
   ministerios: { id: string; nombre: string }[];
+  /** Dónde es responsable o colíder. Solo al editar: en un alta no hay. */
+  liderazgo?: { ministerioId: string; rolEquipo: RolEquipo }[];
+  /** Pastor o `gestionar_ministerios`: puede sacarle también de donde lidera. */
+  puedeSacarLideres?: boolean;
   puedeVerSensibles: boolean;
   error?: string;
 }) {
   const ministeriosActuales = new Set(miembro?.ministerios.map((m) => m.id));
+  const rolEn = new Map(
+    liderazgo
+      .filter((l) => l.rolEquipo !== 'voluntario')
+      .map((l) => [l.ministerioId, l.rolEquipo]),
+  );
+  const hayFijos =
+    !puedeSacarLideres && ministerios.some((m) => rolEn.has(m.id));
 
   return (
     <form action={accion} className="flex flex-col gap-6">
@@ -148,28 +162,55 @@ export function FormularioMiembro({
           <div className="flex flex-col gap-2.5 pt-1">
             <span className="t-label">Ministerios en los que sirve</span>
             <div className="flex flex-wrap gap-2">
-              {ministerios.map((m) => (
-                <label
-                  key={m.id}
-                  className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-surface-alt px-3.5 py-2.5 text-[14px] font-medium hover:bg-surface-active"
-                >
-                  <input
-                    type="checkbox"
-                    name="ministerios"
-                    value={m.id}
-                    defaultChecked={ministeriosActuales.has(m.id)}
-                  />
-                  {m.nombre}
-                </label>
-              ))}
+              {ministerios.map((m) => {
+                const rol = rolEn.get(m.id);
+                // Donde lidera, a quien no gobierna los ministerios la casilla
+                // se le queda marcada y quieta: desmarcarla haría rebotar el
+                // guardado entero. Deshabilitada no viaja en el envío, así que
+                // el valor va en un oculto; si no, se leería como desmarcada.
+                // La que manda sigue siendo la comprobación de la action.
+                const fija = rol !== undefined && !puedeSacarLideres;
+                return (
+                  <label
+                    key={m.id}
+                    className={
+                      'flex items-center gap-2.5 rounded-lg border border-border bg-surface-alt px-3.5 py-2.5 text-[14px] font-medium ' +
+                      (fija ? 'cursor-default' : 'cursor-pointer hover:bg-surface-active')
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      name={fija ? undefined : 'ministerios'}
+                      value={m.id}
+                      defaultChecked={fija || ministeriosActuales.has(m.id)}
+                      disabled={fija}
+                    />
+                    {fija && <input type="hidden" name="ministerios" value={m.id} />}
+                    {m.nombre}
+                    {rol && (
+                      <span className="rounded-full bg-accent px-2 py-0.5 text-[12px] font-semibold text-accent-foreground">
+                        {rol === 'responsable' ? 'Responsable' : 'Colíder'}
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
             </div>
+            {hayFijos && (
+              <p className="t-label text-muted-foreground">
+                Donde es responsable o colíder no se le puede sacar desde aquí.
+                Pídeselo al pastor.
+              </p>
+            )}
           </div>
         )}
       </Bloque>
 
       {/*
-       * Si quien rellena no tiene el permiso, estos campos no se pintan — y
-       * tampoco se envían, así que un `update` suyo no los pisa con vacíos.
+       * Si quien rellena no tiene el permiso, estos campos no se pintan. Que
+       * no los pise con vacíos NO lo garantiza esto: no viajar es llegar como
+       * null. Lo garantiza `datosProtegidos()` en las actions, que los deja
+       * fuera del UPDATE. Este comentario decía lo contrario y era falso.
        */}
       {puedeVerSensibles && (
         <Bloque

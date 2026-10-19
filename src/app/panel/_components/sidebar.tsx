@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useMemo, useSyncExternalStore } from 'react';
 import { ChevronRight, ExternalLink, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
-import { construirMenu } from '@/lib/panel/secciones';
+import { construirMenu, hrefActivo } from '@/lib/panel/secciones';
 import { MarcaIglesia } from './marca-iglesia';
 import type { FlagsDelMenu } from '@/lib/panel/menu';
 
@@ -132,11 +132,8 @@ export function PanelSidebar({
 
   const bloques = construirMenu(flags);
 
-  // `startsWith` para que la ficha de un miembro (`/panel/miembros/…`) mantenga
-  // Miembros marcado. Con igualdad exacta, entrar en una ficha apaga el menú
-  // entero y no se sabe dónde se está.
-  const estaActiva = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`);
+  // Una sola entrada marcada, la más concreta: el porqué en `hrefActivo`.
+  const activo = hrefActivo(bloques, pathname);
 
   return (
     <aside
@@ -197,8 +194,8 @@ export function PanelSidebar({
         {bloques.map((bloque, i) => {
           // Un bloque plegado que contiene la página abierta se abre igual: si
           // no, la única marca de dónde estás desaparece del menú.
-          const contieneLaActiva = bloque.secciones.some((s) =>
-            estaActiva(s.href),
+          const contieneLaActiva = bloque.secciones.some(
+            (s) => s.href === activo,
           );
           const abierto =
             // Encogida no hay encabezados que pulsar, así que tampoco puede
@@ -248,8 +245,8 @@ export function PanelSidebar({
                 }
               >
                 <div className="flex min-h-0 flex-col gap-0.5 overflow-hidden">
-                  {bloque.secciones.map(({ href, etiqueta, Icono, aviso }) => {
-                    const activa = estaActiva(href);
+                  {bloque.secciones.map(({ href, etiqueta, Icono, punto, aviso }) => {
+                    const activa = href === activo;
 
                     return (
                       <Link
@@ -270,15 +267,31 @@ export function PanelSidebar({
                             : 'font-medium text-muted-foreground hover:bg-surface-alt hover:text-foreground')
                         }
                       >
-                        <Icono
-                          className={
-                            'size-[17px] flex-none transition-colors ' +
-                            (activa
-                              ? ''
-                              : 'text-muted-foreground group-hover:text-foreground')
-                          }
-                          strokeWidth={1.7}
-                        />
+                        {Icono ? (
+                          <Icono
+                            className={
+                              'size-[17px] flex-none transition-colors ' +
+                              (activa
+                                ? ''
+                                : 'text-muted-foreground group-hover:text-foreground')
+                            }
+                            strokeWidth={1.7}
+                          />
+                        ) : (
+                          // El punto ocupa la caja de un icono para que el
+                          // texto quede en la misma columna que el del resto
+                          // del menú. Encogida, es lo único que se ve: el
+                          // nombre lo da el `title` del enlace.
+                          <span
+                            aria-hidden
+                            className="flex size-[17px] flex-none items-center justify-center"
+                          >
+                            <span
+                              className="size-2 rounded-full"
+                              style={{ backgroundColor: punto }}
+                            />
+                          </span>
+                        )}
                         {!encogida && (
                           <span className="truncate">{etiqueta}</span>
                         )}

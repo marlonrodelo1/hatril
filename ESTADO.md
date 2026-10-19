@@ -1,6 +1,6 @@
 # Estado de Hatril
 
-Última actualización: 15 de octubre de 2026.
+Última actualización: 19 de octubre de 2026.
 
 Este fichero se actualiza al cerrar cada sesión de trabajo. Va **dentro del
 repo** a propósito: Pidoo guardaba su detalle en ficheros `memory/` fuera del
@@ -53,6 +53,67 @@ lee al arrancar.
 - **Ministerios con varios líderes**: un responsable garantizado único por la
   base de datos, más los colíderes que hagan falta. Un líder gestiona los suyos
   y nada más (`gestionar_su_ministerio`).
+- **La jerarquía de los ministerios, de punta a punta** (base común de los
+  módulos, 19-oct; el plan entero está en `docs/modulos/plan.md`). Verificado
+  ejecutándolo como `colider@`, `pastor@`, `secretaria@` y una cuenta recién
+  registrada, también a 375 px:
+
+  - **Liderar da acceso, sin tocar el rol.** Antes hacían falta dos llaves:
+    nombrar responsable a alguien con rol `miembro` no le dejaba entrar al panel,
+    y le llegaban avisos con enlace al panel que rebotaban.
+    `gestionar_su_ministerio` es ahora defecto de todos los roles y el ámbito lo
+    pone el dato; `esDelEquipo` solo lo cuenta si de verdad lidera algo. Quien
+    solo lleva un ministerio aterriza en él, y el menú abre con «Lo que llevas».
+    Ojo: una cuenta con rol `lider` que no lidera nada ya no entra al panel.
+  - **El pastor activa, el líder configura.** Tipo y herramientas de un
+    ministerio solo los cambia el pastor o `gestionar_ministerios`; el líder ve
+    las dos cosas como texto y edita lo demás. Probado inyectando `tipo` y
+    `modulos` en el formulario: se ignoran.
+  - **Quién toca a quién.** El responsable solo lo quita o cambia el pastor. Los
+    colíderes los nombra y los quita el responsable o el pastor, no otro colíder:
+    si no, cualquier colíder metería gente en el panel sin que el pastor lo
+    sepa. Un colíder sí lleva a los voluntarios. Había tres puertas abiertas y
+    las tres están cerradas: quitar, cambiar papel y —la que nadie miraba—
+    «Asignar miembros», que reactivaba como voluntario también a quien ya estaba
+    activo. Probado mandando el id del responsable por esa puerta: sigue igual.
+  - **Guardar una ficha ya no quita cargos.** `editarMiembro` desactivaba todas
+    las filas de ministerio y las reinsertaba como voluntario: corregir el
+    teléfono del responsable dejaba al ministerio sin cabeza. Ahora compara, y
+    sacar a un líder desde su ficha queda para el pastor.
+  - **Enlazar la cuenta con la ficha que ya existía.** Aprobar insertaba siempre
+    una ficha nueva, así que el líder que el pastor ya tenía en el fichero
+    entraba sin sus ministerios. Al aprobar se ofrecen las fichas sin cuenta que
+    coinciden por correo o teléfono, sin ninguna marcada, con el aviso de que esos
+    datos los escribe quien pide entrar. Probado: una sola ficha, con su
+    ministerio, y sus consentimientos.
+  - **La casilla de asistencia también al solicitar** (migración `0040`).
+    Aprobar registraba el consentimiento general en la versión vigente sin el de
+    asistencia, y `miembrosSinPermisoDeAsistencia` lee esa combinación como «dijo
+    que no»: toda persona aprobada desaparecía de las listas sin haberlo dicho.
+    La solicitud guarda ahora la casilla y la versión que se leyó.
+  - **Herramientas en la app**: en `/mi/cuenta`, «Abrir herramientas» en cada
+    ministerio que la persona lleva.
+  - **La lista del ensayo respeta el permiso de asistencia**, y solo escribe en
+    reuniones de SU ministerio: antes un colíder podía mandar el id del culto del
+    domingo y pisar la asistencia de la congregación. Y al revés: `/panel/reuniones`
+    ya no abre ni escribe un ensayo (404). El seguimiento tampoco acepta ya a
+    quien negó el permiso.
+  - **Una cuenta en dos iglesias no cruza de una a otra.** La RLS deja escribir
+    en todas las iglesias donde la cuenta está activa, no solo en la del
+    contexto, y `puedeGestionarMinisterio` dejaba pasar al pastor con cualquier
+    id: el pastor de A vaciaba el equipo de un ministerio de B, donde es un
+    miembro más. Ahora `requireGestionMinisterio(Accion)` comprueba que el
+    ministerio es de la iglesia del contexto, y cada escritura de
+    `ministerio_miembros` filtra además por iglesia, igual que `darDeBaja`.
+  - **Guardar una ficha sin `ver_datos_sensibles` ya no borra** la fecha de
+    nacimiento, la dirección, el estado civil y las notas. Esos campos no se
+    pintan y no viajar es llegar como null; ahora se quedan fuera del UPDATE.
+- **Catálogo de módulos**: `/panel/modulos`, «Activa lo que usa tu iglesia».
+  Una tarjeta por tipo con sus herramientas; activar crea el ministerio con su
+  plantilla y lleva a él para nombrar responsable. Reconoce los ministerios
+  anteriores a la `0028`, que se guardaron como «Otro»: dice «Ya lo tienes» en
+  vez de crear un «Jóvenes 2». No tiene «Desactivar» a propósito: cerrar un
+  ministerio da de baja a todo su equipo y vive en su pantalla de editar.
 - **Ministerios que hacen algo, no solo se ven**: cada uno tiene un **tipo**
   (alabanza, consolidación, niños, evangelismo, acción social, medios…) que al
   elegirlo enciende sus **herramientas**, y misión, visión y objetivo. El
@@ -489,7 +550,11 @@ lee al arrancar.
 | Pieza | Estado |
 |---|---|
 | Proveedor de alojamiento en los legales | Relleno (Hostinger). Falta confirmar en hPanel el país del centro de datos: pone Alemania y la IP geolocaliza en Francia |
-| Módulos de ministerio | **Turnos y repertorio hechos.** Siguen material del equipo e inventario. Peticiones de oración y la ficha de los niños esperan una decisión legal: salud y menores |
+| Módulos de ministerio | **Turnos y repertorio hechos, y la base común (jerarquía, acceso del líder, catálogo).** Sigue la tanda 1, entrega de alimentos; el orden entero está en `docs/modulos/plan.md`. Peticiones de oración y la ficha de los niños esperan una decisión legal: salud y menores |
+| La secretaria no puede aprobar solicitudes | Tiene `aprobar_solicitudes` de salida, pero `iglesia_usuarios` solo admite UPDATE y DELETE del pastor (`0001`). Antes aprobaba a medias sin avisar; ahora la pantalla le dice que las aprueba el pastor. Arreglarlo es una función `security definer` que active o borre solo membresías pendientes |
+| El correo de una cuenta nueva no se verifica | `/crear-cuenta` la crea con `email_confirm: true`. Pesa más desde que aprobar puede enlazar con una ficha: por eso la pantalla avisa de que el correo y el teléfono no prueban nada |
+| El pastor que registra una iglesia sale de las listas | `crear-iglesia.ts` registra el consentimiento general vigente sin el de asistencia: el mismo fallo que tenía aprobar una solicitud. Hay que preguntarle la casilla en `/registro` |
+| Un módulo apagado sigue aceptando escrituras | `tieneModulo` solo se comprueba en los `layout.tsx`, que no corren en una action: quien lleva un equipo puede escribir en la agenda o el seguimiento apagados con un POST fabricado. Lo que escribe no se ve ni se puede borrar hasta que se encienda. Va con la tanda 1: una guarda común `exigirModulo()` junto a `requireGestionMinisterioAccion`, y que la use cada módulo |
 | Foto en la ficha de miembro | Va en OTRO bucket, privado y con URL firmada. El de iglesias es público |
 | Eventos y calendario | Hecho y verificado, con sus textos legales |
 | Área del miembro | Comunidad, devocional con vídeo, **agenda como calendario con sus turnos y lo que se toca cada domingo** y Biblia. Falta el material del equipo |
@@ -510,6 +575,20 @@ lee al arrancar.
 ---
 
 ## Trampas que ya han costado tiempo
+
+**Registrar el consentimiento general en la versión vigente equivale a decir
+«no» a la asistencia.** `miembrosSinPermisoDeAsistencia` se apoya en que esa
+versión solo se acepta en `/acepta`, donde también sale la casilla. Cualquier
+otro sitio que la escriba sin preguntar la casilla convierte el silencio en
+negativa. Lo hacían aprobar una solicitud (arreglado con la `0040`) y crear una
+iglesia (pendiente). Al escribir un consentimiento nuevo, mirar esto primero.
+
+**Una action que reactiva filas puede estar reescribiendo las activas.**
+`asignarAlMinisterio` buscaba las filas de esas personas sin filtrar por
+`activo` y les ponía `voluntario`: así un colíder degradaba al responsable sin
+pasar por las dos actions que vigilaban eso. Al cerrar una regla de quién toca
+a quién, buscar con grep TODAS las actions que escriben en esa tabla, no solo
+las que se llaman como la regla.
 
 **`drizzle-kit generate` arrastra lo que se escribió a mano.** La 0034 y la 0035
 se escribieron como migraciones a mano y su snapshot no recogió lo que creaban,

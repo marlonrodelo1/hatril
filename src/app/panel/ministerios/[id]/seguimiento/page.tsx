@@ -49,7 +49,7 @@ export default async function SeguimientoPage({
       />
 
       <Contenedor>
-        <PestanasMinisterio ministerio={ministerio} activa="seguimiento" />
+        <PestanasMinisterio ctx={ctx} ministerio={ministerio} activa="seguimiento" />
 
         {error && <Aviso>{error}</Aviso>}
         {guardado && CONFIRMACIONES[guardado] && (

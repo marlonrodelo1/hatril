@@ -17,10 +17,12 @@ import { esPastor, puede, puedeGestionarMinisterio } from '@/lib/auth/permisos';
 import {
   candidatosParaMinisterio,
   obtenerMinisterio,
+  type IntegranteEquipo,
 } from '@/lib/ministerios/consultas';
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { tipoDeMinisterio } from '@/lib/ministerios/tipos';
 import { iniciales } from '@/lib/format/iniciales';
+import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
 import {
   asignarAlMinisterio,
@@ -53,11 +55,11 @@ export default async function MinisterioPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ asignar?: string }>;
+  searchParams: Promise<{ asignar?: string; error?: string }>;
 }) {
   const ctx = await requireIglesia();
   const { id } = await params;
-  const { asignar } = await searchParams;
+  const { asignar, error } = await searchParams;
 
   const ministerio = await obtenerMinisterio(ctx, id);
   if (!ministerio) notFound();
@@ -66,10 +68,56 @@ export default async function MinisterioPage({
   // global de la iglesia. Es justo lo que compra `gestionar_su_ministerio`.
   const puedeGestionar = puedeGestionarMinisterio(ctx, id);
 
-  // Nombrar responsable no. A ese lo pone quien gobierna la iglesia: un líder
-  // acotado puede traer ayuda, no traspasar el mando y marcharse.
-  const puedeNombrarResponsable =
-    esPastor(ctx) || puede(ctx, 'gestionar_ministerios');
+  const esElPastor = esPastor(ctx);
+  const gobierna = esElPastor || puede(ctx, 'gestionar_ministerios');
+  const miRol =
+    ministerio.equipo.find((p) => p.miembroId === ctx.miembroId)?.rolEquipo ??
+    null;
+
+  /*
+   * Qué controles lleva cada fila.
+   *
+   * Son las reglas de `motivoParaNoQuitar` y `motivoParaNoCambiar`, en
+   * `../actions.ts`, más lo que HT104 rechaza en la base de datos. Están
+   * repetidas aquí porque un botón que solo devuelve un error no se enseña: un
+   * colíder no ve nada sobre el responsable ni sobre otros colíderes, y no le
+   * sale «hacer colíder» porque no puede nombrarlos. Si cambian allí, cambian
+   * aquí.
+   */
+  function controlesDe(p: IntegranteEquipo) {
+    if (!puedeGestionar) return null;
+    // Lo mismo que `YA_NO_LLEVAS`: sin gobernar, hay que mandar en ESTE equipo.
+    if (!gobierna && miRol !== 'responsable' && miRol !== 'colider') return null;
+
+    const esYo = p.miembroId === ctx.miembroId;
+    // HT104: nadie salvo el pastor se asciende a sí mismo.
+    const puedeAscenderle = !esYo || esElPastor;
+    const mandaSobreColideres = gobierna || miRol === 'responsable';
+
+    const controles = {
+      hacerColider:
+        p.rolEquipo === 'voluntario' && puedeAscenderle && mandaSobreColideres,
+      // Siendo él el responsable, nombrar a otro le bajaría a colíder en su
+      // propia fila, y HT104 se lo rechaza a todos menos al pastor.
+      hacerResponsable:
+        p.rolEquipo === 'colider' &&
+        gobierna &&
+        puedeAscenderle &&
+        (esElPastor || miRol !== 'responsable'),
+      // Bajarse uno mismo sí: solo le quita mando a quien lo pide.
+      quitarLiderazgo:
+        p.rolEquipo === 'colider' && (mandaSobreColideres || esYo),
+      quitar:
+        p.rolEquipo === 'responsable'
+          ? gobierna
+          : p.rolEquipo === 'colider'
+            ? mandaSobreColideres || esYo
+            : true,
+    };
+
+    // Sin ninguno, ni el hueco de la botonera.
+    return Object.values(controles).some(Boolean) ? controles : null;
+  }
 
   const color = colorDeMinisterio(ministerio.colorHex);
   const tipo = tipoDeMinisterio(ministerio.tipo);
@@ -120,7 +168,9 @@ export default async function MinisterioPage({
       </CabeceraPanel>
 
       <Contenedor>
-        <PestanasMinisterio ministerio={ministerio} activa="equipo" />
+        <PestanasMinisterio ctx={ctx} ministerio={ministerio} activa="equipo" />
+
+        {error && <Aviso>{error}</Aviso>}
 
         <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5 md:flex-row md:items-center md:gap-6 md:px-6">
           <span
@@ -317,85 +367,88 @@ export default async function MinisterioPage({
               Todavía no hay nadie en este equipo.
             </p>
           ) : (
-            ministerio.equipo.map((p) => (
-              <div
-                key={p.vinculoId}
-                className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
-              >
-                <span className="flex size-9 flex-none items-center justify-center rounded-full bg-muted text-[12.5px] font-bold text-muted-foreground">
-                  {iniciales(p.nombre)}
-                </span>
-
-                <div className="flex min-w-0 flex-1 flex-col gap-px">
-                  <Link
-                    href={`/panel/miembros?ficha=${p.miembroId}`}
-                    className="truncate text-[15px] font-semibold text-foreground no-underline hover:text-primary"
-                  >
-                    {p.nombre}
-                  </Link>
-                  {p.desde && (
-                    <span className="text-[12.5px] text-muted-foreground">
-                      Desde {formatearMesAno(p.desde)}
-                    </span>
-                  )}
-                </div>
-
-                {/* Quien manda lleva el color del ministerio; el resto, el gris
-                    neutro. Nada de mezclar `className` con un spread condicional
-                    que lo pisa: se decide arriba y se aplica una vez. */}
-                <span
-                  className={
-                    'whitespace-nowrap rounded-full px-2.5 py-[5px] text-[12px] font-semibold ' +
-                    (p.rolEquipo === 'voluntario'
-                      ? 'bg-muted text-muted-foreground'
-                      : '')
-                  }
-                  style={
-                    p.rolEquipo === 'voluntario'
-                      ? undefined
-                      : { background: color.suave, color: color.claro }
-                  }
+            ministerio.equipo.map((p) => {
+              const c = controlesDe(p);
+              const esYo = p.miembroId === ctx.miembroId;
+              return (
+                <div
+                  key={p.vinculoId}
+                  className="flex items-center gap-3 border-b border-border px-5 py-3 last:border-b-0"
                 >
-                  {p.rolEquipo === 'responsable'
-                    ? 'Responsable'
-                    : p.rolEquipo === 'colider'
-                      ? 'Colíder'
-                      : (p.rolEnMinisterio ?? 'Equipo')}
-                </span>
+                  <span className="flex size-9 flex-none items-center justify-center rounded-full bg-muted text-[12.5px] font-bold text-muted-foreground">
+                    {iniciales(p.nombre)}
+                  </span>
 
-                {puedeGestionar && (
-                  <div className="flex flex-none items-center gap-0.5">
-                    {/* Un formulario por acción, no uno con varios botones: con
-                        el `bind` de las server actions, dos submits en el mismo
-                        form comparten destino y el valor de `rolEquipo` acaba
-                        dependiendo de cuál pulsó el navegador. */}
-                    {p.rolEquipo === 'voluntario' && (
-                      <BotonRol
-                        accion={cambiarRolEnEquipo.bind(
-                          null,
-                          ministerio.id,
-                          p.miembroId,
-                        )}
-                        valor="colider"
-                        etiqueta={`Hacer a ${p.nombre} colíder del equipo`}
-                        Icono={ShieldPlus}
-                      />
+                  <div className="flex min-w-0 flex-1 flex-col gap-px">
+                    <Link
+                      href={`/panel/miembros?ficha=${p.miembroId}`}
+                      className="truncate text-[15px] font-semibold text-foreground no-underline hover:text-primary"
+                    >
+                      {p.nombre}
+                    </Link>
+                    {p.desde && (
+                      <span className="text-[12.5px] text-muted-foreground">
+                        Desde {formatearMesAno(p.desde)}
+                      </span>
                     )}
+                  </div>
 
-                    {p.rolEquipo === 'colider' && (
-                      <>
-                        {puedeNombrarResponsable && (
-                          <BotonRol
-                            accion={cambiarRolEnEquipo.bind(
-                              null,
-                              ministerio.id,
-                              p.miembroId,
-                            )}
-                            valor="responsable"
-                            etiqueta={`Hacer a ${p.nombre} responsable del equipo`}
-                            Icono={Star}
-                          />
-                        )}
+                  {/* Quien manda lleva el color del ministerio; el resto, el gris
+                      neutro. Nada de mezclar `className` con un spread condicional
+                      que lo pisa: se decide arriba y se aplica una vez. */}
+                  <span
+                    className={
+                      'whitespace-nowrap rounded-full px-2.5 py-[5px] text-[12px] font-semibold ' +
+                      (p.rolEquipo === 'voluntario'
+                        ? 'bg-muted text-muted-foreground'
+                        : '')
+                    }
+                    style={
+                      p.rolEquipo === 'voluntario'
+                        ? undefined
+                        : { background: color.suave, color: color.claro }
+                    }
+                  >
+                    {p.rolEquipo === 'responsable'
+                      ? 'Responsable'
+                      : p.rolEquipo === 'colider'
+                        ? 'Colíder'
+                        : (p.rolEnMinisterio ?? 'Equipo')}
+                  </span>
+
+                  {c && (
+                    <div className="flex flex-none items-center gap-0.5">
+                      {/* Un formulario por acción, no uno con varios botones: con
+                          el `bind` de las server actions, dos submits en el mismo
+                          form comparten destino y el valor de `rolEquipo` acaba
+                          dependiendo de cuál pulsó el navegador. */}
+                      {c.hacerColider && (
+                        <BotonRol
+                          accion={cambiarRolEnEquipo.bind(
+                            null,
+                            ministerio.id,
+                            p.miembroId,
+                          )}
+                          valor="colider"
+                          etiqueta={`Hacer a ${p.nombre} colíder del equipo`}
+                          Icono={ShieldPlus}
+                        />
+                      )}
+
+                      {c.hacerResponsable && (
+                        <BotonRol
+                          accion={cambiarRolEnEquipo.bind(
+                            null,
+                            ministerio.id,
+                            p.miembroId,
+                          )}
+                          valor="responsable"
+                          etiqueta={`Hacer a ${p.nombre} responsable del equipo`}
+                          Icono={Star}
+                        />
+                      )}
+
+                      {c.quitarLiderazgo && (
                         <BotonRol
                           accion={cambiarRolEnEquipo.bind(
                             null,
@@ -403,34 +456,48 @@ export default async function MinisterioPage({
                             p.miembroId,
                           )}
                           valor="voluntario"
-                          etiqueta={`Quitar a ${p.nombre} el liderazgo del equipo`}
+                          etiqueta={
+                            esYo
+                              ? 'Dejar el liderazgo del equipo'
+                              : `Quitar a ${p.nombre} el liderazgo del equipo`
+                          }
                           Icono={ShieldMinus}
                         />
-                      </>
-                    )}
-
-                    <form
-                      action={quitarDelMinisterio.bind(
-                        null,
-                        ministerio.id,
-                        p.miembroId,
                       )}
-                    >
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        size="icon-sm"
-                        title={`Quitar a ${p.nombre} del equipo`}
-                        aria-label={`Quitar a ${p.nombre} del equipo`}
-                        className="text-muted-foreground hover:bg-muted hover:text-foreground"
-                      >
-                        <UserMinus strokeWidth={1.7} />
-                      </Button>
-                    </form>
-                  </div>
-                )}
-              </div>
-            ))
+
+                      {c.quitar && (
+                        <form
+                          action={quitarDelMinisterio.bind(
+                            null,
+                            ministerio.id,
+                            p.miembroId,
+                          )}
+                        >
+                          <Button
+                            type="submit"
+                            variant="ghost"
+                            size="icon-sm"
+                            title={
+                              esYo
+                                ? 'Salir del equipo'
+                                : `Quitar a ${p.nombre} del equipo`
+                            }
+                            aria-label={
+                              esYo
+                                ? 'Salir del equipo'
+                                : `Quitar a ${p.nombre} del equipo`
+                            }
+                            className="text-muted-foreground hover:bg-muted hover:text-foreground"
+                          >
+                            <UserMinus strokeWidth={1.7} />
+                          </Button>
+                        </form>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
 
           {puedeGestionar && (

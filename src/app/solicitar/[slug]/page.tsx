@@ -13,7 +13,10 @@ import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS } from '@/lib/rgpd/consentimiento';
+import {
+  TEXTO_CONSENTIMIENTO_ASISTENCIA_Y_SEGUIMIENTO,
+  TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS,
+} from '@/lib/rgpd/consentimiento';
 
 export const metadata: Metadata = { title: 'Pedir unirme' };
 
@@ -194,6 +197,41 @@ export default async function SolicitarPage({
                   Leer la política de privacidad
                 </Link>
                 .
+              </span>
+            </label>
+
+            {/*
+             * La casilla de `/acepta`, con su título y su texto, y NO otra
+             * parecida: la versión que se guarda con la solicitud es la de ese
+             * texto, y dos redacciones bajo la misma etiqueta harían mentir al
+             * registro.
+             *
+             * Hace falta aquí porque sin ella aprobar dejaba a la persona con la
+             * política vigente aceptada y sin esta casilla, que es justo lo que
+             * `miembrosSinPermisoDeAsistencia` lee como «dijo que no».
+             *
+             * SIN `defaultChecked`, por lo mismo que en `/acepta`: el
+             * considerando 32 del RGPD dice que una casilla premarcada no es
+             * consentimiento. Y sin `required`: es opcional de verdad.
+             */}
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5 hover:bg-surface-active has-checked:border-primary has-checked:bg-accent">
+              <input type="checkbox" name="asistencia" className="mt-0.5" />
+              <span className="flex min-w-0 flex-col gap-1">
+                <span className="text-[14.5px] font-semibold">
+                  Que se apunte si vengo y lo que se habla conmigo
+                </span>
+                <span className="text-pretty text-[13.5px] leading-snug text-muted-foreground">
+                  {TEXTO_CONSENTIMIENTO_ASISTENCIA_Y_SEGUIMIENTO}
+                </span>
+                {/* La consecuencia de `/acepta`, dicha para quien todavía no
+                    está dentro: la iglesia puede tenerle ya en su fichero con
+                    asistencias apuntadas, y al unir la solicitud con esa ficha
+                    se borran si esto queda sin marcar. */}
+                <span className="text-pretty text-[13px] leading-snug text-muted-foreground">
+                  Puedes unirte igual sin marcarla. Entonces no sales en las
+                  listas de asistencia ni de seguimiento de la iglesia, y si ya
+                  tenían algo apuntado de ti en ellas, se borra.
+                </span>
               </span>
             </label>
 

@@ -46,7 +46,7 @@ export default async function AgendaPage({
       </CabeceraPanel>
 
       <Contenedor>
-        <PestanasMinisterio ministerio={ministerio} activa="agenda" />
+        <PestanasMinisterio ctx={ctx} ministerio={ministerio} activa="agenda" />
 
         {error && <Aviso>{error}</Aviso>}
         {guardado && CONFIRMACIONES[guardado] && (

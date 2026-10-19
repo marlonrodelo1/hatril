@@ -1,9 +1,12 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { and, eq, ne } from 'drizzle-orm';
 import { Trash2 } from 'lucide-react';
 
 import { requirePermiso } from '@/lib/auth/guard-panel';
-import { puedeVerDatosSensibles } from '@/lib/auth/permisos';
+import { esPastor, puede, puedeVerDatosSensibles } from '@/lib/auth/permisos';
+import { withUser } from '@/lib/db';
+import { ministerioMiembros } from '@/lib/db/schema';
 import { obtenerMiembro, listarMinisterios } from '@/lib/miembros/consultas';
 import { editarMiembro, darDeBaja } from '../../actions';
 import { FormularioMiembro } from '../../_components/formulario';
@@ -33,6 +36,24 @@ export default async function EditarMiembroPage({
   // mira. Distinguir los dos casos ya revelaría que esa persona está en la
   // iglesia, que es justo el dato protegido.
   if (!miembro) notFound();
+
+  // Dónde manda esta persona. Después del `notFound()` y no en el
+  // `Promise.all`: solo se pregunta por una ficha que quien mira puede ver.
+  const liderazgo = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({
+        ministerioId: ministerioMiembros.ministerioId,
+        rolEquipo: ministerioMiembros.rolEquipo,
+      })
+      .from(ministerioMiembros)
+      .where(
+        and(
+          eq(ministerioMiembros.miembroId, miembro.id),
+          eq(ministerioMiembros.activo, true),
+          ne(ministerioMiembros.rolEquipo, 'voluntario'),
+        ),
+      ),
+  );
 
   const nombreCompleto = [miembro.nombre, miembro.apellidos]
     .filter(Boolean)
@@ -65,6 +86,10 @@ export default async function EditarMiembroPage({
           accion={guardar}
           miembro={miembro}
           ministerios={ministerios}
+          liderazgo={liderazgo}
+          // La misma regla que aplica `editarMiembro`: aquí solo decide qué se
+          // pinta; lo que rechaza el guardado está en la action.
+          puedeSacarLideres={esPastor(ctx) || puede(ctx, 'gestionar_ministerios')}
           puedeVerSensibles={puedeVerDatosSensibles(ctx)}
           error={error}
         />

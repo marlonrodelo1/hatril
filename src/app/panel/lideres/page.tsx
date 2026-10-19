@@ -14,7 +14,9 @@ import {
   ETIQUETAS_PERMISOS,
   ETIQUETAS_ROLES,
   PERMISOS,
+  PERMISOS_DE_TODOS,
   ROLES_IGLESIA,
+  type Permiso,
 } from '@/lib/auth/permisos';
 import { listarEquipo, type FilaEquipo } from '@/lib/equipo/consultas';
 import { iniciales } from '@/lib/format/iniciales';
@@ -32,6 +34,21 @@ import {
 export const metadata: Metadata = { title: 'Líderes' };
 
 /**
+ * Los permisos que el pastor reparte persona a persona: todos menos los que
+ * trae cualquier rol.
+ *
+ * Los de todos no entran en el recuento —con `gestionar_su_ministerio` dentro,
+ * cada miembro raso salía «1 de 12» sin que nadie le hubiera dado nada— y se
+ * pintan aparte, debajo, para que el número cuadre con las casillas que tiene
+ * encima. Siguen en el mismo formulario: su casilla tiene que poder
+ * desmarcarse, y sin viajar en el FormData `guardarPermisos` la leería como
+ * desmarcada cada vez.
+ */
+const PERMISOS_A_REPARTIR = PERMISOS.filter(
+  (p) => !PERMISOS_DE_TODOS.includes(p),
+);
+
+/**
  * Cuántos permisos tiene concedidos, para el resumen del desplegable.
  *
  * Se cuenta sobre el mapa EFECTIVO —el que ya incluye los defectos del rol—,
@@ -39,7 +56,7 @@ export const metadata: Metadata = { title: 'Líderes' };
  * del jsonb diría «0 de 6» de una secretaría que puede casi todo.
  */
 function contarConcedidos(p: FilaEquipo): number {
-  return PERMISOS.filter((permiso) => p.permisos[permiso]).length;
+  return PERMISOS_A_REPARTIR.filter((permiso) => p.permisos[permiso]).length;
 }
 
 const CONFIRMACIONES: Record<string, string> = {
@@ -313,34 +330,31 @@ function TarjetaPersona({ persona: p }: { persona: FilaEquipo }) {
             >
               <span className="t-micro">
                 Además de su rol, puede · {contarConcedidos(p)} de{' '}
-                {PERMISOS.length}
+                {PERMISOS_A_REPARTIR.length}
               </span>
 
               <div className="flex flex-col gap-3">
-                {PERMISOS.map((permiso) => (
-                  <label
+                {PERMISOS_A_REPARTIR.map((permiso) => (
+                  <CasillaPermiso
                     key={permiso}
-                    className="flex cursor-pointer items-start gap-2.5"
-                  >
-                    {/* Casilla nativa, la restilizada en `globals.css`. Tiene
-                        que viajar en el FormData de la server action. */}
-                    <input
-                      type="checkbox"
-                      name={permiso}
-                      defaultChecked={p.permisos[permiso]}
-                      className="mt-0.5 flex-none"
-                    />
-                    <span className="flex flex-col gap-0.5">
-                      <span className="text-[14.5px] font-semibold leading-snug">
-                        {ETIQUETAS_PERMISOS[permiso].titulo}
-                      </span>
-                      <span className="text-pretty text-[13px] leading-relaxed text-muted-foreground">
-                        {ETIQUETAS_PERMISOS[permiso].descripcion}
-                      </span>
-                    </span>
-                  </label>
+                    permiso={permiso}
+                    marcado={p.permisos[permiso]}
+                  />
                 ))}
               </div>
+
+              {PERMISOS_DE_TODOS.length > 0 && (
+                <div className="flex flex-col gap-3 border-t border-border pt-3">
+                  <span className="t-micro">Viene puesto para todos</span>
+                  {PERMISOS_DE_TODOS.map((permiso) => (
+                    <CasillaPermiso
+                      key={permiso}
+                      permiso={permiso}
+                      marcado={p.permisos[permiso]}
+                    />
+                  ))}
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center gap-2.5">
                 <Button type="submit" variant="outline">
@@ -373,5 +387,34 @@ function TarjetaPersona({ persona: p }: { persona: FilaEquipo }) {
       )}
       </div>
     </details>
+  );
+}
+
+function CasillaPermiso({
+  permiso,
+  marcado,
+}: {
+  permiso: Permiso;
+  marcado: boolean;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-2.5">
+      {/* Casilla nativa, la restilizada en `globals.css`. Tiene que viajar en
+          el FormData de la server action. */}
+      <input
+        type="checkbox"
+        name={permiso}
+        defaultChecked={marcado}
+        className="mt-0.5 flex-none"
+      />
+      <span className="flex flex-col gap-0.5">
+        <span className="text-[14.5px] font-semibold leading-snug">
+          {ETIQUETAS_PERMISOS[permiso].titulo}
+        </span>
+        <span className="text-pretty text-[13px] leading-relaxed text-muted-foreground">
+          {ETIQUETAS_PERMISOS[permiso].descripcion}
+        </span>
+      </span>
+    </label>
   );
 }

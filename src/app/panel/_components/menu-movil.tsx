@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
 import { ExternalLink, Menu, X } from 'lucide-react';
 
-import { construirMenu } from '@/lib/panel/secciones';
+import { construirMenu, hrefActivo } from '@/lib/panel/secciones';
 import type { FlagsDelMenu } from '@/lib/panel/menu';
 import { MarcaIglesia } from './marca-iglesia';
 
@@ -68,6 +68,9 @@ export function MenuMovil({
   }
 
   const bloques = construirMenu(flags);
+  // La misma regla que el lateral, y de la misma función: el porqué, en
+  // `hrefActivo`.
+  const activo = hrefActivo(bloques, pathname);
 
   return (
     <Dialog.Root open={abierto} onOpenChange={setAbierto}>
@@ -122,9 +125,8 @@ export function MenuMovil({
                   </span>
                 )}
 
-                {bloque.secciones.map(({ href, etiqueta, Icono, aviso }) => {
-                  const activa =
-                    pathname === href || pathname.startsWith(`${href}/`);
+                {bloque.secciones.map(({ href, etiqueta, Icono, punto, aviso }) => {
+                  const activa = href === activo;
 
                   return (
                     <Link
@@ -138,8 +140,25 @@ export function MenuMovil({
                           : 'font-medium text-muted-foreground')
                       }
                     >
-                      <Icono className="size-[19px] flex-none" strokeWidth={1.7} />
-                      {etiqueta}
+                      {Icono ? (
+                        <Icono className="size-[19px] flex-none" strokeWidth={1.7} />
+                      ) : (
+                        // En la caja de un icono, para que el texto no se
+                        // desalinee del resto del menú.
+                        <span
+                          aria-hidden
+                          className="flex size-[19px] flex-none items-center justify-center"
+                        >
+                          <span
+                            className="size-2 rounded-full"
+                            style={{ backgroundColor: punto }}
+                          />
+                        </span>
+                      )}
+                      {/* Truncado porque el nombre de un ministerio lo escribe
+                          la iglesia y puede ser largo; en dos líneas no cabe en
+                          la altura fija del enlace. */}
+                      <span className="truncate">{etiqueta}</span>
                       {aviso > 0 && (
                         <span
                           aria-label={`${aviso} sin revisar`}

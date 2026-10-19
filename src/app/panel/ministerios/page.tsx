@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ChevronRight, HandHeart, Plus } from 'lucide-react';
+import { Blocks, ChevronRight, HandHeart, Plus } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { esPastor, puede } from '@/lib/auth/permisos';
@@ -45,11 +45,23 @@ export default async function MinisteriosPage({
             : `${resumen.equipos} ${resumen.equipos === 1 ? 'equipo' : 'equipos'} · ${resumen.personasSirviendo} ${resumen.personasSirviendo === 1 ? 'persona sirviendo' : 'personas sirviendo'}`
         }
       >
+        {/* El catálogo, en `outline` al lado del naranja: es la otra puerta para
+            lo mismo —crear un equipo—, y la más rápida si el ministerio es uno
+            de los habituales. Mismo permiso que crear, porque es crear. */}
         {puedeGestionar && (
-          <Button render={<Link href="/panel/ministerios/nuevo" />}>
-            <Plus strokeWidth={1.9} />
-            Crear ministerio
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              render={<Link href="/panel/modulos" />}
+            >
+              <Blocks strokeWidth={1.9} />
+              Módulos
+            </Button>
+            <Button render={<Link href="/panel/ministerios/nuevo" />}>
+              <Plus strokeWidth={1.9} />
+              Crear ministerio
+            </Button>
+          </>
         )}
       </CabeceraPanel>
 

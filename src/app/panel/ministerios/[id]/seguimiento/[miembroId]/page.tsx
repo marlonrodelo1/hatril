@@ -53,6 +53,12 @@ export default async function PersonaEnSeguimientoPage({
   // la lista. Dos consultas distintas para la misma pregunta acaban dando
   // respuestas distintas, y aquí la respuesta es a quién se le puede leer el
   // seguimiento.
+  //
+  // De aquí sale también el 404 para quien negó el permiso de asistencia —la
+  // lista lo filtra—, que es lo que `/privacidad` §4 promete. Cambiar esto por
+  // una consulta directa contra `miembros` reabriría su ficha con su uuid. Las
+  // actions preguntan lo mismo con `estaEnSeguimiento()`, que tira de la misma
+  // función.
   const persona = (await personasPorFaltas(ctx, id)).find(
     (p) => p.miembroId === miembroId,
   );

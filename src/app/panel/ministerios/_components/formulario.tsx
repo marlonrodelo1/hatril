@@ -40,6 +40,13 @@ import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
  * el pastor vería unas casillas que ignoran el desplegable que tiene justo
  * encima. Un control que no responde a lo que hay al lado se lee como un fallo.
  *
+ * EL TIPO Y LAS HERRAMIENTAS LOS ELIGE EL PASTOR
+ * ----------------------------------------------
+ * O quien tenga `gestionar_ministerios`. Al responsable y a los colíderes se
+ * les pintan como texto: ven qué tienen encendido y a quién pedírselo, pero no
+ * un control que el servidor iba a ignorar. `editarMinisterio` no los guarda
+ * cuando quien envía es un líder acotado, así que esto decide solo lo que se ve.
+ *
  * Todo entrada nativa —`select`, `radio`, `checkbox`— porque este formulario
  * viaja en el `FormData` de una server action. Los de Base UI guardan el valor
  * en estado de React y exigirían un input oculto detrás de cada uno.
@@ -48,13 +55,28 @@ export function FormularioMinisterio({
   accion,
   ministerio,
   error,
+  puedeCambiarHerramientas = true,
 }: {
   accion: (formData: FormData) => Promise<void>;
   ministerio?: MinisterioDetalle;
   error?: string;
+  /**
+   * Si quien edita elige el tipo y enciende o apaga herramientas. Por defecto
+   * sí, porque el alta solo la abre quien tiene `gestionar_ministerios`.
+   */
+  puedeCambiarHerramientas?: boolean;
 }) {
   const colorActual = ministerio?.colorHex ?? COLORES_MINISTERIO[0].hex;
   const tipoActual = tipoDeMinisterio(ministerio?.tipo);
+
+  // En el alta no hay nada que leer: el texto solo tiene sentido al editar.
+  const soloLectura = Boolean(ministerio) && !puedeCambiarHerramientas;
+
+  // Lo que el equipo tiene encendido DE VERDAD, no la plantilla. A un
+  // ministerio sin configurar el formulario del pastor le propone la de su tipo
+  // —es una sugerencia para quien puede guardarla—; al líder se la contaría
+  // como hecha, y luego no vería esas pestañas.
+  const encendidas = ministerio ? modulosActivos(ministerio.modulos) : [];
 
   // Un ministerio anterior a esta columna tiene `{}`, y le toca la plantilla de
   // su tipo. Uno que apagó las casillas a mano tiene las claves escritas con
@@ -83,26 +105,36 @@ export function FormularioMinisterio({
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="tipo">De qué va</Label>
-          <select
-            id="tipo"
-            name="tipo"
-            defaultValue={tipoActual.id}
-            className="h-[42px] rounded-lg border border-input bg-surface-alt px-3 text-[15px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
-          >
-            {TIPOS_MINISTERIO.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.nombre}
-              </option>
-            ))}
-          </select>
-          <p className="t-label text-muted-foreground">
-            {ministerio
-              ? tipoActual.descripcion
-              : 'Decide qué herramientas trae encendidas de salida. Luego las cambias cuando quieras.'}
-          </p>
-        </div>
+        {soloLectura ? (
+          <div className="flex flex-col gap-1.5">
+            <span className="t-label">De qué va</span>
+            <span className="text-[15px] font-semibold">{tipoActual.nombre}</span>
+            <p className="t-label text-muted-foreground">
+              {tipoActual.descripcion}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="tipo">De qué va</Label>
+            <select
+              id="tipo"
+              name="tipo"
+              defaultValue={tipoActual.id}
+              className="h-[42px] rounded-lg border border-input bg-surface-alt px-3 text-[15px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
+            >
+              {TIPOS_MINISTERIO.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nombre}
+                </option>
+              ))}
+            </select>
+            <p className="t-label text-muted-foreground">
+              {ministerio
+                ? tipoActual.descripcion
+                : 'Decide qué herramientas trae encendidas de salida. Luego las cambias cuando quieras.'}
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="descripcion">
@@ -232,12 +264,40 @@ export function FormularioMinisterio({
         <div className="flex flex-col gap-0.5">
           <h2 className="t-subtitulo">Herramientas del equipo</h2>
           <p className="t-label text-muted-foreground">
-            No todos los ministerios hacen lo mismo. Enciende solo lo que este
-            vaya a usar.
+            {soloLectura
+              ? 'Las enciende y las apaga el pastor. Si al equipo le falta alguna, pídesela.'
+              : 'No todos los ministerios hacen lo mismo. Enciende solo lo que este vaya a usar.'}
           </p>
         </div>
 
-        {ministerio ? (
+        {soloLectura ? (
+          encendidas.length > 0 ? (
+            <ul className="flex flex-col gap-2.5">
+              {encendidas.map((m) => (
+                <li
+                  key={m.id}
+                  className="flex flex-col gap-0.5 rounded-lg border border-border bg-surface-alt p-3.5"
+                >
+                  <span className="flex items-center gap-2 text-[15px] font-semibold">
+                    <m.Icono
+                      className="size-4 text-muted-foreground"
+                      strokeWidth={1.9}
+                      aria-hidden
+                    />
+                    {m.nombre}
+                  </span>
+                  <span className="text-pretty text-[13.5px] leading-snug text-muted-foreground">
+                    {m.descripcion}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-pretty text-[14px] leading-relaxed text-muted-foreground">
+              Este ministerio no tiene ninguna encendida todavía.
+            </p>
+          )
+        ) : ministerio ? (
           <div className="flex flex-col gap-2.5">
             {MODULOS_MINISTERIO.map((m) => (
               <label

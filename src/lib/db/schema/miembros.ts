@@ -134,6 +134,37 @@ export const solicitudesIngreso = pgTable(
     telefono: text('telefono'),
     mensaje: text('mensaje'),
 
+    /**
+     * La casilla de asistencia y seguimiento, la misma de `/acepta`, tal como la
+     * dejó al enviar. Al aprobar se convierte en una fila de `consentimientos`
+     * —o no— porque hasta entonces no hay ficha a la que colgarla.
+     *
+     * Existe porque aprobar registraba el consentimiento general en la versión
+     * vigente y ninguno de asistencia, y `miembrosSinPermisoDeAsistencia` lee
+     * esa combinación como «lo vio en `/acepta` y dijo que no». Toda persona
+     * aprobada desaparecía de las listas sin haber dicho nada.
+     *
+     * NULL, y no `default false`, a propósito: NULL es «no se le preguntó», el
+     * caso de las solicitudes enviadas antes de la `0040`. Un `false` por defecto
+     * las habría convertido en un «no» que nadie dijo, y al enlazar ese «no»
+     * borra el historial de la ficha. `/solicitar` siempre escribe true o false.
+     */
+    aceptaAsistencia: boolean('acepta_asistencia'),
+    /**
+     * `VERSION_POLITICA_PRIVACIDAD` cuando la envió: a qué texto dijo que sí.
+     *
+     * Aprobar puede llegar semanas después, con la política ya cambiada.
+     * Registrar entonces la versión vigente diría que aceptó un texto que no
+     * leyó, y además le ahorraría `/acepta`, que es quien se lo pregunta otra
+     * vez. Con la suya, si se ha quedado vieja, la pantalla salta sola.
+     *
+     * NULL es «no consta», y aprobar no registra nada con él. Lo tienen las
+     * filas que no pasaron por `/solicitar` después de la `0040` —la semilla—
+     * y, a propósito, las enviadas entre la subida a `privacidad-2026-09` y la
+     * `0040`: la migración cuenta por qué.
+     */
+    versionTexto: text('version_texto'),
+
     estado: estadoSolicitudEnum('estado').notNull().default('pendiente'),
     revisadoPor: uuid('revisado_por'),
     revisadoAt: timestamp('revisado_at', { withTimezone: true }),

@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ExternalLink, HandCoins, LogOut } from 'lucide-react';
+import { ExternalLink, HandCoins, LayoutDashboard, LogOut } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
+import { puedeGestionarMinisterio } from '@/lib/auth/permisos';
 import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { misMinisterios } from '@/lib/ministerios/consultas';
 import { donativosDeMiIglesia } from '@/lib/iglesias/donativos';
@@ -105,6 +106,26 @@ export default async function MiCuentaPage() {
                           {m.objetivo}
                         </p>
                       </div>
+                    )}
+                    {/*
+                     * Directo al ministerio y no a `/panel/hoy`, que es donde
+                     * deja «Ir al panel» del menú: quien lleva un equipo viene a
+                     * lo suyo. Una entrada para todos sus módulos.
+                     *
+                     * Con `puedeGestionarMinisterio` y no `esDelEquipo`: el
+                     * voluntario que lleva la caja entra al panel, pero en ESTE
+                     * equipo no tiene herramientas. En contorno porque con dos
+                     * ministerios serían dos naranjas, y se admite uno.
+                     */}
+                    {puedeGestionarMinisterio(ctx, m.id) && (
+                      <Button
+                        variant="outline"
+                        className="self-start"
+                        render={<Link href={`/panel/ministerios/${m.id}`} />}
+                      >
+                        <LayoutDashboard strokeWidth={1.8} />
+                        Abrir herramientas
+                      </Button>
                     )}
                   </li>
                 );

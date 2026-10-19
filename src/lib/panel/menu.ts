@@ -8,6 +8,7 @@ import {
   puede,
   puedeGestionarEventos,
   puedeGestionarFinanzas,
+  puedeGestionarMinisterio,
 } from '@/lib/auth/permisos';
 import { contarSolicitudesPendientes } from '@/lib/solicitudes/consultas';
 import { misTurnosPendientes } from '@/lib/devocionales/consultas';
@@ -41,6 +42,13 @@ export type FlagsDelMenu = {
   puedeVerEventos: boolean;
   puedeVerReuniones: boolean;
   esPastorDeLaIglesia: boolean;
+  /**
+   * Los ministerios del bloque «Lo que llevas». Viajan como datos y no como
+   * secciones ya montadas porque esto cruza al cliente como prop, y las
+   * secciones llevan un componente de icono, que no se puede serializar.
+   */
+  ministeriosQueLlevo: { id: string; nombre: string; colorHex: string }[];
+  puedeActivarModulos: boolean;
 };
 
 export const flagsDelMenu = cache(
@@ -75,6 +83,17 @@ export const flagsDelMenu = cache(
       // envolviera este `||` sería una indirección sin nada dentro.
       puedeVerReuniones: esPastor(ctx) || puede(ctx, 'registrar_asistencia'),
       esPastorDeLaIglesia: esPastor(ctx),
+      // Los que lidera Y puede llevar desde aquí. Coinciden salvo con quien el
+      // pastor desmarcó `gestionar_su_ministerio` a mano: el equipo sigue siendo
+      // suyo, pero el enlace le llevaría a una pantalla de solo lectura
+      // presentada como «lo que llevas».
+      ministeriosQueLlevo: ctx.ministeriosQueLlevo.filter((m) =>
+        puedeGestionarMinisterio(ctx, m.id),
+      ),
+      // Qué herramientas existen en la iglesia lo decide quien gobierna los
+      // ministerios, no quien lleva uno: el líder configura lo de dentro del
+      // suyo. Es el mismo par que nombra responsable en la ficha del ministerio.
+      puedeActivarModulos: esPastor(ctx) || puede(ctx, 'gestionar_ministerios'),
     };
   },
 );

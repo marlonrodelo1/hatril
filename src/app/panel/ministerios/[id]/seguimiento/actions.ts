@@ -17,6 +17,8 @@ import {
   viaContactoEnum,
 } from '@/lib/db/schema/seguimiento';
 import { campo, campoObligatorio } from '@/lib/api/formulario';
+import { estaEnSeguimiento } from '@/lib/seguimiento/consultas';
+import type { UserContext } from '@/lib/auth/user-context';
 
 /**
  * El seguimiento de personas.
@@ -46,6 +48,25 @@ function volver(mensaje: string, destino: string): never {
 async function permiso(ministerioId: string) {
   await requirePermisoAccion('ver_seguimiento', DESTINO);
   return requireGestionMinisterioAccion(ministerioId);
+}
+
+/**
+ * La tercera puerta, la de la persona: solo se escribe sobre quien sale en la
+ * lista. El porqué —el permiso de asistencia— está en `estaEnSeguimiento()`.
+ *
+ * El mensaje no dice por qué no está, y es deliberado. Haber negado el permiso
+ * también es un dato de esa persona, y la lista la omite sin explicarlo: la
+ * action no puede contar más que la pantalla. Vuelve al listado y no a la ficha,
+ * que para esa persona da 404.
+ */
+async function exigirEnLaLista(
+  ctx: UserContext,
+  ministerioId: string,
+  miembroId: string,
+) {
+  if (!(await estaEnSeguimiento(ctx, ministerioId, miembroId))) {
+    volver('Esa persona no está en la lista de seguimiento.', base(ministerioId));
+  }
 }
 
 const EsquemaContacto = z.object({
@@ -91,6 +112,8 @@ export async function registrarContacto(
 
   const d = parsed.data;
   const destino = `${base(ministerioId)}/${d.miembroId}`;
+
+  await exigirEnLaLista(ctx, ministerioId, d.miembroId);
 
   // Sin ficha no se puede firmar, y la policy lo rechazaría con un 500 seco.
   // Es un caso real: una cuenta puede existir sin `miembros` asociado.
@@ -151,6 +174,11 @@ export async function asignarAcompanante(
   if (responsable && !z.string().uuid().safeParse(responsable).success) {
     volver('Revisa a quién le asignas esta persona.', destino);
   }
+
+  // También al QUITAR la asignación, aunque desactivar no cree nada: a quien no
+  // está en la lista la pantalla no le ofrece este formulario, así que una
+  // petición así solo puede ser fabricada, y no hay por qué atenderla a medias.
+  await exigirEnLaLista(ctx, ministerioId, miembroId);
 
   try {
     await withUser(ctx.user.id, async (tx) => {
