@@ -195,6 +195,26 @@ export default function PrivacidadPage() {
           y no te damos de alta en el fichero de la congregación.
         </P>
         <P>
+          De quien recibe alimentos u otra ayuda en el reparto de una iglesia, si
+          acepta que se le apunte: el nombre con el que quiera que le llamen,
+          cuántas personas viven en su casa, su teléfono si lo da, un número para
+          llamarle en la puerta, y qué días vino, a qué hora y si se le entregó.
+          Además, la fecha en que dio su permiso, qué texto se le leyó, y quién
+          de la iglesia le apuntó y le marcó cada vez.{' '}
+          <strong className="font-semibold">
+            No hay ningún campo para escribir nada más
+          </strong>{' '}
+          —ni documento, ni dirección, ni ingresos, ni notas—, y tampoco se
+          guardan la IP ni el navegador: se apunta en el móvil de quien está en
+          la puerta, y serían los suyos. Estar en esa lista no te hace miembro de
+          la iglesia ni te da de alta en su fichero, y{' '}
+          <strong className="font-semibold">
+            solo la ven el pastor y quienes sirven en ese reparto
+          </strong>
+          , no el resto de la congregación. Eso lo impone la base de datos, no
+          solo la pantalla.
+        </P>
+        <P>
           Del dinero de la iglesia guardamos lo que entra y lo que sale: importe,
           concepto y fecha, y si una ofrenda fue diezmo o donativo para poder
           sumarlos por separado.{' '}
@@ -269,6 +289,20 @@ export default function PrivacidadPage() {
           congregación. Usamos tus datos para organizar ese evento y para avisarte
           si cambia o se cancela, y para nada más: ni te apuntamos a una lista de
           correo, ni te escribimos por otra cosa.
+        </P>
+        <P>
+          <strong className="font-semibold">
+            Si recibes ayuda de un reparto
+          </strong>{' '}
+          la única base es también tu consentimiento, y lo das de palabra: quien
+          está en la puerta te lee qué se guarda y para qué, y si dices que sí, lo
+          apunta junto con la fecha y el texto exacto que te leyó. Tus datos sirven
+          para organizar el reparto y para nada más.{' '}
+          <strong className="font-semibold">
+            La ayuda no depende de que los des
+          </strong>
+          : si no quieres que te apunten, te la llevas igual, y lo único que se
+          cuenta es que se entregó una más, sin nombre.
         </P>
         <P>
           Retirar el consentimiento no tiene más consecuencia que dejar de
@@ -352,6 +386,16 @@ export default function PrivacidadPage() {
               momento
             </strong>
             .
+          </li>
+          <li>
+            Si te apuntaron en un reparto, tus datos se guardan mientras sigas
+            viniendo. Cuando pasa un año desde la última vez que viniste —o desde
+            que te apuntaron, si no llegaste a venir—, la iglesia los borra: tiene
+            un botón para hacerlo de una vez, porque no hay ninguna tarea
+            automática que lo haga. Si pides que te borren antes, se hace en el
+            momento desde la misma pantalla: se van tu nombre, tu teléfono, tu
+            número y el registro de tu permiso. Lo que se te entregó otros días se
+            queda solo como una cifra, sin nada que diga que eras tú.
           </li>
           <li>
             Si una iglesia deja Hatril, sus datos se eliminan a los 60 días de

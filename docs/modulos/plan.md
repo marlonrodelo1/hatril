@@ -16,8 +16,10 @@ Además de lo de la sección 0 se cerraron, al revisarla, una cuenta en dos
 iglesias cruzando de una a otra, guardar una ficha borrando los datos
 protegidos y `/panel/reuniones` escribiendo en ensayos. Y se decidió una regla
 que no estaba: **los colíderes los nombra el responsable o el pastor**, no otro
-colíder. **Siguiente:** la tanda 1, entrega de alimentos, que trae además la
-guarda común `exigirModulo()` (ver «Qué falta» en `ESTADO.md`).
+colíder. **Hecho también:** la tanda 1, el reparto en su v1 «solo la puerta» (20-oct),
+con `exigirModulo()` en las actions de todos los módulos. Sale con la `0042` y
+coge HT126 y HT127, así que la siguiente migración es la **0043** y el siguiente
+código **HT128**. **Siguiente:** la tanda 2, alabanza.
 
 ---
 

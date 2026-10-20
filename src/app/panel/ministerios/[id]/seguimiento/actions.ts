@@ -6,13 +6,13 @@ import { and, eq, isNull, ne } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
+  exigirModulo,
   requireGestionMinisterioAccion,
   requirePermisoAccion,
 } from '@/lib/auth/guard-panel';
 import { withUser } from '@/lib/db';
 import {
   miembros,
-  ministerios,
   seguimientoAsignaciones,
   seguimientoContactos,
 } from '@/lib/db/schema';
@@ -24,7 +24,6 @@ import {
 import { campo, campoObligatorio, casilla } from '@/lib/api/formulario';
 import { sumarDias } from '@/lib/agenda/horarios';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
-import { tieneModulo } from '@/lib/ministerios/modulos';
 import {
   DIAS_EN_NUEVOS,
   estaEnSeguimiento,
@@ -57,36 +56,14 @@ function volver(mensaje: string, destino: string): never {
 }
 
 /**
- * Los dos guards, siempre juntos y siempre en este orden, y el módulo.
- *
- * El módulo encendido es la tercera llave del `layout.tsx`, y hasta ahora solo
- * protegía lo que se PINTA: con el seguimiento apagado, un POST a estas actions
- * seguía apuntando contactos en un ministerio que ya no hace seguimiento.
- *
- * Pasará a `exigirModulo()` cuando se fusione la tanda 1 de
- * `docs/modulos/plan.md`, que trae esa guarda común. Hasta entonces, la misma
- * comprobación escrita aquí.
+ * Los guards, siempre juntos y siempre en este orden. El tercero, que el
+ * seguimiento esté encendido en ESE ministerio, solo lo miraba el `layout.tsx`,
+ * que no corre en una server action.
  */
 async function permiso(ministerioId: string) {
   await requirePermisoAccion('ver_seguimiento', DESTINO);
   const ctx = await requireGestionMinisterioAccion(ministerioId);
-
-  const [fila] = await withUser(ctx.user.id, (tx) =>
-    tx
-      .select({ modulos: ministerios.modulos })
-      .from(ministerios)
-      .where(
-        and(
-          eq(ministerios.id, ministerioId),
-          eq(ministerios.iglesiaId, ctx.iglesia.id),
-        ),
-      )
-      .limit(1),
-  );
-  if (!fila || !tieneModulo(fila.modulos, 'seguimiento')) {
-    volver('Este ministerio no tiene el seguimiento encendido.', DESTINO);
-  }
-
+  await exigirModulo(ctx, ministerioId, 'seguimiento');
   return ctx;
 }
 

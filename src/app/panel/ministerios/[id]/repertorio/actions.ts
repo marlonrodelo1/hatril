@@ -5,7 +5,10 @@ import { revalidatePath } from 'next/cache';
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { requireGestionMinisterioAccion } from '@/lib/auth/guard-panel';
+import {
+  exigirModulo,
+  requireGestionMinisterioAccion,
+} from '@/lib/auth/guard-panel';
 import { withUser } from '@/lib/db';
 import { canciones, turnoCanciones } from '@/lib/db/schema';
 import { esGuardHatril, isUniqueViolation, pgErrorCode } from '@/lib/db/error';
@@ -31,6 +34,28 @@ const repertorioDe = (ministerioId: string) =>
 
 const turnoDe = (ministerioId: string, turnoId: string) =>
   `/panel/ministerios/${ministerioId}/turnos/${turnoId}`;
+
+/**
+ * Las puertas de cada action de este fichero: quién manda en ESTE equipo, y que
+ * el repertorio esté encendido. La segunda la cubría solo el `layout.tsx`, que
+ * no corre en una server action.
+ */
+async function guarda(ministerioId: string) {
+  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  await exigirModulo(ctx, ministerioId, 'repertorio');
+  return ctx;
+}
+
+/**
+ * La lista de un culto vive en la pantalla del turno, así que pide las DOS
+ * herramientas: con los turnos apagados no hay turno donde colgarla, y con el
+ * repertorio apagado la ficha del turno ni siquiera pinta la lista.
+ */
+async function guardaDeLaLista(ministerioId: string) {
+  const ctx = await guarda(ministerioId);
+  await exigirModulo(ctx, ministerioId, 'turnos');
+  return ctx;
+}
 
 function volver(mensaje: string, destino: string): never {
   redirect(`${destino}?error=${encodeURIComponent(mensaje)}`);
@@ -76,7 +101,7 @@ function leerCancion(formData: FormData) {
 // ===========================================================================
 
 export async function crearCancion(ministerioId: string, formData: FormData) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const base = repertorioDe(ministerioId);
 
   const leido = leerCancion(formData);
@@ -118,7 +143,7 @@ export async function editarCancion(
   cancionId: string,
   formData: FormData,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const destino = `${repertorioDe(ministerioId)}/${cancionId}`;
 
   const leido = leerCancion(formData);
@@ -162,7 +187,7 @@ export async function archivarCancion(
   cancionId: string,
   archivar: boolean,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const destino = `${repertorioDe(ministerioId)}/${cancionId}`;
 
   await withUser(ctx.user.id, (tx) =>
@@ -190,7 +215,7 @@ export async function archivarCancion(
  * historia del equipo.
  */
 export async function borrarCancion(ministerioId: string, cancionId: string) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const base = repertorioDe(ministerioId);
 
   try {
@@ -233,7 +258,7 @@ export async function agregarCancionAlTurno(
   turnoId: string,
   formData: FormData,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guardaDeLaLista(ministerioId);
   const destino = turnoDe(ministerioId, turnoId);
 
   const leido = EsquemaElegir.safeParse({
@@ -281,7 +306,7 @@ export async function quitarCancionDelTurno(
   turnoId: string,
   filaId: string,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guardaDeLaLista(ministerioId);
   const destino = turnoDe(ministerioId, turnoId);
 
   if (!(await turnoEsDelMinisterio(ctx, turnoId, ministerioId))) {
@@ -317,7 +342,7 @@ export async function moverCancion(
   filaId: string,
   direccion: 'arriba' | 'abajo',
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guardaDeLaLista(ministerioId);
   const destino = turnoDe(ministerioId, turnoId);
 
   if (!(await turnoEsDelMinisterio(ctx, turnoId, ministerioId))) {
@@ -362,7 +387,7 @@ export async function cambiarTonoDelDia(
   filaId: string,
   formData: FormData,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guardaDeLaLista(ministerioId);
   const destino = turnoDe(ministerioId, turnoId);
 
   const leido = Tono.safeParse(campo(formData, 'tono'));
