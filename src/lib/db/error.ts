@@ -125,7 +125,19 @@ export type GuardHatril =
    * Una canción no cambia de iglesia ni de equipo, y una fila de la lista
    * tampoco de culto ni de canción (`0039`).
    */
-  | 'HT125';
+  | 'HT125'
+  /**
+   * El ministerio, el día de reparto, la persona del padrón o quien apunta no
+   * son de esta iglesia o de este equipo, o se intentó apuntar una entrega sin
+   * persona (`0042`).
+   */
+  | 'HT126'
+  /**
+   * Una fila del reparto no cambia de iglesia, de equipo ni de día, el número
+   * y el consentimiento de una persona no se reescriben, y una entrega no
+   * cambia de persona (`0042`).
+   */
+  | 'HT127';
 
 /**
  * ¿Es este error uno de nuestros triggers guard?

@@ -113,10 +113,18 @@ export const TIPOS_MINISTERIO = [
     puestos: ['Equipo de calle', 'Visitas'],
   },
   {
+    /*
+     * El plan pedía llamarlo «Acción social y entrega de alimentos», y se queda
+     * en «Acción social» por lo que dice `nombre` arriba: es como el catálogo
+     * reconoce los ministerios anteriores a los tipos, y el nombre con que nace
+     * el ministerio en la web pública. La entrega de alimentos va en la
+     * descripción y en el módulo `reparto`.
+     */
     id: 'accion_social',
     nombre: 'Acción social',
-    descripcion: 'Reparto de alimentos, ayuda a familias y salidas a la calle.',
-    modulos: ['agenda'],
+    descripcion:
+      'Entrega de alimentos, ayuda a familias y salidas a la calle.',
+    modulos: ['reparto', 'agenda'],
     puestos: ['Reparto', 'Cocina', 'Recogida'],
   },
   {

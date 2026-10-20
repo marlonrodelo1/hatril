@@ -682,6 +682,31 @@ export function puedeGestionarMinisterio(
 }
 
 /**
+ * ¿Puede tocar ESTE ministerio estando dentro de él?
+ *
+ * `puedeGestionarMinisterio` sin el camino de `gestionar_ministerios`. Es para
+ * los módulos que guardan datos de gente que NO es de la congregación y está
+ * en situación vulnerable —el padrón del reparto, y más adelante los niños de
+ * la escuela—, cuya RLS no es por iglesia sino por equipo: `es_pastor() OR
+ * sirve_en_ministerio()` (`0042`). Quien organiza los ministerios desde
+ * secretaría no está en ese equipo, la base no le enseña nada, y abrirle la
+ * pantalla sería darle un listado vacío y unos botones que fallan.
+ *
+ * Tiene que decir lo mismo que la policy, o la pantalla y la base se
+ * contradicen. La policy deja pasar también al voluntario del equipo; aquí no,
+ * porque en la v1 la puerta la llevan el responsable y los colíderes —el
+ * voluntario no entra al panel— y eso es más estrecho que la base, no más
+ * ancho.
+ */
+export function puedeGestionarDesdeDentro(
+  ctx: ContextoPermisos,
+  ministerioId: string,
+): boolean {
+  if (esPastor(ctx)) return true;
+  return puede(ctx, 'gestionar_su_ministerio') && esLiderDe(ctx, ministerioId);
+}
+
+/**
  * A QUIÉN puede ver esta persona.
  *
  * `ninguno` es el caso raro pero real: una cuenta activa cuya ficha de miembro

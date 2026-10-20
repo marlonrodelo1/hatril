@@ -147,5 +147,56 @@ export const TEXTO_CONSENTIMIENTO_EVENTO = (iglesia: string): string =>
  */
 export const VERSION_CONSENTIMIENTO_EVENTO = 'evento-2026-08';
 
+/**
+ * Lo que se le LEE en voz alta a quien se apunta al reparto, en la puerta.
+ *
+ * NO ES UNA CASILLA QUE MARQUE ESA PERSONA
+ * ----------------------------------------
+ * Quien viene a por comida casi nunca tiene la aplicación, y la pantalla de la
+ * puerta es el móvil de quien la lleva. Así que el permiso se da de palabra:
+ * se le lee esto, la persona dice que sí, y quien apunta marca «se lo he
+ * leído». La prueba del art. 7.1 es el texto exacto (esta versión), la fecha y
+ * quién lo apuntó. Sin IP ni navegador, que serían los del voluntario:
+ * guardarlos como si fueran de esta persona sería fabricar una prueba falsa.
+ *
+ * QUÉ DICE Y POR QUÉ
+ * ------------------
+ * Corto, para leerlo con una fila esperando, y con lo que pide el art. 13 que
+ * esa persona sepa: quién lo guarda, para qué, quién lo ve, cuánto dura y qué
+ * puede pedir. Y lo más importante, lo primero: que la comida no depende de dar
+ * los datos. La Ley 1581 y su Decreto 1377/2013 lo dicen de los datos
+ * sensibles —no se puede condicionar una actividad a darlos—, y aunque no lo
+ * dijeran, una iglesia que niega una bolsa de comida por no dar un nombre no es
+ * lo que nadie quiere construir.
+ *
+ * Cada frase está comprobada contra el código: sin texto libre en el padrón
+ * (schema `reparto.ts`), lo ven el pastor y el equipo (RLS de la `0042`), no es
+ * una ficha de miembro (sin `miembro_id`), y el botón de borrar a una persona y
+ * el de borrar a quien lleve un año sin venir existen en el padrón.
+ */
+export const TEXTO_AVISO_REPARTO = (iglesia: string): string =>
+  'Te lo damos aunque no quieras dar tus datos. Si quieres que te apuntemos, ' +
+  `en ${iglesia} guardamos tu nombre —como quieras que te llamemos—, ` +
+  'cuántas personas viven en tu casa, tu teléfono si nos lo das, y qué días ' +
+  'vienes a recogerlo, solo para organizar el reparto. Lo ven el pastor y el ' +
+  'equipo del reparto, nadie más de la iglesia, y no te hace miembro de nada. ' +
+  'Puedes pedir que lo borremos cuando quieras, y si pasa un año sin que ' +
+  'vengas, lo borramos.';
+
+/**
+ * Versión de `TEXTO_AVISO_REPARTO`, aparte de la de la política.
+ *
+ * Por lo mismo que `VERSION_CONSENTIMIENTO_EVENTO`: es un permiso con su propio
+ * ritmo y de gente que no está en `consentimientos` (que exige `miembro_id`).
+ * Se guarda en `reparto_beneficiarios.consentimiento_version`, que la base
+ * valida contra `^reparto-[0-9]{4}-[0-9]{2}$`.
+ *
+ * Sube cada vez que cambie el texto de arriba. A diferencia de un evento, este
+ * consentimiento NO se agota: quien se apuntó con la versión vieja sigue
+ * viniendo cada domingo, y habría que volver a leérselo. Esa pantalla no existe
+ * todavía, así que subir esto obliga a construirla antes.
+ */
+export const VERSION_CONSENTIMIENTO_REPARTO = 'reparto-2026-10';
+
 export const TEXTO_CONSENTIMIENTO_IMAGEN =
   'Autorizo que mi foto aparezca en el directorio interno de la congregación.';

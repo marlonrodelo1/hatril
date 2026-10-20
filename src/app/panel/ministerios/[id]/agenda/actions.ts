@@ -5,7 +5,10 @@ import { revalidatePath } from 'next/cache';
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { requireGestionMinisterioAccion } from '@/lib/auth/guard-panel';
+import {
+  exigirModulo,
+  requireGestionMinisterioAccion,
+} from '@/lib/auth/guard-panel';
 import { withUser } from '@/lib/db';
 import { asistencias, reuniones } from '@/lib/db/schema';
 import { esGuardHatril } from '@/lib/db/error';
@@ -70,6 +73,17 @@ function volver(mensaje: string, destino: string): never {
   redirect(`${destino}?error=${encodeURIComponent(mensaje)}`);
 }
 
+/**
+ * Las dos puertas de cada action de este fichero: quién manda en ESTE equipo,
+ * y que la agenda esté encendida. La segunda la cubría solo el
+ * `layout.tsx`, que no corre en una server action.
+ */
+async function guarda(ministerioId: string) {
+  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  await exigirModulo(ctx, ministerioId, 'agenda');
+  return ctx;
+}
+
 const agenda = (ministerioId: string) =>
   `/panel/ministerios/${ministerioId}/agenda`;
 
@@ -77,7 +91,7 @@ export async function crearReunionDeMinisterio(
   ministerioId: string,
   formData: FormData,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const base = agenda(ministerioId);
 
   const parsed = leer(formData);
@@ -123,7 +137,7 @@ export async function editarReunionDeMinisterio(
   reunionId: string,
   formData: FormData,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const base = agenda(ministerioId);
 
   const parsed = leer(formData);
@@ -179,7 +193,7 @@ export async function guardarListaDelEquipo(
   reunionId: string,
   formData: FormData,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const destino = `${agenda(ministerioId)}/${reunionId}`;
 
   const presentes = new Set(campos(formData, 'presentes'));
@@ -259,7 +273,7 @@ export async function borrarReunionDeMinisterio(
   ministerioId: string,
   reunionId: string,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const base = agenda(ministerioId);
 
   await withUser(ctx.user.id, (tx) =>

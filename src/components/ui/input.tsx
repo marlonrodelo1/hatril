@@ -16,9 +16,12 @@ import { cn } from '@/lib/utils';
  *     esquema de Claude la tarjeta es blanca y el campo baja un escalón: sin
  *     ese contraste, un campo vacío sobre una tarjeta no se distingue del fondo
  *     y no parece que se pueda escribir en él.
- *   - El texto es de 15 px y no de 14. Por debajo de 16 px, iOS hace zoom al
- *     enfocar un campo; 15 es el mínimo del sistema y ya obliga a probarlo en
- *     móvil, pero bajar a 14 empeora eso sin ganar nada.
+ *   - El texto es de 15 px y no de 14, y de 16 por debajo de `md`. Por debajo
+ *     de 16 px, Safari de iOS amplía la página al enfocar el campo y no la
+ *     devuelve. `globals.css` ya lo pedía para todo `input`, pero esa regla
+ *     vive en la capa `base` y `text-[15px]` es una utilidad, que gana: ningún
+ *     `<Input>` llegaba a 16 en el móvil. Se vio midiendo la puerta del reparto
+ *     a 375 px, con `getComputedStyle`; a ojo, 15 y 16 no se distinguen.
  */
 function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
   return (
@@ -26,7 +29,7 @@ function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
       type={type}
       data-slot="input"
       className={cn(
-        'h-[42px] w-full min-w-0 rounded-lg border border-input bg-surface-alt px-3 text-[15px] transition-colors outline-none',
+        'h-[42px] w-full min-w-0 rounded-lg border border-input bg-surface-alt px-3 text-[16px] transition-colors outline-none md:text-[15px]',
         'placeholder:text-muted-foreground',
         'focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/16',
         'disabled:cursor-not-allowed disabled:border-disabled-border disabled:bg-disabled-bg disabled:text-disabled-text',
