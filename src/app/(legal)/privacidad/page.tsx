@@ -380,6 +380,20 @@ export default function PrivacidadPage() {
           desde su móvil.
         </P>
         <P>
+          <strong className="font-semibold">Si tu iglesia tiene radio.</strong>{' '}
+          Al darle a escuchar en su reproductor, tu teléfono o tu navegador se conecta
+          directamente al servidor de la emisora. Ese servidor es de un tercero que
+          elige tu iglesia, no nosotros, y puede estar fuera de la Unión Europea;
+          recibe tu dirección IP, como la recibe cualquier web que visitas. Hasta
+          que pulsas no se conecta nada, y la pantalla te dice a qué servidor vas
+          antes de hacerlo.{' '}
+          <strong className="font-semibold">
+            Hatril no apunta quién escucha
+          </strong>
+          : no hay ningún registro de oyentes, y darle a escuchar no se apunta en
+          ninguna parte ni se le cuenta a nadie.
+        </P>
+        <P>
           Ninguna otra iglesia de Hatril puede ver los datos de la tuya. Eso no
           lo garantiza nuestra buena intención: lo impone la base de datos, que
           rechaza la consulta aunque la aplicación se equivoque al pedirla.

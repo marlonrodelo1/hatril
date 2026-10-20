@@ -5,6 +5,7 @@ import {
   ListMusic,
   PackageOpen,
   type LucideIcon,
+  Radio,
 } from 'lucide-react';
 import { z } from 'zod';
 
@@ -35,7 +36,7 @@ import { z } from 'zod';
  *
  * SOLO ESTÁ LO QUE FUNCIONA
  * -------------------------
- * Cinco módulos, y son los cinco que existen de verdad. Material del equipo,
+ * Seis módulos, y son los seis que existen de verdad. Material del equipo,
  * inventario, vínculo con las familias y peticiones de oración están decididos
  * y NO se declaran aquí hasta que se puedan pulsar. Un interruptor que enciende
  * una pestaña vacía hace parecer roto un producto que funciona — la misma regla
@@ -102,6 +103,19 @@ export const MODULOS_MINISTERIO = [
     descripcion:
       'La puerta del reparto de alimentos: quién ha venido hoy, a quién se le ha entregado y cuánto se repartió cada mes.',
     Icono: PackageOpen,
+  },
+  {
+    /*
+     * La señal en directo de la radio, su parrilla y si sale en la web. La
+     * configuración entera vive aquí, en `modulos.emisora` —ver
+     * `lib/emisora/config.ts`—, y los programas del mes con sus locutores son
+     * turnos, que ya existen.
+     */
+    id: 'emisora',
+    nombre: 'Radio en directo',
+    descripcion:
+      'La señal de la emisora y su programación. La congregación la escucha desde la aplicación, y en la web si lo decides tú.',
+    Icono: Radio,
   },
 ] as const satisfies readonly ModuloDeclarado[];
 
