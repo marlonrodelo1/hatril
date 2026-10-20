@@ -14,7 +14,8 @@ repositorio y hoy no existen, así que cuatro meses de decisiones se perdieron.
 |---|---|
 | Repo | `github.com/marlonrodelo1/hatril`, rama `main` |
 | Despliegue | Dokploy en VPS `187.124.37.206`, autodeploy al hacer push |
-| Dominio | `hatril-fronted-y39axf-ee09a0-187-124-37-206.traefik.me` (temporal) |
+| Dominio | **`https://hatril.com`**, con certificado válido, resolviendo al VPS (20-oct). Sin registros MX: `hola@hatril.com` todavía no recibe nada. Antes, la temporal de Dokploy en `traefik.me` |
+| Apps | `Versiones/Android/Hatril-1.0.0-1.aab` y `.apk` (fuera de Git), contra hatril.com. iOS: `ios/` sincronizado, sin compilar (hace falta el Mac) |
 | Base de datos | Supabase `qutoggpigkdginvburjv`, org `ministeriales`, eu-west-1 |
 | Diseños | claude.ai/design `107021c4-dd85-485d-9cc7-34ef639d92ae` |
 
@@ -544,6 +545,35 @@ lee al arrancar.
   **Lo que falta y se nota:** el material del equipo. El repertorio del domingo
   y los turnos ya están en la agenda, y lo de cada equipo, en su pestaña.
 
+- **App nativa (Android e iOS)** (20-oct): Capacitor 8.5.3, y la app es un
+  WebView que carga **https://hatril.com** y arranca en `/mi`. Lo verificado,
+  todo en el emulador (Pixel 6, Android 17, WebView 145), con capturas en
+  `Versiones/Android/pruebas/`:
+
+  - La **release** firmada, `Versiones/Android/Hatril-1.0.0-1.aab` y `.apk`:
+    `app.hatril`, 1.0.0, versionCode 1, targetSdk 36, `allowBackup=false`;
+    pasa `jarsigner -verify` y `apksigner verify`, y la huella del certificado
+    es la de la firma de subida. Instalada, arranca, carga hatril.com y llega
+    al acceso. El primer arranque tras instalar tardó unos 11 s en pintar; el
+    segundo, unos 5 (el emulador va a ~480 ms de hatril.com).
+  - Con la de **depuración**, leyendo la página por el protocolo de
+    depuración del WebView: la redirección de `/mi` deja la barra en
+    `/acceso?next=%2Fmi` y el formulario envía la acción ahí (interceptado
+    en la página, sin mandar nada). El riesgo de que Capacitor sirviera el
+    acceso con la dirección `/mi` no se da con un WebView al día; el porqué y
+    el caso en que sí, en `docs/app-nativa/android.md` §4.
+  - Sin red, «Sin conexión»; al volver la red se reintenta sola y llega al
+    acceso. Eso **no funcionaba** hasta el 20-oct: faltaba el permiso
+    `ACCESS_NETWORK_STATE` y el WebView creía tener red siempre. Tras volver,
+    el historial empieza limpio (`MainActivity`).
+  - Atrás dentro de la web vuelve a la pantalla anterior.
+
+  **Sin probar**: nada con sesión (no se entra en producción con contraseña);
+  un teléfono de verdad; iOS entero; y atrás saliendo de la app desde la
+  primera pantalla, que hace `src/components/app-nativa.tsx` y **no está
+  desplegado**: hoy, en esa pantalla, atrás no hace nada. La hoja de compartir
+  del sistema no existe en el WebView de Android («Compartir» copia el texto).
+
 - **Los equipos en la app** (20-oct): `/mi` está completa para quien sirve en un
   ministerio, sin salir al panel. Quinta pestaña, **Equipo** (`/mi/equipo`),
   solo para quien sirve en algo y al final de la barra, para que nadie pierda
@@ -905,7 +935,9 @@ lee al arrancar.
 | Notas de seguimiento en texto libre | A propósito NO están. Necesitan cifrado en reposo y base jurídica antes |
 | Legales de la asistencia y el seguimiento | Hechos: `/privacidad` §3, §4 y §6, el anexo del art. 28 en `/terminos`, y el consentimiento propio |
 | Los bloques de asistencia en Inicio | El diseño los pinta y siguen sin pintarse: el dato ya existe |
-| App móvil (Capacitor) | v2. `platform/` ya detecta el WebView |
+| **App nativa: lo que impide enviar a Apple** | Lo cuenta `docs/app-nativa/fichas.md` §1: borrar la cuenta desde la app, la Biblia vacía, el pago de Stripe al alcance dentro de la app (`/registro`, `/panel/suscripcion`), «Denunciar» y «Bloquear» en el muro, y la regla 4.2 (una web metida en una app; lo que más la separaría, los avisos push). Y compilar en el Mac (`docs/app-nativa/ios.md`) |
+| **App nativa: lo que pide Google** | Borrar la cuenta dentro de la app **y** una dirección web para pedirlo (`/borrar-cuenta`, no existe). El gráfico de 1024×500 y las capturas. La cuenta para quien revisa. El formulario de seguridad de datos con lo de `fichas.md` §5, que ya incluye la plaza pagada y el reparto. Con cuenta personal de Play Console, la prueba cerrada de 12 personas durante 14 días |
+| **App nativa: antes de cualquiera de las dos** | Desplegar la web con `app-nativa.tsx` y el cambio a hatril.com (los legales en producción aún dicen `hola@hatril.app`). Crear el buzón `hola@hatril.com`. Probar con sesión en un teléfono de verdad. **La firma de subida está solo en este ordenador**, en `Versiones/Android/firma/` (el `.jks` y `CLAVES.txt`): copiarla fuera, a un pendrive o un gestor de contraseñas. Si se pierde, Google tarda días en aceptar una nueva y mientras no se publica nada |
 | Texto de la Biblia | La pantalla `/mi/biblia` está: índice de los 66 libros, buscador y capítulos. **Falta el texto**: unos 4,5 MB de la Reina-Valera 1909 en `public/biblia/rv1909/`, un JSON por libro. La RVR60 tiene derechos de Sociedades Bíblicas Unidas |
 | Foto de perfil del miembro | **Se pinta ya**: `miembros.foto_url` existía desde la `0000` y ahora la usan el muro, los comentarios y el compositor, con las iniciales de color debajo como respaldo. Falta la pantalla para SUBIRLA, que va al bucket privado con URL firmada. Las de la demo son de `randomuser.me`, y eso NO vale para producción: la foto de un miembro es dato personal y no puede servirla un tercero |
 
@@ -1339,9 +1371,12 @@ fichero.
   latinoamericano— que nadie había comprobado. Que los datos guardados
   estén en Supabase no exime: el contenedor de Next ve cada dato al procesar la
   petición, y eso también es tratamiento.
-- **Registrar `hatril.app`.** Los textos legales ya lo dan por hecho, y el correo
-  `hola@hatril.app` tiene que existir: es la dirección a la que la gente escribe
-  para ejercer sus derechos.
+- **Crear el buzón `hola@hatril.com`.** El dominio es hatril.com (ya no
+  hatril.app) y sirve la web, pero no tiene registros MX: el correo de los
+  legales, al que la gente escribe para ejercer sus derechos, no llega a
+  ninguna parte.
+- **Copiar la firma de subida de Android fuera de este ordenador**:
+  `Versiones/Android/firma/`, con el `.jks` y `CLAVES.txt`.
 - **Rotar la clave secreta de Supabase y la contraseña de la base.** Las dos se
   pegaron en un chat el 16-ago-2026. Antes de que entre una iglesia real.
 - **Activar la protección de contraseñas filtradas** en Supabase (Auth →
@@ -1441,9 +1476,10 @@ lo sabemos»— y nunca una fila con `presente = false`. Confundirlos pone a
 consolidación a llamar a gente que vino todas las semanas, y a la tercera
 llamada el pastor deja de fiarse del producto.
 
-Ojo con la dependencia: la autoconfirmación necesita app (Capacitor no está ni
-en `package.json`), push (cero referencias en el repo) y que la gente tenga
-cuenta (`miembros.auth_user_id` es nullable y casi ninguna ficha la tiene).
+Ojo con la dependencia: la autoconfirmación necesita app (Capacitor ya está
+desde el 20-oct, pero la app aún no se ha publicado), push (cero referencias en
+el repo) y que la gente tenga cuenta (`miembros.auth_user_id` es nullable y
+casi ninguna ficha la tiene).
 
 **Finanzas, lo que falta.** La v1 está hecha y NO guarda nombres de donante.
 `tipo_ingreso` distingue diezmo de ofrenda para poder sumarlos por separado, pero

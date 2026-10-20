@@ -10,15 +10,27 @@ las respuestas, en [`fichas.md`](fichas.md).
 
 ---
 
-## Antes de nada: sin dominio no hay app
+## 0. Antes de nada: que GitHub tenga la app nativa
 
-La app carga la web desplegada. Con la dirección de ahora, la de
-`traefik.me`, iOS rechaza el certificado y la app abre directamente la pantalla
-«Sin conexión». Sirve para probar el arranque y esa pantalla, **no para
-subirla**. Para subir hace falta el dominio definitivo con un certificado
-válido, y en todos los comandos de abajo `https://DOMINIO` es ese dominio.
+El Mac compila lo que hay en GitHub, no lo que hay en el Windows. La carpeta
+`ios/`, los scripts de `scripts/app/` y esta guía llegaron con el commit
+«La app nativa: Capacitor para Android e iOS…» y los que le siguen. **Antes
+de abrir la Terminal del Mac**:
 
-`npm run app:ios` avisa con «PRUEBA» si se le pasa una de traefik.me.
+1. En el Windows, que esos commits estén subidos (`git push`; en GitHub, la
+   carpeta `ios/` tiene que verse en la página del repo).
+2. En el Mac, el `git pull` (o el `git clone` de la sección 2) hecho después
+   de eso. Si `ios/App/App.xcodeproj` no existe, `npm run app:ios` lo dice y
+   se para: falta el pull, no hay que generar nada.
+
+## La dirección: https://hatril.com
+
+La app carga la web desplegada en **https://hatril.com**, con su certificado
+válido. Es la dirección de todos los comandos de abajo.
+
+Con una de `traefik.me`, la temporal de Dokploy, iOS rechaza el certificado y
+la app abre directamente «Sin conexión»; `npm run app:ios` avisa con
+«PRUEBA». Eso no se sube.
 
 ---
 
@@ -86,16 +98,18 @@ Con la cuenta del Apple Developer Program (99 USD al año).
 
 1. En App Store Connect pulsa **Users and Access**.
 2. Pestaña **Integrations**, luego **App Store Connect API**, luego **Team Keys**.
-3. Pulsa el **+**. Name: `Hatril Mac`. Access: **Admin**.
+3. Pulsa el **+**. Name: `Hatril Mac`. Access: **App Manager**.
 4. Pulsa **Generate**.
 5. Apunta el **Issuer ID** (arriba) y el **Key ID** (en la fila de la clave).
 6. Pulsa **Download** y guarda el `AuthKey_XXXXXXXXXX.p8`. **Solo se puede
    descargar una vez.** Copia también en `Versiones/iOS/` del Windows, que está
    fuera de Git.
 
-«Admin» y no «App Manager» porque firmar desde la terminal con
-`-allowProvisioningUpdates` crea certificados, y con otros roles a veces falla
-con *Cloud signing permission error*.
+«App Manager» y no «Admin»: esta clave **solo la usa `altool` para subir** el
+`.ipa` (camino B), y para eso basta. Firmar no la usa: `xcodebuild` firma con
+la cuenta metida en Xcode (sección 2). Una clave de Admin, además, puede dar
+de alta usuarios y tocar los acuerdos y la facturación de la cuenta; si se
+pierde el `.p8`, que no pueda.
 
 ---
 
@@ -177,7 +191,7 @@ npm ci
 ```
 
 ```bash
-export CAP_SERVER_URL=https://DOMINIO
+export CAP_SERVER_URL=https://hatril.com
 ```
 
 ```bash
@@ -350,9 +364,13 @@ Qué mirar, en este orden:
 - **Sin red**: «Sin conexión», y «Reintentar» vuelve a la web.
 - **Un enlace de fuera** (WhatsApp, Stripe): se abre en Safari, no dentro.
 
-Con la dirección de traefik.me se ve directamente «Sin conexión»: eso ya
+Con una dirección de traefik.me se ve directamente «Sin conexión»: eso
 prueba la página de error en iOS, y que un certificado malo no se acepta
-nunca.
+nunca. Con https://hatril.com tiene que llegar al acceso.
+
+Antes de probar, que hatril.com tenga desplegada la web con
+`src/components/app-nativa.tsx`: es la que esconde el arranque en cuanto la
+web está y pone los iconos oscuros en la barra de estado.
 
 En un iPhone de verdad: la subida aparece en **TestFlight**. En App Store
 Connect → la app → TestFlight → **Internal Testing** → **+**, crea un grupo y
@@ -384,7 +402,7 @@ producto que hoy harían que Apple la rechace.
 | `Missing package product 'CapApp-SPM'` o falla *Resolving Package Graph* | Xcode no llega a GitHub para descargar Capacitor. Comprueba la red y en Xcode: **File → Packages → Reset Package Caches**. |
 | `Signing for "App" requires a development team` | Falta elegir el Team (camino A) o `DEVELOPMENT_TEAM` (camino B). |
 | `No profiles for 'app.hatril' were found` | Falta `-allowProvisioningUpdates`, o la cuenta en Xcode → Settings → Accounts. |
-| `Cloud signing permission error` | La clave de API no es de rol Admin. |
+| `Cloud signing permission error` | La cuenta metida en Xcode no puede crear el certificado de distribución. Con la del titular de la cuenta de desarrollador no pasa; con otra, que el titular le dé permiso. La clave de API no interviene: solo la usa `altool`. |
 | *Redundant Binary Upload* | Ese build ya se subió. Sección 4. |
 | Correo de Apple con *ITMS-91053: Missing API declaration* | Algún plugin usa una API que Apple obliga a declarar. Hoy ninguno de los tres lo hace (Capacitor trae su propio `PrivacyInfo.xcprivacy`), pero un plugin nuevo puede. Se arregla en Xcode: **File → New → File… → App Privacy**, con la razón que diga el correo. |
 

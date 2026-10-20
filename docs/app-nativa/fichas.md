@@ -10,16 +10,12 @@ Cómo compilar y subir: [`android.md`](android.md) e [`ios.md`](ios.md).
 
 ---
 
-## 1. Antes de enviar: lo que hoy haría que la rechacen
+## 1. Antes de enviar a Apple: lo que hoy haría que la rechacen
 
-Por orden. Los tres primeros bloquean las dos tiendas.
+Por orden de lo que pesa. El 1 lo pide también Google, y el 3 afecta a las
+dos tiendas.
 
-1. **El dominio.** Sin un dominio con certificado válido, la app abre
-   «Sin conexión». Además, la política de privacidad tiene que estar publicada
-   en una dirección pública, y hoy `hatril.app` es un relleno
-   (`src/lib/legal/datos-responsable.ts`).
-
-2. **Borrar la cuenta desde la app.** Apple lo exige a toda app en la que se
+1. **Borrar la cuenta desde la app.** Apple lo exige a toda app en la que se
    pueda crear una cuenta (norma 5.1.1(v)), y Google pide un camino dentro de
    la app **y** una dirección web para pedirlo (sale en el formulario de
    seguridad de datos). Hoy no existe: `/privacidad` dice que se pide por
@@ -29,39 +25,52 @@ Por orden. Los tres primeros bloquean las dos tiendas.
    según `/privacidad` §6). Qué pasa con la ficha del miembro —que es de la
    iglesia— al borrar la cuenta es una decisión de producto.
 
-3. **La Biblia sin texto.** `/mi/biblia` enseña «El texto todavía no está
-   cargado» y unas instrucciones para quien lo esté montando. Apple rechaza
-   contenido de relleno (norma 2.1). O se carga la Reina-Valera 1909 en
+2. **La Biblia vacía.** `/mi/biblia` enseña «El texto todavía no está cargado»
+   y unas instrucciones para quien lo esté montando. Apple rechaza contenido de
+   relleno (norma 2.1). O se carga la Reina-Valera 1909 en
    `public/biblia/rv1909/`, o la pestaña no sale en la app hasta entonces.
 
-4. **Pagos (sobre todo Apple).** Desde `/acceso` se llega a `/registro` (dar de
-   alta una iglesia, con prueba y después Stripe), y `/panel/suscripcion` abre
-   Stripe Checkout. Dentro de una app de iOS no puede haber botones ni enlaces
-   que lleven a pagar fuera de la App Store (norma 3.1.1). La suscripción la
-   paga una organización —la iglesia—, y eso encaja en la excepción de
-   servicios a organizaciones (3.1.3(c)): la app puede dar acceso a lo que se
-   pagó fuera, pero **sin** botón de pago. Recomendación: dentro de la app (el
-   User-Agent lleva `HatrilApp/`, `src/lib/platform/is-native-app.ts`), ni
-   enlace a `/registro` ni botones de Stripe; en la suscripción, solo el
-   estado. Las normas de pagos de Google Play van por el mismo camino; no he
-   comprobado si una suscripción de empresa como esta tiene excepción allí,
-   pero con el mismo arreglo no hace falta.
+3. **El pago de Stripe, accesible dentro de la app.** Desde `/acceso` se llega
+   a `/registro` (dar de alta una iglesia, con prueba y después Stripe), y
+   `/panel/suscripcion` abre Stripe Checkout. Dentro de una app de iOS no puede
+   haber botones ni enlaces que lleven a pagar fuera de la App Store (norma
+   3.1.1). La suscripción la paga una organización —la iglesia—, y eso encaja
+   en la excepción de servicios a organizaciones (3.1.3(c)): la app puede dar
+   acceso a lo que se pagó fuera, pero **sin** botón de pago. Recomendación:
+   dentro de la app (el User-Agent lleva `HatrilApp/`,
+   `src/lib/platform/is-native-app.ts`), ni enlace a `/registro` ni botones de
+   Stripe; en la suscripción, solo el estado. Las normas de pagos de Google
+   Play van por el mismo camino; no he comprobado si una suscripción de
+   empresa como esta tiene excepción allí, pero con el mismo arreglo no hace
+   falta.
 
-5. **El muro es contenido de usuarios (Apple 1.2).** Apple pide tres cosas:
-   poder **denunciar** una publicación o un comentario, poder **bloquear** a
-   quien molesta, y que se actúe sobre lo denunciado. Hoy se puede borrar lo
-   propio y quien modera borra lo de otros, pero no hay ni «Denunciar» ni
-   «Bloquear».
+4. **«Denunciar» y «Bloquear» en el muro (Apple 1.2).** El muro es contenido
+   de usuarios, y Apple pide tres cosas: poder **denunciar** una publicación o
+   un comentario, poder **bloquear** a quien molesta, y que se actúe sobre lo
+   denunciado. Hoy se puede borrar lo propio y quien modera borra lo de otros,
+   pero no hay ni «Denunciar» ni «Bloquear».
 
-6. **Funcionalidad mínima (Apple 4.2).** Ver la sección 10. Es el riesgo más
-   alto de que Apple diga que no.
+5. **La regla 4.2: funcionalidad mínima.** Por dentro, la app es un WebView
+   que carga la web. Ver la sección 10. Es el riesgo más alto de que Apple
+   diga que no.
 
-7. **La privacidad, a mano dentro de la app** (Apple 5.1.1(i)). Hoy se enlaza
-   desde el registro y desde `/acepta`. Conviene un enlace fijo en
-   `/mi/cuenta`, junto al botón de borrar la cuenta.
+Y uno más, menor: **la privacidad a mano dentro de la app** (Apple
+5.1.1(i)). Hoy se enlaza desde el registro y desde `/acepta`. Conviene un
+enlace fijo en `/mi/cuenta`, junto al botón de borrar la cuenta.
+
+### Antes de cualquiera de las dos
+
+- **El correo `hola@hatril.com` no tiene buzón.** El dominio ya sirve la web
+  con certificado válido, pero no tiene registros MX (comprobado el
+  20-oct-2026). Es el correo de contacto de las fichas y al que `/privacidad`
+  manda para ejercer los derechos.
+- **La web con la app nativa, desplegada.** La app carga hatril.com, y lo que
+  la hace comportarse como app (`src/components/app-nativa.tsx`) vive en la
+  web. El 20 de octubre aún no estaba desplegado: sin él, atrás en la primera
+  pantalla no hace nada.
 
 **Recomendación**: Google primero (prueba interna, y la cerrada si la cuenta es
-personal), arreglando 2, 3 y 4 mientras tanto. Apple cuando estén 1 a 7.
+personal), arreglando 1, 2 y 3 mientras tanto. Apple cuando estén los cinco.
 
 ---
 
@@ -69,13 +78,13 @@ personal), arreglando 2, 3 y 4 mientras tanto. Apple cuando estén 1 a 7.
 
 | Para qué | Dirección | Estado |
 |---|---|---|
-| Política de privacidad (las dos tiendas) | `https://hatril.app/privacidad` | Cuando exista el dominio |
-| Soporte (Apple la exige) | `https://hatril.app/privacidad#s1` | Sirve: lleva el correo de contacto. Mejor una página `/soporte` |
-| Borrar la cuenta (Google la exige) | `https://hatril.app/borrar-cuenta` | **No existe** (punto 2) |
-| Web de la app (opcional) | `https://hatril.app` | Cuando exista el dominio |
+| Política de privacidad (las dos tiendas) | `https://hatril.com/privacidad` | Responde. Hasta desplegar el cambio de dominio enseña el correo antiguo, `hola@hatril.app` |
+| Soporte (Apple la exige) | `https://hatril.com/privacidad#s1` | Sirve: lleva el correo de contacto. Mejor una página `/soporte` |
+| Borrar la cuenta (Google la exige) | `https://hatril.com/borrar-cuenta` | **No existe** (sección 1, punto 1) |
+| Web de la app (opcional) | `https://hatril.com` | Sirve |
 
-El correo de contacto que se ve en las fichas es público. `hola@hatril.app`
-cuando el dominio tenga correo.
+El correo de contacto que se ve en las fichas es público: `hola@hatril.com`,
+que **todavía no tiene buzón** (sección 1).
 
 ---
 
@@ -134,7 +143,7 @@ PARA EL EQUIPO PASTORAL
 TUS DATOS
 Pertenecer a una iglesia es un dato especialmente protegido, y Hatril lo trata así. Lo de tu congregación no lo ve ninguna otra, y eso lo impone la base de datos, no solo la pantalla. Sin publicidad, sin rastreo y sin venta de datos.
 
-La política de privacidad completa está en hatril.app/privacidad.
+La política de privacidad completa está en hatril.com/privacidad.
 ```
 
 Cuando la Biblia tenga texto, añadir en «Lo que encuentras»:
@@ -171,7 +180,7 @@ iglesia real.
 | ¿Van cifrados en tránsito? | Sí (todo HTTPS) |
 | ¿Se puede pedir que se borren? | Sí |
 | Formas de crear cuenta | Usuario (correo) y contraseña |
-| Dirección para borrar la cuenta | `https://hatril.app/borrar-cuenta` (**falta**, sección 1) |
+| Dirección para borrar la cuenta | `https://hatril.com/borrar-cuenta` (**falta**, sección 1) |
 
 **Compartir**: **no**. Google no cuenta como «compartir» lo que reciben los
 proveedores que trabajan por cuenta de Hatril (Supabase, el alojamiento). No
@@ -193,12 +202,19 @@ cuenta*):
 | Fotos y vídeos → Fotos | Lo que se sube al muro, devocionales, ministerios | Opcional |
 | Actividad en la app → Otro contenido generado por el usuario | Publicaciones, comentarios, devocionales | Opcional |
 | Actividad en la app → Otras acciones | Me gusta, inscripciones a eventos, asistencia a ensayos | Opcional |
+| Información financiera → Historial de compras | **Si una persona ha pagado su plaza** en un evento de pago. La marca la iglesia a mano; Hatril no cobra ni ve el pago (`evento_inscripciones.pagado`) | Opcional |
+| Información personal → Nombre, Número de teléfono y Otra información | **El reparto de alimentos**: el hogar que recibe ayuda (nombre, teléfono, cuántas personas viven en la casa) y si vino cada día de reparto (`reparto.ts`). Casi nunca son usuarios de la app: los apunta el equipo del ministerio | Opcional |
 
-**No se recogen**: ubicación, información financiera de las personas (no se
-piden datos bancarios; el dinero de la iglesia es de la iglesia y no lleva
-nombres), salud, mensajes, audio, archivos, calendario del teléfono, contactos
-del teléfono, historial web, analítica, registros de fallos, ni identificadores
-del dispositivo.
+**No se recogen**: ubicación, otros datos financieros (ni tarjetas ni cuentas
+bancarias; la caja de la iglesia no lleva nombres), salud, mensajes, audio,
+archivos, calendario del teléfono, contactos del teléfono, historial web,
+analítica, registros de fallos, ni identificadores del dispositivo.
+
+Sobre el reparto: que alguien reciba comida de la iglesia dice que pasa
+necesidad, y Google no tiene una casilla para eso; va en *Otra información*.
+Se declara aunque quien lo recibe no use la app, porque los datos entran por
+ella. El módulo ya lo trata aparte (sin texto libre, visible solo para el
+equipo del reparto).
 
 Dos notas que importan:
 
@@ -206,10 +222,14 @@ Dos notas que importan:
   (`src/lib/observability/`; `track` e `identify` no se llaman desde ningún
   sitio). El día que se enciendan, cambian *Registros de fallos*,
   *Diagnóstico* y, con un id de persona, *Interacciones con la app*.
-- El registro del consentimiento guarda **la IP y el navegador** como prueba
-  de que el permiso lo dio esa persona. Ninguna de las dos tiendas tiene una
-  casilla para la IP mientras no se use para saber dónde está alguien, y aquí
-  no se usa.
+- **La IP y el navegador** se guardan solo en tres sitios, como prueba de que
+  el permiso lo dio esa persona: el consentimiento que se registra **al dar de
+  alta una iglesia** (el de quien la registra, `crear-iglesia.ts`), **su copia
+  en la auditoría** (el trigger de `consentimientos` copia la fila entera), y
+  las **inscripciones a eventos** hechas desde la página pública de la
+  iglesia. Quien entra por `/acepta` o por una solicitud no deja ni IP ni
+  navegador. Ninguna de las dos tiendas tiene una casilla para la IP mientras
+  no se use para saber dónde está alguien, y aquí no se usa.
 
 ---
 
@@ -232,11 +252,12 @@ Functionality**.
 | User Content | Photos or Videos | Fotos del muro, devocionales, ministerios |
 | User Content | Other User Content | Publicaciones, comentarios, me gusta, devocionales |
 | Identifiers | User ID | El identificador de la cuenta |
-| Other Data | Other Data Types | Fecha de nacimiento, estado civil, bautismo, notas pastorales, inscripciones |
+| Other Data | Other Data Types | Fecha de nacimiento, estado civil, bautismo, notas pastorales, inscripciones; el reparto de alimentos (hogar, cuántos viven en la casa, si vino) |
+| Purchases | Purchase History | Si una persona pagó su plaza en un evento (la marca la iglesia; el pago va fuera de Hatril) |
 
 **No**: Health & Fitness, Financial Info, Location, Contacts, Browsing History,
-Search History, Usage Data, Diagnostics, Purchases (mientras no se cobre nada
-dentro de la app, sección 1 punto 4).
+Search History, Usage Data, Diagnostics. Nada se cobra dentro de la app
+(sección 1, punto 3): lo de *Purchases* es solo la marca de la plaza pagada.
 
 ---
 
@@ -252,16 +273,26 @@ están las respuestas, no el resultado:
 - ¿Navegación web sin restricciones? **No**: la app solo abre Hatril, y los
   enlaces de fuera se van al navegador del teléfono.
 - ¿Comparte la ubicación? **No**. ¿Anuncios? **No**. ¿Compras dentro de la
-  app? **No** (con el punto 4 arreglado).
+  app? **No** (con el punto 3 de la sección 1 arreglado).
 
 Google, al principio del cuestionario, pide la categoría: la que más se acerca
 es la de red social o comunicación, por el muro.
 
-**Público objetivo (Google)**: **18 años o más**. Hatril no está pensada para
-menores de 13 (eso metería la app en el programa de familias de Google), y
-`/privacidad` no trata a menores como usuarios. Si las iglesias van a dar
-cuenta a sus jóvenes, hay que revisar antes la política (en España el
-consentimiento propio empieza a los 14) y ampliar la franja.
+**Público objetivo (Google)**: **13 a 15, 16 a 17 y 18 o más**. `/terminos`
+§2 permite cuenta propia **desde los 14** (por debajo, la ficha la lleva la
+iglesia con permiso de los padres), así que marcar solo «18 o más» haría que
+la ficha contradijera las condiciones. La franja de Google empieza en 13 y la
+nuestra en 14; no hay franja más fina. Nunca por debajo de 13: eso metería la
+app en el programa de familias de Google.
+
+Dos cosas que quedan abiertas:
+
+- El alta **no pregunta la edad**: los 14 son una regla de las condiciones, no
+  una comprobación.
+- Los 14 son la edad del consentimiento propio en España. En Colombia la
+  mayoría de edad es a los 18 y la Ley 1581 trata aparte los datos de
+  menores; `/terminos` no distingue por país. Conviene que lo mire alguien
+  que conozca la norma colombiana antes de abrir allí.
 
 ---
 
@@ -350,8 +381,12 @@ probable de rechazo en Apple.** Google es mucho menos estricta con esto.
 - Icono, arranque y barra de estado propios, siempre en claro.
 - Su propia pantalla de «Sin conexión», con «Reintentar», en vez del error del
   navegador; y nunca acepta un certificado malo.
-- La hoja de compartir del sistema en el devocional, y el selector de fotos y
-  la cámara del sistema al publicar.
+- El selector de fotos y la cámara del sistema al publicar.
+- **No prometer la hoja de compartir del sistema.** En Android no sale: el
+  WebView no trae `navigator.share` (comprobado en el emulador) y «Compartir»
+  del devocional copia el texto. En iOS no se ha probado. Con
+  `@capacitor/share` saldría en las dos; mientras, no se cuenta como algo de
+  app.
 - En Android, el botón atrás cierra primero lo abierto y sale desde la raíz.
 
 **Lo que conviene añadir antes de enviar a Apple**, por orden de lo que pesa:
