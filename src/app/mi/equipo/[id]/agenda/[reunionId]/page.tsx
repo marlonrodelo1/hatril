@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { MapPin, Pencil, Trash2 } from 'lucide-react';
+import { MapPin, Pencil, Trash2, UserPlus } from 'lucide-react';
 
 import {
   exigirUuid,
@@ -12,7 +12,7 @@ import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
 import { listaDelEquipo, obtenerReunion } from '@/lib/asistencia/consultas';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { AvatarPersona } from '@/components/avatar-persona';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { CONFIRMACIONES } from '@/app/panel/ministerios/[id]/agenda/constantes';
 import {
   Fila,
@@ -123,9 +123,20 @@ export default async function ReunionEnLaAppPage({
             // negaron el permiso de asistencia. El texto no dice cuál, igual
             // que la action.
             ministerio.equipo.length === 0 ? (
-              <Vacio titulo="El equipo está vacío">
-                Este ministerio todavía no tiene a nadie. Quien lo lleva suma a
-                su gente desde el panel, y en cuanto esté podrás pasar lista.
+              <Vacio
+                titulo="El equipo está vacío"
+                accion={
+                  <Link
+                    href={`/panel/ministerios/${id}`}
+                    className={buttonVariants({ variant: 'outline' })}
+                  >
+                    <UserPlus strokeWidth={1.8} />
+                    Sumar gente en el panel
+                  </Link>
+                }
+              >
+                Este ministerio todavía no tiene a nadie. Suma a tu gente desde
+                el panel y vuelve aquí para pasar lista.
               </Vacio>
             ) : (
               <Vacio titulo="Nadie a quien pasar lista">

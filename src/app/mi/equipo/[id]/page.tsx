@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { CircleCheck, TriangleAlert } from 'lucide-react';
 
+import { esPastor } from '@/lib/auth/permisos';
 import { requireMiEquipo } from '@/lib/ministerios/en-la-app/guarda';
 import {
   tarjetasDeLaPortada,
@@ -63,14 +64,17 @@ export default async function PortadaMinisterioPage({
   const total = totalPendientes(tarjetas);
 
   const yo = ministerio.equipo.find((p) => p.miembroId === ctx.miembroId);
-  // El pastor puede abrir cualquier ministerio sin estar en su equipo. Y del
-  // voluntario se dice lo que HACE —«Voz y teclado»— si lo tiene apuntado,
-  // que es más suyo que «Voluntario».
-  const comoQue = !yo
-    ? 'Pastor'
-    : yo.rolEquipo === 'voluntario'
+  // Del voluntario se dice lo que HACE —«Voz y teclado»— si lo tiene
+  // apuntado, que es más suyo que «Voluntario». Quien no está en el equipo
+  // solo llega aquí por gestionar ministerios: si es pastor, se dice; si lo
+  // tiene por permiso, no se le inventa un cargo.
+  const comoQue = yo
+    ? yo.rolEquipo === 'voluntario'
       ? (yo.rolEnMinisterio ?? ROL.voluntario)
-      : ROL[yo.rolEquipo];
+      : ROL[yo.rolEquipo]
+    : esPastor(ctx)
+      ? 'Pastor'
+      : null;
 
   // La flecha solo si hay a dónde volver: con un solo equipo, esta ES la
   // pestaña, y volver a la lista rebotaría aquí mismo. Sin flecha, el logo,
@@ -81,7 +85,7 @@ export default async function PortadaMinisterioPage({
     <MarcoEquipo
       ctx={ctx}
       titulo={ministerio.nombre}
-      subtitulo={`${comoQue} · ${ctx.iglesia.nombre}`}
+      subtitulo={[comoQue, ctx.iglesia.nombre].filter(Boolean).join(' · ')}
       volver={varios ? RAIZ_APP : undefined}
       conLogo
       error={error}

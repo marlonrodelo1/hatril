@@ -149,7 +149,7 @@ export async function requireMinisterioEnLaApp(
   if (modulo) {
     if (!tieneModulo(ministerio.modulos, modulo)) notFound();
     const app = adaptadorDe(modulo);
-    if (app?.visiblePara && !app.visiblePara(ctx)) notFound();
+    if (app?.visiblePara && !app.visiblePara(ctx, ministerioId)) notFound();
   }
 
   return { ctx, ministerio };

@@ -60,7 +60,7 @@ export async function tarjetasDeLaPortada(
   hoy: string,
   modo: ModoEnElEquipo,
 ): Promise<TarjetaDePortada[]> {
-  const modulos = modulosDeLaPortada(ctx, ministerio.modulos, modo);
+  const modulos = modulosDeLaPortada(ctx, ministerio.modulos, modo, ministerio.id);
 
   const resueltos = await Promise.allSettled(
     modulos.map(({ app }) => {

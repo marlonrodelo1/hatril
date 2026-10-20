@@ -97,12 +97,23 @@ export type ModuloEnLaApp = {
    */
   pantalla: 'app' | 'panel';
   /**
-   * Una puerta de más, aparte de llevar el ministerio y tener el módulo
-   * encendido. El seguimiento pide `ver_seguimiento`. Tiene que decir lo mismo
-   * que el `layout.tsx` del módulo en el panel, o la tarjeta saldría a quien
+   * Una puerta de más para el modo líder, aparte de llevar el ministerio
+   * (`puedeGestionarMinisterio`) y tener el módulo encendido. Tiene que decir
+   * lo mismo que la guarda del módulo en el panel, o la tarjeta saldría a quien
    * luego rebota.
+   *
+   * Recibe el ministerio porque hay puertas que dependen de cuál es: el
+   * reparto pide `puedeGestionarDesdeDentro` —pastor o quien lidera ESE
+   * equipo—, porque su RLS (`0042`) va por equipo y quien organiza ministerios
+   * desde secretaría no ve nada de él. El seguimiento, en cambio, pide un
+   * permiso (`ver_seguimiento`) que no depende del ministerio.
+   *
+   * La aplican las tres puertas a la vez —la tarjeta de la portada
+   * (`modulosDeLaPortada`), las pantallas (`requireMinisterioEnLaApp`) y las
+   * actions (`enLaApp`)—, así que un módulo nuevo que la declare queda cerrado
+   * en todas sin escribir su guarda.
    */
-  visiblePara?: (ctx: ContextoPermisos) => boolean;
+  visiblePara?: (ctx: ContextoPermisos, ministerioId: string) => boolean;
   /**
    * La tarjeta de la portada de quien LLEVA el ministerio. Recibe el ministerio
    * ya cargado —con su equipo y sus módulos— para que ningún adaptador lo vuelva

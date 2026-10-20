@@ -17,6 +17,7 @@ import { withUser } from '@/lib/db';
 import { ministerios } from '@/lib/db/schema';
 import { tieneModulo, type ModuloId } from '@/lib/ministerios/modulos';
 import { exigirPoderEscribir } from '@/lib/suscripcion/muro';
+import { adaptadorDe } from './registro';
 import { rutaApp, traducirAlApp } from './rutas';
 
 /**
@@ -45,10 +46,11 @@ import { rutaApp, traducirAlApp } from './rutas';
  *     saberlo, el aviso tiene que salir donde está.
  *   - Que lleve el ministerio. Lo vuelve a mirar la action; aquí va primero
  *     para no consultar nada sobre un ministerio ajeno.
- *   - Que el módulo esté encendido. En esta rama las actions del panel no lo
- *     comprueban —solo su layout, que no corre en una action—. Cuando se fusione
- *     la tanda 1, cada una lleva su `exigirModulo()` y esto pasa a ser
- *     redundante: se puede cambiar por esa misma llamada.
+ *   - Que el módulo esté encendido. Las actions del panel ya lo comprueban con
+ *     `exigirModulo()` desde la tanda 1; aquí se repite con el destino de la
+ *     app, para que el aviso no salga en la raíz de la zona.
+ *   - La puerta de más del adaptador (`visiblePara`), la misma que pone la
+ *     pantalla: el reparto, por ejemplo, solo para quien lidera ESE equipo.
  *
  * Y LO QUE NO
  * -----------
@@ -74,17 +76,25 @@ export async function enLaApp(
   const ctx = await requireIglesiaAccion({ sinMuro: true });
   exigirPoderEscribir(ctx, volver);
 
+  // La puerta del ministerio y la de más que declare el adaptador de cada
+  // módulo —`ver_seguimiento`, o la estrecha del reparto—: las mismas que la
+  // pantalla (`requireMinisterioEnLaApp`), para que una action no abra lo que
+  // la pantalla cierra.
   if (
     !z.string().uuid().safeParse(ministerioId).success ||
-    !puedeGestionarMinisterio(ctx, ministerioId)
+    !puedeGestionarMinisterio(ctx, ministerioId) ||
+    modulos.some((m) => {
+      const puerta = adaptadorDe(m)?.visiblePara;
+      return puerta ? !puerta(ctx, ministerioId) : false;
+    })
   ) {
     notFound();
   }
 
-  // Pasará a un `exigirModulo(ctx, ministerioId, m, volver)` por módulo al
-  // fusionar la tanda 1. Acotado a la iglesia del contexto como aquella: un
-  // ministerio de otra congregación sale como apagado, que es lo que es para
-  // quien pregunta.
+  // Redundante con el `exigirModulo()` que ya lleva cada action del panel en
+  // main, y se deja a propósito: es la misma consulta con el destino de la app.
+  // Acotado a la iglesia del contexto como aquella: un ministerio de otra
+  // congregación sale como apagado, que es lo que es para quien pregunta.
   const encendido = await withUser(ctx.user.id, async (tx) => {
     const [fila] = await tx
       .select({ modulos: ministerios.modulos })

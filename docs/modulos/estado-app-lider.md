@@ -35,8 +35,9 @@ lleva desde cada ministerio a su portada: «Abrir herramientas» si lo lleva,
 |---|---|---|
 | Agenda | Ensayos de las últimas 3 semanas (y hoy) sin lista; el siguiente | El próximo ensayo, con lugar; enlace al día en su agenda |
 | Turnos | Próximos turnos con puestos sin cubrir, «no puedo» o sin contestar | Sus turnos: los sin confirmar como pendientes; enlace a su turno en la agenda, donde confirma |
-| Repertorio | La lista del próximo culto, urgente si falta a 3 días | La lista del próximo culto del equipo (sin pendiente: no es cosa suya) |
+| Repertorio | La lista del próximo culto, urgente si falta a 3 días (solo con los turnos encendidos: la lista cuelga del turno) | La lista del próximo culto del equipo (sin pendiente: no es cosa suya) |
 | Seguimiento | Quién más reuniones se ha perdido (solo con `ver_seguimiento`) | Nada: es solo del líder |
+| Reparto | Cómo va la puerta de hoy: cuántos esperan y cuántos se han entregado, sin nombres; enlace a su pantalla del panel. Solo a quien lidera ESE equipo (o al pastor) | Nada en la v1 |
 
 Debajo, el equipo: nombres, papel y quién es responsable o colíder. Nunca las
 respuestas de los demás a un turno; eso es del líder.
@@ -88,7 +89,10 @@ modo (líder si `puedeGestionarMinisterio`, participante si sirve en él, si no
 404). `requireMinisterioEnLaApp(id, modulo)` guarda las herramientas: iglesia y
 consentimiento al día, suscripción no `bloqueada` (si lo está, a
 `/suscripcion`), llevar ese ministerio, ministerio de su iglesia, módulo
-encendido y la puerta de más del adaptador (`ver_seguimiento`). En cada página
+encendido y la puerta de más del adaptador: `visiblePara(ctx, ministerioId)`,
+que es `ver_seguimiento` en el seguimiento y la estrecha de main
+(`puedeGestionarDesdeDentro`) en el reparto. Esa misma puerta la aplican la
+tarjeta de la portada y `enLaApp()` en las actions. En cada página
 y no en un layout porque un layout no se vuelve a ejecutar al navegar entre las
 páginas que cuelgan de él.
 
@@ -111,10 +115,10 @@ del panel (`listaDelEquipo`, `personasPorFaltas`).
 - Un naranja por pantalla como mucho: la acción de la lista (planificar,
   apuntar) o el envío del formulario. La portada y el cuadrante no llevan
   ninguno.
-- **Los campos no llevan tamaño propio.** La guía pide arreglar los 16 px del
-  móvil en un solo sitio (inventario M1, sacar la regla de `@layer base`), no
-  campo a campo. Hasta que entre M1, los `<Input>` de la app miden 15 px en el
-  móvil, como en el resto de la aplicación.
+- **16 px en el móvil.** Main arregló M1 dentro de `Input`
+  (`text-[16px] md:text-[15px]`), así que los `<Input>` van sin tamaño propio;
+  los `<select>` y `<textarea>` nativos, que no pasan por `Input`, llevan lo
+  mismo en `_components/estilos.ts` (`text-[16px] md:text-body`).
 - Retoques tras comparar con `/mi/agenda` y el muro a 375 px: el logo en la
   raíz de la pestaña, la lista de pasar lista sin teñir las filas marcadas (la
   lista entera en salmón borraba avatares y líneas), «Vinieron 2 de 3» en una
@@ -128,46 +132,37 @@ del panel (`listaDelEquipo`, `personasPorFaltas`).
 Un adaptador en la carpeta del módulo y **una línea** en
 `src/lib/ministerios/en-la-app/registro.ts`. La portada lo recoge sola a partir
 de `modulosActivos()`. Sin adaptador, el módulo sale al líder con una tarjeta
-que lleva a su pantalla del panel, y al participante no le sale.
+que lleva a su pantalla del panel (con la puerta ancha,
+`puedeGestionarMinisterio`), y al participante no le sale.
+
+**Si la guarda de tu módulo en el panel es más estrecha** que
+`puedeGestionarMinisterio`, el adaptador tiene que llegar en la misma fusión
+con su `visiblePara`. Esa puerta la aplican a la vez la tarjeta, las pantallas
+(`requireMinisterioEnLaApp`) y las actions (`enLaApp`): declarada una vez, no
+hay que escribirla en ningún otro sitio.
+
+El ejemplo real es el del reparto, que ya está en la rama
+(`src/lib/reparto/en-la-app.ts`), resumido:
 
 ```ts
-// src/lib/reparto/en-la-app.ts
-import 'server-only';
-
-import type { ModuloEnLaApp } from '@/lib/ministerios/en-la-app/contrato';
-import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
-import { jornadaDeHoy } from './consultas'; // la consulta que ya tenga el módulo
-
 export const repartoEnLaApp: ModuloEnLaApp = {
   id: 'reparto',
   abrir: 'Abrir el reparto',
-  // 'panel' mientras no exista /mi/equipo/[id]/reparto; 'app' cuando exista.
+  // Su pantalla «Hoy» vive en el panel y ya está hecha para el móvil.
   pantalla: 'panel',
+  // La de `requireReparto` y `PestanasMinisterio` en main: pastor o quien
+  // lidera ESE equipo. La RLS del reparto (0042) va por equipo.
+  visiblePara: (ctx, ministerioId) => puedeGestionarDesdeDentro(ctx, ministerioId),
   async resumen(ctx, ministerio, hoy) {
-    const jornada = await jornadaDeHoy(ctx, ministerio.id, hoy);
-    return {
-      pendientes: jornada?.abierta
-        ? [{
-            texto: `Jornada de hoy · ${jornada.entregados} de ${jornada.inscritos} entregados`,
-            href: rutaApp(ministerio.id, 'reparto'),
-          }]
-        : [],
-      vacio: 'No hay jornada de reparto abierta. Empieza la del domingo desde el reparto.',
-    };
+    const jornada = await jornadaDelDia(ctx, ministerio.id, hoy);
+    if (!jornada) {
+      const inscritos = await contarInscritos(ctx, ministerio.id);
+      return { pendientes: [], vacio: `${inscritos} hogares en el padrón. …` };
+    }
+    const venidos = await quienHaVenido(ctx, jornada.id);
+    // … cuántos esperan y cuántos se han entregado; ni un nombre.
   },
-  // Lo que ve el voluntario del reparto. Sin datos de las familias: el padrón
-  // es del equipo que lo lleva.
-  async participante(ctx, ministerio, hoy) {
-    const jornada = await jornadaDeHoy(ctx, ministerio.id, hoy);
-    return {
-      pendientes: [],
-      proximo: jornada
-        ? { texto: `Reparto · ${jornada.hora}`, detalle: jornada.lugar, href: '/mi/agenda' }
-        : null,
-      vacio: 'No hay reparto apuntado por delante.',
-      enlace: { texto: 'Ver mi agenda', href: '/mi/agenda' },
-    };
-  },
+  // Sin `participante`: en la v1 el voluntario no marca entregas.
 };
 ```
 
@@ -184,15 +179,17 @@ const ADAPTADORES: Partial<Record<ModuloId, ModuloEnLaApp>> = {
 
 Para darle **pantalla en la app** al líder (`pantalla: 'app'`): la página en
 `src/app/mi/equipo/[id]/reparto/page.tsx`, con la misma ruta que en el panel,
-abriendo con `requireMinisterioEnLaApp(id, 'reparto')` y dentro de
-`MarcoEquipo`; y sus actions en `…/reparto/actions.ts`, envolviendo las del
-panel:
+abriendo con `requireMinisterioEnLaApp(id, 'reparto')` —que aplica sola la
+puerta estrecha del adaptador— y dentro de `MarcoEquipo`; y sus actions en
+`…/reparto/actions.ts`, envolviendo las del panel, que también pasan por ella:
 
 ```ts
-export async function marcarEntregado(ministerioId: string, formData: FormData) {
+import * as panel from '@/app/panel/ministerios/[id]/reparto/actions';
+
+export async function entregarA(ministerioId: string, beneficiarioId: string) {
   await enLaApp(
     { ministerioId, modulos: ['reparto'], volver: rutaApp(ministerioId, 'reparto') },
-    () => panel.marcarEntregado(ministerioId, formData),
+    () => panel.entregarA(ministerioId, beneficiarioId),
   );
 }
 ```
@@ -202,8 +199,8 @@ bajo `/mi/equipo/[id]/reparto/…`.
 
 Casos concretos:
 
-- **Reparto** (ya en main): sin adaptador, al fusionar sale al líder con la
-  tarjeta de respaldo. Con el ejemplo de arriba, también al voluntario.
+- **Reparto**: hecho, como arriba. Al líder del equipo le sale cómo va la
+  puerta de hoy; a quien solo tiene `gestionar_ministerios`, no le sale.
 - **Emisora**: la tarjeta del líder puede decir el próximo programa; si los
   programas son turnos, sus huecos ya los cuenta `turnosEnLaApp`. La radio la
   escucha cualquiera desde el reproductor del layout de `/mi`, que no depende
@@ -212,7 +209,8 @@ Casos concretos:
   `seguimientoEnLaApp.resumen`; si es módulo propio, adaptador nuevo. Sin
   `participante`: quién es nuevo y cómo va no es para todo el equipo.
 - **Células y escuela**, cuando existan: «Mi célula» y «la clase de mi hijo»
-  son exactamente el `participante` de su módulo.
+  son exactamente el `participante` de su módulo. La escuela, además, con la
+  puerta estrecha, como el reparto: también son datos de terceros por equipo.
 
 ---
 
@@ -253,6 +251,17 @@ Betania, y la pestaña depende de servir, no del rol.
 
 **pastor.sion@**: Sion está `bloqueada` y toda la zona le manda a `/suscripcion`.
 
+**Tras la revisión y la fusión con main (reparto)**: Sara, colíder de Acción
+social, ve la tarjeta del reparto con la puerta de hoy («1 espera · 2
+entregados (1 sin inscribir)», las mismas cifras que la pantalla del panel) y
+«Abrir el reparto» le abre esa pantalla; Andrés, voluntario del mismo equipo,
+no la ve. Ninguna cuenta de demo tiene `gestionar_ministerios` sin ser pastor,
+así que la puerta estrecha se comprobó con un guion contra el código real y
+contextos fabricados: quien solo tiene `gestionar_ministerios` ve la agenda y
+no el reparto; el colíder, los dos; el pastor, también el seguimiento; y la
+tarjeta del repertorio con los turnos apagados devuelve su estado vacío, sin
+turno ni enlace. A 375 px, un `<textarea>` y un `<Input>` miden 16 px.
+
 **Comprobaciones**: `npx tsc --noEmit`, `npx eslint`, `npm run build` y
 `npm run test:aislamiento`, las cuatro en verde.
 
@@ -268,7 +277,6 @@ Betania, y la pestaña depende de servir, no del rol.
 - **Una cuenta de otra iglesia abriendo un ministerio de Betania** no se pudo
   probar entrando: Sion rebota antes por la suscripción. Lo cubren
   `obtenerMinisterio` (acotado a la iglesia) y el test de aislamiento.
-- **Campos a 15 px en el móvil** hasta que entre M1 de la guía (ver arriba).
 - **Las 404 salen con la página de Next**, en inglés (inventario M2). Aquí solo
   se llega por una URL escrita a mano, no desde un flujo normal.
 - **El aviso «X no puede» enlaza al panel** (`responderTurno`, en
@@ -290,7 +298,8 @@ Betania, y la pestaña depende de servir, no del rol.
 1. **`/panel/ministerios/<id-que-no-es-uuid>` da 500**: la página del
    ministerio llama a `obtenerMinisterio` sin validar el id (Postgres `22P02`).
    Las de módulo se salvan porque su layout valida antes.
-2. Los campos de 15 px en el móvil ya están en el inventario visual (M1).
+2. Los campos de 15 px en el móvil estaban en el inventario visual (M1), y
+   main ya los arregló dentro de `Input`.
 
 ---
 

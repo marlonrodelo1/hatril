@@ -191,9 +191,22 @@ export default async function TurnoEnLaAppPage({
 
       <Seccion rotulo="Quién va">
         {ministerio.equipo.length === 0 ? (
-          <Vacio titulo="El equipo está vacío">
-            Solo se puede poner en un turno a gente del equipo. Quien lleva el
-            ministerio la suma desde el panel; en cuanto esté, aparecerá aquí.
+          // Sumar gente al equipo sigue en el panel, donde se elige de la
+          // congregación entera; quien ve esto lleva el ministerio y entra.
+          <Vacio
+            titulo="El equipo está vacío"
+            accion={
+              <Link
+                href={`/panel/ministerios/${id}`}
+                className={buttonVariants({ variant: 'outline' })}
+              >
+                <UserPlus strokeWidth={1.8} />
+                Sumar gente en el panel
+              </Link>
+            }
+          >
+            Solo se puede poner en un turno a gente del equipo. Suma a tu gente
+            desde el panel y vuelve aquí: saldrá en cada puesto.
           </Vacio>
         ) : (
           <ul className="flex flex-col gap-2.5">

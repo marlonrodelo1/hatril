@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { sumarDias } from '@/lib/agenda/horarios';
+import { tieneModulo } from '@/lib/ministerios/modulos';
 import type { ModuloEnLaApp } from '@/lib/ministerios/en-la-app/contrato';
 import { cuandoCorto, diaCorto } from '@/lib/ministerios/en-la-app/fechas';
 import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
@@ -27,6 +28,18 @@ export const repertorioEnLaApp: ModuloEnLaApp = {
   abrir: 'Ver el repertorio',
   pantalla: 'app',
   async resumen(ctx, ministerio, hoy) {
+    // La lista cuelga del turno: sin los turnos encendidos no hay culto que
+    // enseñar, y su pantalla daría 404. Es la regla de `guardaDeLaLista` en el
+    // panel, que pide las dos herramientas. Los turnos que ya existían siguen
+    // en la base, por eso no basta con que no haya ninguno.
+    if (!tieneModulo(ministerio.modulos, 'turnos')) {
+      return {
+        pendientes: [],
+        vacio:
+          'La lista de cada culto se monta dentro de su turno, y este ministerio no tiene los turnos encendidos. Los enciende el pastor desde «Módulos».',
+      };
+    }
+
     const [siguiente] = await proximosTurnos(ctx, ministerio.id, hoy);
 
     if (!siguiente) {
@@ -72,6 +85,15 @@ export const repertorioEnLaApp: ModuloEnLaApp = {
    * todavía no está no es un pendiente suyo, así que no pide atención.
    */
   async participante(ctx, ministerio, hoy) {
+    // Lo mismo que para el líder: con los turnos apagados, ni el próximo culto
+    // ni sus canciones son algo que el equipo esté usando.
+    if (!tieneModulo(ministerio.modulos, 'turnos')) {
+      return {
+        pendientes: [],
+        vacio: 'Las canciones de cada culto saldrán aquí cuando el equipo use los turnos.',
+      };
+    }
+
     const [siguiente] = await proximosTurnos(ctx, ministerio.id, hoy);
     if (!siguiente) {
       return {
