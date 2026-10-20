@@ -94,7 +94,7 @@ export default async function MiPage({
        * menú de cuenta se queda en «Cerrar sesión» solo. Lo decide la propia
        * cabecera al ver que no hay contexto de iglesia.
        */}
-      <CabeceraMiembro user={user} titulo="Hatril" campana={false} />
+      <CabeceraMiembro user={user} titulo="Hatril" campana={false} marca />
 
       <main className="mx-auto flex w-full max-w-[620px] flex-col gap-6 px-4 py-12 sm:px-5">
         {enviada && (

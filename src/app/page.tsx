@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import { totalEnDirectorio } from '@/lib/iglesias/directorio';
+import { Logo } from '@/components/marca/logo';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -71,9 +72,7 @@ export default async function HomePage() {
       {/* ---------------------------------------------------------------- */}
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex max-w-[1100px] items-center gap-4 px-5 py-3.5 md:px-8">
-          <span className="text-[17px] font-extrabold tracking-[-0.02em]">
-            Hatril
-          </span>
+          <Logo variante="logotipo" tamano={22} />
           <span className="flex-1" />
           <Link
             href="/iglesias"
@@ -234,7 +233,7 @@ export default async function HomePage() {
       {/* ---------------------------------------------------------------- */}
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-[1100px] flex-wrap items-center gap-x-6 gap-y-2 px-5 py-8 text-[13.5px] text-muted-foreground md:px-8">
-          <span className="font-semibold text-foreground">Hatril</span>
+          <Logo variante="logotipo" tamano={18} />
           <Link href="/iglesias" className="no-underline hover:underline">
             Directorio
           </Link>

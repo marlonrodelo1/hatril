@@ -10,6 +10,7 @@ import { nombreDeLaCuenta } from '@/lib/auth/nombre';
 import { miFotoDePerfil } from '@/lib/miembros/foto';
 import { MarcaIglesia } from '@/app/panel/_components/marca-iglesia';
 import { Campana } from '@/components/campana';
+import { Logo } from '@/components/marca/logo';
 import { MenuCuenta } from '@/components/menu-cuenta';
 
 /**
@@ -52,6 +53,7 @@ export async function CabeceraMiembro({
   volver,
   campana = true,
   logoUrl,
+  marca = false,
   children,
 }: {
   /** La sesión, que las tres páginas ya tienen resuelta antes de pintar nada. */
@@ -72,6 +74,12 @@ export async function CabeceraMiembro({
    * logo que enseñar, y unas iniciales de «Hatril» ahí no dicen nada.
    */
   logoUrl?: string | null;
+  /**
+   * El logotipo de Hatril en lugar del título. Es para la sala de espera, la
+   * única pantalla sin iglesia que nombrar, donde el título era «Hatril» a
+   * secas. El `titulo` se sigue pidiendo: es el nombre de la pantalla.
+   */
+  marca?: boolean;
   /** Las acciones de ESTA pantalla: «Marcar todo»… */
   children?: React.ReactNode;
 }) {
@@ -128,16 +136,20 @@ export async function CabeceraMiembro({
           <MarcaIglesia logoUrl={logoUrl} iniciales="" nombre={titulo} />
         )}
 
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate text-[15.5px] font-extrabold leading-tight tracking-[-0.02em]">
-            {titulo}
-          </span>
-          {subtitulo && (
-            <span className="truncate text-[12.5px] leading-tight text-muted-foreground">
-              {subtitulo}
+        {marca ? (
+          <Logo variante="logotipo" tamano={20} />
+        ) : (
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-[15.5px] font-extrabold leading-tight tracking-[-0.02em]">
+              {titulo}
             </span>
-          )}
-        </span>
+            {subtitulo && (
+              <span className="truncate text-[12.5px] leading-tight text-muted-foreground">
+                {subtitulo}
+              </span>
+            )}
+          </span>
+        )}
 
         <span className="flex-1" />
 

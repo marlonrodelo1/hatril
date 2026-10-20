@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { Logo } from '@/components/marca/logo';
+
 /**
  * Marco de las páginas legales.
  *
@@ -16,9 +18,10 @@ export default function LegalLayout({
         <div className="mx-auto flex max-w-[760px] items-center gap-4 px-5 py-3.5 md:px-8">
           <Link
             href="/"
-            className="text-[17px] font-extrabold tracking-[-0.02em] text-foreground no-underline hover:no-underline"
+            aria-label="Hatril, ir a la portada"
+            className="rounded-sm no-underline outline-offset-4 hover:no-underline focus-visible:outline-2 focus-visible:outline-ring"
           >
-            Hatril
+            <Logo variante="logotipo" tamano={22} />
           </Link>
           <span className="flex-1" />
           <Link
@@ -43,7 +46,7 @@ export default function LegalLayout({
             Términos
           </Link>
           <span className="flex-1" />
-          <span>Hatril</span>
+          <Logo variante="logotipo" tamano={18} />
         </div>
       </footer>
     </div>

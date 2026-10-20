@@ -1,6 +1,7 @@
 /**
- * Iconos y pantalla de arranque de la app, todo de un solo dibujo:
- * `assets/icono.svg`.
+ * Iconos y pantalla de arranque de la app, y los iconos de la web, todo de
+ * `assets/icono.svg` (y, a 16 y 32 px, de los dos favicons dibujados a mano
+ * que hay a su lado).
  *
  *   npm run app:iconos
  *
@@ -31,9 +32,9 @@
  *
  * 3. Escribe a mano el icono adaptable de Android (8 en adelante), en
  *    vectorial. El de @capacitor/assets son PNG de 48 dp estirados a 72: en
- *    una pantalla densa la H salía blanda. El vectorial es la misma H del SVG,
- *    nítida a cualquier tamaño, y sirve además de icono monocromo para los
- *    iconos temáticos de Android 13.
+ *    una pantalla densa el dibujo salía blando. El vectorial es el mismo
+ *    trazado del SVG, nítido a cualquier tamaño, y sirve además de icono
+ *    monocromo para los iconos temáticos de Android 13.
  *
  * 4. Quita del arranque de iOS los PNG de ejemplo de la plantilla de
  *    Capacitor: @capacitor/assets escribe los suyos al lado y los viejos se
@@ -44,6 +45,20 @@
  *
  * 5. Deja en Versiones/Android la vista previa y el icono de 512 que pide la
  *    ficha de Google Play.
+ *
+ * 6. Escribe los iconos de la web con los nombres que Next 16 convierte solo
+ *    en etiquetas <link> (node_modules/next/dist/docs/01-app/
+ *    03-api-reference/03-file-conventions/01-metadata/app-icons.md):
+ *      src/app/favicon.ico      16, 32 y 48 en un fichero, para quien lo pide
+ *                               a ciegas en /favicon.ico (y el buscador)
+ *      src/app/icon1.png        16, el favicon dibujado a mano
+ *      src/app/icon2.png        32, ídem
+ *      src/app/apple-icon.png   180, cuadrado entero y sin alfa
+ *
+ *    Sin icon.svg, y a propósito: el navegador prefiere un SVG a cualquier
+ *    PNG, y escalaría el dibujo grande a 16 px, donde el libro y el pupitre se
+ *    funden en un bloque. Con los dos PNG de tamaño exacto, la pestaña coge el
+ *    de 16 en una pantalla normal y el de 32 en una retina.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -71,10 +86,10 @@ try {
 const CREMA = '#FAF9F5';
 
 const fuente = readFileSync(join(assets, 'icono.svg'), 'utf8');
-const H = fuente.match(/<path[^>]*\sd="([^"]+)"/)?.[1];
+const DIBUJO = fuente.match(/<path[^>]*\sd="([^"]+)"/)?.[1];
 const NARANJA = fuente.match(/<rect[^>]*\sfill="(#[0-9A-Fa-f]{6})"/)?.[1];
-if (!H || !NARANJA) {
-  throw new Error('assets/icono.svg tiene que traer un <rect> de fondo con fill y un <path> con la letra.');
+if (!DIBUJO || !NARANJA) {
+  throw new Error('assets/icono.svg tiene que traer un <rect> de fondo con fill y un <path> con el dibujo.');
 }
 
 /** Un cuadrado con las esquinas de iOS (22,4 % del lado). */
@@ -106,7 +121,7 @@ function adaptableAndroid() {
   if (!existsSync(res)) return;
 
   // Lienzo de 1536 = el 1024 del SVG más el margen hasta 108 dp: la capa mide
-  // 108 y el lanzador enseña los 72 del centro. Así la H queda en la zona
+  // 108 y el lanzador enseña los 72 del centro. Así el atril queda en la zona
   // visible exactamente como en icono.svg.
   writeFileSync(
     join(res, 'drawable', 'ic_launcher_foreground.xml'),
@@ -118,7 +133,7 @@ function adaptableAndroid() {
     android:viewportWidth="1536"
     android:viewportHeight="1536">
     <group android:translateX="256" android:translateY="256">
-        <path android:fillColor="#FFFFFF" android:pathData="${H}" />
+        <path android:fillColor="#FFFFFF" android:pathData="${DIBUJO}" />
     </group>
 </vector>
 `,
@@ -173,7 +188,7 @@ async function adaptable(lado, mascara) {
       : `<rect width="1024" height="1024" rx="307"/>`;
   const dibujo = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="${lado}" height="${lado}">
     <clipPath id="m">${forma}</clipPath>
-    <g clip-path="url(#m)"><rect width="1024" height="1024" fill="${NARANJA}"/><path fill="#FFFFFF" d="${H}"/></g>
+    <g clip-path="url(#m)"><rect width="1024" height="1024" fill="${NARANJA}"/><path fill="#FFFFFF" d="${DIBUJO}"/></g>
   </svg>`;
   return sharp(Buffer.from(dibujo)).png().toBuffer();
 }
@@ -216,6 +231,55 @@ async function vistaPrevia() {
   await sharp(join(assets, 'icon-only.png')).resize(512, 512).png().toFile(join(versiones, 'icono-play-512.png'));
 }
 
+/** Un .ico de los de ahora: un PNG dentro por tamaño (Windows Vista en adelante). */
+function ico(imagenes) {
+  const cabecera = Buffer.alloc(6);
+  cabecera.writeUInt16LE(0, 0); // reservado
+  cabecera.writeUInt16LE(1, 2); // 1 = icono
+  cabecera.writeUInt16LE(imagenes.length, 4);
+  let desde = 6 + 16 * imagenes.length;
+  const entradas = imagenes.map(({ lado, png }) => {
+    const e = Buffer.alloc(16);
+    e.writeUInt8(lado, 0);
+    e.writeUInt8(lado, 1);
+    e.writeUInt16LE(1, 4); // planos
+    e.writeUInt16LE(32, 6); // bits por píxel
+    e.writeUInt32LE(png.length, 8);
+    e.writeUInt32LE(desde, 12);
+    desde += png.length;
+    return e;
+  });
+  return Buffer.concat([cabecera, ...entradas, ...imagenes.map((i) => i.png)]);
+}
+
+async function web() {
+  const app = join(raiz, 'src', 'app');
+  // A 72 ppp el SVG de 16 sale a 16 píxeles justos: cada cuadradito del
+  // dibujo cae en un píxel, sin suavizado que lo emborrone.
+  const f16 = await sharp(join(assets, 'favicon-16.svg'), { density: 72 }).png().toBuffer();
+  const f32 = await sharp(join(assets, 'favicon-32.svg'), { density: 72 }).png().toBuffer();
+  // A 48 ya se lee el dibujo vectorial, con las esquinas del símbolo de la web
+  // (src/components/marca/logo.tsx).
+  const f48 = await redondeado(48);
+
+  writeFileSync(
+    join(app, 'favicon.ico'),
+    ico([
+      { lado: 16, png: f16 },
+      { lado: 32, png: f32 },
+      { lado: 48, png: f48 },
+    ]),
+  );
+  writeFileSync(join(app, 'icon1.png'), f16);
+  writeFileSync(join(app, 'icon2.png'), f32);
+  // iOS pone las esquinas y pinta de negro lo transparente: cuadrado entero.
+  await sharp(join(assets, 'icon-only.png'))
+    .resize(180, 180)
+    .removeAlpha()
+    .png()
+    .toFile(join(app, 'apple-icon.png'));
+}
+
 await rasterizar();
 
 // La línea entera y con shell: en Windows `npx` es un .cmd (ver android.mjs).
@@ -228,5 +292,8 @@ if (generar.status !== 0) {
 adaptableAndroid();
 arranqueIos();
 await vistaPrevia();
+await web();
 
-console.log('\nIconos y arranque generados. Vista previa en Versiones/Android/icono-vista-previa.png');
+console.log(
+  '\nIconos y arranque generados, también los de la web (src/app). Vista previa en Versiones/Android/icono-vista-previa.png',
+);

@@ -12,6 +12,7 @@ import {
 } from '@/lib/suscripcion/estado';
 import { miembrosQueCuentan } from '@/lib/suscripcion/consultas';
 import { Aviso } from '@/components/aviso';
+import { Logo } from '@/components/marca/logo';
 import { ElegirPlan } from '../panel/suscripcion/_components/planes';
 
 export const metadata: Metadata = { title: 'Suscripción' };
@@ -66,55 +67,66 @@ export default async function MuroSuscripcionPage({
   const cuentan = pastor ? await miembrosQueCuentan(ctx) : 0;
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-5 py-12 sm:px-8">
-      {error && <Aviso>{error}</Aviso>}
-
-      <div className="flex flex-col gap-3">
-        <span className="flex size-10 items-center justify-center rounded-full border border-border bg-surface">
-          <Lock className="size-[18px] text-muted-foreground" strokeWidth={1.8} />
-        </span>
-        <h1 className="text-[26px] font-bold tracking-[-0.02em]">
-          {ctx.iglesia.nombre}
-        </h1>
-        <p className="max-w-prose text-[14.5px] leading-relaxed text-muted-foreground">
-          {etiquetaEstado(estado)} Nada se ha borrado: las fichas, los
-          ministerios y las cuentas siguen donde estaban.
-        </p>
-      </div>
-
-      {pastor ? (
-        <ElegirPlan
-          cuentan={cuentan}
-          periodicidad={periodicidad}
-          // Sin plan actual: quien llega aquí no tiene ninguno vigente, y
-          // marcar uno como «el tuyo» sería decirle que tiene lo que acaba de
-          // perder.
-          planActual={null}
-          base="/suscripcion"
-        />
-      ) : (
-        // A quien no es pastor no se le enseñan planes: no puede contratarlos, y
-        // ponerle un botón que le va a rebotar es hacerle perder el tiempo dos
-        // veces. Se le dice quién lo resuelve y se le deja su área, que sigue
-        // siendo suya.
-        //
-        // A `/mi/comunidad` y no a `/mi`: `/mi` manda al equipo al panel, y el
-        // panel, con la iglesia bloqueada, lo devuelve aquí. Para un tesorero o
-        // un colíder el botón era un callejón sin salida. La comunidad solo pide
-        // `requireIglesia()`, que no mira la suscripción, y es lo primero que ve
-        // cualquier miembro al entrar.
-        <div className="flex flex-col gap-3">
-          <p className="max-w-prose text-[14px] leading-relaxed">
-            Esto lo resuelve el pastor de la congregación desde su panel.
-          </p>
-          <Link
-            href="/mi/comunidad"
-            className="w-fit rounded-lg border border-border bg-surface px-4 py-2 text-[13.5px] font-medium hover:bg-muted"
-          >
-            Ir a mi área
-          </Link>
+    <div className="flex min-h-dvh flex-col bg-background">
+      {/* La marca, sin enlace, como en /acepta: fuera del panel es lo único que
+          dice dónde se está, y la portada no es salida para quien tiene que
+          resolver esto. */}
+      <header className="border-b border-border bg-surface">
+        <div className="mx-auto flex max-w-4xl px-5 py-3.5 sm:px-8">
+          <Logo variante="logotipo" tamano={22} />
         </div>
-      )}
+      </header>
+
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-5 py-12 sm:px-8">
+        {error && <Aviso>{error}</Aviso>}
+
+        <div className="flex flex-col gap-3">
+          <span className="flex size-10 items-center justify-center rounded-full border border-border bg-surface">
+            <Lock className="size-[18px] text-muted-foreground" strokeWidth={1.8} />
+          </span>
+          <h1 className="text-[26px] font-bold tracking-[-0.02em]">
+            {ctx.iglesia.nombre}
+          </h1>
+          <p className="max-w-prose text-[14.5px] leading-relaxed text-muted-foreground">
+            {etiquetaEstado(estado)} Nada se ha borrado: las fichas, los
+            ministerios y las cuentas siguen donde estaban.
+          </p>
+        </div>
+
+        {pastor ? (
+          <ElegirPlan
+            cuentan={cuentan}
+            periodicidad={periodicidad}
+            // Sin plan actual: quien llega aquí no tiene ninguno vigente, y
+            // marcar uno como «el tuyo» sería decirle que tiene lo que acaba de
+            // perder.
+            planActual={null}
+            base="/suscripcion"
+          />
+        ) : (
+          // A quien no es pastor no se le enseñan planes: no puede contratarlos, y
+          // ponerle un botón que le va a rebotar es hacerle perder el tiempo dos
+          // veces. Se le dice quién lo resuelve y se le deja su área, que sigue
+          // siendo suya.
+          //
+          // A `/mi/comunidad` y no a `/mi`: `/mi` manda al equipo al panel, y el
+          // panel, con la iglesia bloqueada, lo devuelve aquí. Para un tesorero o
+          // un colíder el botón era un callejón sin salida. La comunidad solo pide
+          // `requireIglesia()`, que no mira la suscripción, y es lo primero que ve
+          // cualquier miembro al entrar.
+          <div className="flex flex-col gap-3">
+            <p className="max-w-prose text-[14px] leading-relaxed">
+              Esto lo resuelve el pastor de la congregación desde su panel.
+            </p>
+            <Link
+              href="/mi/comunidad"
+              className="w-fit rounded-lg border border-border bg-surface px-4 py-2 text-[13.5px] font-medium hover:bg-muted"
+            >
+              Ir a mi área
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

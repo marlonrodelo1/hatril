@@ -48,8 +48,20 @@ lee al arrancar.
   con cinco cuentas, en siete graves (M1–M7), diecisiete que se notan algo y
   quince detalles, cada uno con su fichero y su arreglo. La fase 2, los
   arreglos, está en «Qué falta».
+- **La marca: el atril** (20-oct). La «t» de Hatril es un atril con la Biblia
+  abierta (la propuesta 3-b; las piezas, la lámina y el veredicto están en
+  `Versiones/marca/final/`, fuera del repo). En la web lo pinta
+  `src/components/marca/logo.tsx`, en SVG y con tokens: el logotipo en la
+  portada (cabecera y pie), el directorio, las legales, la sala de espera de
+  `/mi`, `/acepta`, `/suscripcion` y el acceso; el símbolo, arriba del acceso
+  en el móvil. Por debajo de 40 px el símbolo usa los favicons dibujados a
+  mano. Favicon e iconos de la web en `src/app` (`favicon.ico`, `icon1.png`,
+  `icon2.png`, `apple-icon.png`) y los de Android e iOS salen todos de
+  `assets/` con `npm run app:iconos`. El panel no lleva la marca de Hatril:
+  muestra la de cada iglesia. Comprobado a 375 y 1280 px y en el emulador.
 - **Acceso**: entrar, registrar iglesia, crear cuenta personal, recuperar
-  contraseña.
+  contraseña. Rehecho el 20-oct: el mismo marco en las cinco pantallas,
+  pensado para el móvil de 375 px, que es lo primero que ve la app nativa.
 - **Panel**: inicio (avisos accionables arriba, cifras debajo), miembros
   (listado con filtros, ficha, alta, edición, baja),
   ministerios (rejilla, detalle, equipo, asignar, responsable y colíderes,
@@ -554,7 +566,9 @@ lee al arrancar.
     `app.hatril`, 1.0.0, versionCode 1, targetSdk 36, `allowBackup=false`;
     pasa `jarsigner -verify` y `apksigner verify`, y la huella del certificado
     es la de la firma de subida. Instalada, arranca, carga hatril.com y llega
-    al acceso. El primer arranque tras instalar tardó unos 11 s en pintar; el
+    al acceso. Recompilada el 20-oct con el icono del atril (sigue siendo
+    versionCode 1: no se ha subido nada a Play); en el emulador, el icono del
+    cajón y el del arranque son ya el atril. El primer arranque tras instalar tardó unos 11 s en pintar; el
     segundo, unos 5 (el emulador va a ~480 ms de hatril.com).
   - Con la de **depuración**, leyendo la página por el protocolo de
     depuración del WebView: la redirección de `/mi` deja la barra en

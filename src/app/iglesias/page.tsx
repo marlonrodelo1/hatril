@@ -4,6 +4,7 @@ import { MapPin, Search, SearchX } from 'lucide-react';
 
 import { buscarIglesias, totalEnDirectorio } from '@/lib/iglesias/directorio';
 import { iniciales } from '@/lib/format/iniciales';
+import { Logo } from '@/components/marca/logo';
 import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
@@ -44,9 +45,10 @@ export default async function DirectorioPage({
         <div className="mx-auto flex max-w-[1000px] items-center gap-6 px-5 py-3.5 md:px-8">
           <Link
             href="/"
-            className="text-[17px] font-extrabold tracking-[-0.02em] text-foreground no-underline hover:no-underline"
+            aria-label="Hatril, ir a la portada"
+            className="rounded-sm no-underline outline-offset-4 hover:no-underline focus-visible:outline-2 focus-visible:outline-ring"
           >
-            Hatril
+            <Logo variante="logotipo" tamano={22} />
           </Link>
           <span className="flex-1" />
           <Button variant="outline" size="sm" render={<Link href="/acceso" />}>

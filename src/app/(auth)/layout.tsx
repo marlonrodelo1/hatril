@@ -50,7 +50,7 @@ export default async function AuthLayout({
           acababa a media página, lejos del logo y del pie. */}
       <aside className="hidden flex-col justify-between border-r border-border bg-surface px-12 py-12 lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-[44%] lg:self-start xl:w-[40%] xl:px-16">
         <Marca enApp={enApp}>
-          <Logo variante="logotipo" tamano={44} />
+          <Logo variante="logotipo" tamano={36} />
         </Marca>
 
         <div className="flex max-w-[30rem] flex-col gap-8">

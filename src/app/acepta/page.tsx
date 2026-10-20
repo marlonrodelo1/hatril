@@ -5,6 +5,7 @@ import { ShieldCheck } from 'lucide-react';
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS } from '@/lib/rgpd/consentimiento';
 import { CasillaAsistencia } from '@/components/casilla-asistencia';
+import { Logo } from '@/components/marca/logo';
 import { Button } from '@/components/ui/button';
 import { salir } from '../(auth)/actions';
 import { aceptar } from './actions';
@@ -32,6 +33,15 @@ export default async function AceptaPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
+      {/* La marca, y sin enlace: fuera del panel y de /mi no hay otra cosa
+          que diga dónde se está, y a quien tiene esta decisión a medias no se
+          le ofrece irse a la portada. */}
+      <header className="border-b border-border bg-surface">
+        <div className="mx-auto flex max-w-[640px] px-4 py-3.5 sm:px-5">
+          <Logo variante="logotipo" tamano={22} />
+        </div>
+      </header>
+
       <main className="mx-auto flex w-full max-w-[640px] flex-col gap-6 px-4 py-12 sm:px-5">
         <div className="flex flex-col gap-3">
           <span className="flex size-11 items-center justify-center rounded-full bg-accent text-accent-foreground">
