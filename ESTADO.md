@@ -72,7 +72,7 @@ lee al arrancar.
     `gestionar_su_ministerio` es ahora defecto de todos los roles y el ámbito lo
     pone el dato; `esDelEquipo` solo lo cuenta si de verdad lidera algo. Quien
     solo lleva sus ministerios aterriza en la app, en la pestaña Equipo
-    (; con uno solo, directo a su portada), y el panel le queda en
+    (`/mi/equipo`; con uno solo, directo a su portada), y el panel le queda en
     el menú del avatar: lo decidió Marlon el 20-oct. En el panel, el menú abre
     con «Lo que llevas».
     Ojo: una cuenta con rol `lider` que no lidera nada ya no entra al panel.
