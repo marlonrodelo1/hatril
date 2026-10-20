@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
-import { ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+import { CalendarClock, ChevronRight, ExternalLink } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { turnoParaMiembro } from '@/lib/turnos/consultas';
 import { cancionesDelTurno } from '@/lib/repertorio/consultas';
+import { diaYHora, ensayoAntesDelTurno } from '@/lib/agenda/ensayos';
 import { sitioDe } from '@/lib/repertorio/enlaces';
 import { ETIQUETA_RESPUESTA } from '@/lib/turnos/respuestas';
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
@@ -50,7 +52,17 @@ export default async function TurnoMiembroPage({
   //
   // Sin mirar si el repertorio está encendido. Si el equipo lo apagó, la lista
   // de un domingo que ya se preparó sigue siendo lo que se va a tocar.
-  const canciones = await cancionesDelTurno(ctx, turno.id);
+  //
+  // El ensayo, igual: la reunión del mismo equipo en la semana de antes, que es
+  // de su equipo por la misma puerta.
+  const [canciones, ensayo] = await Promise.all([
+    cancionesDelTurno(ctx, turno.id),
+    ensayoAntesDelTurno(ctx, {
+      ministerioId: turno.ministerio.id,
+      fecha: turno.fecha,
+      hora: turno.hora,
+    }),
+  ]);
 
   const supabase = await createClient();
   const {
@@ -137,6 +149,43 @@ export default async function TurnoMiembroPage({
             <p className="rounded-lg border border-border bg-surface-alt px-4 py-3 text-pretty text-[14.5px] leading-relaxed">
               {turno.notas}
             </p>
+          )}
+
+          {ensayo && (
+            // Las notas del ensayo van aquí mismo, recortadas: «traed los
+            // in-ear» es lo que hay que leer antes de salir de casa, y abrir
+            // otra pantalla para verlo es lo que hacía que no llegara.
+            <Link
+              href={`/mi/agenda/reunion/${ensayo.id}`}
+              className="group flex items-start gap-3 border-t border-border pt-4 text-foreground no-underline hover:no-underline"
+            >
+              <CalendarClock
+                className="mt-0.5 size-[18px] flex-none text-muted-foreground"
+                strokeWidth={1.8}
+                aria-hidden
+              />
+              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="text-pretty text-[14.5px] leading-snug">
+                  <span className="font-semibold underline-offset-4 group-hover:underline">
+                    {ensayo.titulo}:
+                  </span>{' '}
+                  {diaYHora(ensayo.fecha, ensayo.hora)}
+                  {ensayo.lugar && (
+                    <span className="text-muted-foreground"> · {ensayo.lugar}</span>
+                  )}
+                </span>
+                {ensayo.notas && (
+                  <span className="line-clamp-3 whitespace-pre-line text-pretty text-[13.5px] leading-snug text-muted-foreground">
+                    {ensayo.notas}
+                  </span>
+                )}
+              </span>
+              <ChevronRight
+                className="mt-0.5 size-4 flex-none text-disabled-text"
+                strokeWidth={1.9}
+                aria-hidden
+              />
+            </Link>
           )}
         </section>
 

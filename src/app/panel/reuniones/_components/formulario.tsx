@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
+import { BotonEnviar } from '../../modulos/_components/boton-enviar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ReunionDetalle } from '@/lib/asistencia/consultas';
@@ -27,6 +28,7 @@ export function FormularioReunion({
   hoy,
   cancelarHref,
   etiquetas,
+  repetirHasta,
 }: {
   accion: (formData: FormData) => Promise<void>;
   reunion?: ReunionDetalle;
@@ -40,13 +42,38 @@ export function FormularioReunion({
    * mismo —una reunión es una reunión—, pero «Culto del domingo» de marcador de
    * posición en la pantalla de alabanza haría dudar de si se está en el sitio
    * correcto.
+   *
+   * Las notas cambian además de público, y eso no es un matiz de texto. Las del
+   * culto son un acta que lee quien lleva la asistencia; las de un equipo las
+   * lee todo el equipo en su agenda. Quien escribe tiene que saberlo al
+   * escribir, igual que en las notas del turno.
    */
-  etiquetas?: { titulo?: string; ejemploTitulo?: string; ejemploLugar?: string };
+  etiquetas?: {
+    titulo?: string;
+    ejemploTitulo?: string;
+    ejemploLugar?: string;
+    notas?: string;
+    ejemploNotas?: string;
+    ayudaNotas?: string;
+  };
+  /**
+   * Hasta cuántas semanas se puede repetir, o nada para no ofrecerlo. Solo lo
+   * pasa la agenda de un equipo, y solo al crear: el culto del domingo ya se
+   * repite solo desde el horario, y una reunión guardada es una sola.
+   */
+  repetirHasta?: number;
 }) {
   const t = {
     titulo: etiquetas?.titulo ?? 'Qué reunión es',
     ejemploTitulo: etiquetas?.ejemploTitulo ?? 'Culto del domingo',
     ejemploLugar: etiquetas?.ejemploLugar ?? 'El templo',
+    notas: etiquetas?.notas ?? 'Notas',
+    ejemploNotas:
+      etiquetas?.ejemploNotas ??
+      'Predicó el pastor invitado. Se recogió la ofrenda para el viaje de los jóvenes.',
+    ayudaNotas:
+      etiquetas?.ayudaNotas ??
+      'Cómo fue el encuentro, no cómo está la gente. Lo que le pasa a una persona concreta tiene su sitio en su seguimiento, no aquí.',
   };
   return (
     <form action={accion} className="flex flex-col gap-6">
@@ -96,6 +123,36 @@ export function FormularioReunion({
           </div>
         </div>
 
+        {repetirHasta && !reunion && (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="semanas">Repetir cada semana</Label>
+            {/* En la misma rejilla que «Día» y «Hora», para que el desplegable
+                acabe donde acaba el día y no a un ancho suyo. */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <select
+                id="semanas"
+                name="semanas"
+                defaultValue="1"
+                // 16 px en el móvil, como `<Input>`: con menos, Safari de iOS
+                // amplía la página al tocar el campo y no la devuelve.
+                className="h-[42px] w-full min-w-0 rounded-lg border border-input bg-surface-alt px-2.5 text-[16px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16 md:text-[15px]"
+              >
+                <option value="1">No, solo ese día</option>
+                {Array.from({ length: repetirHasta - 1 }, (_, i) => i + 2).map((n) => (
+                  <option key={n} value={n}>
+                    Durante {n} semanas
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="t-label text-muted-foreground">
+              Se apunta una vez por semana, el mismo día y a la misma hora, y
+              cada una se puede cambiar o borrar sin tocar las demás. Si alguna
+              semana ya tiene algo a esa hora, esa se salta.
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="lugar">
             Dónde
@@ -114,7 +171,7 @@ export function FormularioReunion({
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="notas">
-            Notas
+            {t.notas}
             <span className="ml-1.5 font-normal text-muted-foreground">
               (opcional)
             </span>
@@ -125,22 +182,22 @@ export function FormularioReunion({
             rows={3}
             maxLength={2000}
             defaultValue={reunion?.notas ?? ''}
-            placeholder="Predicó el pastor invitado. Se recogió la ofrenda para el viaje de los jóvenes."
-            className="rounded-lg border border-input bg-surface-alt px-3 py-2.5 text-[15px] leading-relaxed outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
+            placeholder={t.ejemploNotas}
+            // 16 px en el móvil por lo mismo que el desplegable de arriba.
+            className="rounded-lg border border-input bg-surface-alt px-3 py-2.5 text-[16px] leading-relaxed outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16 md:text-[15px]"
           />
           {/* El aviso va aquí y no en una política que nadie abre: es el momento
               en que alguien está a punto de escribirlo. */}
-          <p className="t-label text-muted-foreground">
-            Cómo fue el encuentro, no cómo está la gente. Lo que le pasa a una
-            persona concreta tiene su sitio en su seguimiento, no aquí.
-          </p>
+          <p className="t-label text-muted-foreground">{t.ayudaNotas}</p>
         </div>
       </section>
 
       <div className="flex items-center gap-3">
-        <Button type="submit">
-          {reunion ? 'Guardar los cambios' : 'Apuntar la reunión'}
-        </Button>
+        {/* Desactivado mientras se envía: con «repetir doce semanas», un doble
+            clic eran dos peticiones creando a la vez. El servidor ya lo aguanta
+            (ver el cerrojo de la agenda), pero lo que no se envía no hay que
+            aguantarlo. */}
+        <BotonEnviar>{reunion ? 'Guardar los cambios' : 'Apuntar la reunión'}</BotonEnviar>
         <Button variant="ghost" render={<Link href={cancelarHref} />}>
           Cancelar
         </Button>

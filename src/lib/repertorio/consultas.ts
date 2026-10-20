@@ -219,3 +219,36 @@ export async function cancionesParaElegir(
       .orderBy(asc(canciones.titulo)),
   );
 }
+
+/**
+ * Cuántas canciones tiene la lista de cada turno, para el cuadrante.
+ *
+ * Es lo que el responsable repasa a mitad de semana: qué domingos tienen ya la
+ * lista hecha y cuáles no. Un turno sin canciones no sale en el mapa, y quien
+ * pinta lo lee como «sin lista».
+ *
+ * Un solo `count` agrupado para todos los turnos de la pantalla, y no
+ * `cancionesDelTurno` por cada uno: serían treinta viajes a Irlanda para pintar
+ * treinta números.
+ */
+export async function cancionesPorTurno(
+  ctx: UserContext,
+  turnoIds: string[],
+): Promise<Map<string, number>> {
+  if (turnoIds.length === 0) return new Map();
+
+  const filas = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ turnoId: turnoCanciones.turnoId, canciones: count() })
+      .from(turnoCanciones)
+      .where(
+        and(
+          eq(turnoCanciones.iglesiaId, ctx.iglesia.id),
+          inArray(turnoCanciones.turnoId, turnoIds),
+        ),
+      )
+      .groupBy(turnoCanciones.turnoId),
+  );
+
+  return new Map(filas.map((f) => [f.turnoId, Number(f.canciones)]));
+}

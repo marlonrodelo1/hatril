@@ -10,7 +10,12 @@ import { Button } from '@/components/ui/button';
 import { CabeceraPanel } from '../../../_components/cabecera';
 import { Contenedor } from '../../../_components/contenedor';
 import { PestanasMinisterio } from '../_components/pestanas';
-import { CONFIRMACIONES } from './constantes';
+import {
+  CONFIRMACIONES,
+  confirmacionDeSemanas,
+  confirmacionYaEstaba,
+  SEMANAS_MAXIMAS,
+} from './constantes';
 
 export const metadata: Metadata = { title: 'Agenda del ministerio' };
 
@@ -19,12 +24,28 @@ export default async function AgendaPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; guardado?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    guardado?: string;
+    creadas?: string;
+    saltadas?: string;
+    estaban?: string;
+    otras?: string;
+  }>;
 }) {
   const { id } = await params;
   // Las puertas de sus layouts aquí, y no solo allí: ver CLAUDE.md.
   const { ctx, ministerio } = await requireModuloMinisterio(id, 'agenda');
-  const { error, guardado } = await searchParams;
+  const { error, guardado, creadas, saltadas, estaban, otras } = await searchParams;
+
+  // Las cuentas vienen en la URL, así que se leen como lo que son: algo que
+  // cualquiera puede escribir. Fuera de rango, no se enseña nada.
+  const confirmacion = textoDeConfirmacion(guardado, {
+    creadas: cuenta(creadas),
+    saltadas: cuenta(saltadas),
+    estaban: cuenta(estaban),
+    otras: cuenta(otras),
+  });
 
   const reuniones = await listarReuniones(ctx, { ministerioId: id });
 
@@ -45,9 +66,7 @@ export default async function AgendaPage({
         <PestanasMinisterio ctx={ctx} ministerio={ministerio} activa="agenda" />
 
         {error && <Aviso>{error}</Aviso>}
-        {guardado && CONFIRMACIONES[guardado] && (
-          <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
-        )}
+        {confirmacion && <Aviso tipo="ok">{confirmacion}</Aviso>}
 
         {reuniones.length === 0 ? (
           <div className="flex flex-col items-start gap-3 rounded-xl border border-border bg-surface p-8">
@@ -114,4 +133,27 @@ export default async function AgendaPage({
       </Contenedor>
     </>
   );
+}
+
+function textoDeConfirmacion(
+  guardado: string | undefined,
+  n: { creadas: number | null; saltadas: number | null; estaban: number | null; otras: number | null },
+): string | null {
+  if (guardado === 'semanas') {
+    return n.creadas && n.saltadas !== null
+      ? confirmacionDeSemanas(n.creadas, n.saltadas)
+      : null;
+  }
+  if (guardado === 'ya-estaba' && n.estaban && n.otras !== null) {
+    return confirmacionYaEstaba(n.estaban, n.otras);
+  }
+  return guardado ? (CONFIRMACIONES[guardado] ?? null) : null;
+}
+
+/** Un número de semanas de la URL, entre 0 y el tope, o null. */
+function cuenta(valor: string | undefined): number | null {
+  const n = Number(valor);
+  return valor !== undefined && Number.isInteger(n) && n >= 0 && n <= SEMANAS_MAXIMAS
+    ? n
+    : null;
 }

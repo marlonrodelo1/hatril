@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { CalendarPlus, ChevronRight, CircleX } from 'lucide-react';
+import { CalendarPlus, ChevronRight, CircleX, ListMusic } from 'lucide-react';
 
 import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
+import { tieneModulo } from '@/lib/ministerios/modulos';
+import { cancionesPorTurno } from '@/lib/repertorio/consultas';
 import { listarTurnos, type TurnoResumen } from '@/lib/turnos/consultas';
 import { puestosDelMinisterio } from '@/lib/turnos/puestos';
 import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
@@ -52,6 +54,16 @@ export default async function TurnosPage({
     listarTurnos(ctx, id, { hasta: sumarDias(hoy, -1), orden: 'desc', limite: 5 }),
   ]);
 
+  // Qué domingos tienen ya la lista, solo en un equipo con repertorio: en el
+  // cuadrante de los ujieres, «Sin lista» en cada tarjeta se leería como algo
+  // que les falta. Y solo para los próximos, que son los que se preparan.
+  const canciones = tieneModulo(ministerio.modulos, 'repertorio')
+    ? await cancionesPorTurno(
+        ctx,
+        proximos.map((t) => t.id),
+      )
+    : null;
+
   return (
     <>
       <CabeceraPanel
@@ -100,6 +112,7 @@ export default async function TurnosPage({
                     puestos={puestos}
                     href={`/panel/ministerios/${id}/turnos/${t.id}`}
                     hoy={hoy}
+                    canciones={canciones ? (canciones.get(t.id) ?? 0) : null}
                   />
                 </li>
               ))}
@@ -174,11 +187,14 @@ function TarjetaTurno({
   puestos,
   href,
   hoy,
+  canciones,
 }: {
   turno: TurnoResumen;
   puestos: string[];
   href: string;
   hoy: string;
+  /** Canciones de su lista, o null si el equipo no lleva repertorio. */
+  canciones: number | null;
 }) {
   const { faltan, noPueden, sinContestar } = estadoDelTurno(t, puestos);
   const completo = faltan.length === 0;
@@ -225,6 +241,22 @@ function TarjetaTurno({
               {sinContestar} sin contestar
             </span>
           )}
+
+          {canciones !== null &&
+            (canciones > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-badge-neutral-bg px-2 py-0.5 text-badge-neutral-fg">
+                <ListMusic className="size-3.5" strokeWidth={2} aria-hidden />
+                Lista: {canciones} {canciones === 1 ? 'canción' : 'canciones'}
+              </span>
+            ) : (
+              // Con borde discontinuo y sin relleno, como el «Sin lista» de la
+              // agenda: es lo que falta por hacer, no un error ni un aviso. El
+              // ámbar ya lo gasta el hueco de puestos, que corre más prisa.
+              <span className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-px text-muted-foreground">
+                <ListMusic className="size-3.5" strokeWidth={2} aria-hidden />
+                Sin lista
+              </span>
+            ))}
         </span>
 
         {!completo && (
