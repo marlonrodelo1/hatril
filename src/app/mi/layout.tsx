@@ -69,8 +69,30 @@ export default async function MiLayout({
        * hay forma de leerla — y en una lista larga eso no se nota hasta que
        * alguien se queja. En escritorio el hueco es menor: la barra es una
        * pastilla despegada del fondo.
+       *
+       * UN SOLO HUECO, Y CUENTA CON LA RADIO
+       * ------------------------------------
+       * Con radio, encima de la barra flota también el reproductor, y el hueco
+       * es el de los dos: barra (12 + 65 px) + 6 + reproductor (54) en el móvil,
+       * y en escritorio (20 + 52) + 6 + 54, más el mismo margen que ya dejaba
+       * el hueco sin radio. Medidos con `getBoundingClientRect`, a 375 y a 1024:
+       * lo último de cada pantalla de `/mi` queda entre 19 y 42 px por encima
+       * del reproductor. Va aquí y no dentro del
+       * reproductor para que quien añada una pantalla a `/mi` vea en un solo
+       * sitio todo lo que tapa el final.
+       *
+       * Y con la zona segura del iPhone sumada en el móvil, porque la barra la
+       * suma a su `bottom`: sin ella, con la raya de gestos, los últimos 34 px
+       * de cada pantalla quedaban debajo de las pestañas.
        */}
-      <div className="h-[76px] md:h-[88px]" aria-hidden />
+      <div
+        className={
+          radio
+            ? 'h-[calc(140px+env(safe-area-inset-bottom))] md:h-[148px]'
+            : 'h-[calc(76px+env(safe-area-inset-bottom))] md:h-[88px]'
+        }
+        aria-hidden
+      />
     </>
   );
 }

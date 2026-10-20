@@ -66,15 +66,16 @@ export function MiniReproductor({
     <>
       <div
         className={
-          // Justo encima de la barra: su `bottom` más su alto (65 px en móvil,
-          // medidos a 375) más un hueco de 6. Si la barra cambia de alto, esto
-          // se queda montado encima: medirlas juntas al tocar una.
+          // Justo encima de la barra: su `bottom` más su alto (65 px en móvil a
+          // 375, 52 en escritorio, medidos) más un hueco de 6. Si la barra cambia de alto, esto
+          // se queda montado encima: medirlas juntas al tocar una, y con ellas
+          // el hueco de abajo de `mi/layout.tsx`, que cuenta con las dos.
           'fixed inset-x-3 z-30 flex items-center gap-2.5 rounded-2xl border border-border py-1.5 pl-1.5 pr-1 ' +
           'bottom-[calc(0.75rem+env(safe-area-inset-bottom)+71px)] ' +
           // El mismo cristal que la barra, con su misma guarda: ver allí por qué
           // es 0.92 y no menos.
           'bg-surface supports-backdrop-filter:bg-surface/92 supports-backdrop-filter:backdrop-blur-2xl supports-backdrop-filter:backdrop-saturate-150 ' +
-          'md:inset-x-auto md:bottom-[calc(1.25rem+56px)] md:left-1/2 md:w-[420px] md:-translate-x-1/2'
+          'md:inset-x-auto md:bottom-[calc(1.25rem+58px)] md:left-1/2 md:w-[420px] md:-translate-x-1/2'
         }
       >
         {/* Sin `crossOrigin` y con `preload="none"`: ver `use-senal.ts`. */}
@@ -143,10 +144,6 @@ export function MiniReproductor({
           />
         </button>
       </div>
-
-      {/* Su hueco, que se suma al de la barra que pone el layout: sin esto lo
-          último del muro queda debajo de la radio. */}
-      <div className="h-[60px]" aria-hidden />
 
       <Hoja
         abierta={verProgramacion}

@@ -204,6 +204,19 @@ Verificado después del merge, en `radio.localhost:3002`, a 375 px:
 Del merge: un solo conflicto, en `modulos.ts`, porque reparto y emisora se
 añadieron los dos al final. `guardarEmisora` llama ya a `exigirModulo()`.
 
+### El hueco de abajo de `/mi`, para barra y reproductor
+
+Lo pidió el ensayo de fusión. El hueco vive ahora entero en `mi/layout.tsx`
+—antes el reproductor ponía el suyo y el layout el de la barra—, con dos
+medidas según haya radio o no, y con la zona segura del iPhone sumada en el
+móvil, que la barra ya sumaba a su `bottom` y el hueco no. Medido con la
+radio puesta, bajando hasta el final de cada pantalla: lo último queda por
+encima del reproductor en Comunidad (19 px), Devocional (34), Agenda (30), la
+ficha de un turno (32), Biblia (32; leyendo los Salmos, 19), Cuenta (27) y
+Avisos; en escritorio, Comunidad a 42. El reproductor de escritorio bajaba 2 px
+sobre la barra (mide 52 y no 50): ahora son 6, como en el móvil.
+`/mi/agenda/reunion/[id]` es de la rama de alabanza y no está aquí.
+
 ---
 
 ## Datos de prueba
