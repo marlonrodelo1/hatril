@@ -12,7 +12,7 @@ import { validarPassword, traducirErrorAuth } from '@/lib/auth/password';
 import { getOrigin } from '@/lib/auth/get-origin';
 import { getCurrentUserContext } from '@/lib/auth/user-context';
 import { inicioDe } from '@/lib/auth/permisos';
-import { campo, campoObligatorio } from '@/lib/api/formulario';
+import { campo, campoObligatorio, casilla } from '@/lib/api/formulario';
 
 /**
  * Acciones de acceso, registro y recuperación.
@@ -97,6 +97,10 @@ const EsquemaRegistro = z.object({
   consentimiento: z.literal('on', {
     message: 'Tienes que aceptar para poder crear la iglesia.',
   }),
+  // La de asistencia, en cambio, sí es opcional de verdad: se crea la iglesia
+  // igual. Booleano y no `literal('on')` porque su ausencia es una respuesta,
+  // no un error.
+  asistencia: z.boolean(),
 });
 
 export async function registrar(formData: FormData) {
@@ -108,14 +112,22 @@ export async function registrar(formData: FormData) {
     pais: campoObligatorio(formData, 'pais'),
     ciudad: campo(formData, 'ciudad'),
     consentimiento: formData.get('consentimiento'),
+    asistencia: casilla(formData, 'asistencia'),
   });
 
   if (!parsed.success) {
     volverCon('/registro', parsed.error.issues[0]!.message);
   }
 
-  const { nombreIglesia, nombrePastor, email, password, pais, ciudad } =
-    parsed.data;
+  const {
+    nombreIglesia,
+    nombrePastor,
+    email,
+    password,
+    pais,
+    ciudad,
+    asistencia,
+  } = parsed.data;
 
   const errorPassword = validarPassword(password);
   if (errorPassword) volverCon('/registro', errorPassword);
@@ -164,6 +176,7 @@ export async function registrar(formData: FormData) {
     nombrePastor,
     pais,
     ciudad,
+    aceptaAsistencia: asistencia,
     ip: ip === 'unknown' ? null : ip,
     userAgent: cabeceras.get('user-agent'),
   });

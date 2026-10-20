@@ -3,10 +3,8 @@ import type { Metadata } from 'next';
 import { ShieldCheck } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
-import {
-  TEXTO_CONSENTIMIENTO_ASISTENCIA_Y_SEGUIMIENTO,
-  TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS,
-} from '@/lib/rgpd/consentimiento';
+import { TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS } from '@/lib/rgpd/consentimiento';
+import { CasillaAsistencia } from '@/components/casilla-asistencia';
 import { Button } from '@/components/ui/button';
 import { salir } from '../(auth)/actions';
 import { aceptar } from './actions';
@@ -96,32 +94,20 @@ export default async function AceptaPage() {
               {TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS}
             </p>
 
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5 hover:bg-surface-active has-checked:border-primary has-checked:bg-accent">
-              {/*
-               * SIN `defaultChecked`, y no es un olvido: el considerando 32 del
-               * RGPD dice que el silencio, las casillas ya marcadas y la
-               * inacción NO constituyen consentimiento. Premarcarla la
-               * invalidaría entera, justo en el dato más sensible del producto.
-               *
-               * Tampoco se premarca a quien ya la tenía aceptada: esta pantalla
-               * sale porque el texto ha cambiado, así que lo que aceptó antes
-               * era de otra redacción y hay que volver a preguntarlo de cero.
-               */}
-              <input type="checkbox" name="asistencia" className="mt-0.5" />
-              <span className="flex min-w-0 flex-col gap-1">
-                <span className="text-[14.5px] font-semibold">
-                  Que se apunte si vengo y lo que se habla conmigo
-                </span>
-                <span className="text-pretty text-[13.5px] leading-snug text-muted-foreground">
-                  {TEXTO_CONSENTIMIENTO_ASISTENCIA_Y_SEGUIMIENTO}
-                </span>
-                <span className="text-pretty text-[13px] leading-snug text-muted-foreground">
+            {/*
+             * Sin premarcar tampoco a quien ya la tenía aceptada: esta pantalla
+             * sale porque el texto ha cambiado, así que lo que aceptó antes era
+             * de otra redacción y hay que volver a preguntarlo de cero.
+             */}
+            <CasillaAsistencia
+              consecuencia={
+                <>
                   Si no la marcas, no sales en las listas de asistencia ni de
                   seguimiento de tu iglesia, y se borra lo que ya hubiera
                   apuntado de ti en ellas. Todo lo demás sigue igual.
-                </span>
-              </span>
-            </label>
+                </>
+              }
+            />
           </section>
 
           <div className="flex flex-wrap items-center gap-3">

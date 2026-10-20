@@ -225,6 +225,12 @@ function TarjetaPersona({ persona: p }: { persona: FilaEquipo }) {
             <span className="mt-0.5 inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
               <HandHeart className="size-3.5 flex-none" strokeWidth={1.7} />
               Lidera {p.lidera.map((m) => m.nombre).join(', ')}
+              {/* Desmarcar «Llevar sus propios ministerios» no se nota en
+                  ningún otro sitio: el ministerio le sigue teniendo de
+                  responsable y la tarjeta cerrada decía lo mismo que antes.
+                  Sin esto, el pastor que lo quitó hace un mes no recuerda por
+                  qué esa persona no puede entrar. */}
+              {!p.permisos.gestionar_su_ministerio && ', sin poder llevarlo'}
             </span>
           )}
         </div>
@@ -345,7 +351,12 @@ function TarjetaPersona({ persona: p }: { persona: FilaEquipo }) {
 
               {PERMISOS_DE_TODOS.length > 0 && (
                 <div className="flex flex-col gap-3 border-t border-border pt-3">
-                  <span className="t-micro">Viene puesto para todos</span>
+                  {/* «Viene puesto para todos» a secas se leía como algo fijo,
+                      que no va con esta persona y no se toca. Es de esta
+                      persona, y se le puede quitar. */}
+                  <span className="t-micro">
+                    Viene puesto para todos · puedes quitárselo
+                  </span>
                   {PERMISOS_DE_TODOS.map((permiso) => (
                     <CasillaPermiso
                       key={permiso}

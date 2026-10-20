@@ -5,20 +5,26 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 /**
- * Paginación del listado.
+ * Paginación de un listado del panel.
  *
  * Con enlaces reales y no botones con `onClick`: cada página es una URL, así
  * que se puede abrir en otra pestaña, compartir y volver con el botón atrás.
  * Un `<button>` que llama a `router.push` se ve igual y no permite nada de eso.
+ *
+ * Nació en miembros con «personas» escrito dentro; el libro de caja la usa
+ * también, y por eso la unidad viaja como parámetro.
  */
 export function Paginacion({
   total,
   pagina,
   porPagina,
+  unidad = ['persona', 'personas'],
 }: {
   total: number;
   pagina: number;
   porPagina: number;
+  /** Singular y plural de lo que se cuenta. */
+  unidad?: readonly [string, string];
 }) {
   const params = useSearchParams();
   const paginas = Math.ceil(total / porPagina);
@@ -45,7 +51,7 @@ export function Paginacion({
   return (
     <div className="flex items-center justify-between gap-4 px-1">
       <span className="text-[13px] text-muted-foreground">
-        {desde}–{hasta} de {total} {total === 1 ? 'persona' : 'personas'}
+        {desde}–{hasta} de {total} {total === 1 ? unidad[0] : unidad[1]}
       </span>
 
       <div className="flex items-center gap-1">

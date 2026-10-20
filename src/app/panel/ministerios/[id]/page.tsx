@@ -50,16 +50,27 @@ import { Contenedor } from '../../_components/contenedor';
  */
 export const metadata: Metadata = { title: 'Ministerio' };
 
+/*
+ * Las dos actions de la foto mandaban aquí `?guardado=foto` y
+ * `?guardado=foto-quitada` y nadie los leía: la foto cambiaba, la página volvía
+ * igual que estaba y no había forma de saber si había ido bien. Una clave que
+ * no esté aquí no pinta nada, como en el resto de pantallas.
+ */
+const CONFIRMACIONES: Record<string, string> = {
+  foto: 'Foto del grupo guardada.',
+  'foto-quitada': 'Foto del grupo quitada.',
+};
+
 export default async function MinisterioPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ asignar?: string; error?: string }>;
+  searchParams: Promise<{ asignar?: string; error?: string; guardado?: string }>;
 }) {
   const ctx = await requireIglesia();
   const { id } = await params;
-  const { asignar, error } = await searchParams;
+  const { asignar, error, guardado } = await searchParams;
 
   const ministerio = await obtenerMinisterio(ctx, id);
   if (!ministerio) notFound();
@@ -171,6 +182,9 @@ export default async function MinisterioPage({
         <PestanasMinisterio ctx={ctx} ministerio={ministerio} activa="equipo" />
 
         {error && <Aviso>{error}</Aviso>}
+        {guardado && CONFIRMACIONES[guardado] && (
+          <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
+        )}
 
         <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5 md:flex-row md:items-center md:gap-6 md:px-6">
           <span

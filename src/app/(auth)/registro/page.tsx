@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 
 import { registrar } from '../actions';
 import { Aviso } from '@/components/aviso';
+import { CasillaAsistencia } from '@/components/casilla-asistencia';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -116,12 +117,17 @@ export default async function RegistroPage({
          * considerando 32). Y por eso es una casilla suya, separada de los
          * términos: mezclarlo con «acepto las condiciones» tampoco valdría.
          */}
-        <label className="mt-1 flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface p-3.5">
+        <label className="mt-1 flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5">
+          {/* `aria-label` con el texto del consentimiento, exacto: sin él la
+              casilla se anunciaba como «on», y deducido del `<label>` se
+              llevaría pegado «Leer la política de privacidad», que es un
+              enlace y no parte de lo que se acepta. */}
           <input
             type="checkbox"
             id="consentimiento"
             name="consentimiento"
             required
+            aria-label={TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS}
             className="mt-0.5"
           />
           <span className="text-[13.5px] leading-snug text-muted-foreground">
@@ -132,6 +138,23 @@ export default async function RegistroPage({
             .
           </span>
         </label>
+
+        {/*
+         * La casilla de `/acepta` y `/solicitar`, también aquí.
+         *
+         * Sin ella, el pastor quedaba con la política vigente aceptada y sin
+         * el permiso de asistencia, que `miembrosSinPermisoDeAsistencia` lee
+         * como «dijo que no»: quien registraba la iglesia no salía en la lista
+         * de su propio culto. Ahora lo dice él, como cualquier otro.
+         */}
+        <CasillaAsistencia
+          consecuencia={
+            <>
+              Puedes crear la iglesia igual sin marcarla. Entonces no sales en
+              las listas de asistencia ni de seguimiento de tu iglesia.
+            </>
+          }
+        />
 
         <Button type="submit" className="mt-1">
           Crear la iglesia
