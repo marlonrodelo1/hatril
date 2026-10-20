@@ -39,6 +39,14 @@ lee al arrancar.
   que ya eran bajos antes del cambio: los días del mes vecino en el calendario
   (2.6:1), la inscripción cancelada de un evento con `opacity-60` y la muestra
   del color Dorado de ministerio sobre su fondo suave (2.7:1).
+- **Guía visual para pantallas nuevas, y su inventario** (20-oct,
+  `docs/diseno/`). `guia-visual.md` dice qué copiar y de dónde, con doce reglas
+  cortas y cuatro pantallas de referencia —turnos, repertorio, el muro y la
+  agenda—; la app del líder ya se construyó con ella. `inventario-visual.md` es
+  la fase 1: lo que falla hoy en toda la aplicación, medido a 375 y a 1280 px
+  con cinco cuentas, en siete graves (M1–M7), diecisiete que se notan algo y
+  quince detalles, cada uno con su fichero y su arreglo. La fase 2, los
+  arreglos, está en «Qué falta».
 - **Acceso**: entrar, registrar iglesia, crear cuenta personal, recuperar
   contraseña.
 - **Panel**: inicio (avisos accionables arriba, cifras debajo), miembros
@@ -123,24 +131,24 @@ lee al arrancar.
 
   No se programa una pantalla por tipo: se programan piezas y cada tipo enciende
   las suyas, así que un ministerio de radio o de reparto de alimentos funciona
-  sin tocar código. Hoy existen **cinco módulos de verdad**, `agenda`,
-  `turnos`, `repertorio`, `seguimiento` y `reparto`; el resto no se declara
-  hasta que se pueda pulsar.
+  sin tocar código. Hoy existen **seis módulos de verdad**, `agenda`,
+  `turnos`, `repertorio`, `seguimiento`, `reparto` y `emisora`; el resto no se
+  declara hasta que se pueda pulsar.
 
   **Cada action de módulo comprueba que el módulo esté encendido**
   (`exigirModulo()` en `guard-panel.ts`, detrás de
   `requireGestionMinisterioAccion`). Hasta el 20-oct solo lo miraba el
   `layout.tsx`, que no corre en una action: quien llevaba un equipo escribía en
   la agenda o el seguimiento apagados con un POST fabricado. Lo usan agenda,
-  turnos, repertorio (la lista del culto pide además turnos), seguimiento y
-  reparto. Verificado apagando el reparto en la base con la pantalla abierta y
-  pulsando un botón: vuelve al ministerio con «Esa herramienta no está
+  turnos, repertorio (la lista del culto pide además turnos), seguimiento,
+  reparto y emisora. Verificado apagando el reparto en la base con la pantalla
+  abierta y pulsando un botón: vuelve al ministerio con «Esa herramienta no está
   encendida» y el contador no se mueve.
 
   Qué trae cada tipo de salida: Alabanza, agenda, turnos y repertorio; Niños e
-  Intercesión, agenda y turnos; Ujieres y Medios, turnos y agenda;
-  Consolidación y Evangelismo, agenda y seguimiento; Acción social, reparto y
-  agenda; Jóvenes y Otro, solo agenda. Siguen sin diferenciarse del todo hasta que lleguen
+  Intercesión, agenda y turnos; Ujieres y Medios, turnos y agenda; Radio,
+  emisora, turnos y agenda; Consolidación y Evangelismo, agenda y seguimiento;
+  Acción social, reparto y agenda; Jóvenes y Otro, solo agenda. Siguen sin diferenciarse del todo hasta que lleguen
   material e inventario.
 
 - **Reparto** (entrega de alimentos, tanda 1 del plan, v1 «solo la puerta»):
@@ -309,6 +317,76 @@ lee al arrancar.
     domingo en que sonara.
   - Sin `auditar()`: es material de trabajo del equipo, no un dato de nadie.
 
+- **Alabanza, cosida** (tanda 2 del plan, sin migración, 20-oct). Agenda,
+  turnos y repertorio ya funcionaban; esto los junta. Verificado como `lider@`
+  y `miembro@` a 375 px y como `pastor.sion@`, mirando en la base quién firmó
+  cada fila:
+
+  - **Ensayo repetido.** «Repetir cada semana», hasta doce, solo al crear y
+    solo en la agenda de un equipo. Crea una fila por semana, que luego se
+    cambia o se borra sola. La semana que ya tiene algo del mismo equipo a la
+    misma hora se salta, y el aviso lo dice con números. Editar pasa por la
+    misma comprobación: mover un ensayo encima de otro es la otra forma de
+    duplicarlo.
+  - **Sin duplicados con doble clic, todavía sin índice.** Cerrojo
+    `for no key update` sobre la fila del ministerio y comprobación en la misma
+    transacción; el segundo clic contesta «Ya estaba apuntado» con las cuentas,
+    y el botón se apaga al enviar. Probado con doble clic: cuatro filas, cero
+    repetidas. Lo que entre por otro camino —un script, el editor de
+    Supabase— solo lo para el índice único, que está en «Qué falta».
+  - **El ensayo dentro del turno**, derivado y sin tabla: la reunión del equipo
+    más cercana en la semana de antes del turno (el mismo día, solo si va
+    antes; el de hace siete días, solo si fue después de la hora del turno). Sale
+    en la ficha del turno del panel y en `/mi/agenda/turno/[id]`, y **solo en
+    equipos con el repertorio encendido**: en la radio o en acción social, la
+    reunión semanal saldría como ensayo de cada programa o de cada reparto. Si
+    no hay, el panel lo dice con un enlace para apuntarlo.
+  - **El músico ve el ensayo** en una ficha nueva, `/mi/agenda/reunion/[id]`,
+    de solo lectura y acotada al equipo: otro equipo, un culto o un uuid
+    inventado dan 404. Las notas pasan a leerlas todos, así que el campo se
+    llama «Para el equipo», y en `/mi` solo salen las de hoy en adelante y con
+    la agenda encendida: las actas viejas se escribieron para otro público.
+  - **«Lista: N canciones» o «Sin lista»** en cada turno de «Próximos» del
+    cuadrante, con un solo `count` agrupado.
+
+  Detalle en `docs/modulos/estado-alabanza-pulido-61bccd.md`.
+
+- **Radio en directo** (tanda 6, v1 sin migración, 20-oct). Tipo `radio`
+  —enciende `emisora`, `turnos` y `agenda`, con los puestos Locución, Control
+  técnico, Producción y Redes; Medios pierde «y radio»— y módulo `emisora`, que
+  vive entero en `ministerios.modulos.emisora`: nombre, señal (solo
+  `https://`), parrilla semanal con «de qué va» cada programa, y la casilla de
+  la web. Los programas del mes con sus locutores son turnos, que ya existían.
+
+  - **En el panel**, `/panel/ministerios/[id]/emisora`: «Probar» suena en el
+    navegador de quien lo pulsa, y lo que la gente pega de verdad se rechaza
+    con nombre (http, `.pls` y `.m3u`, HLS, la ficha de zeno.fm, usuario y
+    contraseña en la URL, la red de casa). Dos programas no se pueden pisar, y
+    el tope es de 60. `guardarEmisora` lee la config con `for update` y pasa por
+    `exigirModulo()`. La señal se valida también al leer: sin migración no hay
+    CHECK.
+  - **En `/mi`**, `MiniReproductor` encima de la barra, solo si la iglesia
+    tiene una radio encendida con señal, y la parrilla de la semana en una hoja.
+    Nada se conecta antes de pulsar, no se registra quién escucha, y sigue
+    sonando al cambiar de pestaña. El hueco de abajo para barra y reproductor
+    vive entero en `mi/layout.tsx`, medido pantalla a pantalla.
+  - **En la web pública**, el bloque «Radio en directo» con lo que suena, lo
+    que viene y la parrilla, solo con la casilla, la web publicada y señal.
+    **Si quien cambia algo que se ve en la web no es el pastor** —la señal, el
+    nombre o cualquier programa—, la radio sale de la web hasta que él la vuelva
+    a marcar: el tema es texto libre y podría publicar la fe o la salud de
+    alguien sin que lo viera.
+  - **Legales**: `/terminos` §3 (los derechos de lo que suena son de la
+    iglesia; Hatril no emite, no retransmite ni graba) y `/privacidad` §5 (un
+    tercero elegido por la iglesia). Sin subir la versión: ver «Qué falta».
+
+  Verificado como `pastor@`; como `colider@`, colíder de Radio, con un
+  `en_web=on` metido a mano que la base deja en `false`; como `miembro@` a
+  375 px, con la Media Session; y como `lider@`, que rebota. **Sin verificar:**
+  escuchar con la pantalla bloqueada en un móvil de verdad. Safari puede
+  cortarlo, y ninguna pantalla lo promete. Detalle en
+  `docs/modulos/estado-radio-emisora.md`.
+
 - **Reuniones y asistencia**: `/panel/reuniones`. Apuntar el culto del domingo o
   el del jueves con su fecha, y marcar quién vino. **Se guarda fila también para
   quien faltó**, con `presente = false`: sin eso, un domingo en el que nadie pasó
@@ -351,6 +429,44 @@ lee al arrancar.
   contra `miembro_actual()`: nadie apunta nada en nombre de otro. Y la tabla de
   contactos **no tiene UPDATE concedido**: un contacto es un hecho fechado, y si
   se apuntó mal se borra en vez de reescribirse.
+
+- **Consolidación: los nuevos** (tanda 4, v1 sin migración, 20-oct). El
+  seguimiento contestaba «¿quién se fue?»; faltaba «¿quién llegó?».
+
+  - **Tres defectos del seguimiento, cerrados.** Las faltas cuentan desde que
+    la persona existe —la más tardía de su última asistencia, su
+    `fecha_ingreso` y el día de su ficha—: antes, a un visitante se le contaban
+    todas las reuniones de la historia de la iglesia, y en la demo salían siete
+    personas de más. Quien está en nuevos no sale en ausentes, porque las dos
+    listas salen de la misma función, `calcular()`. Y la pestaña ya no rebota.
+  - **Vista «Nuevos»**, `/panel/ministerios/[id]/seguimiento/nuevos`, dentro
+    del módulo `seguimiento` y no como módulo propio: hoy no tiene nada suyo, y
+    con un interruptor aparte el visitante podría desaparecer de las dos
+    listas. Fichas en visitante o nuevo llegadas en los últimos 90 días, en
+    etapas **calculadas, no guardadas**: vinieron una vez, volvieron y se
+    quedan (tres de las últimas seis listas). «Sin contactar» va destacado, y la
+    ficha gana un botón de WhatsApp (`wa.me`) si el teléfono está en E.164.
+  - **Alta rápida de visitante**, `.../nuevos/alta`: una ficha en visitante,
+    sin notas, con el mismo permiso que el resto del seguimiento y no con
+    `editar_miembros`. **El permiso se lee en voz alta y se guarda**, como en el
+    reparto: el consentimiento general y la casilla de asistencia, las dos sin
+    premarcar, y sin IP ni navegador, que serían los del voluntario. Sin la
+    segunda, la ficha se crea pero no sale en ninguna lista, y la pantalla lo
+    dice. Un teléfono repetido lleva a la ficha que ya existe si el nombre
+    coincide, pregunta si es otra persona si no, y si el número es de quien negó
+    el permiso da un mensaje que no confirma nada.
+  - **Cifras para el pastor en Inicio**: llegaron este mes, han vuelto, nuevos
+    sin llamar y faltan tres o más reuniones. Solo números, y solo a quien puede
+    abrir algún seguimiento, así que el enlace siempre abre.
+  - De paso, `hoy()` en `miembros/actions.ts` pasa a la fecha de la iglesia y
+    no a la de UTC: salía «llegó hace -1 días».
+
+  Verificado contra la base con `scripts/seed-consolidacion.sql`, como
+  `pastor@` (las cifras de Inicio cuadradas a mano) y como `consolidacion@` a
+  375 px, con y sin `ver_seguimiento`. Quien negó el permiso de asistencia no
+  sale en ninguna lista ni cuenta en ninguna cifra. **Sin pulsar:** el aviso de
+  «en 90 días no se ha pasado lista», que no tiene iglesia de demo donde salir.
+  Detalle en `docs/modulos/estado-consolidacion-nuevos-9b87a5.md`.
 
 - **Área del miembro**: `/mi`, y es una **app, no una página**. Quien pertenece a
   una iglesia y no lleva nada en ella ya no aterriza en el panel — antes veía un
@@ -422,8 +538,51 @@ lee al arrancar.
   Verificado entrando como `miembro@hatril.test`: aterriza en el muro, las cuatro
   pestañas cargan, y `/panel/miembros` escrito a mano en la barra le devuelve.
 
-  **Lo que falta y se nota:** el repertorio del domingo, los turnos y el material
-  del equipo. Son módulos de la tanda siguiente.
+  **Lo que falta y se nota:** el material del equipo. El repertorio del domingo
+  y los turnos ya están en la agenda, y lo de cada equipo, en su pestaña.
+
+- **Los equipos en la app** (20-oct): `/mi` está completa para quien sirve en un
+  ministerio, sin salir al panel. Quinta pestaña, **Equipo** (`/mi/equipo`),
+  solo para quien sirve en algo y al final de la barra, para que nadie pierda
+  ninguna de sitio. Con un equipo lleva directa a su portada; con varios, a
+  «Lo que llevas» y «Donde sirves».
+
+  - **Una portada por equipo, en dos modos.** Quien lo lleva ve lo pendiente de
+    cada herramienta: ensayos sin lista, turnos con huecos o sin contestar, la
+    lista del próximo culto, quién más reuniones se ha perdido (con
+    `ver_seguimiento`) y cómo va la puerta del reparto, sin nombres. Quien
+    participa ve lo suyo: sus turnos por confirmar, el próximo ensayo y la
+    lista del domingo. Nunca las respuestas de los demás a un turno.
+  - **Las herramientas del líder, con las mismas rutas que el panel** bajo
+    `/mi/equipo/[id]/…`: turnos, agenda con pasar lista, repertorio y
+    seguimiento. Al voluntario le dan 404.
+  - **Las actions son las del panel, envueltas y sin tocar.** `enLaApp()`
+    ejecuta la del panel, atrapa su `redirect()` y lo relanza hacia
+    `/mi/equipo` con el mensaje intacto: ni una línea de lógica copiada. Lee el
+    redirect con `isRedirectError`, importado de `next/dist/client/components/…`:
+    si cambia de sitio falla el build, y si cambiara el formato, la action
+    volvería al panel. Se degrada, no abre nada.
+  - **Un contrato por módulo**, en `src/lib/ministerios/en-la-app/`: cada
+    módulo engancha un adaptador con `resumen` (la tarjeta del líder),
+    `participante` (opcional) y `visiblePara`, la puerta de más que aplican a
+    la vez la tarjeta, las pantallas y las actions. El reparto ya lo tiene, con
+    la puerta estrecha del panel. **Un módulo con la puerta más estrecha que
+    `puedeGestionarMinisterio` trae su adaptador en la misma fusión**: sin él,
+    al líder le sale una tarjeta hacia el panel con la puerta ancha. La radio
+    no lo tiene ni le hace falta: su puerta es la ancha, y se escucha desde el
+    reproductor.
+  - **Las puertas, en cada página** (`en-la-app/guarda.ts`): iglesia y
+    consentimiento, suscripción no bloqueada, llevar ese ministerio, que sea de
+    su iglesia, módulo encendido y la puerta del adaptador. 404 y no un
+    rebote: para quien no sirve en nada, la zona no existe.
+
+  Verificado a 375 px, escribiendo cada fila desde la app, comprobándola en la
+  base y deshaciéndola, como `lider@`, `colider@` (también el reparto),
+  `consolidacion@`, `miembro@` y `enlace@` en modo participante, y
+  `secretaria@`, que no sirve en nada y no ve la pestaña. La puerta de quien
+  solo tiene `gestionar_ministerios` se probó con un guion contra el código,
+  porque ninguna cuenta de demo la tiene. Detalle, con la receta para enganchar
+  un módulo, en `docs/modulos/estado-app-lider.md`.
 
 - **Re-consentimiento**: `/acepta`. Cuando la política cambia de fondo se sube
   `VERSION_POLITICA_PRIVACIDAD` y el layout del panel corta el paso a quien
@@ -574,6 +733,34 @@ lee al arrancar.
   resumen del mes, informe imprimible para la asamblea y exportación a CSV.
   Verificado apuntando una ofrenda de 250.000 y borrándola desde la pantalla.
   **Sin nombres de donante**: ver el apartado de decisiones.
+- **Arreglos de la revisión** (20-oct, sin migración), cada uno probado contra
+  la base y deshecho después (`scripts/prueba-arreglos-sueltos.sql`):
+
+  - **El libro de caja ya no corta a escondidas.** Cortaba en 50 y la pantalla
+    contaba lo que le llegaba: con 62 movimientos en el mes decía «50» y el más
+    antiguo no salía en ningún sitio. Ahora la cabecera dice el total y la
+    tabla pagina de 50 en 50 (`?pagina=N`, enlaces de verdad); el informe avisa
+    contra el total y el CSV lleva una línea de aviso si corta el tope de
+    10.000. Probado con 62 y con 512. `Paginacion` vive ahora en
+    `panel/_components`.
+  - **El pastor que registra una iglesia ya sale en las listas.** `/registro`
+    pregunta la casilla de asistencia, sin premarcar, y `crearIglesiaConSeeds`
+    la pide como parámetro obligatorio y sin defecto: una puerta de alta nueva
+    que no la pregunte no compila. Probado registrando una iglesia y, como
+    control, revocando el consentimiento: la lista dice «No hay nadie en el
+    fichero», que es como se quedaba todo pastor recién registrado.
+  - **Las casillas tienen nombre accesible**; salían como `checkbox "on"`. La
+    de asistencia es un componente, `CasillaAsistencia`, con una sola redacción
+    en `/registro`, `/acepta`, `/solicitar` y el alta rápida de consolidación.
+  - **`?guardado=constructor` tumbaba la página** con un 500 (ver «Trampas»).
+    `Object.hasOwn` en las 21 pantallas que lo tenían; las que llegaron
+    después, en «Qué falta».
+  - La foto del ministerio confirma al guardar y al quitar. Y en
+    `/panel/lideres`, desmarcar «Llevar sus propios ministerios» funciona, y la
+    tarjeta dice «Sin permiso para llevarlo» cuando la persona lidera algo que
+    no puede llevar, con la misma función que decide la puerta.
+
+  Detalle en `docs/modulos/estado-arreglos-sueltos.md`.
 - **Compartir**: `/panel/compartir`. La dirección absoluta de la web de la
   iglesia y la de «pedir unirme», con copiar y con enviar por WhatsApp, y el
   formulario de las cinco redes sociales —Instagram, Facebook, YouTube,
@@ -666,6 +853,10 @@ lee al arrancar.
   de Acción social y `colider@` lo ve entero; sin la demo lo dice en vez de
   pasar en verde. **199 comprobaciones**, cero fallos.
 
+  Y una de la radio: `anon` no puede leer `ministerios.modulos`, que es lo que
+  deja la config de la emisora solo al alcance del `dbAdmin` del bloque
+  público.
+
   `get_advisors` no se pudo pasar el 20-oct: el MCP contesta «no tienes
   permiso». Se comprobó a mano lo que mira: ninguna tabla de `public` sin RLS,
   ninguna función sin `search_path`, y ninguna `security definer` ejecutable
@@ -679,21 +870,28 @@ lee al arrancar.
 | Pieza | Estado |
 |---|---|
 | Proveedor de alojamiento en los legales | Relleno (Hostinger). Falta confirmar en hPanel el país del centro de datos: pone Alemania y la IP geolocaliza en Francia |
-| Módulos de ministerio | **Turnos, repertorio, la base común y el reparto (tanda 1, v1) hechos.** Sigue la tanda 2, alabanza; el orden entero está en `docs/modulos/plan.md`. Peticiones de oración y la ficha de los niños esperan una decisión legal: salud y menores |
+| Módulos de ministerio | **Hechas, y fusionadas el 20-oct, la base común, el reparto v1, alabanza sin migración, consolidación v1 y la radio v1, más los equipos en la app.** Sigue, con migración y de una en una, la **contabilidad completa**; la cola está en `docs/modulos/cola.md` y el plan en `plan.md`. Peticiones de oración y la ficha de los niños esperan una decisión legal: salud y menores |
+| **Subir `VERSION_POLITICA_PRIVACIDAD`** | Decisión de Marlon. `/privacidad` ya trae redactado lo de consolidación (§3, §4 y §5: lo que guarda el alta que teclea el equipo, que también se llama a quien acaba de llegar, y que con WhatsApp el número pasa por Meta) y lo de la radio (§5), y sigue en `privacidad-2026-09`: el texto publicado ya no es exactamente el que aceptó la gente. **Antes de subirla, guardar la negativa de asistencia como fila**, o dejar de exigir la versión actual para leerla (ver «Trampas»): si no, quien negó vuelve a salir en todas las listas. En la misma subida, ampliar el texto de la casilla de asistencia, que solo habla de contactar a quien lleva tiempo sin aparecer |
 | Reparto v1.1 | Enlace público sin cuenta para inscribirse, QR, etiquetas Nuevo / Repite / No viene en el padrón y voluntarios marcando desde `/mi` (la RLS ya les deja). Fuera de la v1 a propósito |
-| **Las páginas confiaban en el layout** | **Cerrado el 20-oct**, y no era solo de los módulos: era todo el panel. Probado: `miembro@`, un miembro raso, pedía el seguimiento con `RSC: 1` y recibía la lista entera con 13 teléfonos; también finanzas y miembros. Ahora cada página aplica la cadena entera (`requirePanel`, `requirePermiso`, `requirePastor`, `requireModuloMinisterio` en `guard-panel.ts`), las exportaciones la heredan de `requirePermisoApi`, y `npm run test:puertas` lo comprueba con 8 cuentas en 59 rutas, normal y con `RSC: 1`: una página nueva que no esté en su lista lo hace fallar. Entre iglesias nunca cruzó. Pendiente: las guardas de ACTION no miran ser del equipo ni el consentimiento (`devocionales/actions.ts` usa `requireIglesiaAccion` a secas) |
+| Alabanza, lo que queda | **El índice único de `reuniones`**, `(ministerio_id, fecha, hora) nulls not distinct where ministerio_id is not null`, con la próxima migración que toque esa tabla; antes, buscar duplicados o la migración se cae (la consulta está en el estado de la rama). Hasta entonces el doble clic lo para la action, pero no un script. «Avisar al equipo: ya está la lista» pide un valor nuevo del enum de avisos. Y la agenda del equipo lista de lejos a cerca: con doce semanas apuntadas, lo próximo queda abajo del todo |
+| Radio, lo que queda | **El tema de cada emisión** necesita `turnos.tema` (migración, y sirve también a células y escuela); hoy el tema es de cada programa, fijo semana a semana. Un CHECK de `stream_url` en la base. Planificar los turnos desde la parrilla y no desde los cultos. Con dos radios en una iglesia suena la primera, sin selector. Y `guardarPuestos` y `editarMinisterio` reescriben `modulos` sin `for update`: dos guardados a la vez se pisan (la radio ya bloquea) |
+| Consolidación, lo que queda | Con migración: la tarjeta por QR sin cuenta, la tabla `llegadas`, el aviso `llegada_nueva` y el borrado de las llegadas caducadas. La promesa de borrar a los 90 días una ficha del alta rápida choca con `auditar()`, como ya señalaba el plan. «Te toca acompañar» en `/mi`. «Nuevos» y el alta no están en la app del líder: su seguimiento solo enseña ausentes. «Nuevos» tarda 3,7 s en desarrollo (ocho consultas, repartibles en `withUser` paralelos). El umbral de «se quedan» y los 90 días son constantes de `consultas.ts`, no configuración |
+| Los equipos en la app, lo que queda | Decisión de Marlon: `/mi` sigue mandando al panel a quien solo lidera (`inicioDe`); para la app nativa conviene decidir si empieza en `/mi/equipo`. El aviso «X no puede» enlaza al panel y saca al líder de la app (lo arregla traducir en la campana con `traducirAlApp`). Gestionar el equipo —gente, colíderes, puestos— sigue en el panel. Sin ejercitar `solo_lectura`. Tras una action la página vuelve arriba, porque las del panel no llevan ancla |
+| Pase visual, fase 2 del inventario | **M1 primero**: los `<select>` y `<textarea>` nativos que llevan su propio tamaño siguen a 15 px en el móvil, y Safari de iOS amplía la página. El 20-oct se arregló `<Input>`, pero la regla de 16 px de `globals.css` sigue dentro de `@layer base` y cualquier utilidad le gana. Se arregla en un solo sitio, sacando el `@media` de la capa (verificado inyectándolo), no campo a campo; la radio, alabanza y la app del líder igualaron los suyos a mano. Después M2 (el 404 y el error de Next salen en negro y en inglés, y `/panel` a secas da 404), A9, A16 y D2, que son de un fichero; luego M3 y A1, que tocan casi todo; y al final las pantallas. Todo en `docs/diseno/inventario-visual.md` |
+| **Las páginas confiaban en el layout** | **Cerrado el 20-oct**, y no era solo de los módulos: era todo el panel. Probado: `miembro@`, un miembro raso, pedía el seguimiento con `RSC: 1` y recibía la lista entera con 13 teléfonos; también finanzas y miembros. Ahora cada página aplica la cadena entera (`requirePanel`, `requirePermiso`, `requirePastor`, `requireModuloMinisterio` en `guard-panel.ts`), las exportaciones la heredan de `requirePermisoApi`, y `npm run test:puertas` lo comprueba con 8 cuentas en 59 rutas, normal y con `RSC: 1`: una página nueva que no esté en su lista lo hace fallar. Entre iglesias nunca cruzó. Pendiente: las guardas de ACTION no miran ser del equipo ni el consentimiento (`devocionales/actions.ts` usa `requireIglesiaAccion` a secas). **Y al fusionar las ramas del 20-oct entraron tres páginas de panel sin la cadena**: `seguimiento/nuevos`, `seguimiento/nuevos/alta` y `emisora`, con `requireIglesia` y `obtenerMinisterio` y fuera de la lista de `test:puertas`, que falla hasta que entren; `seguimiento/nuevos` y `emisora` buscan además `CONFIRMACIONES[guardado]` sin `Object.hasOwn`. Va en la tanda de guardas de después de la fusión. `test:puertas`, además, solo recorre `src/app/panel`: las catorce pantallas de `/mi/equipo` ponen sus guardas en cada página (`en-la-app/guarda.ts`), probadas a mano, pero ninguna prueba las pide con `RSC: 1` |
 | CSV del reparto | No se hizo: no era barato. Un route handler no pasa por el `layout.tsx` del reparto, y `guard-api.ts` no tiene guarda por ministerio (haría falta `requireGestionMinisterioApi(id, { desdeDentro, modulo })`). Y hay que decidir antes si una iglesia con el pago caído o el consentimiento pendiente puede descargar: hoy los CSV de eventos y finanzas se saltan esos dos cortes del `panel/layout.tsx` sin que esté decidido. El informe imprimible, con «Guardar como PDF», cubre lo que pide un banco de alimentos |
-| Tres fallos vistos de paso, sin arreglar | `guard-api.ts` reutiliza el mismo `Response` de 401/403 en todas las peticiones, y el cuerpo solo se lee una vez: a partir del segundo fallo sale vacío (factorías en vez de constantes). `src/lib/format/csv.ts:63` lleva el BOM como carácter literal, la trampa que ESTADO.md dice evitar. El informe de finanzas no valida `?mes=`: con basura, 500 |
+| El BOM del CSV, literal | `src/lib/format/csv.ts` lleva el BOM como carácter literal, la trampa que este fichero dice evitar. (El `Response` compartido de `guard-api.ts`, que salía vacío desde el segundo 401, lo cerró la tanda de las puertas) |
+| Parámetros de la URL que tumban la página | CLAUDE.md pide Zod en toda query y estas no lo tienen: con basura dan 500 el informe de finanzas (`?mes=`), `/panel/miembros?ficha=abc` y `/panel/ministerios/<algo que no es un uuid>`, y probablemente `?desde=` y `?hasta=` del libro. Y el `?guardado=constructor` que cerraron los arreglos vuelve en las pantallas que llegaron después: las ocho de `/mi/equipo` que pintan `CONFIRMACIONES[guardado]` lo buscan sin `Object.hasOwn` (leído en el código, no probado) |
 | El muro de pago cierra la puerta del reparto | En `solo_lectura`, `exigirPoderEscribir` impide marcar entregas un domingo. Se puede seguir repartiendo en papel, pero hay que decidir si el reparto entra en la lista corta de `sinMuro`. Es decisión de Marlon, no de código |
 | Las personas del hogar se copian al LLEGAR | Si en la puerta se corrige el tamaño del hogar después de «Ha llegado», esa entrega cuenta el número viejo. Hoy se arregla con «Quitar» y «Ha llegado» otra vez; hacerlo solo pide una migración que refresque la copia al pasar a entregado |
 | La puerta es lenta en local | Unos 6 s por action desde Canarias contra Irlanda: guard, `esMinisterioDeSuIglesia`, `exigirModulo` y la action, cada una en su transacción. En el VPS la base está al lado y no debería notarse, pero no está medido |
 | Contestar un turno con los turnos apagados | `responderTurno` en `/mi/agenda` no pasa por `exigirModulo`: es la respuesta de una persona a SU asignación, no una escritura del equipo. Decidir si se corta |
 | La secretaria no puede aprobar solicitudes | Tiene `aprobar_solicitudes` de salida, pero `iglesia_usuarios` solo admite UPDATE y DELETE del pastor (`0001`). Antes aprobaba a medias sin avisar; ahora la pantalla le dice que las aprueba el pastor. Arreglarlo es una función `security definer` que active o borre solo membresías pendientes |
 | El correo de una cuenta nueva no se verifica | `/crear-cuenta` la crea con `email_confirm: true`. Pesa más desde que aprobar puede enlazar con una ficha: por eso la pantalla avisa de que el correo y el teléfono no prueban nada |
-| El pastor que registra una iglesia sale de las listas | `crear-iglesia.ts` registra el consentimiento general vigente sin el de asistencia: el mismo fallo que tenía aprobar una solicitud. Hay que preguntarle la casilla en `/registro` |
+| Dar o retirar el permiso de asistencia cuando se quiera | No hay pantalla, y el texto de la casilla lo promete («puedo retirar este permiso cuando quiera»): `/acepta` solo sale cuando cambia la versión. Hace falta en `/mi/cuenta` o en la ficha. Mientras, los pastores que se registraron antes del 20-oct siguen fuera de sus propias listas —`/registro` ya pregunta la casilla, pero solo a las altas nuevas—; en la demo, el de Betania |
 | Foto en la ficha de miembro | Va en OTRO bucket, privado y con URL firmada. El de iglesias es público |
 | Eventos y calendario | Hecho y verificado, con sus textos legales |
-| Área del miembro | Comunidad, devocional con vídeo, **agenda como calendario con sus turnos y lo que se toca cada domingo** y Biblia. Falta el material del equipo |
+| Área del miembro | Comunidad, devocional con vídeo, **agenda como calendario con sus turnos, lo que se toca cada domingo y la ficha del ensayo**, Biblia, **Equipo** para quien sirve y el reproductor de la radio. Falta el material del equipo |
 | Agenda | **Calendario con día, semana y mes**, los días marcados y una hoja al tocarlos. Junta los horarios semanales, los eventos y las reuniones de los ministerios de cada persona |
 | Stripe | **Hecho el circuito entero**, sin claves todavía. Ver «Qué hay que crear en Stripe» |
 | Correo (Resend) | Nada. Ni bienvenida, ni aviso de solicitud, ni el de «se te acaba la prueba» — que ahora es el que más falta hace: el aviso solo se ve entrando al panel |
@@ -720,6 +918,13 @@ código. Con varias sesiones a la vez, cada una con su host,
 `http://<nombre>.localhost:<puerto>`, y el enlace mágico canjeado en ese host.
 Comprobar SIEMPRE quién firmó la fila en la base, no solo la pantalla.
 
+`127.0.0.1` no sirve para separarlas: en desarrollo Next arma `request.url` con
+`localhost`, y `/auth/confirm` redirige ahí. La cookie sí se queda en el host
+del enlace, así que después de canjearlo hay que volver a navegar a mano a
+`<nombre>.localhost`; y si el enlace dice «caducado», es que se canjeó dos
+veces. Además, **con el panel del navegador oculto** algún clic no llega y las
+capturas salen atrasadas: otra razón para mirar la base y no la captura.
+
 **Y el pooler se satura con varios servidores de desarrollo.** Modo sesión,
 `pool_size` 15, y cada `next dev` abre hasta 10: con tres o cuatro sesiones
 sale `EMAXCONNSESSION` como un 500 en cualquier pantalla. Es pasajero; si se
@@ -731,18 +936,40 @@ otras sesiones viven en `.claude/worktrees/`, dentro de este repo, y `eslint`
 sin argumentos entra en todas: pasa de un minuto a más de diez, y si acaba
 informa de fallos que no son de esta rama. Desde aquí, `npx eslint src scripts`.
 
+**No compilar con el servidor de desarrollo encendido.** `next build`, `tsc` y
+`next dev` comparten `.next`: el servidor se pone a contestar 404 a todo, también
+a `/panel`, y `tsc` lee `.next/dev/types/routes.d.ts` a medio escribir y da
+decenas de errores que no son del código. Y al revés: `npm run build` seguido de
+`next dev` sobre la misma `.next` da 404 en rutas que existen, en 30 ms y sin
+nada en el log. Primero las comprobaciones, después el servidor, y borrar
+`.next` si ya pasó. En un worktree recién montado, además, `tsc` falla con un
+`.avif` de `/i/[slug]`: falta `next-env.d.ts`, que crean `next dev` o el build.
+
 **La regla de 16 px de `globals.css` no llegaba a `<Input>`.** Vive en la capa
 `base`, y la clase `text-[15px]` del componente es una utilidad, que gana:
 todos los campos del panel medían 15 px en el móvil, y Safari de iOS ampliaba la
 página al enfocarlos. Lo arregla `input.tsx` con `text-[16px] md:text-[15px]`.
-Se vio midiendo con `getComputedStyle`; a ojo no se distingue.
+Se vio midiendo con `getComputedStyle`; a ojo no se distingue. **Y no llega
+tampoco a ningún `<select>` ni `<textarea>` nativo con su propio tamaño**: la
+regla sigue dentro de `@layer base`. Es M1 del inventario visual, y se arregla
+sacándola de la capa, no campo a campo (ver «Qué falta»).
 
 **Registrar el consentimiento general en la versión vigente equivale a decir
 «no» a la asistencia.** `miembrosSinPermisoDeAsistencia` se apoya en que esa
 versión solo se acepta en `/acepta`, donde también sale la casilla. Cualquier
 otro sitio que la escriba sin preguntar la casilla convierte el silencio en
 negativa. Lo hacían aprobar una solicitud (arreglado con la `0040`) y crear una
-iglesia (pendiente). Al escribir un consentimiento nuevo, mirar esto primero.
+iglesia (arreglado el 20-oct: `crearIglesiaConSeeds` exige `aceptaAsistencia`
+sin defecto). Al escribir un consentimiento nuevo, mirar esto primero.
+
+**Y la misma deducción muerde al subir la versión.** La negativa no se guarda:
+se deduce de tener el general en la versión vigente sin el de asistencia, y
+negar en `/acepta` no deja fila. El día que se suba
+`VERSION_POLITICA_PRIVACIDAD` nadie tendrá el general en la versión nueva, así
+que quien negó dejará de contar como negativa y volverá a salir en ausentes, en
+nuevos, en las cifras de Inicio y en la lista de pasar, hasta que vuelva a
+entrar en `/acepta`. Antes de subirla, guardar la negativa como fila, o dejar
+de exigir la versión actual para leerla. En la demo, el caso es Tomás.
 
 **Una action que reactiva filas puede estar reescribiendo las activas.**
 `asignarAlMinisterio` buscaba las filas de esas personas sin filtrar por
@@ -773,6 +1000,44 @@ implícita de una rejilla mide lo que su contenido más ancho, y un `<select>`
 mide lo que su opción más larga. En el cuadrante, «Lucía Ferrer Ramos — Voz y
 teclado» sacaba la pantalla 20 px. Escribir `grid-cols-1`, que es
 `minmax(0, 1fr)`, aunque parezca el defecto.
+
+**Un objeto literal usado como diccionario hereda de `Object.prototype`.**
+`CONFIRMACIONES[guardado]` con `?guardado=constructor` devuelve la función
+`Object`, que es verdadera, y React no la puede pintar: 500. Cualquier búsqueda
+con una clave que viene de la URL va con `Object.hasOwn`. Lo tenían 21
+pantallas, y las que se escriben copiando una vieja lo vuelven a traer.
+
+**`Date` corrige las fechas imposibles sin avisar.** El 31 de febrero pasa a
+ser el 3 de marzo, y se guarda como si alguien lo hubiera pedido. Una fecha que
+llega de un formulario se valida antes de sumarle días (`sumarDias`, en la
+agenda del equipo).
+
+**«Hoy» es el de la iglesia.** Betania está en Bogotá: de madrugada en España
+allí todavía es ayer, y una prueba que dependa de «hoy» sale con el día
+anterior. Y al revés: una fecha calculada en UTC adelanta el día de noche en
+América; el `hoy()` de `miembros/actions.ts` lo hacía y salía «llegó hace -1
+días». La buena es `hoyEnLaIglesia()`.
+
+**Una iglesia no se borra con un `delete from iglesias`**, aunque todo cuelgue
+en cascada: el trigger `auditar()` de las tablas hijas inserta en `auditoria`
+con el `iglesia_id` que se está borrando, y la clave ajena lo rechaza. Hay que
+vaciar antes las tablas auditadas; el orden está en
+`scripts/prueba-arreglos-sueltos.sql`. Pesará el día de la supresión de una
+iglesia entera.
+
+**Un `<audio>` miente en dos sitios.** `paused` vale `false` en cuanto se llama
+a `play()`, suene o no, así que un tope de espera que lo mire no salta nunca; y
+cuando el servidor corta, Chrome manda `pause` antes de `ended`, que parece una
+pausa de quien escucha. Están comentados en `use-senal.ts`. Para probar la
+radio, FIP de Radio France: SomaFM empezó a redirigir esta IP a un `alert.mp3`
+a los pocos días de pruebas, y parecía que cualquier ruta sonaba treinta
+segundos. Para un fallo de verdad, `example.com/x.mp3`.
+
+**El lector de la herramienta del navegador no es un lector de pantalla.** Toma
+el nombre de un campo del placeholder antes que de su `<label for>`, y el de una
+casilla de su `value` si no hay `aria-label` ni `label[for]`. Un
+`checkbox "on"` ahí no prueba que un lector real diga «on» —Chrome sí sigue la
+etiqueta envolvente—, pero el arreglo vale para los dos.
 
 **Cambiar la paleta enseña dónde NO están los tokens.** Al pasar la aplicación a
 oscuro aparecieron 79 colores escritos a mano en `.tsx` —17 solo en
@@ -822,7 +1087,10 @@ ventana, no hay ni un elemento que desborde, y todas las comprobaciones dan
 verde. El campo de comentario medía 14.5px y el de publicar, 15.
 
 Lo arregla una regla en `globals.css` que sube a 16px todo `input`, `textarea` y
-`select` por debajo de `md`. La otra forma —`maximum-scale=1` en el viewport—
+`select` por debajo de `md`, **pero solo a los que no llevan clase de tamaño**:
+vive en `@layer base` y las utilidades de Tailwind ganan siempre. Por eso no
+llegaba a `<Input>` (ya arreglado) y no llega a los campos nativos con tamaño
+propio (M1, en «Qué falta»). La otra forma —`maximum-scale=1` en el viewport—
 se descarta a propósito: le quita el zoom a quien no ve bien, y en una
 congregación con gente mayor eso es cambiar un problema de maquetación por uno
 de accesibilidad.
@@ -843,6 +1111,11 @@ sesión: quién eres y a qué iglesia perteneces. Pero un estado que puede cambi
 mientras alguien navega —la suscripción— no se puede vigilar solo desde ahí. Por
 eso el muro corta en el guard de cada server action y el layout se limita a
 mandar fuera del panel.
+
+Desde el 20-oct se sabe que el layout no basta ni para lo que no cambia: no
+impide que su página se ejecute, y lo que la página consulta viaja en el payload
+RSC aunque el layout redirija. La guarda va en cada página, antes de consultar
+nada (ver «Las páginas confiaban en el layout», en «Qué falta»).
 
 **El MCP de Supabase es de solo lectura.** `execute_sql` sirve para mirar y
 falla con «cannot execute UPDATE in a read-only transaction» al escribir. Para
@@ -1279,10 +1552,14 @@ consulta; la columna ya es la buena.
 personas, con comentarios, respuestas y me gusta—. El segundo se puede repetir:
 borra antes lo suyo, que va marcado con `[demo]` en el texto.
 
-Siete cuentas, contraseña `Hatril2026`:
-`pastor@`, `secretaria@`, `lider@`, `miembro@`, `visita@`, `admin@` y
-`pastor.sion@` (de otra iglesia, para probar el aislamiento), todas
-`@hatril.test`.
+Diez cuentas, contraseña `Hatril2026`, todas `@hatril.test`: `pastor@`,
+`secretaria@`, `lider@`, `miembro@`, `visita@`, `admin@`, `pastor.sion@` (de
+otra iglesia, para probar el aislamiento), `colider@` (Sara Nieto, rol
+`miembro`, colíder de Acción social y de Radio), `consolidacion@` (Noemí, rol
+`miembro`, responsable de Consolidación y con `ver_seguimiento`; la crea
+`scripts/seed-consolidacion.sql`) y `enlace@` (Andrés, voluntario de Acción
+social; su ficha nació sin cuenta para probar el enlace al aprobar). Son las
+ocho con las que corre `npm run test:puertas`, más `visita@` y `admin@`.
 
 `lider@` es responsable de Alabanza: es la cuenta con la que se comprueba que el
 permiso acotado deja gestionar un ministerio y ninguno más. Alabanza tiene
@@ -1300,3 +1577,23 @@ El **reparto** de Acción social de Betania tiene datos de las pruebas del
 y repartos el 12, 16, 19 y 20 de octubre, con entregas sin inscribir y una
 entrega de un hogar ya borrado. Se entra como `colider@` (Sara Nieto, colíder
 con rol `miembro`).
+
+De las tandas del 20-oct quedan en la base, cada cosa con su script y su
+borrado:
+
+- **Alabanza**: seis ensayos del 22-oct al 26-nov y dos canciones en la lista
+  del culto del 25-oct (`scripts/seed-alabanza-ensayos.sql`).
+- **Consolidación**: tres cultos con lista en los tres últimos domingos —con
+  fechas relativas a hoy— y una persona nueva por cada caso de la pantalla
+  (`scripts/seed-consolidacion.sql`). Además, de las pruebas, cuatro visitantes
+  dados de alta desde la pantalla —Rosa Medina Pinto, Mateo Rincón Vega, Sofía
+  Duque Arango y Andrés Duque, los tres últimos con sus consentimientos— y la
+  asignación y el contacto de Valeria. Tomás es el que negó el permiso de
+  asistencia.
+- **Radio**: un ministerio Radio en Betania con la señal de FIP, tres programas
+  y `en_web` marcado, con Sara de colíder (`scripts/seed-radio.sql`).
+- Las pruebas de los arreglos y de la app del líder no dejaron nada.
+
+Ojo: Betania tiene en su horario semanal un «Ensayo de alabanza» los jueves a
+las 19:30, y con los ensayos de la agenda el músico ve dos filas el mismo
+jueves. Es dato de la demo, no código.

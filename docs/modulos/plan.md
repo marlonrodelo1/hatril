@@ -19,7 +19,18 @@ que no estaba: **los colíderes los nombra el responsable o el pastor**, no otro
 colíder. **Hecho también:** la tanda 1, el reparto en su v1 «solo la puerta» (20-oct),
 con `exigirModulo()` en las actions de todos los módulos. Sale con la `0042` y
 coge HT126 y HT127, así que la siguiente migración es la **0043** y el siguiente
-código **HT128**. **Siguiente:** la tanda 2, alabanza.
+código **HT128**.
+
+**Hecho también, sin migraciones y fusionado en `main` el 20-oct:** lo que no
+pedía migración de la tanda 2 (alabanza), la 4 (consolidación v1: nuevos, alta
+rápida y cifras de Inicio) y la 6 (radio v1), el corte del libro a 50 de la
+tanda 3, y **los equipos en la app** (`/mi/equipo`), que es «quien lidera algo
+ve, en la misma app, las herramientas de lo suyo». Cada sección dice abajo qué
+quedó; el detalle está en `ESTADO.md` y en los `estado-*.md` de esta carpeta.
+La numeración no se ha movido: **0043** y **HT128**.
+
+**Siguiente:** la tanda 3, contabilidad completa, que es la primera con
+migración de la cola (`cola.md`).
 
 ---
 
@@ -169,7 +180,15 @@ marcando desde `/mi`, CSV si un banco de alimentos lo pide, QR.
 
 ## 2. Alabanza
 
-Casi hecha. Falta:
+**Estado (20-oct): hecho lo que no pedía migración**: ensayo repetido hasta
+doce semanas, el ensayo dentro del turno (derivado, solo con el repertorio
+encendido) con su ficha en `/mi`, y el indicador de lista. El doble clic lo
+para la action con un cerrojo, no el índice. Quedan el **índice único** de
+`reuniones` (con la próxima migración que toque esa tabla, buscando antes
+duplicados) y el aviso «ya está la lista»: van en Alabanza v2 de la cola.
+Detalle en `estado-alabanza-pulido-61bccd.md`.
+
+Lo que pedía el plan:
 
 - Cerrar el repertorio (ver arriba).
 - Ensayo fijo: «repetir cada semana N semanas», con tope de 12 y un índice
@@ -185,14 +204,17 @@ Nada de subir PDFs de acordes: Hatril pasaría a alojar obras con derechos.
 
 ## 3. Contabilidad = Finanzas
 
+**Estado (20-oct): es la siguiente.** El corte del libro a 50 ya está
+arreglado (paginación de verdad, el total en la cabecera y el aviso en el
+informe y el CSV; `estado-arreglos-sueltos.md`). Lo demás pide migración.
+
 En pantalla sigue llamándose **Finanzas**: «Contabilidad» promete partida doble
 e impuestos, que no se van a construir.
 
 - Interruptor de iglesia solo del pastor en `/panel/modulos`
   (`iglesias.modulos`, clave ausente = encendido, para que nadie se quede sin
   su caja el lunes). Apagado: fuera del menú, de Hoy y de las rutas (404).
-- **Arreglar el corte silencioso del libro a 50 movimientos**
-  (`src/lib/finanzas/consultas.ts:146`, `movimientos/page.tsx:38`).
+- ~~Arreglar el corte silencioso del libro a 50 movimientos~~. Hecho el 20-oct.
 - Fondo vinculado a un ministerio (`fondos.ministerio_id`) y pestaña «Fondo»
   de solo lectura para su responsable: el líder de alimentos ve su dinero.
 - Arqueo del culto (quien cuenta no es quien confirma): v1.1.
@@ -200,6 +222,15 @@ e impuestos, que no se van a construir.
 ---
 
 ## 4. Consolidación
+
+**Estado (20-oct): v1 hecha, sin migración.** Los tres defectos del
+seguimiento, la vista «Nuevos» dentro del módulo `seguimiento` (no como módulo
+propio), el alta rápida de visitante con el permiso leído en voz alta y
+guardado, y las cifras de Inicio. Queda lo que pide migración —la tarjeta por
+QR, la tabla `llegadas`, el aviso `llegada_nueva`— para Consolidación v2, y una
+decisión de Marlon: `/privacidad` ya está redactada y la versión sin subir, y
+antes de subirla hay que guardar la negativa de asistencia como fila (ver la
+decisión 7). Detalle en `estado-consolidacion-nuevos-9b87a5.md`.
 
 Distinguir dos preguntas: **¿quién llegó?** (nuevos, lo que falta) y **¿quién
 se fue?** (ausentes, lo que ya hace `seguimiento`).
@@ -242,6 +273,14 @@ se fue?** (ausentes, lo que ya hace `seguimiento`).
 ---
 
 ## 6. Radio
+
+**Estado (20-oct): v1 hecha, sin migración**, adelantada porque era
+independiente. Tipo `radio`, módulo `emisora` dentro de `ministerios.modulos`,
+parrilla con «de qué va» cada programa, reproductor en `/mi` y bloque en la web
+pública, y los dos párrafos legales. Si quien cambia lo público no es el
+pastor, la radio sale de la web. Queda **`turnos.tema`** —el tema de cada
+emisión, que hoy es de cada programa—, el CHECK de `stream_url` y planificar
+los turnos desde la parrilla. Detalle en `estado-radio-emisora.md`.
 
 - Tipo `radio` propio (sale de `medios`). Módulo `emisora`: URL del stream
   (**solo https**, sin proxy desde Hatril: ni ancho de banda ni comunicación
@@ -301,6 +340,14 @@ primeras, que van recomendadas dentro de ella.
 7. ¿Una sola subida de `VERSION_POLITICA_PRIVACIDAD` para toda la tanda o una por
    módulo? Alimentos no la necesita (consentimiento propio). Subirla **una vez**,
    cuando cambie el uso de los datos de los miembros (células, escuela).
+   **20-oct:** el uso ya cambió con consolidación, que contacta también a quien
+   acaba de llegar y manda por WhatsApp; `/privacidad` está redactada (§3, §4 y
+   §5, más la radio en §5) y la versión sin subir. **Antes de subirla, guardar
+   la negativa de asistencia como fila**: hoy se deduce de la versión vigente, y
+   al subirla quien negó volvería a todas las listas. Y ampliar en la misma
+   subida el texto de la casilla de asistencia.
+9. ¿Quien solo lidera empieza en `/mi/equipo` y no en el panel? Hoy `inicioDe`
+   le manda al panel. Pesa para la app nativa de la v2.
 8. Escuela dominical: ¿fichas nominales de niños? **No hasta la revisión
    legal.**
 
@@ -309,12 +356,17 @@ primeras, que van recomendadas dentro de ella.
 - **No hay correo ni push.** Un aviso solo existe si se abre la app.
 - `getCurrentUserContext` hace `.limit(1)` sin orden: una cuenta en dos iglesias
   recibe una cualquiera.
-- El test de aislamiento **no cubre el recorte por ministerio dentro de una
-  iglesia**: su fase `withUser` ejecuta `select 1`. Con siete módulos más, una
-  fuga de un equipo a otro solo se vería abriendo la pantalla.
+- El test de aislamiento **no cubría el recorte por ministerio dentro de una
+  iglesia**: su fase `withUser` ejecutaba `select 1`. Desde el 20-oct lo
+  cubren en parte las 39 comprobaciones del reparto (las primeras dentro de una
+  iglesia) y `npm run test:puertas`, que pide cada página de `src/app/panel`
+  con ocho cuentas, normal y con `RSC: 1`. **No recorre `/mi`**: las catorce
+  pantallas de `/mi/equipo` tienen sus guardas, probadas a mano, pero ninguna
+  prueba automática.
 - La supresión sigue siendo manual y cada módulo añade tablas con personas.
   Hace falta una lista única de tablas que se borran al negarse en `/acepta`.
 - `obtenerIglesiaPublica` lista todo ministerio activo en la web: los tipos
   nuevos salen a internet sin que nadie lo decida.
-- En Claude Design faltan el área del miembro y las vistas móviles. La pantalla
-  de la puerta a 375 px no tiene referencia: fijar un patrón y reutilizarlo.
+- En Claude Design faltan el área del miembro y las vistas móviles. El patrón
+  que faltaba lo fija ahora `docs/diseno/guia-visual.md` (20-oct): qué copiar y
+  de qué pantalla. Lo que falla hoy, en `docs/diseno/inventario-visual.md`.
