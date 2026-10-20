@@ -4,6 +4,7 @@ import {
   ChevronRight,
   HandHeart,
   ShieldCheck,
+  ShieldOff,
   SquarePen,
   UserMinus,
   UserPlus,
@@ -225,12 +226,25 @@ function TarjetaPersona({ persona: p }: { persona: FilaEquipo }) {
             <span className="mt-0.5 inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
               <HandHeart className="size-3.5 flex-none" strokeWidth={1.7} />
               Lidera {p.lidera.map((m) => m.nombre).join(', ')}
-              {/* Desmarcar «Llevar sus propios ministerios» no se nota en
-                  ningún otro sitio: el ministerio le sigue teniendo de
-                  responsable y la tarjeta cerrada decía lo mismo que antes.
-                  Sin esto, el pastor que lo quitó hace un mes no recuerda por
-                  qué esa persona no puede entrar. */}
-              {!p.permisos.gestionar_su_ministerio && ', sin poder llevarlo'}
+            </span>
+          )}
+
+          {/*
+           * Desmarcar «Llevar sus propios ministerios» no se nota en ningún
+           * otro sitio: el ministerio le sigue teniendo de responsable y la
+           * tarjeta cerrada decía lo mismo que antes. Sin esto, el pastor que
+           * lo quitó hace un mes no recuerda por qué esa persona no entra.
+           *
+           * En su línea y con su icono, no pegado detrás de la lista: con dos
+           * ministerios, «Lidera Acción social, Radio, sin poder llevarlo» se
+           * leía como un tercero.
+           */}
+          {p.lidera.length > 0 && !p.permisos.gestionar_su_ministerio && (
+            <span className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
+              <ShieldOff className="size-3.5 flex-none" strokeWidth={1.7} />
+              {p.lidera.length === 1
+                ? 'Sin permiso para llevarlo'
+                : 'Sin permiso para llevarlos'}
             </span>
           )}
         </div>
@@ -353,9 +367,11 @@ function TarjetaPersona({ persona: p }: { persona: FilaEquipo }) {
                 <div className="flex flex-col gap-3 border-t border-border pt-3">
                   {/* «Viene puesto para todos» a secas se leía como algo fijo,
                       que no va con esta persona y no se toca. Es de esta
-                      persona, y se le puede quitar. */}
+                      persona, y se le puede quitar. Sin el «puesto»: con él
+                      no cabe en una línea a 375 px y la versalita partida a
+                      media frase parece un descuido. */}
                   <span className="t-micro">
-                    Viene puesto para todos · puedes quitárselo
+                    Viene para todos · puedes quitárselo
                   </span>
                   {PERMISOS_DE_TODOS.map((permiso) => (
                     <CasillaPermiso

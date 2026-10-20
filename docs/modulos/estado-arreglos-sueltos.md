@@ -42,6 +42,35 @@ migraciones. Para integrar en `ESTADO.md` al fusionar.
    ha quitado —antes no se notaba en ningún sitio— y la descripción dice
    «desde el panel» en vez de «desde aquí».
 
+## Segunda pasada: el listón visual
+
+Revisadas con capturas a 375 px y en escritorio todas las pantallas tocadas:
+el libro con dos páginas, `/registro`, `/acepta`, `/solicitar`, la foto del
+ministerio y `/panel/lideres`. El diff no lleva ni un hex ni un `text-white`;
+cada clase sale de un token expuesto en `globals.css`. Lo que no se parecía:
+
+- **Las flechas de la paginación medían 32 px** y todos los controles de
+  finanzas y de miembros miden 36 (`h-9`). Ahora `size-9`, en las dos.
+- **La paginación de abajo dejaba al final de la página siguiente.** Llevaba
+  `scroll={false}`, que en miembros es a propósito porque va arriba. La de
+  abajo (`alPie`) sube al principio: desde 1.833 px aterriza con la primera
+  fila a la vista.
+- **Las dos casillas de `/registro` respondían distinto**: la de asistencia se
+  tiñe al marcarla y la del art. 9 no hacía nada. En `/solicitar` igual. Las
+  dos llevan ahora los mismos estados, y al hacerlo saltó un contraste: el
+  enlace «Leer la política» en naranja sobre el fondo marcado da 4.15:1 y
+  sobre el de `hover`, 4.32. Pasa a `accent-foreground` en esos dos estados
+  (5.64:1), que es lo que CLAUDE.md manda para lo escrito sobre `bg-accent`.
+- **«Sin poder llevarlo» se leía como un ministerio más**: con dos, «Lidera
+  Acción social, Radio, sin poder llevarlo». Va en su línea, con el icono
+  `ShieldOff`, y concuerda en número.
+- **El encabezado del grupo se partía a media frase a 375 px** («…· PUEDES /
+  QUITÁRSELO»). Ahora «Viene para todos · puedes quitárselo», medido en una
+  línea.
+
+La confirmación de la foto ya era el `Aviso` de las demás, en el mismo sitio
+que la agenda y el repertorio pintan las suyas: no cambió.
+
 ## Verificado ejecutándolo (localhost:3004)
 
 - **Libro**: 62 movimientos de prueba en junio de 2026 en Betania. Cabecera

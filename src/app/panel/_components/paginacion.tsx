@@ -19,12 +19,20 @@ export function Paginacion({
   pagina,
   porPagina,
   unidad = ['persona', 'personas'],
+  alPie = false,
 }: {
   total: number;
   pagina: number;
   porPagina: number;
   /** Singular y plural de lo que se cuenta. */
   unidad?: readonly [string, string];
+  /**
+   * La que va debajo de la tabla. Esa SÍ sube al principio al cambiar de
+   * página: quien la pulsa está al final de la lista, y con `scroll={false}`
+   * aterrizaba al final de la siguiente, con sus primeras filas fuera de la
+   * vista. La de arriba no se mueve, que es lo que pedía miembros.
+   */
+  alPie?: boolean;
 }) {
   const params = useSearchParams();
   const paginas = Math.ceil(total / porPagina);
@@ -44,9 +52,9 @@ export function Paginacion({
   const hasta = Math.min(pagina * porPagina, total);
 
   const claseFlecha =
-    'flex size-8 items-center justify-center rounded-lg border border-border bg-surface-alt text-foreground no-underline hover:bg-surface-active hover:no-underline';
+    'flex size-9 items-center justify-center rounded-lg border border-border bg-surface-alt text-foreground no-underline hover:bg-surface-active hover:no-underline';
   const claseInerte =
-    'flex size-8 items-center justify-center rounded-lg border border-border bg-surface-alt text-disabled-text';
+    'flex size-9 items-center justify-center rounded-lg border border-border bg-surface-alt text-disabled-text';
 
   return (
     <div className="flex items-center justify-between gap-4 px-1">
@@ -58,7 +66,7 @@ export function Paginacion({
         {pagina > 1 ? (
           <Link
             href={href(pagina - 1)}
-            scroll={false}
+            scroll={alPie}
             aria-label="Página anterior"
             className={claseFlecha}
           >
@@ -77,7 +85,7 @@ export function Paginacion({
         {pagina < paginas ? (
           <Link
             href={href(pagina + 1)}
-            scroll={false}
+            scroll={alPie}
             aria-label="Página siguiente"
             className={claseFlecha}
           >

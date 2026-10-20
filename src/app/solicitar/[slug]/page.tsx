@@ -181,8 +181,10 @@ export default async function SolicitarPage({
 
             {/* El mismo consentimiento del art. 9 que en el alta de iglesia:
                 vincularse a una congregación es lo que revela la confesión
-                religiosa, y da igual por qué puerta se entre. */}
-            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5">
+                religiosa, y da igual por qué puerta se entre. Con los estados
+                de la de asistencia y el enlace oscuro al marcarla, por el
+                contraste: ver `/registro`. */}
+            <label className="group/consentimiento flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5 hover:bg-surface-active has-checked:border-primary has-checked:bg-accent">
               {/* `aria-label` con el texto exacto: sin él se anunciaba «on».
                   Ver la misma casilla en `/registro`. */}
               <input
@@ -194,7 +196,7 @@ export default async function SolicitarPage({
               />
               <span className="text-[13.5px] leading-snug text-muted-foreground">
                 {TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS}{' '}
-                <Link href="/privacidad" target="_blank" className="font-semibold">
+                <Link href="/privacidad" target="_blank" className="font-semibold group-hover/consentimiento:text-accent-foreground group-has-checked/consentimiento:text-accent-foreground">
                   Leer la política de privacidad
                 </Link>
                 .

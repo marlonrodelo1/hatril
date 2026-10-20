@@ -116,8 +116,13 @@ export default async function RegistroPage({
          * consentimiento que llega marcado de fábrica no es válido (art. 7.2 y
          * considerando 32). Y por eso es una casilla suya, separada de los
          * términos: mezclarlo con «acepto las condiciones» tampoco valdría.
+         *
+         * Responde al marcarla igual que la de asistencia de debajo: dos
+         * casillas vecinas que se comportan distinto parecen de dos sitios. Y
+         * por eso el enlace cambia de color: el naranja sobre el fondo marcado
+         * da 4.15:1 y sobre el de `hover` 4.32; `accent-foreground`, 5.6.
          */}
-        <label className="mt-1 flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5">
+        <label className="group/consentimiento mt-1 flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5 hover:bg-surface-active has-checked:border-primary has-checked:bg-accent">
           {/* `aria-label` con el texto del consentimiento, exacto: sin él la
               casilla se anunciaba como «on», y deducido del `<label>` se
               llevaría pegado «Leer la política de privacidad», que es un
@@ -132,7 +137,7 @@ export default async function RegistroPage({
           />
           <span className="text-[13.5px] leading-snug text-muted-foreground">
             {TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS}{' '}
-            <Link href="/privacidad" target="_blank" className="font-semibold">
+            <Link href="/privacidad" target="_blank" className="font-semibold group-hover/consentimiento:text-accent-foreground group-has-checked/consentimiento:text-accent-foreground">
               Leer la política de privacidad
             </Link>
             .

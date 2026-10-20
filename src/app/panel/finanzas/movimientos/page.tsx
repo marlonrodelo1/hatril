@@ -49,14 +49,16 @@ export default async function MovimientosPage({
   // Arriba Y abajo. Abajo es donde se busca la página siguiente; arriba es
   // donde se ve que la tabla no es todo, antes de recorrer 50 filas buscando
   // el apunte que está en la página dos.
-  const paginacion = total > porPagina && (
-    <Paginacion
-      total={total}
-      pagina={pagina}
-      porPagina={porPagina}
-      unidad={['movimiento', 'movimientos']}
-    />
-  );
+  const paginacion = (alPie: boolean) =>
+    total > porPagina && (
+      <Paginacion
+        total={total}
+        pagina={pagina}
+        porPagina={porPagina}
+        unidad={['movimiento', 'movimientos']}
+        alPie={alPie}
+      />
+    );
 
   return (
     <>
@@ -131,7 +133,7 @@ export default async function MovimientosPage({
           </a>
         </form>
 
-        {paginacion}
+        {paginacion(false)}
 
         {filas.length === 0 ? (
           <p className="rounded-xl border border-border bg-surface px-4 py-8 text-center text-[14px] text-muted-foreground">
@@ -187,7 +189,7 @@ export default async function MovimientosPage({
           </div>
         )}
 
-        {paginacion}
+        {paginacion(true)}
       </Contenedor>
     </>
   );
