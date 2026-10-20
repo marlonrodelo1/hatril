@@ -412,7 +412,7 @@ export async function aprobarSolicitud(
       // una solicitud pendiente sin su membresía pendiente, que `/solicitar`
       // crea juntas. No es algo que quien aprueba pueda arreglar.
       volverCon(
-        'No se ha podido activar la cuenta de esta persona, así que no se ha aprobado nada. Escríbenos a hola@hatril.app y lo miramos.',
+        'No se ha podido activar la cuenta de esta persona, así que no se ha aprobado nada. Escríbenos a hola@hatril.com y lo miramos.',
       );
     }
     throw err;
@@ -541,7 +541,7 @@ export async function rechazarSolicitud(
   } catch (err) {
     if (err instanceof RechazoDeshecho) {
       volverCon(
-        'No se ha podido cerrar la petición de esta persona, así que no se ha rechazado nada. Escríbenos a hola@hatril.app y lo miramos.',
+        'No se ha podido cerrar la petición de esta persona, así que no se ha rechazado nada. Escríbenos a hola@hatril.com y lo miramos.',
       );
     }
     throw err;

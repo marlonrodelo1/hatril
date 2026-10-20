@@ -168,7 +168,7 @@ export default async function AjustesPage({
             <form action={guardarWebPublica}>
               <Seccion
                 titulo="Página pública"
-                nota={`Tu iglesia en hatril.app/i/${iglesia.slug}`}
+                nota={`Tu iglesia en hatril.com/i/${iglesia.slug}`}
                 accion={
                   iglesia.webPublica ? (
                     <Button
