@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { eq } from 'drizzle-orm';
 import { KeyRound, Mail } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePanel } from '@/lib/auth/guard-panel';
 import { ETIQUETAS_ROLES } from '@/lib/auth/permisos';
 import { nombreDeLaCuenta } from '@/lib/auth/nombre';
 import { withUser } from '@/lib/db';
@@ -44,7 +44,8 @@ export default async function CuentaPage({
 }: {
   searchParams: Promise<{ error?: string; guardado?: string; password?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // Repite la puerta del layout, que no impide que esto corra (CLAUDE.md).
+  const ctx = await requirePanel();
   const { error, guardado, password } = await searchParams;
 
   // La ficha, si la tiene. Hay cuentas sin ficha —quien acaba de ser aprobado y

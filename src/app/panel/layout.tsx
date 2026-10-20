@@ -12,10 +12,12 @@ import { AvisoSuscripcion } from './_components/aviso-suscripcion';
 /**
  * Marco del panel.
  *
- * `requireIglesia()` va aquí y no en cada página: puesto en el layout cubre la
- * sección entera, incluidas las rutas dinámicas. Gonper lo hacía página a
- * página y ahí es donde se le quedaron los huecos — `/panel/clientes` guardado
- * y `/panel/clientes/[id]` sin guardar.
+ * Los cortes de aquí abajo se repiten en el layout solo para la navegación:
+ * deciden a dónde va quien no debe estar, antes de pintar el marco. NO protegen
+ * nada. En Next 16 la página se ejecuta aunque el layout redirija, y lo que
+ * consulta viaja en el payload RSC: así se encontró a un miembro raso leyendo
+ * el seguimiento entero. Cada página pone su propia cadena con `requirePanel()`
+ * o una guarda que la incluye. Ver CLAUDE.md y `npm run test:puertas`.
  *
  * Ojo: esto NO es lo que aísla una iglesia de otra. Eso lo hacen las policies
  * de RLS y `withUser()`. Si este guard faltara, lo peor que pasa es que se vea

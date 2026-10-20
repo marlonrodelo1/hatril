@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Plus, SearchX, UserPlus } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePanel } from '@/lib/auth/guard-panel';
 import { puede, esPastor } from '@/lib/auth/permisos';
 import {
   listarMiembros,
@@ -31,7 +31,9 @@ export default async function MiembrosPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const ctx = await requireIglesia();
+  // La puerta del panel aquí y no solo en el layout, que no protege la página
+  // (CLAUDE.md, «La guarda va en CADA página»).
+  const ctx = await requirePanel();
   const sp = await searchParams;
 
   const primer = (v: string | string[] | undefined) =>

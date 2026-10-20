@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePermiso } from '@/lib/auth/guard-panel';
 import { obtenerReunion } from '@/lib/asistencia/consultas';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { CabeceraPanel } from '../../../_components/cabecera';
@@ -20,7 +20,8 @@ export default async function EditarReunionPage({
 }) {
   // `params` antes del guard: sin el id no hay a qué volver si rebota.
   const { id } = await params;
-  const ctx = await requireIglesia();
+  // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
+  const ctx = await requirePermiso('registrar_asistencia');
   const { error } = await searchParams;
 
   // Un ensayo o una reunión de un equipo no se abren por aquí: son de la

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePanel } from '@/lib/auth/guard-panel';
 import { PASSWORD_PISTA } from '@/lib/auth/password';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +35,8 @@ export default async function CambiarPasswordPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  await requireIglesia();
+  // Repite la puerta del layout, que no impide que esto corra (CLAUDE.md).
+  await requirePanel();
   const { error } = await searchParams;
 
   return (

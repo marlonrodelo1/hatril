@@ -23,10 +23,10 @@ import { MenuCuenta } from '@/components/menu-cuenta';
  * entre ellas), una con campana hecha a mano y las otras sin nada, y un botón de
  * «Salir» suelto donde el panel tiene un menú de cuenta entero.
  *
- * `/mi` NO TIENE `layout.tsx`, Y ESO NO ES UN DESCUIDO
- * ----------------------------------------------------
- * Un layout obligaría a resolver ahí el título de cada pantalla, y sobre todo
- * tendría que decidir un guard común. No lo hay: `/mi/comunidad` exige
+ * EL LAYOUT DE `/mi` NO PINTA LA CABECERA, Y ESO NO ES UN DESCUIDO
+ * ----------------------------------------------------------------
+ * Tendría que resolver ahí el título de cada pantalla, y sobre todo decidir un
+ * guard común. No lo hay: `/mi/comunidad` exige
  * `requireIglesia()` y `/mi/avisos` NO puede exigirlo bajo ningún concepto —a
  * quien le rechazan la solicitud se le borra la membresía en el mismo movimiento
  * y ese aviso es justo el que se lo explica—. Un componente compartido unifica

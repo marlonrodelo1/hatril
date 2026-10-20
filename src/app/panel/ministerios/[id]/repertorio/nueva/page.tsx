@@ -1,8 +1,6 @@
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { CabeceraPanel } from '../../../../_components/cabecera';
 import { Contenedor } from '../../../../_components/contenedor';
 import { FormularioCancion } from '../_components/formulario-cancion';
@@ -18,11 +16,9 @@ export default async function NuevaCancionPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
-  const ctx = await requireIglesia();
+  // Las puertas de sus layouts aquí, y no solo allí: ver CLAUDE.md.
+  const { ministerio } = await requireModuloMinisterio(id, 'repertorio');
   const { error } = await searchParams;
-
-  const ministerio = await obtenerMinisterio(ctx, id);
-  if (!ministerio) notFound();
 
   const base = `/panel/ministerios/${id}/repertorio`;
 

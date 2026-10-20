@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { BookOpen, ChevronRight, Search, TriangleAlert } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
+import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { LIBROS, buscarLibros, libroPorSlug } from '@/lib/biblia/libros';
 import { cargarCapitulo } from '@/lib/biblia/texto';
 import { CabeceraMiembro } from '../_components/cabecera-miembro';
@@ -37,6 +38,9 @@ export default async function BibliaPage({
   searchParams: Promise<{ libro?: string; cap?: string; q?: string }>;
 }) {
   const ctx = await requireIglesia();
+  // Como las otras tres pestañas: la cabecera pinta los avisos y la foto de la
+  // ficha, y `/mi/layout.tsx` no guarda nada.
+  await exigirConsentimientoAlDia(ctx);
   const { libro: slug, cap, q } = await searchParams;
 
   const libro = libroPorSlug(slug);

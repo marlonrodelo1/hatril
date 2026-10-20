@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { CalendarPlus, MapPin, Users } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePermiso } from '@/lib/auth/guard-panel';
 import { listarEventos, type EventoListado } from '@/lib/eventos/consultas';
 import { formatearInstante } from '@/lib/fecha/zona';
 import { formatearDinero } from '@/lib/format/dinero';
@@ -21,7 +21,8 @@ export default async function EventosPage({
 }: {
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
+  const ctx = await requirePermiso('gestionar_eventos');
   const { error, guardado } = await searchParams;
 
   const todos = await listarEventos(ctx);

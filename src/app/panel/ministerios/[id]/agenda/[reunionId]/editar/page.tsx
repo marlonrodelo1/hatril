@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { obtenerReunion } from '@/lib/asistencia/consultas';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { CabeceraPanel } from '../../../../../_components/cabecera';
@@ -19,12 +19,13 @@ export default async function EditarReunionMinisterioPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { id, reunionId } = await params;
-  const ctx = await requireIglesia();
+  // Las puertas de sus layouts aquí, y no solo allí: ver CLAUDE.md.
+  const { ctx } = await requireModuloMinisterio(id, 'agenda');
   const { error } = await searchParams;
 
   const reunion = await obtenerReunion(ctx, reunionId);
   if (!reunion) notFound();
-  // Igual que en el detalle: el layout comprueba el ministerio de la URL, no
+  // Igual que en el detalle: la guarda comprueba el ministerio de la URL, no
   // que la reunión sea suya.
   if (reunion.ministerio?.id !== id) notFound();
 

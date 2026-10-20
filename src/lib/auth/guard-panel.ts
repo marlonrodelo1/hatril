@@ -1,6 +1,7 @@
 import 'server-only';
 
-import { redirect } from 'next/navigation';
+import { cache } from 'react';
+import { notFound, redirect } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -11,14 +12,21 @@ import {
   type UserContext,
 } from '@/lib/auth/user-context';
 import {
+  esDelEquipo,
   esPastor,
   puede,
   puedeGestionarDesdeDentro,
   puedeGestionarMinisterio,
   type Permiso,
 } from '@/lib/auth/permisos';
+import {
+  obtenerMinisterio,
+  type MinisterioDetalle,
+} from '@/lib/ministerios/consultas';
 import { tieneModulo, type ModuloId } from '@/lib/ministerios/modulos';
+import { estadoConsentimiento } from '@/lib/rgpd/consultas';
 import { createClient } from '@/lib/supabase/server';
+import { leerEstadoSuscripcion } from '@/lib/suscripcion/estado';
 import { exigirPoderEscribir } from '@/lib/suscripcion/muro';
 
 /**
@@ -31,12 +39,45 @@ import { exigirPoderEscribir } from '@/lib/suscripcion/muro';
  * quien la invoca a pelo, así que se redirige con `?error=`, que además es la
  * convención de errores de action en todo el repo.
  *
- * DÓNDE PONERLOS
- * --------------
- * En el `layout.tsx` de la sección, no en cada página. Así queda cubierta la
- * carpeta entera incluidas las rutas dinámicas, que es justo donde se cuelan
- * los huecos: en Gonper `/panel/clientes` estaba guardado y
- * `/panel/clientes/[id]` no.
+ * DÓNDE PONERLAS: EN CADA PÁGINA, CON LA CADENA ENTERA
+ * ----------------------------------------------------
+ * Aquí ponía «en el `layout.tsx` de la sección, no en cada página». En Next 16
+ * es falso, y lo dice su documentación (`02-guides/authentication.md`, «Layouts
+ * and auth checks»): un layout no controla si el resto de la ruta se renderiza.
+ * La página se ejecuta igual, y lo que consulta viaja en el payload RSC aunque
+ * el layout redirija. Así se encontró: un miembro raso —sin `ver_seguimiento` y
+ * sin panel— pidió `/panel/ministerios/<id>/seguimiento` con la cabecera
+ * `RSC: 1` y se llevó la lista entera, con trece teléfonos, mientras el layout
+ * le mandaba a `/mi`.
+ *
+ * Así que cada página aplica ELLA MISMA todas las puertas de los layouts que
+ * tiene encima: la del panel (`requirePanel`) más la de su sección. Las de
+ * sección de aquí abajo llevan dentro la del panel, y una sola llamada basta.
+ * El layout puede repetirla para que la navegación normal redirija, pero no
+ * protege nada. Un `route.ts` no pasa por ningún layout, nunca: ese usa
+ * `motivoFueraDelPanel()` y devuelve una `Response` (por qué no `redirect()`,
+ * en `guard-api.ts`).
+ *
+ * El hueco de Gonper sigue valiendo, ahora del otro lado: `/panel/clientes`
+ * guardado y `/panel/clientes/[id]` no. Una ruta dinámica es una página más, y
+ * necesita su guarda.
+ *
+ * REPETIRLAS NO REPITE LAS CONSULTAS
+ * ----------------------------------
+ * `getCurrentUserContext` va con `cache()` de React, y aquí también
+ * `requirePanel`, `esMinisterioDeSuIglesia` y el `obtenerMinisterio` de
+ * `requireModuloMinisterio`. Comprobado en el React que trae Next
+ * (`compiled/react/cjs/react.react-server.production.js` y el `getCacheForType`
+ * de `react-server-dom-webpack`): la memoria cuelga de la petición RSC, y layout
+ * y página se pintan en la misma —es lo que propone `layout.md` para pedir un
+ * dato en los dos sitios—. Un fallo también se recuerda: el `redirect()` de la
+ * primera llamada se relanza en la segunda sin volver a consultar.
+ *
+ * Lo que NO se ahorra es lo que un layout pide por su cuenta sin pasar por aquí:
+ * el `exigirConsentimientoAlDia` de `panel/layout.tsx` y el `obtenerMinisterio`
+ * de los layouts de módulo. Una consulta por clave más por carga. Y fuera de un
+ * render —server actions, `route.ts`— `cache()` no memoriza: sin petición RSC
+ * cada llamada es una llamada. Correcto, solo que sin ahorro.
  *
  * QUÉ NO PROTEGE ESTO
  * -------------------
@@ -45,9 +86,11 @@ import { exigirPoderEscribir } from '@/lib/suscripcion/muro';
  * `iglesia_usuarios` y nunca desde un parámetro del cliente. Aquí solo se
  * decide QUÉ puede hacer alguien dentro de SU congregación.
  *
- * Y tampoco es la única capa: que un guard falte no abre los datos de otra
- * iglesia, solo una pantalla que no le tocaba dentro de la suya. Esa diferencia
- * es la razón de haber puesto el aislamiento en la base de datos.
+ * Pero dentro de su congregación, esto es la única puerta. Casi toda la RLS es
+ * por iglesia y no por permiso: un miembro raso pasa las policies de
+ * `miembros`, de las finanzas o del seguimiento igual que el pastor. Que una
+ * guarda falte no es «una pantalla que no le tocaba»: son datos del art. 9 de
+ * su propia iglesia en manos de quien no debía verlos.
  */
 
 const MENSAJE_SOLO_PASTOR =
@@ -83,11 +126,17 @@ async function rebotar(): Promise<never> {
 }
 
 // ============================================
-// PÁGINAS (server components / layouts)
+// PÁGINAS (y los layouts que las repiten)
 // ============================================
 
 /**
- * Exige sesión con iglesia activa. El guard mínimo de todo `/panel`.
+ * Exige sesión con iglesia activa. Y NADA MÁS.
+ *
+ * No basta para una página de `/panel`: no mira si es del equipo, ni el
+ * consentimiento, ni la suscripción. Esa usa `requirePanel()` o una de las de
+ * sección. Esta queda para lo que vive fuera del panel y no puede llevar esos
+ * cortes —`/mi`, `/acepta`, `/suscripcion`— y para lo que solo pide el
+ * contexto para pintar, debajo de una página que ya pasó su guarda.
  *
  * Distingue tres situaciones que la persona vive de forma muy distinta: sin
  * sesión, con solicitud en revisión, y sin iglesia ninguna.
@@ -99,21 +148,82 @@ export async function requireIglesia(): Promise<UserContext> {
 }
 
 /**
+ * Por qué alguien con iglesia no puede estar en el panel, o `null` si puede.
+ *
+ * Son los tres cortes de `panel/layout.tsx`, en su orden. Viven aquí sin
+ * `redirect()` para que haya UNA lista: `requirePanel` la convierte en
+ * redirecciones, y un `route.ts`, que no debe redirigir, en una `Response`.
+ *
+ *   - `fuera_del_equipo`: un miembro raso. Su área es `/mi`; el porqué de mirar
+ *     capacidades y no el rol, en `esDelEquipo`.
+ *   - `consentimiento`: aceptó una versión anterior de la política. Es el mismo
+ *     corte que `exigirConsentimientoAlDia`, sin el redirect.
+ *   - `bloqueada`: la suscripción, pasada ya la gracia de lectura. En
+ *     `solo_lectura` NO se corta: leer sigue abierto tres días.
+ */
+export type MotivoFueraDelPanel =
+  | 'fuera_del_equipo'
+  | 'consentimiento'
+  | 'bloqueada';
+
+export async function motivoFueraDelPanel(
+  ctx: UserContext,
+): Promise<MotivoFueraDelPanel | null> {
+  if (!esDelEquipo(ctx)) return 'fuera_del_equipo';
+  if (!(await estadoConsentimiento(ctx)).alDia) return 'consentimiento';
+  if (leerEstadoSuscripcion(ctx.iglesia).situacion === 'bloqueada') {
+    return 'bloqueada';
+  }
+  return null;
+}
+
+/** Los mismos destinos que `panel/layout.tsx`. */
+const SALIDA_DEL_PANEL: Record<MotivoFueraDelPanel, string> = {
+  fuera_del_equipo: '/mi',
+  consentimiento: '/acepta',
+  bloqueada: '/suscripcion',
+};
+
+/**
+ * La puerta del panel entero: lo que hace `panel/layout.tsx` antes de pintar,
+ * para que cada página lo haga también por su cuenta.
+ *
+ * Toda página de `/panel` empieza por aquí, o por una de las de sección de
+ * abajo, que ya lo llaman. Devuelve el mismo contexto que `requireIglesia`.
+ *
+ * Con `cache()`: sin argumentos, así que dentro de un render se ejecuta una vez
+ * por muchas guardas que la pidan —`requireModuloMinisterio` la alcanza por dos
+ * caminos—.
+ */
+export const requirePanel = cache(
+  async function requirePanel(): Promise<UserContext> {
+    const ctx = await requireIglesia();
+    const motivo = await motivoFueraDelPanel(ctx);
+    if (motivo) redirect(SALIDA_DEL_PANEL[motivo]);
+    return ctx;
+  },
+);
+
+/**
  * Exige ser pastor. Para ajustes, equipo, facturación y bajas.
+ *
+ * Lleva dentro `requirePanel()`: en una página basta con esta.
  */
 export async function requirePastor(): Promise<UserContext> {
-  const ctx = await getCurrentUserContext();
-  if (!ctx) return rebotar();
+  const ctx = await requirePanel();
   if (!esPastor(ctx)) {
     redirect('/panel/hoy?error=' + encodeURIComponent(MENSAJE_SOLO_PASTOR));
   }
   return ctx;
 }
 
-/** Exige un permiso concreto. El pastor pasa siempre. */
+/**
+ * Exige un permiso concreto. El pastor pasa siempre.
+ *
+ * Lleva dentro `requirePanel()`: en una página basta con esta.
+ */
 export async function requirePermiso(permiso: Permiso): Promise<UserContext> {
-  const ctx = await getCurrentUserContext();
-  if (!ctx) return rebotar();
+  const ctx = await requirePanel();
   if (!esPastor(ctx) && !puede(ctx, permiso)) {
     redirect('/panel/hoy?error=' + encodeURIComponent(MENSAJE_SIN_PERMISO));
   }
@@ -148,12 +258,15 @@ function puedeEntrarAlMinisterio(
  *
  * Rebota a `/panel/ministerios` y no a `/panel/hoy`: quien llega aquí venía de
  * la rejilla de ministerios, y devolverlo al inicio le hace perder el sitio.
+ *
+ * Lleva dentro `requirePanel()`. Para una página de módulo (agenda, turnos…)
+ * no basta: esa usa `requireModuloMinisterio`, que mira además la herramienta.
  */
 export async function requireGestionMinisterio(
   ministerioId: string,
   opciones?: OpcionesMinisterio,
 ): Promise<UserContext> {
-  const ctx = await requireIglesia();
+  const ctx = await requirePanel();
   if (
     !puedeEntrarAlMinisterio(ctx, ministerioId, opciones) ||
     !(await esMinisterioDeSuIglesia(ctx, ministerioId))
@@ -161,6 +274,56 @@ export async function requireGestionMinisterio(
     redirect('/panel/ministerios?error=' + encodeURIComponent(MENSAJE_SIN_PERMISO));
   }
   return ctx;
+}
+
+/**
+ * `permiso` añade una puerta ANTES de las del ministerio. Es la del
+ * seguimiento: `ver_seguimiento` no se abre por llevar el equipo, ni llevar el
+ * equipo por tener el permiso.
+ */
+export type OpcionesModulo = OpcionesMinisterio & { permiso?: Permiso };
+
+/**
+ * Dentro de un render, una consulta por ministerio aunque la pidan varias
+ * guardas. La clave es la pareja (ctx, id), y `ctx` es el mismo objeto en todo
+ * el render porque sale del `getCurrentUserContext` memorizado.
+ */
+const obtenerMinisterioUnaVez = cache(obtenerMinisterio);
+
+/**
+ * La guarda entera de una página de módulo de ministerio: el panel, quién
+ * (lleva ESTE equipo) y qué (la herramienta encendida en ESTE ministerio).
+ *
+ * Es lo que hacen los `layout.tsx` de agenda, turnos, repertorio, seguimiento y
+ * reparto, en el mismo orden y con las mismas salidas: sin permiso, rebote con
+ * mensaje; con la herramienta apagada, `notFound()`. Un 404 y no un rebote
+ * porque a quien llega ahí no le falta un permiso —lo tiene—: es una ruta que
+ * para ese ministerio no existe.
+ *
+ * La versión de action es `exigirModulo`, que redirige con `?error=` en vez de
+ * dar 404, por lo que cuenta la cabecera de este fichero.
+ *
+ * Devuelve el ministerio porque todas esas páginas lo piden de todas formas
+ * para la cabecera y las pestañas, y `notFound()` también cuando ya no existe,
+ * igual que hacían ellas.
+ *
+ * `requireReparto` (`ministerios/[id]/reparto/guarda.ts`) es exactamente
+ * `requireModuloMinisterio(id, 'reparto', { desdeDentro: true })`, y desde que
+ * `requireGestionMinisterio` pasa por `requirePanel()` ya hereda la puerta del
+ * panel sin tocarlo.
+ */
+export async function requireModuloMinisterio(
+  ministerioId: string,
+  modulo: ModuloId,
+  opciones?: OpcionesModulo,
+): Promise<{ ctx: UserContext; ministerio: MinisterioDetalle }> {
+  if (opciones?.permiso) await requirePermiso(opciones.permiso);
+  const ctx = await requireGestionMinisterio(ministerioId, opciones);
+
+  const ministerio = await obtenerMinisterioUnaVez(ctx, ministerioId);
+  if (!ministerio || !tieneModulo(ministerio.modulos, modulo)) notFound();
+
+  return { ctx, ministerio };
 }
 
 /**
@@ -179,8 +342,11 @@ export async function requireGestionMinisterio(
  * Para el líder acotado ya lo cubría `ministeriosQueLidera`, que sale solo de
  * la iglesia del contexto; esto lo cierra para los otros dos caminos. Una
  * consulta por pantalla y por action de ministerio, contra la clave primaria.
+ *
+ * Con `cache()` para que el layout y la página, que ahora la piden los dos, no
+ * hagan dos viajes. En una action no memoriza nada (cabecera del fichero).
  */
-async function esMinisterioDeSuIglesia(
+const esMinisterioDeSuIglesia = cache(async function esMinisterioDeSuIglesia(
   ctx: UserContext,
   ministerioId: string,
 ): Promise<boolean> {
@@ -200,7 +366,7 @@ async function esMinisterioDeSuIglesia(
       .limit(1),
   );
   return filas.length > 0;
-}
+});
 
 // ============================================
 // SERVER ACTIONS
@@ -306,6 +472,7 @@ export async function requireGestionMinisterioAccion(
  * congregación sale como «apagado», que es lo que es para quien pregunta.
  *
  * Vuelve al ministerio y no a la herramienta, que con el módulo apagado da 404.
+ * La versión de página es `requireModuloMinisterio`.
  */
 export async function exigirModulo(
   ctx: UserContext,

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { eq } from 'drizzle-orm';
 import { ExternalLink, MessageCircle, Settings } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePanel } from '@/lib/auth/guard-panel';
 import { esPastor } from '@/lib/auth/permisos';
 import { getOrigin } from '@/lib/auth/get-origin';
 import { withUser } from '@/lib/db';
@@ -35,10 +35,8 @@ export const metadata: Metadata = { title: 'Compartir' };
  *
  * SIN `layout.tsx` PROPIO
  * -----------------------
- * La regla del repo es que el guard va en el layout de la sección, y aquí no
- * hace falta ninguno: el guard efectivo es el `requireIglesia()` de
- * `panel/layout.tsx`, esta ruta no tiene sub-rutas dinámicas donde se pudiera
- * colar un hueco, y un layout que solo repitiera esa llamada haría creer que hay
+ * La única puerta es la del panel entero, `requirePanel()`, y va en la página
+ * (CLAUDE.md, convenciones). Un layout que solo la repitiera haría creer que hay
  * una comprobación extra que no existe. El bloque de redes —lo único que
  * escribe— sí es del pastor, y lo comprueba su propia action.
  *
@@ -51,7 +49,7 @@ export default async function CompartirPage({
 }: {
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  const ctx = await requirePanel();
   const { error, guardado } = await searchParams;
 
   const [iglesia] = await withUser(ctx.user.id, (tx) =>

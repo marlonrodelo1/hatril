@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Trash2 } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePermiso } from '@/lib/auth/guard-panel';
 import { movimiento, opciones } from '@/lib/finanzas/consultas';
 import { importeParaEditar } from '@/lib/format/dinero';
 import type { Moneda } from '@/lib/db/schema';
@@ -22,7 +22,8 @@ export default async function MovimientoPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
+  const ctx = await requirePermiso('gestionar_finanzas');
   const { id } = await params;
   const { error } = await searchParams;
 

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Blocks, ChevronRight, HandHeart, Plus } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePanel } from '@/lib/auth/guard-panel';
 import { esPastor, puede } from '@/lib/auth/permisos';
 import {
   listarMinisteriosConEquipo,
@@ -25,7 +25,8 @@ export default async function MinisteriosPage({
   // rebotaba en silencio, que se lee como que el enlace está roto.
   searchParams: Promise<{ error?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // La puerta del panel aquí y no solo en su layout: ver CLAUDE.md.
+  const ctx = await requirePanel();
   const { error } = await searchParams;
 
   const [ministerios, resumen] = await Promise.all([

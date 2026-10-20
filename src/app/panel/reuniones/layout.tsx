@@ -1,12 +1,13 @@
 import { requirePermiso } from '@/lib/auth/guard-panel';
 
 /**
- * El guard de la sección, en el layout y no en cada página.
+ * El guard de la sección, repetido aquí solo para la navegación.
  *
- * Es la regla del repo, y aquí pesa más que en otras secciones: `[id]` es la
- * pantalla donde se lee quién estuvo en un culto y quién no. Guardar `page.tsx`
- * y olvidar la ruta dinámica dejaría el listado cerrado y el dato abierto, que
- * es exactamente el hueco que tuvo el proyecto anterior con `/panel/clientes`.
+ * NO protege nada: en Next 16 la página se ejecuta aunque el layout redirija, y
+ * lo que consulta viaja en el payload RSC. Aquí pesa más que en otras
+ * secciones, porque `[id]` es donde se lee quién estuvo en un culto y quién no:
+ * cada página pone su propio `requirePermiso('registrar_asistencia')`. Ver
+ * CLAUDE.md y `npm run test:puertas`.
  */
 export default async function ReunionesLayout({
   children,

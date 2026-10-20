@@ -1,10 +1,8 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { ChevronRight, Plus, Search } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { listarCanciones, type CancionResumen } from '@/lib/repertorio/consultas';
 import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { Aviso } from '@/components/aviso';
@@ -43,11 +41,9 @@ export default async function RepertorioPage({
   }>;
 }) {
   const { id } = await params;
-  const ctx = await requireIglesia();
+  // Las puertas de sus layouts aquí, y no solo allí: ver CLAUDE.md.
+  const { ctx, ministerio } = await requireModuloMinisterio(id, 'repertorio');
   const { q, archivadas, error, guardado } = await searchParams;
-
-  const ministerio = await obtenerMinisterio(ctx, id);
-  if (!ministerio) notFound();
 
   const busqueda = q?.trim().slice(0, 60) || undefined;
   const verArchivadas = archivadas === '1';

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePermiso } from '@/lib/auth/guard-panel';
 import { libro, resumen, saldosPorFondo } from '@/lib/finanzas/consultas';
 import { mesEnLaIglesia } from '@/lib/fecha/hoy';
 import { formatearDinero } from '@/lib/format/dinero';
@@ -34,7 +34,8 @@ export default async function InformePage({
 }: {
   searchParams: Promise<{ mes?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
+  const ctx = await requirePermiso('gestionar_finanzas');
   const { mes } = await searchParams;
   const moneda = ctx.iglesia.moneda as Moneda;
 

@@ -1,11 +1,9 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { CalendarPlus, ChevronRight, MapPin } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { listarReuniones } from '@/lib/asistencia/consultas';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
 import { formatearFechaLarga } from '@/lib/fecha/hoy';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
@@ -24,11 +22,9 @@ export default async function AgendaPage({
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
   const { id } = await params;
-  const ctx = await requireIglesia();
+  // Las puertas de sus layouts aquí, y no solo allí: ver CLAUDE.md.
+  const { ctx, ministerio } = await requireModuloMinisterio(id, 'agenda');
   const { error, guardado } = await searchParams;
-
-  const ministerio = await obtenerMinisterio(ctx, id);
-  if (!ministerio) notFound();
 
   const reuniones = await listarReuniones(ctx, { ministerioId: id });
 

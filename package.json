@@ -11,7 +11,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "test:aislamiento": "tsx --env-file-if-exists=.env.local scripts/test-aislamiento.ts"
+    "test:aislamiento": "tsx --env-file-if-exists=.env.local scripts/test-aislamiento.ts",
+    "test:puertas": "node --env-file-if-exists=.env.local scripts/test-puertas.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

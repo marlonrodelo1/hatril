@@ -1,12 +1,10 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { ChevronRight, Phone } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { personasPorFaltas } from '@/lib/seguimiento/consultas';
 import { RESULTADOS } from '@/lib/seguimiento/catalogos';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
 import { formatearFechaLarga } from '@/lib/fecha/hoy';
 import { ESTADOS } from '@/lib/miembros/estados';
 import { iniciales } from '@/lib/format/iniciales';
@@ -26,11 +24,11 @@ export default async function SeguimientoPage({
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
   const { id } = await params;
-  const ctx = await requireIglesia();
+  // Las tres puertas de su layout aquí, y no solo allí: ver CLAUDE.md.
+  const { ctx, ministerio } = await requireModuloMinisterio(id, 'seguimiento', {
+    permiso: 'ver_seguimiento',
+  });
   const { error, guardado } = await searchParams;
-
-  const ministerio = await obtenerMinisterio(ctx, id);
-  if (!ministerio) notFound();
 
   const personas = await personasPorFaltas(ctx, id);
 

@@ -10,7 +10,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePanel } from '@/lib/auth/guard-panel';
 import {
   esPastor,
   puede,
@@ -75,7 +75,8 @@ export default async function HoyPage({
 }: {
   searchParams: Promise<{ error?: string; bienvenida?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // Repite la puerta del layout, que no impide que esto corra (CLAUDE.md).
+  const ctx = await requirePanel();
   const { error, bienvenida } = await searchParams;
 
   const puedeCrear = esPastor(ctx) || puede(ctx, 'editar_miembros');

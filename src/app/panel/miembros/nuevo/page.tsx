@@ -16,8 +16,8 @@ export default async function NuevoMiembroPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   // El guard va en la página además de en la acción. No es redundancia inútil:
-  // aquí evita pintar un formulario que al enviarse rebotaría, y allí es lo que
-  // de verdad impide escribir.
+  // aquí es lo que impide leer —el layout no protege la página, CLAUDE.md—, y
+  // allí lo que impide escribir.
   const ctx = await requirePermiso('editar_miembros');
   const { error } = await searchParams;
 

@@ -15,9 +15,10 @@ import { tieneModulo } from '@/lib/ministerios/modulos';
  *   2. El módulo encendido — qué. Un ministerio con la agenda apagada no tiene
  *      esta pantalla, y entrar por la URL da 404 en vez de una sección vacía.
  *
- * La segunda va aquí y no en cada página por lo de siempre: `nueva`,
- * `[reunionId]` y `[reunionId]/editar` cuelgan de este layout, y comprobarlo
- * página a página es donde se quedan los huecos.
+ * Aquí se repiten solo para la navegación. NO protegen nada: en Next 16 la
+ * página se ejecuta aunque el layout redirija, y lo que consulta viaja en el
+ * payload RSC. Cada página pone las dos con `requireModuloMinisterio(id,
+ * 'agenda')`. Ver CLAUDE.md y `npm run test:puertas`.
  *
  * `notFound()` y no un rebote con mensaje: quien llega aquí con el módulo
  * apagado no es alguien a quien le falte un permiso —lo tiene—, es una ruta que

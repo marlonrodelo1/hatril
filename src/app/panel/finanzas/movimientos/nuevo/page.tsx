@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePermiso } from '@/lib/auth/guard-panel';
 import { opciones } from '@/lib/finanzas/consultas';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { Aviso } from '@/components/aviso';
@@ -16,7 +16,8 @@ export default async function NuevoMovimientoPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
+  const ctx = await requirePermiso('gestionar_finanzas');
   const { error } = await searchParams;
 
   const { fondos, cajas } = await opciones(ctx);

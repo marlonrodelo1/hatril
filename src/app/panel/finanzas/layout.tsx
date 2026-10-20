@@ -3,10 +3,10 @@ import { requirePermiso } from '@/lib/auth/guard-panel';
 /**
  * Marco de finanzas.
  *
- * El guard va aquí y no en cada página: puesto en el layout cubre la sección
- * entera, incluidas `/movimientos/[id]` y cualquier ruta dinámica que llegue
- * después. Es la regla del repo, y nació de que en Gonper `/panel/clientes`
- * estaba guardado y `/panel/clientes/[id]` no.
+ * El guard se repite aquí solo para la navegación. NO protege nada: en Next 16
+ * la página se ejecuta aunque el layout redirija, y lo que consulta viaja en el
+ * payload RSC. Cada página de finanzas pone su propio guard, y la exportación
+ * el suyo en `requirePermisoApi`. Ver CLAUDE.md y `npm run test:puertas`.
  *
  * Ojo con lo que esto NO hace: no aísla una iglesia de otra. Eso son las
  * policies y `withUser()`. Si este guard faltara, alguien sin permiso vería la

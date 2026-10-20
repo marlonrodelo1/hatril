@@ -3,9 +3,8 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { MapPin, Pencil, Trash2 } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { listaDelEquipo, obtenerReunion } from '@/lib/asistencia/consultas';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
 import { formatearFechaLarga } from '@/lib/fecha/hoy';
 import { ESTADOS } from '@/lib/miembros/estados';
 import { iniciales } from '@/lib/format/iniciales';
@@ -26,17 +25,14 @@ export default async function ReunionDeMinisterioPage({
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
   const { id, reunionId } = await params;
-  const ctx = await requireIglesia();
+  // Las puertas de sus layouts aquí, y no solo allí: ver CLAUDE.md.
+  const { ctx, ministerio } = await requireModuloMinisterio(id, 'agenda');
   const { error, guardado } = await searchParams;
 
-  const [ministerio, reunion] = await Promise.all([
-    obtenerMinisterio(ctx, id),
-    obtenerReunion(ctx, reunionId),
-  ]);
+  const reunion = await obtenerReunion(ctx, reunionId);
+  if (!reunion) notFound();
 
-  if (!ministerio || !reunion) notFound();
-
-  // El layout ya comprobó que quien entra manda en ESTE ministerio. Falta la
+  // La guarda ya comprobó que quien entra manda en ESTE ministerio. Falta la
   // otra mitad: que la reunión de la URL sea de este ministerio y no del de al
   // lado. Sin esto, el responsable de alabanza vería el ensayo de niños —y a su
   // equipo— cambiando un uuid en la barra de direcciones.

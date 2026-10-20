@@ -10,7 +10,7 @@ import {
   Users,
 } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePermiso } from '@/lib/auth/guard-panel';
 import { evento, inscritos } from '@/lib/eventos/consultas';
 import { formatearInstante } from '@/lib/fecha/zona';
 import { formatearDinero } from '@/lib/format/dinero';
@@ -46,7 +46,8 @@ export default async function EventoPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
+  const ctx = await requirePermiso('gestionar_eventos');
   const { id } = await params;
   const { error, guardado } = await searchParams;
 

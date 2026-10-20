@@ -159,8 +159,20 @@ sirve como autorización, solo como comprobación optimista.
 - **Zod con `safeParse`** en todo body y query. Error como `{error, detalles}`.
 - **Server actions** devuelven errores con `redirect('/ruta?error=' + encodeURIComponent(msg))`.
 - **shadcn antes que CSS a medida.** Los tokens están en `globals.css`.
-- **Los guards van en el `layout.tsx` de la sección**, no en cada página: así
-  quedan cubiertas las rutas dinámicas, que es donde se cuelan los huecos.
+- **La guarda va en CADA página y en cada `route.ts`, con la cadena entera**:
+  la del panel (`requirePanel()`) más la de su sección (`requirePermiso`,
+  `requirePastor`, `requireGestionMinisterio`, `requireModuloMinisterio`, que
+  ya llevan dentro la del panel). El `layout.tsx` puede repetirla para que la
+  navegación redirija, pero **no protege nada**: un layout no controla si el
+  resto de la ruta se renderiza; la página corre igual y lo que consulta viaja
+  en el payload RSC (`node_modules/next/dist/docs/01-app/02-guides/authentication.md`,
+  «Layouts and auth checks»). Aquí ponía lo contrario, y así se encontró: un
+  miembro raso pidió `/panel/ministerios/<id>/seguimiento` con la cabecera
+  `RSC: 1` y recibió la lista entera, con nombres, situación y trece teléfonos,
+  mientras el layout le mandaba a `/mi`. Dentro de una iglesia casi toda la RLS
+  es por iglesia, no por permiso: la guarda es la única puerta. Los `route.ts` no pasan
+  por ningún layout, nunca. Repetirla no cuesta: va con `cache()`
+  (`src/lib/auth/guard-panel.ts`).
 - **Comentar el porqué, no el qué.** Lo valioso de este repo es saber qué falló
   antes; el código ya dice lo que hace.
 - **Nunca `formData.get()` directo hacia Zod.** Devuelve `null` cuando el campo

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePermiso } from '@/lib/auth/guard-panel';
 import { Aviso } from '@/components/aviso';
 import { CabeceraPanel } from '../../_components/cabecera';
 import { Contenedor } from '../../_components/contenedor';
@@ -14,7 +14,8 @@ export default async function NuevoEventoPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
+  const ctx = await requirePermiso('gestionar_eventos');
   const { error } = await searchParams;
 
   return (

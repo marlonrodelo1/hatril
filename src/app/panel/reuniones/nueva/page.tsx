@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePermiso } from '@/lib/auth/guard-panel';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { CabeceraPanel } from '../../_components/cabecera';
 import { Contenedor } from '../../_components/contenedor';
@@ -14,7 +14,8 @@ export default async function NuevaReunionPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
+  const ctx = await requirePermiso('registrar_asistencia');
   const { error } = await searchParams;
 
   return (

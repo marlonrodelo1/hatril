@@ -6,8 +6,9 @@ import { BarraInferior } from './_components/barra-inferior';
  *
  * AQUÍ NO HAY GUARD, Y ES DELIBERADO
  * ----------------------------------
- * Es la excepción a la regla del repo —«los guards van en el layout»— y tiene un
- * motivo concreto: bajo `/mi` conviven pantallas con requisitos distintos.
+ * Y aunque lo hubiera no protegería nada: en Next 16 la página se ejecuta
+ * aunque el layout redirija (ver CLAUDE.md). Además bajo `/mi` conviven
+ * pantallas con requisitos distintos.
  * `/mi/avisos` funciona SIN membresía, porque a quien le rechazan la solicitud
  * se le borra la membresía en el mismo movimiento y el aviso que se lo explica
  * quedaría fuera de su alcance. Un `requireIglesia()` aquí lo dejaría fuera.

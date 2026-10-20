@@ -3,8 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Archive, ArchiveRestore, ExternalLink, Trash2 } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { obtenerCancion } from '@/lib/repertorio/consultas';
 import { sitioDe } from '@/lib/repertorio/enlaces';
 import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
@@ -32,18 +31,16 @@ export default async function CancionPage({
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
   const { id, cancionId } = await params;
-  const ctx = await requireIglesia();
+  // Las puertas de sus layouts aquí, y no solo allí: ver CLAUDE.md.
+  const { ctx, ministerio } = await requireModuloMinisterio(id, 'repertorio');
   const { error, guardado } = await searchParams;
 
-  const [ministerio, cancion] = await Promise.all([
-    obtenerMinisterio(ctx, id),
-    obtenerCancion(ctx, cancionId),
-  ]);
+  const cancion = await obtenerCancion(ctx, cancionId);
 
-  // Que la canción sea de ESTE equipo: el layout comprobó el ministerio de la
+  // Que la canción sea de ESTE equipo: la guarda comprobó el ministerio de la
   // URL, no la canción. Sin esto, el responsable de jóvenes leería el
   // repertorio de alabanza cambiando un uuid en la barra.
-  if (!ministerio || !cancion || cancion.ministerioId !== id) notFound();
+  if (!cancion || cancion.ministerioId !== id) notFound();
 
   const base = `/panel/ministerios/${id}/repertorio`;
   const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);

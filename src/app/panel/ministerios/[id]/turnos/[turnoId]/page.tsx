@@ -13,8 +13,7 @@ import {
   X,
 } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { tieneModulo } from '@/lib/ministerios/modulos';
 import {
   cancionesDelTurno,
@@ -80,18 +79,16 @@ export default async function TurnoPage({
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
   const { id, turnoId } = await params;
-  const ctx = await requireIglesia();
+  // Las puertas de sus layouts aquí, y no solo allí: ver CLAUDE.md.
+  const { ctx, ministerio } = await requireModuloMinisterio(id, 'turnos');
   const { error, guardado } = await searchParams;
 
-  const [ministerio, turno] = await Promise.all([
-    obtenerMinisterio(ctx, id),
-    obtenerTurno(ctx, turnoId),
-  ]);
+  const turno = await obtenerTurno(ctx, turnoId);
 
-  // El layout ya comprobó que quien entra manda en ESTE ministerio. Falta que
+  // La guarda ya comprobó que quien entra manda en ESTE ministerio. Falta que
   // el turno de la URL sea de este ministerio y no del de al lado: sin esto, el
   // responsable de alabanza vería el cuadrante de niños cambiando un uuid.
-  if (!ministerio || !turno || turno.ministerioId !== id) notFound();
+  if (!turno || turno.ministerioId !== id) notFound();
 
   // La lista de canciones solo si el equipo tiene el repertorio encendido: un
   // equipo de ujieres no tiene nada que tocar, y un bloque vacío de «Canciones»

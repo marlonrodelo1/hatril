@@ -16,10 +16,12 @@ import { tieneModulo } from '@/lib/ministerios/modulos';
  *      Tener el permiso no abre el seguimiento de todos los ministerios.
  *   3. El módulo encendido — si el equipo no hace seguimiento, la ruta no existe.
  *
- * Van en el layout y no en cada página porque debajo cuelga `[miembroId]`, que
- * es la pantalla donde se lee por qué una persona concreta dejó de venir. Es
- * exactamente el sitio donde el proyecto anterior dejó el hueco: la lista
- * guardada y el detalle abierto.
+ * Aquí se repiten solo para la navegación. NO protegen nada: en Next 16 la
+ * página se ejecuta aunque el layout redirija, y lo que consulta viaja en el
+ * payload RSC. Fue justo esta sección: un miembro raso pidiéndola con `RSC: 1`
+ * recibía la lista entera con los teléfonos. Cada página pone las tres con
+ * `requireModuloMinisterio(id, 'seguimiento', { permiso: 'ver_seguimiento' })`.
+ * Ver CLAUDE.md y `npm run test:puertas`.
  */
 export default async function SeguimientoLayout({
   children,

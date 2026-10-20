@@ -1,10 +1,8 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { CalendarPlus, ChevronRight, CircleX } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { listarTurnos, type TurnoResumen } from '@/lib/turnos/consultas';
 import { puestosDelMinisterio } from '@/lib/turnos/puestos';
 import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
@@ -42,11 +40,9 @@ export default async function TurnosPage({
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
   const { id } = await params;
-  const ctx = await requireIglesia();
+  // Las puertas de sus layouts aquí, y no solo allí: ver CLAUDE.md.
+  const { ctx, ministerio } = await requireModuloMinisterio(id, 'turnos');
   const { error, guardado } = await searchParams;
-
-  const ministerio = await obtenerMinisterio(ctx, id);
-  if (!ministerio) notFound();
 
   const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
   const puestos = puestosDelMinisterio(ministerio);

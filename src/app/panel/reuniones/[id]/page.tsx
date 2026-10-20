@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { MapPin, Pencil, Trash2 } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePermiso } from '@/lib/auth/guard-panel';
 import { listaParaPasar, obtenerReunion } from '@/lib/asistencia/consultas';
 import { formatearFechaLarga } from '@/lib/fecha/hoy';
 import { ESTADOS } from '@/lib/miembros/estados';
@@ -30,7 +30,8 @@ export default async function ReunionPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
+  const ctx = await requirePermiso('registrar_asistencia');
   const { id } = await params;
   const { error, guardado } = await searchParams;
 

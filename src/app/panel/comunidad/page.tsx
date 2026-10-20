@@ -8,7 +8,7 @@ import {
   Users,
 } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePanel } from '@/lib/auth/guard-panel';
 import { esPastor, puedeModerarComunidad } from '@/lib/auth/permisos';
 import { pulsoDelMuro } from '@/lib/comunidad/consultas';
 import { MAX_IMAGENES } from '@/lib/comunidad/limites';
@@ -51,7 +51,8 @@ export default async function ComunidadPanelPage({
 }: {
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // Repite la puerta del layout, que no impide que esto corra (CLAUDE.md).
+  const ctx = await requirePanel();
   const { error, guardado } = await searchParams;
 
   const puedeConfigurar = esPastor(ctx);

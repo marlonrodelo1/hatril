@@ -12,7 +12,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePanel } from '@/lib/auth/guard-panel';
 import { esPastor, puede, puedeGestionarMinisterio } from '@/lib/auth/permisos';
 import {
   candidatosParaMinisterio,
@@ -57,7 +57,8 @@ export default async function MinisterioPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ asignar?: string; error?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // La puerta del panel aquí y no solo en su layout: ver CLAUDE.md.
+  const ctx = await requirePanel();
   const { id } = await params;
   const { asignar, error } = await searchParams;
 

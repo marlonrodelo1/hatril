@@ -1,11 +1,9 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Check } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { esPastor } from '@/lib/auth/permisos';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
 import { cultosParaPlanificar } from '@/lib/turnos/consultas';
 import { sumarDias } from '@/lib/agenda/horarios';
 import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
@@ -46,11 +44,9 @@ export default async function PlanificarTurnosPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
-  const ctx = await requireIglesia();
+  // Las puertas de sus layouts aquí, y no solo allí: ver CLAUDE.md.
+  const { ctx, ministerio } = await requireModuloMinisterio(id, 'turnos');
   const { error } = await searchParams;
-
-  const ministerio = await obtenerMinisterio(ctx, id);
-  if (!ministerio) notFound();
 
   const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
   const hasta = sumarDias(hoy, SEMANAS * 7 - 1);

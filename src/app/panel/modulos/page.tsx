@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ChevronRight, Plus, Power } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePermiso } from '@/lib/auth/guard-panel';
 import {
   TIPOS_ACTIVABLES,
   ministeriosActivosPorTipo,
@@ -35,9 +35,9 @@ export default async function ModulosPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  // El permiso lo exige el layout. Esto solo recoge el contexto, que va en
-  // `cache()` y no repite la consulta.
-  const ctx = await requireIglesia();
+  // Las dos puertas de sus layouts, la del panel y la del permiso, repetidas
+  // aquí: un layout no impide que esto corra (CLAUDE.md).
+  const ctx = await requirePermiso('gestionar_ministerios');
   const { error } = await searchParams;
 
   const porTipo = await ministeriosActivosPorTipo(ctx);

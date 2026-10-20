@@ -7,7 +7,7 @@ import {
   Upload,
 } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePanel } from '@/lib/auth/guard-panel';
 import { esPastor, puede } from '@/lib/auth/permisos';
 import {
   listarDevocionales,
@@ -48,7 +48,8 @@ export default async function DevocionalesPage({
 }: {
   searchParams: Promise<{ error?: string; guardado?: string; abrir?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // Repite la puerta del layout, que no impide que esto corra (CLAUDE.md).
+  const ctx = await requirePanel();
   const { error, guardado, abrir } = await searchParams;
 
   const puedeRepartir = esPastor(ctx);

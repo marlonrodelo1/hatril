@@ -1,8 +1,6 @@
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { CabeceraPanel } from '../../../../_components/cabecera';
 import { Contenedor } from '../../../../_components/contenedor';
@@ -19,11 +17,9 @@ export default async function NuevaReunionMinisterioPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
-  const ctx = await requireIglesia();
+  // Las puertas de sus layouts aquí, y no solo allí: ver CLAUDE.md.
+  const { ctx, ministerio } = await requireModuloMinisterio(id, 'agenda');
   const { error } = await searchParams;
-
-  const ministerio = await obtenerMinisterio(ctx, id);
-  if (!ministerio) notFound();
 
   const base = `/panel/ministerios/${id}/agenda`;
 

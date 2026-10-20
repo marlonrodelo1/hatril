@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePermiso } from '@/lib/auth/guard-panel';
 import { evento } from '@/lib/eventos/consultas';
 import { timestampAFechaHoraLocal } from '@/lib/fecha/zona';
 import { Aviso } from '@/components/aviso';
@@ -28,7 +28,8 @@ export default async function EditarEventoPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
+  const ctx = await requirePermiso('gestionar_eventos');
   const { id } = await params;
   const { error } = await searchParams;
 

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Phone, Trash2 } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import {
   acompanaDe,
   contactosDe,
@@ -15,7 +15,6 @@ import {
   VIAS,
   VIAS_ELEGIBLES,
 } from '@/lib/seguimiento/catalogos';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
 import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { ESTADOS } from '@/lib/miembros/estados';
 import { iniciales } from '@/lib/format/iniciales';
@@ -42,11 +41,11 @@ export default async function PersonaEnSeguimientoPage({
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
   const { id, miembroId } = await params;
-  const ctx = await requireIglesia();
+  // Las tres puertas de su layout aquí, y no solo allí: ver CLAUDE.md.
+  const { ctx, ministerio } = await requireModuloMinisterio(id, 'seguimiento', {
+    permiso: 'ver_seguimiento',
+  });
   const { error, guardado } = await searchParams;
-
-  const ministerio = await obtenerMinisterio(ctx, id);
-  if (!ministerio) notFound();
 
   // La persona sale de la MISMA consulta que la lista, y no de una nueva contra
   // `miembros`: así el ámbito de quién es visible aquí no puede separarse del de

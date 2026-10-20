@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { CalendarPlus, ChevronRight, MapPin } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePermiso } from '@/lib/auth/guard-panel';
 import { listarReuniones } from '@/lib/asistencia/consultas';
 import { formatearFechaLarga } from '@/lib/fecha/hoy';
 import { Aviso } from '@/components/aviso';
@@ -18,7 +18,8 @@ export default async function ReunionesPage({
 }: {
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
+  const ctx = await requirePermiso('registrar_asistencia');
   const { error, guardado } = await searchParams;
 
   const reuniones = await listarReuniones(ctx);

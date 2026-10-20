@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Archive } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePastor, requirePermiso } from '@/lib/auth/guard-panel';
 import { opciones } from '@/lib/finanzas/consultas';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,11 @@ export default async function AjustesFinanzasPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const ctx = await requireIglesia();
+  // Las dos puertas de los dos layouts, también aquí: el layout no protege la
+  // página (CLAUDE.md). Hoy el pastor pasa la de finanzas siempre; si eso
+  // cambia, esta página no debe enterarse tarde.
+  await requirePermiso('gestionar_finanzas');
+  const ctx = await requirePastor();
   const { error } = await searchParams;
   const { fondos, cajas } = await opciones(ctx);
 

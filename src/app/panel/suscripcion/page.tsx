@@ -17,13 +17,17 @@ import { ElegirPlan } from './_components/planes';
 export const metadata: Metadata = { title: 'Suscripción' };
 
 /**
- * La pantalla que NUNCA se bloquea.
+ * La pantalla de pagar, que nunca puede quedarse sin salida.
  *
- * Lleva `requirePastor()` en la propia página y **no tiene `layout.tsx`
- * propio**, a propósito. Es la excepción documentada a la regla de que los
- * guards van en el layout: si alguien «arregla» el patrón y le pone un layout
- * que herede el muro de suscripción, la única puerta para pagar queda cerrada
- * justo para quien necesita cruzarla.
+ * Lleva `requirePastor()`, y con él la puerta entera del panel, como toda
+ * página (CLAUDE.md, «La guarda va en CADA página»). Esa puerta incluye el
+ * muro, y no cierra nada: en `solo_lectura` esta pantalla sigue abierta y sus
+ * actions van con `sinMuro`; en `bloqueada` la guarda manda a `/suscripcion`,
+ * fuera del panel.
+ *
+ * Lo que no puede llevar es una guarda que corte MÁS que el panel —un
+ * `layout.tsx` propio con otro muro, algo que pare también `solo_lectura`—:
+ * cerraría la única puerta para pagar justo a quien necesita cruzarla.
  *
  * Y es ruta hermana de `ajustes`, no hija: el muro tiene que preguntar «¿estoy
  * en la ruta que sirve para pagar?», y con una hermana es una comparación de
@@ -32,10 +36,10 @@ export const metadata: Metadata = { title: 'Suscripción' };
  *
  * QUÉ PASA CUANDO LA IGLESIA YA ESTÁ BLOQUEADA
  * --------------------------------------------
- * Que el layout del panel no pinta ni esta pantalla ni ninguna: pinta el muro,
- * que enseña **los mismos planes** porque los saca del mismo componente. Así no
- * hay que exceptuar esta ruta de nada —el layout no sabe en qué ruta está, ni
- * puede saberlo— y aun así sigue habiendo una forma de pagar.
+ * Que ni esta pantalla ni ninguna del panel se pinta: la guarda redirige a
+ * `/suscripcion`, que enseña **los mismos planes** porque los saca del mismo
+ * componente, y devuelve aquí en cuanto vuelve a haber acceso. Las dos miran la
+ * misma condición, negada, y eso es lo que impide que se llamen en bucle.
  */
 export default async function SuscripcionPage({
   searchParams,

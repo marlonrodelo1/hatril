@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Plus } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requirePermiso } from '@/lib/auth/guard-panel';
 import { libro, opciones } from '@/lib/finanzas/consultas';
 import { mesEnLaIglesia, formatearFechaLarga } from '@/lib/fecha/hoy';
 import { formatearDineroConSigno } from '@/lib/format/dinero';
@@ -24,7 +24,8 @@ export default async function MovimientosPage({
     fondo?: string;
   }>;
 }) {
-  const ctx = await requireIglesia();
+  // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
+  const ctx = await requirePermiso('gestionar_finanzas');
   const params = await searchParams;
   const moneda = ctx.iglesia.moneda as Moneda;
 

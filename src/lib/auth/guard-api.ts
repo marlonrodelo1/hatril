@@ -5,6 +5,7 @@ import {
   type UserContext,
 } from '@/lib/auth/user-context';
 import { esPastor, puede, type Permiso } from '@/lib/auth/permisos';
+import { motivoFueraDelPanel } from '@/lib/auth/guard-panel';
 
 /**
  * Guard para route handlers.
@@ -32,15 +33,24 @@ export type ResultadoGuard =
   | { ok: true; ctx: UserContext }
   | { ok: false; respuesta: Response };
 
-const SIN_SESION = new Response('No has iniciado sesión.', {
-  status: 401,
-  headers: { 'content-type': 'text/plain; charset=utf-8' },
-});
+/*
+ * Funciones y no constantes. Eran dos `Response` creadas una vez para todo el
+ * proceso, y el cuerpo de una `Response` solo se puede leer una vez: desde el
+ * segundo rechazo, los 401 y 403 llegaban vacíos. Lo cazó `test:puertas`.
+ */
+function sinSesion(): Response {
+  return new Response('No has iniciado sesión.', {
+    status: 401,
+    headers: { 'content-type': 'text/plain; charset=utf-8' },
+  });
+}
 
-const SIN_PERMISO = new Response('No tienes acceso a esto.', {
-  status: 403,
-  headers: { 'content-type': 'text/plain; charset=utf-8' },
-});
+function sinPermiso(): Response {
+  return new Response('No tienes acceso a esto.', {
+    status: 403,
+    headers: { 'content-type': 'text/plain; charset=utf-8' },
+  });
+}
 
 /**
  * Exige sesión con iglesia activa y un permiso concreto. El pastor pasa siempre.
@@ -53,9 +63,16 @@ export async function requirePermisoApi(
   permiso: Permiso,
 ): Promise<ResultadoGuard> {
   const ctx = await getCurrentUserContext();
-  if (!ctx) return { ok: false, respuesta: SIN_SESION };
+  if (!ctx) return { ok: false, respuesta: sinSesion() };
+  // Las puertas del panel —ser del equipo, el consentimiento al día y la
+  // suscripción no bloqueada— también, y aquí y no en cada ruta: ningún layout
+  // las pone por un `route.ts`, y una exportación nueva las hereda sin
+  // acordarse. Con 403 y no con redirect, por lo de arriba.
+  if (await motivoFueraDelPanel(ctx)) {
+    return { ok: false, respuesta: sinPermiso() };
+  }
   if (!esPastor(ctx) && !puede(ctx, permiso)) {
-    return { ok: false, respuesta: SIN_PERMISO };
+    return { ok: false, respuesta: sinPermiso() };
   }
   return { ok: true, ctx };
 }
