@@ -1,4 +1,4 @@
-import { requirePermiso } from '@/lib/auth/guard-panel';
+import { requireFinanzas } from '@/lib/auth/guard-panel';
 
 /**
  * Marco de finanzas.
@@ -18,6 +18,6 @@ import { requirePermiso } from '@/lib/auth/guard-panel';
 export default async function FinanzasLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  await requirePermiso('gestionar_finanzas');
+  await requireFinanzas();
   return <>{children}</>;
 }

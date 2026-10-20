@@ -1,8 +1,14 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ChevronRight, Plus, Power } from 'lucide-react';
+import { ChevronRight, Plus, Power, PowerOff } from 'lucide-react';
 
 import { requirePermiso } from '@/lib/auth/guard-panel';
+import { esPastor } from '@/lib/auth/permisos';
+import {
+  HERRAMIENTAS_IGLESIA,
+  herramientaEncendida,
+  type HerramientaIglesia,
+} from '@/lib/iglesias/herramientas';
 import {
   TIPOS_ACTIVABLES,
   ministeriosActivosPorTipo,
@@ -17,8 +23,12 @@ import {
   type TipoMinisterio,
 } from '@/lib/ministerios/tipos';
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
-import { activarModulo, anadirOtroModulo } from './actions';
+import { Button, buttonVariants } from '@/components/ui/button';
+import {
+  activarModulo,
+  anadirOtroModulo,
+  cambiarHerramienta,
+} from './actions';
 import { BotonEnviar } from './_components/boton-enviar';
 import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
@@ -26,19 +36,25 @@ import { Contenedor } from '../_components/contenedor';
 export const metadata: Metadata = { title: 'Módulos' };
 
 /*
- * Lo que hay aquí son ministerios. Las herramientas de la iglesia entera
- * —Finanzas, Eventos, Reuniones, Devocionales— entran en un segundo bloque con
- * la tanda 3, que es la que trae `iglesias.modulos` para poder apagarlas.
+ * Dos bloques. Los ministerios, que activa quien gobierna los equipos, y las
+ * herramientas de la iglesia entera (`iglesias.modulos`), que solo enciende y
+ * apaga el pastor. Hoy, de estas últimas, solo Finanzas: el porqué está en
+ * `lib/iglesias/herramientas.ts`.
  */
+const CONFIRMACIONES: Record<string, string> = {
+  encendida: 'Encendida. Ya está en el menú de quien lleva la caja.',
+  apagada: 'Apagada. No se ha borrado nada: al encenderla estará todo como lo dejaste.',
+};
+
 export default async function ModulosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
   // Las dos puertas de sus layouts, la del panel y la del permiso, repetidas
   // aquí: un layout no impide que esto corra (CLAUDE.md).
   const ctx = await requirePermiso('gestionar_ministerios');
-  const { error } = await searchParams;
+  const { error, guardado } = await searchParams;
 
   const porTipo = await ministeriosActivosPorTipo(ctx);
   const otro = tipoDeMinisterio(TIPO_POR_DEFECTO);
@@ -49,6 +65,9 @@ export default async function ModulosPage({
 
       <Contenedor>
         {error && <Aviso>{error}</Aviso>}
+        {guardado && Object.hasOwn(CONFIRMACIONES, guardado) && (
+          <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
+        )}
 
         <section className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
@@ -103,8 +122,119 @@ export default async function ModulosPage({
             </li>
           </ul>
         </section>
+
+        {/* Solo al pastor: la action lo exige y la base también
+            (`iglesias_update_pastor`). A quien organiza los equipos el bloque
+            le enseñaría un interruptor que no puede pulsar. */}
+        {esPastor(ctx) && (
+          <section id="herramientas" className="flex scroll-mt-20 flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <h2 className="t-subtitulo">Herramientas de la iglesia</h2>
+              <p className="text-pretty t-label text-muted-foreground">
+                Son de toda la congregación, no de un equipo. Solo tú decides si
+                tu iglesia las usa.
+              </p>
+            </div>
+
+            <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {HERRAMIENTAS_IGLESIA.map((h) => (
+                <li key={h.id}>
+                  <TarjetaHerramienta
+                    herramienta={h}
+                    encendida={herramientaEncendida(ctx.iglesia.modulos, h.id)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </Contenedor>
     </>
+  );
+}
+
+/**
+ * Una herramienta de la iglesia con su interruptor.
+ *
+ * El interruptor es un botón y no un `switch`: sin JavaScript de cliente un
+ * `switch` no envía nada al pulsarlo, y un formulario con un botón sí. Lo que
+ * pasa al apagar va escrito ENCIMA del botón, no en una confirmación aparte:
+ * la duda de quien lo pulsa es «¿se borra?», y la respuesta tiene que estar
+ * antes del clic.
+ */
+function TarjetaHerramienta({
+  herramienta: h,
+  encendida,
+}: {
+  herramienta: HerramientaIglesia;
+  encendida: boolean;
+}) {
+  return (
+    <article className="flex h-full flex-col gap-4 rounded-xl border border-border bg-surface p-5">
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h.Icono
+            className="size-[18px] flex-none text-muted-foreground"
+            strokeWidth={1.8}
+            aria-hidden
+          />
+          <h3 className="t-subtitulo">{h.nombre}</h3>
+          {encendida ? (
+            <span className="inline-flex h-[22px] items-center rounded-full bg-badge-success-bg px-2.5 text-[12px] font-semibold text-badge-success-fg">
+              Encendida
+            </span>
+          ) : (
+            <span className="inline-flex h-[22px] items-center rounded-full bg-badge-neutral-bg px-2.5 text-[12px] font-semibold text-badge-neutral-fg">
+              Apagada
+            </span>
+          )}
+        </div>
+        <p className="text-pretty text-body leading-relaxed text-muted-foreground">
+          {h.descripcion}
+        </p>
+      </div>
+
+      <div className="mt-auto flex flex-col gap-3 border-t border-border pt-4">
+        {encendida ? (
+          <>
+            <p className="text-pretty t-label text-muted-foreground">
+              Apagarla la quita del menú y de Inicio, para todos. No borra nada:
+              al encenderla otra vez estará todo como lo dejaste.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/panel/finanzas"
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              >
+                Abrir {h.nombre}
+              </Link>
+              <form action={cambiarHerramienta.bind(null, h.id, false)}>
+                <BotonEnviar variant="ghost" size="sm">
+                  <PowerOff strokeWidth={1.8} />
+                  Apagar
+                  <span className="sr-only"> {h.nombre}</span>
+                </BotonEnviar>
+              </form>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-pretty t-label text-muted-foreground">
+              Apagada no sale en el menú ni en Inicio. Lo que se apuntó sigue
+              guardado.
+            </p>
+            {/* Carbón y no naranja, como «Activar» de los ministerios. */}
+            <form action={cambiarHerramienta.bind(null, h.id, true)}>
+              <BotonEnviar variant="secondary" className="w-full sm:w-fit">
+                <Power strokeWidth={1.8} />
+                Encender
+                <span className="sr-only"> {h.nombre}</span>
+              </BotonEnviar>
+            </form>
+          </>
+        )}
+      </div>
+    </article>
   );
 }
 

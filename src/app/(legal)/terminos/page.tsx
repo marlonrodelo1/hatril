@@ -239,7 +239,8 @@ export default function TerminosPage() {
 
         <P>
           Del dinero: los apuntes del libro de cuentas, sin nombre de quien da,
-          con quién los registró y cuándo.
+          con quién los registró y cuándo, y en el arqueo del culto, quién lo
+          contó y quién lo confirmó.
         </P>
 
         <P>

@@ -137,7 +137,20 @@ export type GuardHatril =
    * y el consentimiento de una persona no se reescriben, y una entrega no
    * cambia de persona (`0042`).
    */
-  | 'HT127';
+  | 'HT127'
+  /** El ministerio al que se vincula un fondo no es de esta iglesia (`0044`). */
+  | 'HT128'
+  /**
+   * El fondo, la caja o las dos personas de un arqueo, o el arqueo de un
+   * ingreso, no son de esta iglesia (`0044`).
+   */
+  | 'HT129'
+  /**
+   * Quien cuenta un arqueo no es quien tiene la sesión, quien confirma tampoco
+   * o es quien contó, un arqueo confirmado se intentó tocar, o un ingreso que
+   * sale de un arqueo se intentó editar, borrar o apuntar a mano (`0044`).
+   */
+  | 'HT130';
 
 /**
  * ¿Es este error uno de nuestros triggers guard?

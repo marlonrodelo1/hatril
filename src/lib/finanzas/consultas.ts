@@ -3,7 +3,7 @@ import 'server-only';
 import { and, asc, count, desc, eq, gte, lte, sql } from 'drizzle-orm';
 
 import { withUser } from '@/lib/db/with-tenant';
-import { cajas, fondos, movimientos } from '@/lib/db/schema';
+import { cajas, fondos, ministerios, movimientos } from '@/lib/db/schema';
 import type { UserContext } from '@/lib/auth/user-context';
 
 /**
@@ -241,6 +241,7 @@ export async function opciones(ctx: UserContext) {
           id: fondos.id,
           nombre: fondos.nombre,
           esGeneral: fondos.esGeneral,
+          ministerioId: fondos.ministerioId,
         })
         .from(fondos)
         .where(
@@ -257,6 +258,27 @@ export async function opciones(ctx: UserContext) {
     ]);
     return { fondos: listaFondos, cajas: listaCajas };
   });
+}
+
+/**
+ * Los ministerios vivos de la iglesia, para el desplegable «Es el fondo de» de
+ * Fondos y cajas. Solo nombre: el pastor elige a cuál vincular, y nada más.
+ */
+export async function ministeriosParaVincular(
+  ctx: UserContext,
+): Promise<{ id: string; nombre: string }[]> {
+  return withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ id: ministerios.id, nombre: ministerios.nombre })
+      .from(ministerios)
+      .where(
+        and(
+          eq(ministerios.iglesiaId, ctx.iglesia.id),
+          eq(ministerios.activo, true),
+        ),
+      )
+      .orderBy(asc(ministerios.orden), asc(ministerios.nombre)),
+  );
 }
 
 /**

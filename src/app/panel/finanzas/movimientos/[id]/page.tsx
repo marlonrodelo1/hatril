@@ -1,13 +1,18 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Trash2 } from 'lucide-react';
+import { z } from 'zod';
 
-import { requirePermiso } from '@/lib/auth/guard-panel';
+import { requireFinanzas } from '@/lib/auth/guard-panel';
 import { movimiento, opciones } from '@/lib/finanzas/consultas';
+import { arqueoDeUnIngreso } from '@/lib/finanzas/arqueos';
+import { formatearFechaLarga } from '@/lib/fecha/hoy';
+import { formatearDinero } from '@/lib/format/dinero';
 import { importeParaEditar } from '@/lib/format/dinero';
 import type { Moneda } from '@/lib/db/schema';
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { CabeceraPanel } from '../../../_components/cabecera';
 import { Contenedor } from '../../../_components/contenedor';
 import { borrarMovimiento, editarMovimiento } from '../../actions';
@@ -23,14 +28,72 @@ export default async function MovimientoPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
-  const ctx = await requirePermiso('gestionar_finanzas');
+  const ctx = await requireFinanzas();
   const { id } = await params;
   const { error } = await searchParams;
+
+  // Un id que no es uuid llegaría a Postgres y el cast daría un 500.
+  if (!z.string().uuid().safeParse(id).success) notFound();
 
   const m = await movimiento(ctx, id);
   // `notFound()` y no un mensaje: si la RLS no devuelve la fila es que no es de
   // esta iglesia, y contarlo confirmaría que ese id existe en alguna parte.
   if (!m) notFound();
+
+  // Un ingreso que sale de un arqueo no se edita ni se borra (HT130): se
+  // enseña tal cual, con quién lo contó y quién lo confirmó, y cómo se corrige.
+  if (m.arqueoId) {
+    const arqueo = await arqueoDeUnIngreso(ctx, m.arqueoId);
+    const moneda = ctx.iglesia.moneda as Moneda;
+
+    return (
+      <>
+        <CabeceraPanel
+          titulo={m.concepto}
+          volver={{
+            href: '/panel/finanzas/movimientos',
+            texto: 'Libro de movimientos',
+          }}
+        />
+
+        <Contenedor ancho="formulario">
+          {error && <Aviso>{error}</Aviso>}
+
+          <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5">
+            <div className="flex flex-col gap-1">
+              <span className="t-micro">Entró</span>
+              <span className="t-cifra tabular-nums">
+                {formatearDinero(m.importe, moneda)}
+              </span>
+            </div>
+            <p className="text-body first-letter:uppercase">
+              {formatearFechaLarga(m.fecha)}
+            </p>
+            {arqueo && (
+              <p className="text-pretty text-label text-muted-foreground">
+                Sale del arqueo del culto: lo contó{' '}
+                {arqueo.contadoPor ?? 'alguien que ya no está'} y lo confirmó{' '}
+                {arqueo.confirmadoPor ?? 'alguien que ya no está'}.
+              </p>
+            )}
+          </section>
+
+          <p className="rounded-xl border border-border bg-surface px-4 py-3 text-pretty text-label text-muted-foreground">
+            Lo confirmado en un arqueo no se edita ni se borra: así lo que
+            contaron dos personas no lo cambia una sola. Si hay un error, apunta
+            un ajuste aparte en el libro, con su explicación en el concepto.
+          </p>
+
+          <Link
+            href="/panel/finanzas/movimientos/nuevo"
+            className={buttonVariants({ variant: 'outline' }) + ' w-fit'}
+          >
+            Apuntar un ajuste
+          </Link>
+        </Contenedor>
+      </>
+    );
+  }
 
   const { fondos, cajas } = await opciones(ctx);
 

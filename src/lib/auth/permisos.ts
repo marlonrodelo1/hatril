@@ -45,6 +45,8 @@
  * no le abre absolutamente nada.
  */
 
+import { finanzasEncendida } from '@/lib/iglesias/herramientas';
+
 /**
  * Rol dentro de una iglesia. Coincide con `rol_iglesia_enum` en Postgres.
  *
@@ -536,7 +538,32 @@ const ABRE_UNA_SECCION: Record<Permiso, boolean> = {
  * entraría al panel por una razón y aterrizaría en un sitio pensado para otra.
  */
 function abreAlgunaSeccion(ctx: ContextoPermisos): boolean {
-  return PERMISOS.some((p) => ABRE_UNA_SECCION[p] && puede(ctx, p));
+  return PERMISOS.some(
+    (p) => ABRE_UNA_SECCION[p] && puede(ctx, p) && seccionEncendida(ctx, p),
+  );
+}
+
+/**
+ * ¿Existe la sección que abre este permiso?
+ *
+ * Con Finanzas apagada, `gestionar_finanzas` no abre nada: el tesorero que solo
+ * lleva la caja aterrizaría en un panel donde no hay nada suyo, con un menú sin
+ * su sección. Así sale a `/mi` como cualquier miembro, y vuelve a entrar solo
+ * el día que el pastor la enciende. El permiso no se toca: sigue marcado en su
+ * ficha de Líderes, esperando.
+ */
+function seccionEncendida(ctx: ContextoPermisos, permiso: Permiso): boolean {
+  if (permiso === 'gestionar_finanzas') return finanzasDeLaIglesia(ctx);
+  return true;
+}
+
+/**
+ * Sin `iglesia` en el contexto, encendida: es lo que significa una clave
+ * ausente (`lib/iglesias/herramientas.ts`), y un contexto que no la trae —uno
+ * de prueba, una API futura— no puede quitarle la caja a nadie por omisión.
+ */
+function finanzasDeLaIglesia(ctx: ContextoPermisos): boolean {
+  return ctx.iglesia ? finanzasEncendida(ctx.iglesia) : true;
 }
 
 /**
@@ -649,6 +676,12 @@ export interface ContextoPermisos {
    * `ministerioIds`: no se puede liderar un equipo sin estar en él.
    */
   ministeriosQueLidera: string[];
+  /**
+   * Las herramientas que el pastor ha apagado en la iglesia. Opcional porque es
+   * dato de la iglesia y no de la persona: `UserContext` lo trae siempre, y sin
+   * él todas cuentan como encendidas.
+   */
+  iglesia?: { modulos: unknown };
 }
 
 export function puede(ctx: ContextoPermisos, permiso: Permiso): boolean {
@@ -747,9 +780,34 @@ export function puedeVerDatosSensibles(ctx: ContextoPermisos): boolean {
  * Sin ámbito que cruzar, a diferencia de los ministerios: la caja es una por
  * iglesia. Quien tiene el permiso ve toda la caja de SU congregación y ninguna
  * otra, y de eso último se encarga la RLS, no esta función.
+ *
+ * Y con la herramienta encendida, también para el pastor: apagada, Finanzas no
+ * sale en el menú ni en Inicio, y sus rutas dan 404. El pastor la vuelve a
+ * encender desde Módulos, que no pasa por aquí.
  */
 export function puedeGestionarFinanzas(ctx: ContextoPermisos): boolean {
+  if (!finanzasDeLaIglesia(ctx)) return false;
   return esPastor(ctx) || puede(ctx, 'gestionar_finanzas');
+}
+
+/**
+ * ¿Ve el fondo de ESTE ministerio, en su pestaña de solo lectura?
+ *
+ * Quien lo lleva desde dentro —el pastor, el responsable y los colíderes—, y
+ * con Finanzas encendida. No el voluntario, y tampoco `gestionar_ministerios`:
+ * organizar los equipos desde secretaría no es llevar este, y los conceptos de
+ * gasto de un fondo de Acción social pueden nombrar a quien recibió la ayuda
+ * aunque se pida que no. Por lo mismo, el tesorero que no lidera el ministerio
+ * no tiene pestaña: ve la caja entera desde Finanzas.
+ *
+ * Que el ministerio tenga un fondo vinculado es un dato, no un permiso, y se
+ * mira aparte (`MinisterioDetalle.conFondo`).
+ */
+export function puedeVerFondoDe(
+  ctx: ContextoPermisos,
+  ministerioId: string,
+): boolean {
+  return finanzasDeLaIglesia(ctx) && puedeGestionarDesdeDentro(ctx, ministerioId);
 }
 
 /**

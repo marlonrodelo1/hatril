@@ -30,6 +30,8 @@ import { Button } from '@/components/ui/button';
 interface Opcion {
   id: string;
   nombre: string;
+  /** Solo en los fondos: el que va por defecto. */
+  esGeneral?: boolean;
 }
 
 export function FormularioMovimiento({
@@ -135,7 +137,12 @@ export function FormularioMovimiento({
         // único sitio donde alguien lo va a leer, y este campo es el agujero
         // por el que se cuela lo que el modelo evita estructuralmente: sale tal
         // cual en el CSV que se le pasa al contador.
-        ayuda="No escribas aquí nombres de personas ni motivos de salud."
+        //
+        // Y desde que un fondo puede ser de un ministerio, lo leen también
+        // quienes lo llevan: «Mercado para la familia X» en el fondo de
+        // Alimentos le dice al equipo entero quién pasa necesidad. Por eso se
+        // nombra a quien recibe una ayuda, que es el nombre que se escapa.
+        ayuda="Sin nombres de personas, tampoco de quien recibe una ayuda, ni motivos de salud. Si el fondo es de un ministerio, quienes lo llevan leen los gastos."
       >
         <input
           id="concepto"
@@ -174,7 +181,15 @@ export function FormularioMovimiento({
             <select
               id="fondoId"
               name="fondoId"
-              defaultValue={valores.fondoId ?? fondos[0]?.id}
+              // El general, y no el primero de la lista: van por orden
+              // alfabético, y «Alimentos» va antes que «General». Con un fondo
+              // de ministerio delante, la ofrenda de cada domingo caería en él
+              // sin que nadie abriera «Más opciones», y la leería su equipo.
+              defaultValue={
+                valores.fondoId ??
+                fondos.find((f) => f.esGeneral)?.id ??
+                fondos[0]?.id
+              }
               className="h-11 w-full rounded-lg border border-border bg-surface-alt px-3 text-[15px] text-foreground"
             >
               {fondos.map((f) => (

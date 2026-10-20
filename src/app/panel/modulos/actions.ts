@@ -5,9 +5,12 @@ import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { requirePermisoAccion } from '@/lib/auth/guard-panel';
+import {
+  requirePastorAccion,
+  requirePermisoAccion,
+} from '@/lib/auth/guard-panel';
 import { withUser } from '@/lib/db';
-import { ministerios } from '@/lib/db/schema';
+import { iglesias, ministerios } from '@/lib/db/schema';
 import { isUniqueViolation } from '@/lib/db/error';
 import {
   TIPOS_ACTIVABLES,
@@ -16,6 +19,11 @@ import {
   repartirPorTipo,
 } from '@/lib/ministerios/catalogo';
 import { componerModulos } from '@/lib/ministerios/modulos';
+import {
+  HERRAMIENTAS_IGLESIA,
+  conHerramienta,
+  type HerramientaIglesiaId,
+} from '@/lib/iglesias/herramientas';
 import {
   modulosDelTipo,
   tipoDeMinisterio,
@@ -136,4 +144,53 @@ async function crearDelTipo(tipoId: string, { otroMas }: { otroMas: boolean }) {
   // Al detalle, porque lo siguiente es nombrar a quien lo lleva: un ministerio
   // recién creado no tiene equipo ni responsable.
   redirect(`/panel/ministerios/${destinoId}`);
+}
+
+// ===========================================================================
+// Herramientas de la iglesia
+//
+// Solo el pastor, y no `gestionar_ministerios`: quien organiza los equipos no
+// decide si la iglesia lleva su caja aquí. La base dice lo mismo —
+// `iglesias_update_pastor` (0001) no deja escribir la fila a nadie más—, así
+// que la puerta de la action y la de la base coinciden.
+//
+// Apagar no borra nada. Por eso aquí SÍ hay interruptor, al revés que con los
+// ministerios: volver a encender deja todo como estaba.
+// ===========================================================================
+
+const Herramienta = z.enum(
+  HERRAMIENTAS_IGLESIA.map((h) => h.id) as [
+    HerramientaIglesiaId,
+    ...HerramientaIglesiaId[],
+  ],
+);
+
+export async function cambiarHerramienta(id: string, encender: boolean) {
+  const ctx = await requirePastorAccion(DESTINO);
+
+  const parsed = Herramienta.safeParse(id);
+  if (!parsed.success) {
+    redirect(`${DESTINO}?error=` + encodeURIComponent('Esa herramienta no existe.'));
+  }
+
+  await withUser(ctx.user.id, async (tx) => {
+    // Leída aquí, con la fila bloqueada, y no del contexto: el contexto es de
+    // cuando se pintó la pantalla, y lo que cuelga de otras claves tiene que
+    // sobrevivir a dos pestañas abiertas a la vez.
+    const [fila] = await tx
+      .select({ modulos: iglesias.modulos })
+      .from(iglesias)
+      .where(eq(iglesias.id, ctx.iglesia.id))
+      .for('update')
+      .limit(1);
+
+    await tx
+      .update(iglesias)
+      .set({ modulos: conHerramienta(fila?.modulos, parsed.data, encender) })
+      .where(eq(iglesias.id, ctx.iglesia.id));
+  });
+
+  // El menú y el bloque de la caja de Inicio cuelgan de esto en todo el panel.
+  revalidatePath('/panel', 'layout');
+  redirect(`${DESTINO}?guardado=${encender ? 'encendida' : 'apagada'}#herramientas`);
 }

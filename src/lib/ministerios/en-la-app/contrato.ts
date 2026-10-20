@@ -1,3 +1,5 @@
+import type { LucideIcon } from 'lucide-react';
+
 import type { ContextoPermisos } from '@/lib/auth/permisos';
 import type { UserContext } from '@/lib/auth/user-context';
 import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
@@ -58,6 +60,12 @@ export type ResumenDeModulo = {
   proximo?: { texto: string; detalle?: string; href: string } | null;
   /** La frase cuando no hay ni pendientes ni próximo. */
   vacio: string;
+  /**
+   * Cifras para mirar, en una fila: «Hay en el fondo · $ 1.250.000». Para la
+   * herramienta cuya pregunta no es «¿falta algo?» sino «¿cuánto?», como el
+   * fondo. Van encima de lo demás, y con ellas no se pinta `vacio`.
+   */
+  cifras?: { rotulo: string; valor: string }[];
   /**
    * El enlace del pie de la tarjeta, si no es el de siempre.
    *
@@ -138,3 +146,29 @@ export type ModuloEnLaApp = {
     hoy: string,
   ) => Promise<ResumenDeModulo>;
 };
+
+/** Lo que una tarjeta de la portada necesita para pintarse: nombre e icono. */
+export type PiezaDeLaPortada = {
+  id: string;
+  nombre: string;
+  Icono: LucideIcon;
+};
+
+/**
+ * Una herramienta que sale en la portada de un ministerio SIN ser uno de sus
+ * módulos (`ministerios.modulos`).
+ *
+ * Hoy, el fondo: no lo enciende quien gobierna los ministerios con una casilla,
+ * lo decide el pastor vinculando un fondo de la caja desde Finanzas. Por eso no
+ * pasa por `modulosActivos()` y trae su propia `aplica`, que mira ese dato y la
+ * puerta a la vez —y que tiene que decir lo mismo que la guarda de su pantalla—.
+ *
+ * El resto es el contrato de siempre: `resumen` para quien lleva el equipo y
+ * `participante` opcional. Su pantalla de la app, si `pantalla` es `'app'`,
+ * va en `/mi/equipo/[id]/<id>` y pone ella misma su guarda: las de
+ * `guarda.ts` son de módulos.
+ */
+export type HerramientaDerivada = Omit<ModuloEnLaApp, 'id' | 'visiblePara'> &
+  PiezaDeLaPortada & {
+    aplica: (ctx: ContextoPermisos, ministerio: MinisterioDetalle) => boolean;
+  };

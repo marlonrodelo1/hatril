@@ -1,8 +1,15 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowDownLeft, ArrowUpRight, Plus, Wallet } from 'lucide-react';
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  ChevronRight,
+  Plus,
+  TriangleAlert,
+  Wallet,
+} from 'lucide-react';
 
-import { requirePermiso } from '@/lib/auth/guard-panel';
+import { requireFinanzas } from '@/lib/auth/guard-panel';
 import { esPastor } from '@/lib/auth/permisos';
 import {
   estaActivado,
@@ -10,11 +17,12 @@ import {
   saldosPorCaja,
   saldosPorFondo,
 } from '@/lib/finanzas/consultas';
+import { contarArqueosPendientes } from '@/lib/finanzas/arqueos';
 import { mesEnLaIglesia } from '@/lib/fecha/hoy';
 import { formatearDinero, formatearDineroConSigno } from '@/lib/format/dinero';
 import type { Moneda } from '@/lib/db/schema';
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
 import { activarFinanzas } from './actions';
@@ -27,7 +35,7 @@ export default async function FinanzasPage({
   searchParams: Promise<{ error?: string; mes?: string }>;
 }) {
   // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
-  const ctx = await requirePermiso('gestionar_finanzas');
+  const ctx = await requireFinanzas();
   const { error, mes } = await searchParams;
   const moneda = ctx.iglesia.moneda as Moneda;
 
@@ -37,26 +45,57 @@ export default async function FinanzasPage({
 
   const { desde, hasta, etiqueta } = mesEnLaIglesia(ctx.iglesia.timezone, mes);
 
-  const [delMes, porFondo, porCaja] = await Promise.all([
+  const [delMes, porFondo, porCaja, arqueosPendientes] = await Promise.all([
     resumen(ctx, desde, hasta, etiqueta),
     saldosPorFondo(ctx),
     saldosPorCaja(ctx),
+    contarArqueosPendientes(ctx),
   ]);
 
   return (
     <>
       <CabeceraPanel titulo="Finanzas" subtitulo={conInicialMayuscula(etiqueta)}>
-        <Button
-          render={<Link href="/panel/finanzas/movimientos/nuevo" />}
-          className="flex-none"
+        {/* Enlaces con forma de botón y no `<Button render={<Link/>}>`, que
+            Base UI denuncia en consola (guía visual, «Botones»). */}
+        <Link
+          href="/panel/finanzas/movimientos/nuevo"
+          className={buttonVariants({ className: 'flex-none' })}
         >
           <Plus strokeWidth={1.9} />
           Apuntar movimiento
-        </Button>
+        </Link>
       </CabeceraPanel>
 
       <Contenedor>
         {error && <Aviso>{error}</Aviso>}
+
+        {/* Lo que espera a otra persona, arriba: un arqueo sin confirmar no
+            suma, y el saldo de abajo parecería que falta la ofrenda. */}
+        {arqueosPendientes > 0 && (
+          <Link
+            href="/panel/finanzas/arqueos"
+            className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-foreground no-underline transition-colors hover:bg-surface-alt hover:no-underline"
+          >
+            <TriangleAlert
+              className="size-4 flex-none text-warning"
+              strokeWidth={1.8}
+              aria-hidden
+            />
+            <span className="min-w-0 flex-1 text-body font-semibold">
+              {arqueosPendientes === 1
+                ? 'Un arqueo espera confirmación'
+                : `${arqueosPendientes} arqueos esperan confirmación`}
+              <span className="block text-label font-normal text-muted-foreground">
+                Hasta que otra persona lo confirme no suma en el saldo.
+              </span>
+            </span>
+            <ChevronRight
+              className="size-4 flex-none text-disabled-text"
+              strokeWidth={1.8}
+              aria-hidden
+            />
+          </Link>
+        )}
 
         {/* Lo primero y sin filtros. Es el número por el que se abre esta
             pantalla, y si hay que buscarlo no se abre una segunda vez. */}
@@ -94,36 +133,42 @@ export default async function FinanzasPage({
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <Button
-            variant="outline"
-            render={<Link href="/panel/finanzas/movimientos" />}
+          <Link
+            href="/panel/finanzas/movimientos"
+            className={buttonVariants({ variant: 'outline' })}
           >
             Ver el libro
-          </Button>
-          <Button
-            variant="outline"
-            render={
-              <a href={`/panel/finanzas/exportar?desde=${desde}&hasta=${hasta}`} />
-            }
+          </Link>
+          <Link
+            href="/panel/finanzas/arqueos"
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            Arqueo del culto
+          </Link>
+          {/* `<a>` y no `Link`: es una descarga de un route handler, y
+              `Link` intentaría precargarla. */}
+          <a
+            href={`/panel/finanzas/exportar?desde=${desde}&hasta=${hasta}`}
+            className={buttonVariants({ variant: 'outline' })}
           >
             Descargar CSV del mes
-          </Button>
-          <Button
-            variant="outline"
-            render={<Link href={`/panel/finanzas/informe?mes=${desde.slice(0, 7)}`} />}
+          </a>
+          <Link
+            href={`/panel/finanzas/informe?mes=${desde.slice(0, 7)}`}
+            className={buttonVariants({ variant: 'outline' })}
           >
             Informe del mes
-          </Button>
+          </Link>
           {/* Solo al pastor: crear un fondo es gobierno, y el sub-layout de
               ajustes rebota a quien no lo sea. Enseñar el enlace igualmente
               sería una sección que al pulsarla dice «no tienes acceso». */}
           {esPastor(ctx) && (
-            <Button
-              variant="ghost"
-              render={<Link href="/panel/finanzas/ajustes" />}
+            <Link
+              href="/panel/finanzas/ajustes"
+              className={buttonVariants({ variant: 'ghost' })}
             >
               Fondos y cajas
-            </Button>
+            </Link>
           )}
         </div>
       </Contenedor>

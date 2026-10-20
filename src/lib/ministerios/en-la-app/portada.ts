@@ -2,18 +2,22 @@ import 'server-only';
 
 import type { UserContext } from '@/lib/auth/user-context';
 import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
-import type { ModuloMinisterio } from '@/lib/ministerios/modulos';
 import { captureException } from '@/lib/observability';
 import type {
   ModoEnElEquipo,
   ModuloEnLaApp,
+  PiezaDeLaPortada,
   ResumenDeModulo,
 } from './contrato';
-import { modulosDeLaPortada } from './registro';
+import { derivadasDeLaPortada, modulosDeLaPortada } from './registro';
 import { RAIZ_APP } from './rutas';
 
+/** Lo que la portada necesita de un adaptador, sea de módulo o derivado. */
+type Adaptador = Pick<ModuloEnLaApp, 'abrir' | 'pantalla' | 'resumen' | 'participante'>;
+
 export type TarjetaDePortada = {
-  modulo: ModuloMinisterio;
+  /** El módulo del catálogo, o la herramienta derivada (el fondo). */
+  modulo: PiezaDeLaPortada;
   /**
    * El enlace del pie: la herramienta del líder, la pantalla del panel de un
    * módulo sin adaptador, o lo que diga la vista del participante. `null`, sin
@@ -31,8 +35,8 @@ export type TarjetaDePortada = {
 /** El pie de la tarjeta del líder: su herramienta en la app, o en el panel. */
 function herramientaDe(
   ministerioId: string,
-  modulo: ModuloMinisterio,
-  app: ModuloEnLaApp | null,
+  modulo: PiezaDeLaPortada,
+  app: Adaptador | null,
 ): { texto: string; href: string } {
   return app?.pantalla === 'app'
     ? { texto: app.abrir, href: `${RAIZ_APP}/${ministerioId}/${modulo.id}` }
@@ -60,7 +64,10 @@ export async function tarjetasDeLaPortada(
   hoy: string,
   modo: ModoEnElEquipo,
 ): Promise<TarjetaDePortada[]> {
-  const modulos = modulosDeLaPortada(ctx, ministerio.modulos, modo, ministerio.id);
+  const modulos: { modulo: PiezaDeLaPortada; app: Adaptador | null }[] = [
+    ...modulosDeLaPortada(ctx, ministerio.modulos, modo, ministerio.id),
+    ...derivadasDeLaPortada(ctx, ministerio, modo).map((h) => ({ modulo: h, app: h })),
+  ];
 
   const resueltos = await Promise.allSettled(
     modulos.map(({ app }) => {
