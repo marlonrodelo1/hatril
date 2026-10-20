@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { withUser } from '@/lib/db';
 import { ministerios, reuniones } from '@/lib/db/schema';
 import type { UserContext } from '@/lib/auth/user-context';
+import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
+import { tieneModulo } from '@/lib/ministerios/modulos';
 import { sumarDias } from './horarios';
 
 /**
@@ -31,9 +33,29 @@ import { sumarDias } from './horarios';
  * turno del panel, detrás del guard del ministerio, y la del miembro, después
  * de que `turnoParaMiembro` comprobara que es de su equipo.
  * `reunionParaMiembro` se acota sola, igual que `turnoParaMiembro`.
+ *
+ * LAS NOTAS, SOLO LAS QUE SE ESCRIBIERON PARA EL EQUIPO
+ * -----------------------------------------------------
+ * Hasta esta pantalla, las notas de una reunión de equipo solo las leía quien
+ * lo lleva, desde el panel, y el formulario invitaba a escribir un acta («cómo
+ * fue el encuentro»). Ahora las lee todo el equipo, y el formulario lo dice.
+ * Pero lo ya escrito se escribió para otro público, así que al voluntario se le
+ * enseñan con dos condiciones (`notasParaElEquipo`):
+ *
+ *   - **De hoy en adelante.** Es lo que necesita quien va a ir —«traed los
+ *     in-ear»— y deja fuera las actas de reuniones pasadas.
+ *   - **Con la agenda encendida.** Apagada, el responsable no puede corregirlas
+ *     ni borrarlas, porque su pantalla da 404: lo que nadie puede quitar no se
+ *     enseña.
  */
 
-/** Cuántos días antes del turno se busca el ensayo. El turno incluido. */
+/**
+ * Cuántos días antes del turno se busca el ensayo.
+ *
+ * El día de hace una semana solo cuenta si la reunión fue DESPUÉS de la hora
+ * del turno: el ensayo del domingo pasado a las 9:30 era para el culto de las
+ * 11:00 de ese domingo, no para el de este.
+ */
 export const DIAS_ANTES_DEL_TURNO = 7;
 
 export type ReunionDelEquipo = {
@@ -60,6 +82,17 @@ function horaCorta(hora: string | null): string | null {
   return hora ? hora.slice(0, 5) : null;
 }
 
+/** Las notas que puede leer el equipo, o null. Ver la cabecera. */
+function notasParaElEquipo(
+  ctx: UserContext,
+  reunion: { fecha: string; notas: string | null },
+  modulos: unknown,
+): string | null {
+  if (!reunion.notas) return null;
+  if (!tieneModulo(modulos, 'agenda')) return null;
+  return reunion.fecha >= hoyEnLaIglesia(ctx.iglesia.timezone) ? reunion.notas : null;
+}
+
 /**
  * El ensayo de un turno: la reunión del mismo equipo más cercana antes de él.
  *
@@ -72,15 +105,18 @@ export async function ensayoAntesDelTurno(
   ctx: UserContext,
   turno: { ministerioId: string; fecha: string; hora: string | null },
 ): Promise<ReunionDelEquipo | null> {
+  const desde = sumarDias(turno.fecha, -DIAS_ANTES_DEL_TURNO);
+
   const filas = await withUser(ctx.user.id, (tx) =>
     tx
-      .select(COLUMNAS)
+      .select({ ...COLUMNAS, modulos: ministerios.modulos })
       .from(reuniones)
+      .innerJoin(ministerios, eq(ministerios.id, reuniones.ministerioId))
       .where(
         and(
           eq(reuniones.iglesiaId, ctx.iglesia.id),
           eq(reuniones.ministerioId, turno.ministerioId),
-          gte(reuniones.fecha, sumarDias(turno.fecha, -DIAS_ANTES_DEL_TURNO)),
+          gte(reuniones.fecha, desde),
           lte(reuniones.fecha, turno.fecha),
         ),
       )
@@ -89,12 +125,18 @@ export async function ensayoAntesDelTurno(
       .limit(20),
   );
 
+  // Los dos extremos de la ventana solo cuentan si se sabe de qué lado caen:
+  // el mismo día, si va antes del turno; hace una semana, si fue después.
+  const conHoras = (r: { hora: string | null }) => turno.hora !== null && r.hora !== null;
+
   const antes = filas
     .map((r) => ({ ...r, hora: horaCorta(r.hora) }))
-    .filter(
-      (r) =>
-        r.fecha < turno.fecha ||
-        (turno.hora !== null && r.hora !== null && r.hora < turno.hora),
+    .filter((r) =>
+      r.fecha === turno.fecha
+        ? conHoras(r) && r.hora! < turno.hora!
+        : r.fecha === desde
+          ? conHoras(r) && r.hora! > turno.hora!
+          : true,
     )
     // La más cercana primero: el día más tardío y, dentro del día, la hora más
     // tardía. Sin hora cuenta como la primera del día, que es lo prudente.
@@ -103,7 +145,13 @@ export async function ensayoAntesDelTurno(
         b.fecha.localeCompare(a.fecha) || (b.hora ?? '').localeCompare(a.hora ?? ''),
     );
 
-  return antes[0] ?? null;
+  const ensayo = antes[0];
+  if (!ensayo) return null;
+
+  const { modulos, ...resto } = ensayo;
+  // El panel no pinta las notas y el músico solo las que le tocan: aplicar la
+  // regla aquí para todos deja un solo sitio donde mirarla.
+  return { ...resto, notas: notasParaElEquipo(ctx, ensayo, modulos) };
 }
 
 export type ReunionParaMiembro = ReunionDelEquipo & {
@@ -120,9 +168,9 @@ export type ReunionParaMiembro = ReunionDelEquipo & {
  * por aquí: esas tienen su ficha en el panel, y ninguna lista las ofrece en
  * `/mi`.
  *
- * Sin mirar si la agenda del equipo está encendida, por lo mismo que la lista
- * de canciones del turno: si se apagó, el ensayo que ya estaba apuntado sigue
- * siendo el jueves a las siete.
+ * La reunión sale aunque la agenda del equipo esté apagada, por lo mismo que la
+ * lista de canciones del turno: el ensayo que ya estaba apuntado sigue siendo
+ * el jueves a las siete. Sus notas no (ver la cabecera).
  */
 export async function reunionParaMiembro(
   ctx: UserContext,
@@ -139,6 +187,7 @@ export async function reunionParaMiembro(
         ministerioId: ministerios.id,
         ministerioNombre: ministerios.nombre,
         ministerioColor: ministerios.colorHex,
+        modulos: ministerios.modulos,
       })
       .from(reuniones)
       // `innerJoin` y no `leftJoin`: una reunión sin ministerio es del culto, y
@@ -159,7 +208,7 @@ export async function reunionParaMiembro(
     fecha: r.fecha,
     hora: horaCorta(r.hora),
     lugar: r.lugar,
-    notas: r.notas,
+    notas: notasParaElEquipo(ctx, r, r.modulos),
     ministerio: {
       id: r.ministerioId,
       nombre: r.ministerioNombre,

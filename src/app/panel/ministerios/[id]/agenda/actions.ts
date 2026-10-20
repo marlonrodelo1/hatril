@@ -46,7 +46,11 @@ const EsquemaReunion = z.object({
   fecha: z
     .string()
     .trim()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Revisa la fecha.'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Revisa la fecha.')
+    // Que exista. `sumarDias` pasa por `Date`, que convierte sin avisar el
+    // 31 de febrero en el 3 de marzo: con la fecha repetida semana a semana,
+    // eso apuntaba un día que nadie había pedido en vez de dar un error.
+    .refine((f) => sumarDias(f, 0) === f, 'Revisa la fecha.'),
   hora: z
     .string()
     .trim()
@@ -127,14 +131,13 @@ export async function crearReunionDeMinisterio(
   let resultado:
     | { tipo: 'apagada' }
     | { tipo: 'ocupadas' }
-    | { tipo: 'ya-estaba' }
+    | { tipo: 'ya-estaba'; estaban: number; otras: number }
     | { tipo: 'creadas'; ids: string[]; saltadas: number };
   try {
     resultado = await withUser(ctx.user.id, async (tx) => {
-      // La agenda encendida se mira aquí, en la misma lectura que el cerrojo.
-      // Cuando se fusione la tanda 1 la mirará también `exigirModulo()` en la
-      // puerta, como al resto de actions del fichero; esta se puede quedar, que
-      // no cuesta otra consulta.
+      // La agenda encendida la mira ya `guarda()` en la puerta. Se vuelve a
+      // mirar aquí porque sale gratis —es la misma lectura que el cerrojo— y es
+      // la que vale: entre la puerta y este punto el pastor pudo apagarla.
       const ministerio = await cerrojoDeLaAgenda(tx, ctx.iglesia.id, ministerioId);
       if (!ministerio || !tieneModulo(ministerio.modulos, 'agenda')) {
         return { tipo: 'apagada' as const };
@@ -144,13 +147,20 @@ export async function crearReunionDeMinisterio(
       const libres = fechas.filter((f) => !ocupadas.has(f));
 
       if (libres.length === 0) {
-        // Si lo que ocupa esas semanas es esto mismo, no es un choque: es el
+        // Si alguna de esas semanas ya tiene esto mismo, no es un choque: es el
         // segundo clic de un doble clic, que ha esperado al cerrojo y llega
-        // cuando el primero ya lo apuntó todo. Se vio así: las cuatro filas
-        // bien creadas y en pantalla «no se ha creado nada», que es la
-        // respuesta de la petición que acaba la última.
-        const loMismo = fechas.every((f) => ocupadas.get(f)!.has(d.titulo));
-        return { tipo: loMismo ? ('ya-estaba' as const) : ('ocupadas' as const) };
+        // cuando el primero ya lo apuntó. Se vio así: las cuatro filas bien
+        // creadas y en pantalla «no se ha creado nada», que es la respuesta de
+        // la petición que acaba la última.
+        //
+        // Con que esté en UNA basta, y no en todas: si el primer clic saltó
+        // semanas ocupadas por otra cosa, el segundo las encuentra ocupadas
+        // igual, y decirle «no se ha creado nada» invitaría a repetirlo a otra
+        // hora y acabar con el ensayo dos veces.
+        const estaban = fechas.filter((f) => ocupadas.get(f)!.has(d.titulo)).length;
+        return estaban > 0
+          ? { tipo: 'ya-estaba' as const, estaban, otras: fechas.length - estaban }
+          : { tipo: 'ocupadas' as const };
       }
 
       const creadas = await tx
@@ -201,7 +211,11 @@ export async function crearReunionDeMinisterio(
   }
 
   revalidatePath(base);
-  if (resultado.tipo === 'ya-estaba') redirect(`${base}?guardado=ya-estaba`);
+  if (resultado.tipo === 'ya-estaba') {
+    redirect(
+      `${base}?guardado=ya-estaba&estaban=${resultado.estaban}&otras=${resultado.otras}`,
+    );
+  }
   if (semanas.data === 1) redirect(`${base}/${resultado.ids[0]}?guardado=creada`);
   // A la lista y no a una ficha: hay varias, y lo que hay que ver es que estén.
   redirect(
@@ -229,7 +243,7 @@ export async function editarReunionDeMinisterio(
   // con el mismo cerrojo y la misma comprobación que al crear.
   const resultado = await withUser(ctx.user.id, async (tx) => {
     const ministerio = await cerrojoDeLaAgenda(tx, ctx.iglesia.id, ministerioId);
-    // Igual que al crear: pasará a `exigirModulo()` con la tanda 1.
+    // Igual que al crear: la puerta ya la miró, y esta es la que vale.
     if (!ministerio || !tieneModulo(ministerio.modulos, 'agenda')) return 'apagada';
 
     const ocupadas = await fechasOcupadas(

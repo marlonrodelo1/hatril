@@ -49,6 +49,11 @@ export default async function NuevaReunionMinisterioPage({
             titulo: 'Qué es',
             ejemploTitulo: 'Ensayo del jueves',
             ejemploLugar: 'La sala de música',
+            // Las notas de un equipo las lee todo el equipo en su agenda, no
+            // solo quien lo lleva: el campo lo dice, como el del turno.
+            notas: 'Para el equipo',
+            ejemploNotas: 'Traed los in-ear. Empezamos por el coro.',
+            ayudaNotas: 'Lo ve todo el equipo. Instrucciones del ensayo, no cosas de las personas.',
           }}
           repetirHasta={SEMANAS_MAXIMAS}
         />

@@ -12,7 +12,12 @@ import { Button } from '@/components/ui/button';
 import { CabeceraPanel } from '../../../_components/cabecera';
 import { Contenedor } from '../../../_components/contenedor';
 import { PestanasMinisterio } from '../_components/pestanas';
-import { CONFIRMACIONES, confirmacionDeSemanas, SEMANAS_MAXIMAS } from './constantes';
+import {
+  CONFIRMACIONES,
+  confirmacionDeSemanas,
+  confirmacionYaEstaba,
+  SEMANAS_MAXIMAS,
+} from './constantes';
 
 export const metadata: Metadata = { title: 'Agenda del ministerio' };
 
@@ -26,24 +31,22 @@ export default async function AgendaPage({
     guardado?: string;
     creadas?: string;
     saltadas?: string;
+    estaban?: string;
+    otras?: string;
   }>;
 }) {
   const { id } = await params;
   const ctx = await requireIglesia();
-  const { error, guardado, creadas, saltadas } = await searchParams;
+  const { error, guardado, creadas, saltadas, estaban, otras } = await searchParams;
 
   // Las cuentas vienen en la URL, así que se leen como lo que son: algo que
   // cualquiera puede escribir. Fuera de rango, no se enseña nada.
-  const semanas = cuenta(creadas);
-  const sinTocar = cuenta(saltadas);
-  const confirmacion =
-    guardado === 'semanas'
-      ? semanas !== null && semanas > 0 && sinTocar !== null
-        ? confirmacionDeSemanas(semanas, sinTocar)
-        : null
-      : guardado
-        ? CONFIRMACIONES[guardado]
-        : null;
+  const confirmacion = textoDeConfirmacion(guardado, {
+    creadas: cuenta(creadas),
+    saltadas: cuenta(saltadas),
+    estaban: cuenta(estaban),
+    otras: cuenta(otras),
+  });
 
   const ministerio = await obtenerMinisterio(ctx, id);
   if (!ministerio) notFound();
@@ -134,6 +137,21 @@ export default async function AgendaPage({
       </Contenedor>
     </>
   );
+}
+
+function textoDeConfirmacion(
+  guardado: string | undefined,
+  n: { creadas: number | null; saltadas: number | null; estaban: number | null; otras: number | null },
+): string | null {
+  if (guardado === 'semanas') {
+    return n.creadas && n.saltadas !== null
+      ? confirmacionDeSemanas(n.creadas, n.saltadas)
+      : null;
+  }
+  if (guardado === 'ya-estaba' && n.estaban && n.otras !== null) {
+    return confirmacionYaEstaba(n.estaban, n.otras);
+  }
+  return guardado ? (CONFIRMACIONES[guardado] ?? null) : null;
 }
 
 /** Un número de semanas de la URL, entre 0 y el tope, o null. */
