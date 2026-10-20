@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    El icono de Hatril. Fuente de verdad: los PNG de al lado, el arranque y todos los
+    tamaños de Android e iOS salen de aquí con `npm run app:iconos`.
+
+    Cuadrado entero, sin esquinas: las redondea cada sistema con su máscara.
+    Naranja quemado de la marca (#B15435) y una H blanca geométrica, sin
+    degradados ni sombras. La barra va un punto por encima del centro, que es
+    donde el ojo la lee centrada. Troncos de 106 y barra de 78: el trazo
+    horizontal más fino que el vertical, como en la letra de la web.
+  -->
+  <rect width="1024" height="1024" fill="#B15435"/>
+  <path fill="#FFFFFF" d="M319 282H425V457H599V282H705V742H599V535H425V742H319Z"/>
+</svg>

@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // La app nativa: proyectos de Gradle y Xcode, con sus compilaciones
+    // dentro, y los binarios. Sin esto `eslint .` se mete en android/app/build
+    // y no termina.
+    "android/**",
+    "ios/**",
+    "Versiones/**",
   ]),
 ]);
 

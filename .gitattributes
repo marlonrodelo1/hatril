@@ -19,3 +19,10 @@
 *.woff binary
 *.woff2 binary
 *.pdf binary
+
+# Los .bat de Windows (el gradlew.bat de android/) con CRLF: cmd.exe lee mal
+# un .bat con saltos LF en cuanto tiene etiquetas y saltos entre ellas.
+*.bat text eol=crlf
+
+# El wrapper de Gradle, sin tocar.
+*.jar binary

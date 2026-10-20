@@ -25,6 +25,14 @@ build
 drizzle
 scripts
 
+# La app nativa no pinta nada en la imagen de la web. Y android/ puede llevar
+# en local el keystore.properties con la contraseña de la firma: fuera.
+android
+ios
+app-shell
+assets
+Versiones
+
 README.md
 CLAUDE.md
 AGENTS.md

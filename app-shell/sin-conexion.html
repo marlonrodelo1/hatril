@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Sin conexión · Hatril</title>
+<!--
+  La pantalla que pinta la app cuando no puede abrir la web: sin red, con un
+  certificado que no vale (MainActivity.java) y, en Android, también cuando la
+  web responde con error a una carga de página entera: Capacitor salta aquí
+  con un 404 o un 500 igual que sin red. Las navegaciones de dentro de Next
+  no son cargas enteras y no pasan por aquí.
+
+  TODO VA DENTRO DE ESTE FICHERO, Y ES A PROPÓSITO
+  Capacitor la sirve desde el origen local de la app (https://localhost en
+  Android, capacitor://localhost en iOS), y en Android todo lo que enlace
+  —una hoja de estilos, una fuente, un script— se pide a la red. Que es justo
+  lo que no hay. Por eso los estilos van aquí, el icono va dibujado aquí y la
+  letra es la del sistema: Plus Jakarta Sans la sirve la propia web.
+
+  Y por eso tampoco sabe dónde está la web. La dirección del botón la escribe
+  el sync en la copia que va dentro de la app, en lugar del marcador de abajo
+  (scripts/app/destino.mjs). Aquí, en el repo, el marcador se queda.
+
+  Los colores son los de globals.css: crema, texto casi negro, gris secundario
+  y el naranja quemado en el único botón.
+-->
+<style>
+  :root {
+    --base: #faf9f5;
+    --texto: #141413;
+    --texto-2: #67665f;
+    --neutro-fondo: #f0eee6;
+    --neutro-texto: #5e5d58;
+    --acento: #b15435;
+    --acento-pulsado: #92442a;
+    --apagado-fondo: #f0eee6;
+    --apagado-texto: #a3a19a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--base);
+    color: var(--texto);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  main {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 32px 24px;
+    text-align: center;
+  }
+  .icono {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    background: var(--neutro-fondo);
+    color: var(--neutro-texto);
+  }
+  h1 {
+    margin: 8px 0 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  p {
+    margin: 0;
+    max-width: 320px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--texto-2);
+  }
+  button {
+    margin-top: 8px;
+    min-width: 160px;
+    height: 44px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--acento);
+    color: #fff;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:active { background: var(--acento-pulsado); }
+  button:disabled { background: var(--apagado-fondo); color: var(--apagado-texto); }
+  .nota { font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="icono" aria-hidden="true">
+    <!-- wifi-off, de Lucide: la misma familia de iconos que la aplicación -->
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 20h.01"/>
+      <path d="M8.5 16.429a5 5 0 0 1 7 0"/>
+      <path d="M5 12.859a10 10 0 0 1 5.17-2.69"/>
+      <path d="M19 12.859a10 10 0 0 0-2.007-1.523"/>
+      <path d="M2 8.82a15 15 0 0 1 4.177-2.643"/>
+      <path d="M22 8.82a15 15 0 0 0-11.288-3.764"/>
+      <path d="m2 2 20 20"/>
+    </svg>
+  </div>
+  <h1>Sin conexión</h1>
+  <p>No hemos podido abrir Hatril. Comprueba que tienes internet y vuelve a intentarlo.</p>
+  <button type="button" id="reintentar">Reintentar</button>
+  <p class="nota" id="nota" role="status">En cuanto vuelva la conexión, lo intentamos solos.</p>
+</main>
+<script>
+  (function () {
+    var boton = document.getElementById('reintentar');
+    var nota = document.getElementById('nota');
+
+    // Lo sustituye el sync por la dirección de la web (ver arriba).
+    var DESTINO = '__HATRIL_DESTINO__';
+
+    function reintentar() {
+      var url = DESTINO.indexOf('https://') === 0 ? DESTINO : null;
+      if (!url) {
+        nota.textContent = 'Cierra la app y vuelve a abrirla.';
+        return;
+      }
+      boton.disabled = true;
+      boton.textContent = 'Conectando…';
+      // replace y no href: que «atrás» no vuelva a esta pantalla.
+      location.replace(url);
+    }
+
+    boton.addEventListener('click', reintentar);
+    window.addEventListener('online', reintentar);
+  })();
+</script>
+</body>
+</html>

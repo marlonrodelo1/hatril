@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# app nativa (Capacitor)
+# Versiones/ guarda los .aab, los .apk y la firma de subida: nada de eso va a
+# GitHub. Si la firma se pierde, hay que pedir a Google que reinicie la clave
+# de subida; si se filtra, cualquiera puede firmar como Hatril.
+/Versiones/
+android/keystore.properties
+*.jks
+*.keystore
