@@ -28,7 +28,10 @@ export async function GET(request: NextRequest) {
   const next =
     nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')
       ? nextParam
-      : '/panel/hoy';
+      // Sin destino, a `/mi`, que reparte a cada quien con `inicioDe()`: el
+      // equipo al panel, quien solo lleva sus ministerios a la app, el miembro
+      // a su muro. Un `/panel/hoy` fijo mandaba a todos al panel.
+      : '/mi';
 
   if (!token_hash || !type) {
     return NextResponse.redirect(

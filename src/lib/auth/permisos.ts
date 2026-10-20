@@ -1,3 +1,5 @@
+import { RAIZ_APP } from '@/lib/ministerios/en-la-app/rutas';
+
 /**
  * Qué puede hacer cada persona dentro de una iglesia.
  *
@@ -551,17 +553,22 @@ function abreAlgunaSeccion(ctx: ContextoPermisos): boolean {
  * `null` es quien tiene sesión y no tiene iglesia: su sitio es `/mi`, que le
  * cuenta en qué punto está su solicitud.
  *
- * QUIEN SOLO LLEVA UN MINISTERIO EMPIEZA EN ÉL
- * --------------------------------------------
- * Para el colíder de un equipo que no tiene nada más, `/panel/hoy` es el resumen
- * de una iglesia de la que casi nada le toca, y lo que viene a hacer queda a dos
- * clics. Con un solo ministerio el destino es evidente; con dos no hay uno que
- * elegir por él, y el bloque «Lo que llevas» del menú se los pone delante.
+ * QUIEN SOLO LLEVA SUS MINISTERIOS EMPIEZA EN LA APP
+ * --------------------------------------------------
+ * Lo decidió Marlon el 20-oct: el líder que no tiene nada más que sus equipos
+ * aterriza en la pestaña Equipo de la app (`/mi/equipo`), con sus herramientas,
+ * y el panel le queda en el menú del avatar. Es la misma persona que el domingo
+ * lleva la puerta del reparto o pasa lista desde el móvil, y el panel, para
+ * ella, es el resumen de una iglesia de la que casi nada le toca. `/mi/equipo`
+ * salta sola a la portada del ministerio si solo hay uno.
+ *
+ * Hasta ese día empezaba en `/panel/ministerios/<id>`, que es lo que hacía
+ * falta mientras la app no tenía las herramientas.
  *
  * El pastor queda fuera aunque dirija un solo equipo, y quien tiene un permiso
  * que le abre otra sección también: su trabajo no cabe en un ministerio, y
- * empezar en uno le escondería el resto. Los que no abren nada por sí solos
- * —ver datos sensibles, el seguimiento, moderar— no le sacan de su ministerio:
+ * empezar en la app le escondería el resto. Los que no abren nada por sí solos
+ * —ver datos sensibles, el seguimiento, moderar— no le sacan de sus equipos:
  * amplían lo que ya ve o se ejercen en el muro (ver `ABRE_UNA_SECCION`).
  */
 export function inicioDe(ctx: ContextoPermisos | null): string {
@@ -569,9 +576,7 @@ export function inicioDe(ctx: ContextoPermisos | null): string {
   if (!esDelEquipo(ctx)) return '/mi';
 
   const soloLleva = !esPastor(ctx) && !abreAlgunaSeccion(ctx);
-  if (soloLleva && ctx.ministeriosQueLidera.length === 1) {
-    return `/panel/ministerios/${ctx.ministeriosQueLidera[0]}`;
-  }
+  if (soloLleva) return RAIZ_APP;
 
   return '/panel/hoy';
 }
