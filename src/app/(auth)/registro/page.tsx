@@ -93,6 +93,9 @@ export default async function RegistroPage({
               id="email"
               name="email"
               type="email"
+              inputMode="email"
+              autoCapitalize="none"
+              spellCheck={false}
               required
               autoComplete="email"
               placeholder="pastor@tuiglesia.org"
@@ -107,9 +110,12 @@ export default async function RegistroPage({
               type="password"
               required
               autoComplete="new-password"
+              aria-describedby="password-pista"
             />
             {/* La regla se enseña ANTES de escribir, no después de fallar. */}
-            <p className="t-label text-muted-foreground">{PASSWORD_PISTA}</p>
+            <p id="password-pista" className="t-label text-muted-foreground">
+              {PASSWORD_PISTA}
+            </p>
           </div>
 
           {/*

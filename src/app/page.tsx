@@ -234,17 +234,21 @@ export default async function HomePage() {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-[1100px] flex-wrap items-center gap-x-6 gap-y-2 px-5 py-8 text-[13.5px] text-muted-foreground md:px-8">
           <Logo variante="logotipo" tamano={18} />
-          <Link href="/iglesias" className="no-underline hover:underline">
-            Directorio
-          </Link>
-          <Link href="/privacidad" className="no-underline hover:underline">
-            Privacidad
-          </Link>
-          <Link href="/terminos" className="no-underline hover:underline">
-            Términos
-          </Link>
-          <span className="flex-1" />
-          <span>Hecho en Tenerife</span>
+          {/* En el móvil los enlaces bajan a su línea y «Hecho en Tenerife» se
+              queda arriba, frente al logotipo. A 375 px no caben los cinco en
+              una fila, y lo que caía solo a la segunda era justo esa frase. */}
+          <div className="order-last flex basis-full flex-wrap gap-x-6 gap-y-2 md:order-none md:basis-auto">
+            <Link href="/iglesias" className="no-underline hover:underline">
+              Directorio
+            </Link>
+            <Link href="/privacidad" className="no-underline hover:underline">
+              Privacidad
+            </Link>
+            <Link href="/terminos" className="no-underline hover:underline">
+              Términos
+            </Link>
+          </div>
+          <span className="ml-auto">Hecho en Tenerife</span>
         </div>
       </footer>
     </div>

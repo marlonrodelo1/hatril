@@ -37,12 +37,12 @@ export default async function AceptaPage() {
           que diga dónde se está, y a quien tiene esta decisión a medias no se
           le ofrece irse a la portada. */}
       <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-[640px] px-4 py-3.5 sm:px-5">
+        <div className="mx-auto flex max-w-[640px] px-5 py-3.5 sm:px-8">
           <Logo variante="logotipo" tamano={22} />
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-[640px] flex-col gap-6 px-4 py-12 sm:px-5">
+      <main className="mx-auto flex w-full max-w-[640px] flex-col gap-6 px-5 py-12 sm:px-8">
         <div className="flex flex-col gap-3">
           <span className="flex size-11 items-center justify-center rounded-full bg-accent text-accent-foreground">
             <ShieldCheck className="size-5" strokeWidth={1.7} />

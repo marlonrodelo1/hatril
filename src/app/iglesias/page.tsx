@@ -136,8 +136,17 @@ export default async function DirectorioPage({
                   >
                     Ver la iglesia
                   </Button>
+                  {/* Carbón y no naranja: un solo botón naranja por pantalla, y
+                      aquí ese es «Buscar». Al revés no encaja: «Pedir unirme»
+                      se repite en cada tarjeta, así que naranja serían tantos
+                      como iglesias, y buscar es lo único que siempre está y lo
+                      primero que hace quien llega. El carbón lo deja por
+                      encima de «Ver la iglesia», que va en contorno. */}
                   {i.aceptaSolicitudes && (
-                    <Button render={<Link href={`/solicitar/${i.slug}`} />}>
+                    <Button
+                      variant="secondary"
+                      render={<Link href={`/solicitar/${i.slug}`} />}
+                    >
                       Pedir unirme
                     </Button>
                   )}

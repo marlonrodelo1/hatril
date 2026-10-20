@@ -137,7 +137,7 @@ export async function CabeceraMiembro({
         )}
 
         {marca ? (
-          <Logo variante="logotipo" tamano={20} />
+          <Logo variante="logotipo" tamano={22} />
         ) : (
           <span className="flex min-w-0 flex-col">
             <span className="truncate text-[15.5px] font-extrabold leading-tight tracking-[-0.02em]">

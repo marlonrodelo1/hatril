@@ -238,8 +238,8 @@ Tres cosas que hay que saber antes de tocar un color:
   volver a claro. **Al añadir un token, exponerlo.** El blanco y el negro solo
   valen encima de una foto o de un relleno de color.
 
-Faltan por diseñar: login, registro, onboarding, super admin, directorio de
-iglesias, área del miembro y todas las vistas móviles.
+Faltan por diseñar: onboarding, super admin, directorio de iglesias, área del
+miembro y todas las vistas móviles. El acceso y el registro ya están (20-oct).
 
 ---
 
