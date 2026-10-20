@@ -1,6 +1,20 @@
 import 'server-only';
 
-import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, lte, max } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  max,
+  min,
+} from 'drizzle-orm';
 
 import { withUser } from '@/lib/db';
 import {
@@ -379,31 +393,42 @@ export type DiaDelHistorial = {
   sinInscribir: number;
   /** Suma de las personas de los hogares a los que se entregó. */
   personas: number;
+  /** Hogares a los que se entregó ese día por PRIMERA vez. */
+  nuevos: number;
 };
 
 export type Historial = {
   dias: DiaDelHistorial[];
   total: {
     repartos: number;
-    /** Entregas hechas, contando las de quien no quiso apuntarse. */
+    /** Entregas hechas, contando las de quien no quiso inscribirse. */
     entregas: number;
     sinInscribir: number;
-    /** Hogares distintos con número. Quien no se apuntó no se puede contar dos veces ni una. */
+    /** Hogares distintos con número. Quien no se inscribió no se puede contar dos veces ni una. */
     hogares: number;
     /** Personas de esos hogares, cada hogar una vez. */
     personas: number;
+    /** De esos hogares, los que recibieron por primera vez este mes. */
+    nuevos: number;
   };
 };
 
 /**
  * El historial de un mes: una fila por reparto y el total, que es lo que pide
- * el pastor o el banco de alimentos.
+ * el pastor o el banco de alimentos. Lo leen la pantalla del historial y el
+ * informe imprimible, así que los dos cuentan exactamente lo mismo.
  *
  * Se agrega aquí y no en SQL. Un mes son unos pocos repartos y unos cientos de
  * filas, y contar los hogares distintos con su tamaño necesita mirar a la vez
  * qué persona es y cuántas había en su casa ESE día. Las filas cuya persona se
  * borró del padrón cuentan como entrega y como personas del día, y no como
  * hogar del mes: sin saber quién era, no se sabe si ya se contó.
+ *
+ * «Nuevo» es el hogar cuya PRIMERA entrega cae ese día, mirando toda su
+ * historia y no solo el mes: quien vino en septiembre no es nuevo en octubre.
+ * Se cuenta sobre entregas hechas, no sobre llegadas: llegar y no llevarse nada
+ * no es haber sido atendido. Tampoco cuenta el alta en sí, que puede ser de
+ * antes de su primer reparto.
  */
 export async function historialDelMes(
   ctx: UserContext,
@@ -431,7 +456,7 @@ export async function historialDelMes(
 
     const vacio: Historial = {
       dias: [],
-      total: { repartos: 0, entregas: 0, sinInscribir: 0, hogares: 0, personas: 0 },
+      total: { repartos: 0, entregas: 0, sinInscribir: 0, hogares: 0, personas: 0, nuevos: 0 },
     };
     if (jornadas.length === 0) return vacio;
 
@@ -453,6 +478,35 @@ export async function historialDelMes(
         ),
       );
 
+    // La primera entrega de cada hogar atendido este mes, en toda su historia.
+    const atendidos = [
+      ...new Set(
+        entregas
+          .filter((e) => e.entregado && e.beneficiarioId)
+          .map((e) => e.beneficiarioId!),
+      ),
+    ];
+    const primeras =
+      atendidos.length === 0
+        ? []
+        : await tx
+            .select({
+              beneficiarioId: repartoEntregas.beneficiarioId,
+              primera: min(repartoJornadas.fecha),
+            })
+            .from(repartoEntregas)
+            .innerJoin(repartoJornadas, eq(repartoJornadas.id, repartoEntregas.jornadaId))
+            .where(
+              and(
+                eq(repartoEntregas.iglesiaId, ctx.iglesia.id),
+                eq(repartoEntregas.ministerioId, ministerioId),
+                eq(repartoEntregas.entregado, true),
+                inArray(repartoEntregas.beneficiarioId, atendidos),
+              ),
+            )
+            .groupBy(repartoEntregas.beneficiarioId);
+    const primeraDe = new Map(primeras.map((p) => [p.beneficiarioId, p.primera]));
+
     const hogares = new Map<string, number>();
     const dias = jornadas.map((j) => {
       const deEse = entregas.filter((e) => e.jornadaId === j.id);
@@ -469,19 +523,81 @@ export async function historialDelMes(
         entregados: hechas.length + j.sinInscribir,
         sinInscribir: j.sinInscribir,
         personas: hechas.reduce((s, e) => s + e.personasHogar, 0),
+        nuevos: hechas.filter((e) => e.beneficiarioId && primeraDe.get(e.beneficiarioId) === j.fecha)
+          .length,
       };
     });
 
-    const sinInscribir = dias.reduce((s, d) => s + d.sinInscribir, 0);
     return {
       dias,
       total: {
         repartos: dias.length,
         entregas: dias.reduce((s, d) => s + d.entregados, 0),
-        sinInscribir,
+        sinInscribir: dias.reduce((s, d) => s + d.sinInscribir, 0),
         hogares: hogares.size,
         personas: [...hogares.values()].reduce((s, n) => s + n, 0),
+        nuevos: dias.reduce((s, d) => s + d.nuevos, 0),
       },
     };
   });
+}
+
+/**
+ * A quién se le entregó en este reparto entre dos fechas, ambas incluidas, con
+ * el ÚLTIMO día en que se le entregó. Es el aviso de «ya vino esta semana».
+ *
+ * Avisa y no prohíbe, como el desplegable de los turnos: la base solo impide
+ * dos entregas a la misma persona el MISMO día. Una familia que vuelve el
+ * miércoles porque se le acabó la comida no es un fraude que la pantalla tenga
+ * que parar; es algo que quien está en la puerta tiene que saber para decidir.
+ *
+ * Con `beneficiarioIds` vacío no consulta nada.
+ */
+export async function recibieronEntre(
+  ctx: UserContext,
+  ministerioId: string,
+  desde: string,
+  hasta: string,
+  beneficiarioIds: string[],
+): Promise<Map<string, string>> {
+  if (beneficiarioIds.length === 0) return new Map();
+  return withUser(ctx.user.id, (tx) =>
+    ultimaEntregaEntre(tx, ctx, ministerioId, desde, hasta, beneficiarioIds),
+  );
+}
+
+/** Lo mismo, dentro de una transacción abierta (para las actions de la puerta). */
+export async function ultimaEntregaEntre(
+  tx: Tx,
+  ctx: UserContext,
+  ministerioId: string,
+  desde: string,
+  hasta: string,
+  beneficiarioIds: string[],
+): Promise<Map<string, string>> {
+  if (beneficiarioIds.length === 0) return new Map();
+  const filas = await tx
+    .select({
+      beneficiarioId: repartoEntregas.beneficiarioId,
+      ultima: max(repartoJornadas.fecha),
+    })
+    .from(repartoEntregas)
+    .innerJoin(repartoJornadas, eq(repartoJornadas.id, repartoEntregas.jornadaId))
+    .where(
+      and(
+        eq(repartoEntregas.iglesiaId, ctx.iglesia.id),
+        eq(repartoEntregas.ministerioId, ministerioId),
+        eq(repartoEntregas.entregado, true),
+        inArray(repartoEntregas.beneficiarioId, beneficiarioIds),
+        gte(repartoJornadas.fecha, desde),
+        lte(repartoJornadas.fecha, hasta),
+      ),
+    )
+    .groupBy(repartoEntregas.beneficiarioId);
+
+  const salida = new Map<string, string>();
+  for (const f of filas) {
+    if (f.beneficiarioId && f.ultima) salida.set(f.beneficiarioId, f.ultima);
+  }
+  return salida;
 }

@@ -1,8 +1,4 @@
-import { notFound } from 'next/navigation';
-
-import { requireGestionMinisterio } from '@/lib/auth/guard-panel';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
-import { tieneModulo } from '@/lib/ministerios/modulos';
+import { requireReparto } from './guarda';
 
 /**
  * El guard del reparto. Las dos puertas de los otros módulos, con la primera
@@ -14,9 +10,9 @@ import { tieneModulo } from '@/lib/ministerios/modulos';
  *      enseña el padrón. Abrirle la pantalla sería darle un listado vacío.
  *   2. El módulo encendido. Apagado, la ruta no existe para ese ministerio.
  *
- * Aquí y no en cada página, porque debajo cuelga `padron/[beneficiarioId]`, que
- * es la ficha de una persona que está pasando necesidad. Las actions llevan las
- * mismas dos puertas por su cuenta: un layout no corre en una server action.
+ * Aquí Y en cada página (`guarda.ts` cuenta por qué el layout solo no basta).
+ * Las actions llevan las mismas dos puertas por su cuenta: un layout no corre
+ * en una server action.
  */
 export default async function RepartoLayout({
   children,
@@ -26,11 +22,7 @@ export default async function RepartoLayout({
   params: Promise<{ id: string }>;
 }>) {
   const { id } = await params;
-  const ctx = await requireGestionMinisterio(id, { desdeDentro: true });
-
-  const ministerio = await obtenerMinisterio(ctx, id);
-  if (!ministerio) notFound();
-  if (!tieneModulo(ministerio.modulos, 'reparto')) notFound();
+  await requireReparto(id);
 
   return <>{children}</>;
 }

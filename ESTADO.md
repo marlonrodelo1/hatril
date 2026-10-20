@@ -154,6 +154,50 @@ lee al arrancar.
   esperando», todo firmado por Sara, y cero filas en `auditoria`. `lider@`
   (otro equipo) rebota en la URL, y con el módulo apagado la ruta da 404.
 
+  El 20-oct, a petición de Marlon, tres piezas más y una pasada visual,
+  verificadas igual como `colider@` a 375 px y con las cifras cuadradas a mano:
+
+  - **«Entregar sin inscribir»** (antes «Sin apuntar»): un botón que suma una
+    entrega sin guardar a nadie, y su corrección de menos uno. El día y el mes
+    lo enseñan aparte («9 entregas, 4 sin inscribir»).
+  - **Aviso «ya recibió hace N días», que no bloquea.** Ventana de hace SEIS
+    días a ayer, no siete: casi todas las iglesias reparten un día fijo a la
+    semana, y con siete el aviso saltaría con toda familia que viene cada
+    domingo, que es lo normal. Sale como insignia en la cola y en el buscador
+    —antes de pulsar— y como caja después de marcar (`?ya=`), con el patrón de
+    `eleccion-ficha.tsx` (`bg-badge-warning-bg` y `TriangleAlert`, sin
+    `role="alert"`, que es para errores). Los botones no cambian.
+  - **«Nuevos» del mes**: hogares cuya PRIMERA entrega, en toda su historia,
+    cae ese día. Llegar y no llevarse nada no cuenta.
+  - **Informe del mes imprimible**, `/reparto/informe?mes=`, enlazado desde el
+    historial: repartos, entregas, hogares atendidos, personas alcanzadas,
+    nuevos y sin inscribir, y una fila por reparto. Sin nombres. Es el de
+    finanzas copiado, sin PDF en el servidor. `BotonImprimir` pasó a
+    `src/components`, y el menú lateral y la franja de suscripción llevan ahora
+    `print:hidden`: antes no salían en el papel solo porque la hoja suele medir
+    menos de 768 px.
+  - **El CSV no**: ver «Qué falta».
+  - **La puerta del reparto va en cada página, no solo en el layout**
+    (`reparto/guarda.ts`). La documentación de Next 16 dice que un layout no
+    impide que la página se ejecute ni que su resultado viaje en el payload RSC,
+    y aquí la RLS deja pasar a los voluntarios del equipo, que la aplicación no
+    deja entrar. Probado pidiendo el informe como `lider@` con `RSC: 1`: ni una
+    cifra en la respuesta.
+  - Revisado por cuatro revisores con un escéptico cada uno (lógica,
+    aislamiento, visual y textos contra el código). Arreglado lo que salió: el
+    aviso de después de marcar se pintaba fuera de la pantalla (la vuelta salta
+    a `#cola`), `?ya=` no se acotaba a la ventana, `?mes=0050-01` daba un 500,
+    «hoy» se calculaba dos veces por action, «−» confirmaba «Entregado sin
+    inscribir», la insignia se salía de su columna y el texto de borrar no
+    decía todo lo que baja en el informe.
+  - **Pasada visual contra turnos, repertorio y agenda**: el contador
+    «Esperando» se pintaba de naranja (un segundo naranja sin acción) y las
+    cuatro cifras sueltas pasaron a una tarjeta, como en Inicio; títulos de lista
+    en `t-micro`; cifras de 24 px; `scroll-mt-24` en los anclajes, que con
+    `scroll-mt-4` quedaban tapados por la cabecera fija; botones de fila en
+    `ghost` gris; sin `font-mono`; estados vacíos con su botón; y los borrados
+    sin tarjeta roja, con el rojo solo en el botón.
+
   - **Padrón aparte, por hogar y sin texto libre** (`reparto_beneficiarios`):
     el nombre como quiera que le llamen, cuántos viven en la casa y el teléfono
     si lo da. Sin `miembro_id` —inscribirse no hace miembro a nadie, y cruzarlo
@@ -173,9 +217,9 @@ lee al arrancar.
     enseñaría nada) ni todavía a los voluntarios, que no entran al panel. La
     base ya les deja, para la v1.1.
   - **La comida no se condiciona a los datos.** Sin la casilla «se lo he leído»
-    no se apunta a nadie, y quien no quiere dar su nombre se suma en «Sin
-    apuntar» (`reparto_jornadas.sin_inscribir`), que cuenta como venido y
-    entregado. El aviso que se lee en voz alta es `TEXTO_AVISO_REPARTO`, con
+    no se apunta a nadie, y quien no quiere dar su nombre se suma con
+    «Entregar sin inscribir» (`reparto_jornadas.sin_inscribir`), que cuenta
+    como venido y entregado. El aviso que se lee en voz alta es `TEXTO_AVISO_REPARTO`, con
     `VERSION_CONSENTIMIENTO_REPARTO` (`reparto-2026-10`), propio y aparte de la
     política: no hizo falta subir `VERSION_POLITICA_PRIVACIDAD`. Sin IP ni
     navegador, que serían los del voluntario.
@@ -183,8 +227,10 @@ lee al arrancar.
     `reparto_entregas.beneficiario_id` es ON DELETE SET NULL, y las personas del
     hogar se COPIAN en la entrega (lo hace HT126, no la aplicación). Se van el
     nombre, el teléfono, el número y el permiso; las entregas de cada día se
-    quedan. Lo único que baja es «hogares distintos» del mes, y la pantalla lo
-    dice antes de borrar. Hay botón para borrar a una persona y otro para borrar
+    quedan. Lo que sí baja, también en los meses pasados, es lo que se cuenta
+    por hogar —hogares atendidos, personas alcanzadas y nuevos—, porque sin
+    nombre no se sabe si dos filas eran el mismo hogar. La pantalla lo dice antes
+    de borrar. Hay botón para borrar a una persona y otro para borrar
     de una vez a quien lleva un año sin venir —el plazo que promete el aviso—,
     que recalcula la lista en la misma transacción y no borra nada si la cifra
     cambió desde que se vio.
@@ -634,7 +680,10 @@ lee al arrancar.
 |---|---|
 | Proveedor de alojamiento en los legales | Relleno (Hostinger). Falta confirmar en hPanel el país del centro de datos: pone Alemania y la IP geolocaliza en Francia |
 | Módulos de ministerio | **Turnos, repertorio, la base común y el reparto (tanda 1, v1) hechos.** Sigue la tanda 2, alabanza; el orden entero está en `docs/modulos/plan.md`. Peticiones de oración y la ficha de los niños esperan una decisión legal: salud y menores |
-| Reparto v1.1 | Enlace público sin cuenta para inscribirse, QR, CSV para el banco de alimentos, etiquetas Nuevo / Repite / No viene y voluntarios marcando desde `/mi` (la RLS ya les deja). Fuera de la v1 a propósito |
+| Reparto v1.1 | Enlace público sin cuenta para inscribirse, QR, etiquetas Nuevo / Repite / No viene en el padrón y voluntarios marcando desde `/mi` (la RLS ya les deja). Fuera de la v1 a propósito |
+| **Las páginas de módulo confían en el layout** | La documentación de Next 16 (`02-guides/authentication.md`, «Layouts and auth checks») dice que un layout no impide que la página se ejecute ni que su resultado viaje en el payload RSC. Las páginas de seguimiento, turnos, repertorio y agenda llaman solo a `requireIglesia()` y dejan la puerta del ministerio (y la de `ver_seguimiento`) al `layout.tsx`, y su RLS es por IGLESIA: en teoría, un miembro de la congregación que pidiera la página de seguimiento a mano con `RSC: 1` recibiría por qué alguien dejó de venir. No está probado; hay que probarlo y, si se confirma, poner la puerta en cada página como hace ya el reparto (`reparto/guarda.ts`). Va antes que cualquier módulo nuevo |
+| CSV del reparto | No se hizo: no era barato. Un route handler no pasa por el `layout.tsx` del reparto, y `guard-api.ts` no tiene guarda por ministerio (haría falta `requireGestionMinisterioApi(id, { desdeDentro, modulo })`). Y hay que decidir antes si una iglesia con el pago caído o el consentimiento pendiente puede descargar: hoy los CSV de eventos y finanzas se saltan esos dos cortes del `panel/layout.tsx` sin que esté decidido. El informe imprimible, con «Guardar como PDF», cubre lo que pide un banco de alimentos |
+| Tres fallos vistos de paso, sin arreglar | `guard-api.ts` reutiliza el mismo `Response` de 401/403 en todas las peticiones, y el cuerpo solo se lee una vez: a partir del segundo fallo sale vacío (factorías en vez de constantes). `src/lib/format/csv.ts:63` lleva el BOM como carácter literal, la trampa que ESTADO.md dice evitar. El informe de finanzas no valida `?mes=`: con basura, 500 |
 | El muro de pago cierra la puerta del reparto | En `solo_lectura`, `exigirPoderEscribir` impide marcar entregas un domingo. Se puede seguir repartiendo en papel, pero hay que decidir si el reparto entra en la lista corta de `sinMuro`. Es decisión de Marlon, no de código |
 | Las personas del hogar se copian al LLEGAR | Si en la puerta se corrige el tamaño del hogar después de «Ha llegado», esa entrega cuenta el número viejo. Hoy se arregla con «Quitar» y «Ha llegado» otra vez; hacerlo solo pide una migración que refresque la copia al pasar a entregado |
 | La puerta es lenta en local | Unos 6 s por action desde Canarias contra Irlanda: guard, `esMinisterioDeSuIglesia`, `exigirModulo` y la action, cada una en su transacción. En el VPS la base está al lado y no debería notarse, pero no está medido |
@@ -1245,3 +1294,9 @@ están en la lista del 18-oct (una en otro tono). `lider@` y `secretaria@` ya ac
 responsable **y** colíder, que es el caso que el modelo viejo no podía guardar.
 
 Dos iglesias: **Betania** (Bogotá, publicada) y **Sion** (Madrid, sin publicar).
+
+El **reparto** de Acción social de Betania tiene datos de las pruebas del
+19 y 20-oct, no de un seed: dos hogares en el padrón (María, la Familia Rojas)
+y repartos el 12, 16, 19 y 20 de octubre, con entregas sin inscribir y una
+entrega de un hogar ya borrado. Se entra como `colider@` (Sara Nieto, colíder
+con rol `miembro`).

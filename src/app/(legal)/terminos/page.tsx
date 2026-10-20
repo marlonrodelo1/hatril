@@ -274,7 +274,7 @@ export default function TerminosPage() {
 
         <P>
           Al usarla te comprometes a tres cosas. A no condicionar la ayuda a que
-          la persona dé sus datos: la herramienta cuenta una entrega sin apuntar
+          la persona dé sus datos: la herramienta cuenta una entrega sin inscribir
           a nadie. A leerle el aviso antes de apuntarla, y a no apuntarla si no
           dice que sí. Y a borrar a quien lleve un año sin venir, que es el plazo
           que ese aviso le promete. No hay ninguna tarea automática que lo haga:

@@ -138,7 +138,10 @@ export function PanelSidebar({
   return (
     <aside
       className={
-        'sticky top-0 z-20 hidden h-dvh flex-none flex-col border-r border-border bg-surface transition-[width] duration-200 md:flex ' +
+        // `print:hidden` aunque ya sea `hidden` por debajo de `md`: una hoja
+        // apaisada o sin márgenes puede medir más de 768 px, y entonces el menú
+        // salía impreso al lado del informe del mes.
+        'sticky top-0 z-20 hidden h-dvh flex-none flex-col border-r border-border bg-surface transition-[width] duration-200 md:flex print:hidden ' +
         (encogida ? 'w-[64px]' : 'w-[264px]')
       }
     >

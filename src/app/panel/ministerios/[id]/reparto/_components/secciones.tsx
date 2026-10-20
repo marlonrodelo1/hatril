@@ -36,7 +36,9 @@ export function SeccionesReparto({
             href={`${base}${p.ruta}`}
             aria-current={esActiva ? 'page' : undefined}
             className={
-              'flex h-10 items-center justify-center rounded-md px-4 text-[14.5px] font-semibold no-underline hover:no-underline ' +
+              // `rounded-sm` (6 px) dentro del `rounded-lg` (8 px) con `p-1`: con el
+              // mismo radio dentro y fuera, las esquinas no casan.
+              'flex h-10 items-center justify-center rounded-sm px-4 text-[14px] font-semibold no-underline transition-colors hover:no-underline ' +
               (esActiva
                 ? 'border border-border bg-surface text-foreground'
                 : 'text-muted-foreground hover:text-foreground')

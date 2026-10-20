@@ -20,8 +20,8 @@ import { campo, campoObligatorio, casilla } from '@/lib/api/formulario';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { normalizarTelefono } from '@/lib/telefono/normalizar';
 import { VERSION_CONSENTIMIENTO_REPARTO } from '@/lib/rgpd/consentimiento';
-import { idsSinVenirDesde } from '@/lib/reparto/consultas';
-import { haceUnAnio } from '@/lib/reparto/plazo';
+import { idsSinVenirDesde, ultimaEntregaEntre } from '@/lib/reparto/consultas';
+import { haceUnAnio, ventanaDeLaSemana } from '@/lib/reparto/plazo';
 import type { UserContext } from '@/lib/auth/user-context';
 
 /**
@@ -84,12 +84,21 @@ function exigirId(id: string, destino: string): void {
 
 type Tx = Parameters<Parameters<typeof withUser>[1]>[0];
 
-/** El id del reparto de hoy de este equipo, o null si no se ha empezado. */
+/**
+ * El reparto de hoy de este equipo, con el día que se usó para buscarlo, o null
+ * si no se ha empezado.
+ *
+ * Devuelve `hoy` para que el resto de la action trabaje con ESE día y no lo
+ * vuelva a calcular: si la transacción cruzara la medianoche, la ventana del
+ * aviso de la semana pasaría a incluir la entrega que se acaba de marcar, y la
+ * pantalla avisaría de que ya vino… por la misma entrega.
+ */
 async function jornadaDeHoy(
   tx: Tx,
   ctx: UserContext,
   ministerioId: string,
-): Promise<string | null> {
+): Promise<{ id: string; hoy: string } | null> {
+  const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
   const [fila] = await tx
     .select({ id: repartoJornadas.id })
     .from(repartoJornadas)
@@ -97,14 +106,39 @@ async function jornadaDeHoy(
       and(
         eq(repartoJornadas.iglesiaId, ctx.iglesia.id),
         eq(repartoJornadas.ministerioId, ministerioId),
-        eq(repartoJornadas.fecha, hoyEnLaIglesia(ctx.iglesia.timezone)),
+        eq(repartoJornadas.fecha, hoy),
       ),
     )
     .limit(1);
-  return fila?.id ?? null;
+  return fila ? { id: fila.id, hoy } : null;
 }
 
 const SIN_JORNADA = 'Empieza primero el reparto de hoy.';
+
+/**
+ * ¿Ya se le entregó a esta persona en la ventana de la semana (de hace seis
+ * días a ayer)? Devuelve el trozo `&ya=AAAA-MM-DD` para la vuelta, o nada.
+ *
+ * Se calcula DESPUÉS de marcar y en la misma transacción, y no impide nada: es
+ * el criterio de los turnos, avisar y no prohibir. La fila de la cola y el
+ * resultado del buscador ya lo enseñan antes de pulsar; esto es para que el
+ * aviso siga ahí justo después, que es cuando quien está en la puerta mira la
+ * pantalla.
+ */
+async function yaVinoEstaSemana(
+  tx: Tx,
+  ctx: UserContext,
+  ministerioId: string,
+  beneficiarioId: string | null,
+  hoy: string,
+): Promise<string> {
+  if (!beneficiarioId) return '';
+  const { desde, hasta } = ventanaDeLaSemana(hoy);
+  const previa = (
+    await ultimaEntregaEntre(tx, ctx, ministerioId, desde, hasta, [beneficiarioId])
+  ).get(beneficiarioId);
+  return previa ? `&ya=${previa}` : '';
+}
 
 // ===========================================================================
 // La puerta
@@ -145,11 +179,12 @@ export async function marcarLlegada(ministerioId: string, beneficiarioId: string
   const base = hoy(ministerioId);
   exigirId(beneficiarioId, base);
 
-  let resultado: 'ok' | 'sin-jornada';
+  let resultado: { ya: string } | 'sin-jornada';
   try {
     resultado = await withUser(ctx.user.id, async (tx) => {
-      const jornadaId = await jornadaDeHoy(tx, ctx, ministerioId);
-      if (!jornadaId) return 'sin-jornada';
+      const jornada = await jornadaDeHoy(tx, ctx, ministerioId);
+      if (!jornada) return 'sin-jornada';
+      const jornadaId = jornada.id;
 
       await tx
         .update(repartoBeneficiarios)
@@ -174,7 +209,7 @@ export async function marcarLlegada(ministerioId: string, beneficiarioId: string
         })
         .onConflictDoNothing();
 
-      return 'ok';
+      return { ya: await yaVinoEstaSemana(tx, ctx, ministerioId, beneficiarioId, jornada.hoy) };
     });
   } catch (err) {
     if (esGuardHatril(err, 'HT126')) {
@@ -186,7 +221,7 @@ export async function marcarLlegada(ministerioId: string, beneficiarioId: string
   if (resultado === 'sin-jornada') volver(SIN_JORNADA, base);
 
   revalidatePath(base);
-  redirect(`${base}?guardado=llegada#cola`);
+  redirect(`${base}?guardado=llegada${resultado.ya}#cola`);
 }
 
 /**
@@ -199,11 +234,12 @@ export async function entregarA(ministerioId: string, beneficiarioId: string) {
   const base = hoy(ministerioId);
   exigirId(beneficiarioId, base);
 
-  let resultado: 'ok' | 'sin-jornada';
+  let resultado: { ya: string } | 'sin-jornada';
   try {
     resultado = await withUser(ctx.user.id, async (tx) => {
-      const jornadaId = await jornadaDeHoy(tx, ctx, ministerioId);
-      if (!jornadaId) return 'sin-jornada';
+      const jornada = await jornadaDeHoy(tx, ctx, ministerioId);
+      if (!jornada) return 'sin-jornada';
+      const jornadaId = jornada.id;
 
       // Primero la fila que ya estuviera —«ha llegado»— y, si no había, una
       // nueva ya entregada. En dos pasos y no con un upsert: el `set` de un
@@ -248,7 +284,7 @@ export async function entregarA(ministerioId: string, beneficiarioId: string) {
           ),
         );
 
-      return 'ok';
+      return { ya: await yaVinoEstaSemana(tx, ctx, ministerioId, beneficiarioId, jornada.hoy) };
     });
   } catch (err) {
     if (esGuardHatril(err, 'HT126')) {
@@ -260,7 +296,7 @@ export async function entregarA(ministerioId: string, beneficiarioId: string) {
   if (resultado === 'sin-jornada') volver(SIN_JORNADA, base);
 
   revalidatePath(base);
-  redirect(`${base}?guardado=entregado#cola`);
+  redirect(`${base}?guardado=entregado${resultado.ya}#cola`);
 }
 
 /** Las tres acciones de una fila de la cola de hoy, por su id. */
@@ -276,14 +312,14 @@ async function tocarFila(
   exigirId(entregaId, base);
 
   const tocadas = await withUser(ctx.user.id, async (tx) => {
-    const jornadaId = await jornadaDeHoy(tx, ctx, ministerioId);
-    if (!jornadaId) return -1;
+    const jornada = await jornadaDeHoy(tx, ctx, ministerioId);
+    if (!jornada) return { n: -1, ya: '' };
 
     const deHoy = and(
       eq(repartoEntregas.id, entregaId),
       eq(repartoEntregas.iglesiaId, ctx.iglesia.id),
       eq(repartoEntregas.ministerioId, ministerioId),
-      eq(repartoEntregas.jornadaId, jornadaId),
+      eq(repartoEntregas.jornadaId, jornada.id),
     );
 
     if (accion === 'quitar') {
@@ -293,7 +329,7 @@ async function tocarFila(
         .delete(repartoEntregas)
         .where(and(deHoy, eq(repartoEntregas.entregado, false)))
         .returning({ id: repartoEntregas.id });
-      return borradas.length;
+      return { n: borradas.length, ya: '' };
     }
 
     const entregar = accion === 'entregar';
@@ -301,15 +337,20 @@ async function tocarFila(
       .update(repartoEntregas)
       .set({ entregado: entregar, entregadoAt: entregar ? new Date() : null })
       .where(and(deHoy, eq(repartoEntregas.entregado, !entregar)))
-      .returning({ id: repartoEntregas.id });
-    return cambiadas.length;
+      .returning({ beneficiarioId: repartoEntregas.beneficiarioId });
+
+    const ya =
+      entregar && cambiadas[0]
+        ? await yaVinoEstaSemana(tx, ctx, ministerioId, cambiadas[0].beneficiarioId, jornada.hoy)
+        : '';
+    return { n: cambiadas.length, ya };
   });
 
-  if (tocadas === -1) volver(SIN_JORNADA, base);
+  if (tocadas.n === -1) volver(SIN_JORNADA, base);
 
   revalidatePath(base);
   const guardado = { entregar: 'entregado', deshacer: 'deshecho', quitar: 'quitado' }[accion];
-  redirect(`${base}?guardado=${guardado}#cola`);
+  redirect(`${base}?guardado=${guardado}${tocadas.ya}#cola`);
 }
 
 export async function entregarFila(ministerioId: string, entregaId: string) {
@@ -325,13 +366,13 @@ export async function quitarDeLaCola(ministerioId: string, entregaId: string) {
 }
 
 /**
- * «Se lo llevó sin apuntarse», más uno o menos uno.
+ * «Entregar sin inscribir»: más uno, o menos uno para corregir.
  *
  * Es lo que hace cumplible la regla de no condicionar la comida a los datos:
- * se entrega, se cuenta y no se apunta a nadie. El menos uno es para el dedo
- * que se equivocó, y no baja de cero.
+ * se entrega, se cuenta y no se guarda a nadie, ni un nombre ni una fila. El
+ * menos uno es para el dedo que se equivocó, y no baja de cero.
  */
-export async function contarSinApuntar(ministerioId: string, formData: FormData) {
+export async function contarSinInscribir(ministerioId: string, formData: FormData) {
   const ctx = await guarda(ministerioId);
   const base = hoy(ministerioId);
   const delta = campo(formData, 'cambio') === 'menos' ? -1 : 1;
@@ -364,7 +405,7 @@ export async function contarSinApuntar(ministerioId: string, formData: FormData)
   if (tocadas === 0) volver(SIN_JORNADA, base);
 
   revalidatePath(base);
-  redirect(`${base}?guardado=sin-apuntar`);
+  redirect(`${base}?guardado=${delta === 1 ? 'sin-inscribir' : 'sin-inscribir-menos'}`);
 }
 
 /**
@@ -376,7 +417,7 @@ export async function contarSinApuntar(ministerioId: string, formData: FormData)
  * --------------------------------------------------
  * La casilla dice que el voluntario le leyó el aviso y que dijo que sí. Sin
  * ella no hay consentimiento y no se guarda nada: el mensaje manda al
- * contador de «sin apuntar», que es donde va quien no quiere dar sus datos.
+ * botón «Entregar sin inscribir», que es donde va quien no quiere dar sus datos.
  */
 export async function apuntarEnLaPuerta(ministerioId: string, formData: FormData) {
   const ctx = await guarda(ministerioId);
@@ -391,7 +432,7 @@ export async function apuntarEnLaPuerta(ministerioId: string, formData: FormData
 
   if (!casilla(formData, 'aviso')) {
     volver(
-      'Sin su permiso no se le apunta. Puede llevarse la ayuda igual: súmalo en «Sin apuntar».',
+      'Sin su permiso no se le apunta. Puede llevarse la ayuda igual: pulsa «Entregar sin inscribir».',
       base,
       '#alta',
     );
@@ -416,12 +457,12 @@ export async function apuntarEnLaPuerta(ministerioId: string, formData: FormData
         })
         .returning({ id: repartoBeneficiarios.id, numero: repartoBeneficiarios.numero });
 
-      const jornadaId = await jornadaDeHoy(tx, ctx, ministerioId);
-      if (jornadaId) {
+      const jornada = await jornadaDeHoy(tx, ctx, ministerioId);
+      if (jornada) {
         await tx.insert(repartoEntregas).values({
           iglesiaId: ctx.iglesia.id,
           ministerioId,
-          jornadaId,
+          jornadaId: jornada.id,
           beneficiarioId: nueva!.id,
           registradoPorMiembroId: ctx.miembroId,
         });
@@ -518,8 +559,9 @@ export async function cambiarBaja(
  *
  * Se lleva su nombre, su teléfono, su número y el registro de su permiso. Sus
  * entregas pasadas se quedan, sin nadie detrás (ON DELETE SET NULL, `0041`):
- * las entregas de un mes ya dado al banco de alimentos no cambian. Lo único
- * que baja es «hogares distintos», y la pantalla lo dice antes de borrar.
+ * las entregas de un mes ya dado al banco de alimentos no cambian. Lo que sí
+ * baja, también en los meses pasados, es lo que se cuenta por hogar —hogares
+ * atendidos, personas alcanzadas y nuevos—, y la pantalla lo dice antes.
  */
 export async function borrarPersona(
   ministerioId: string,

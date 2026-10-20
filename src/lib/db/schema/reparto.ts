@@ -188,9 +188,10 @@ export const repartoJornadas = pgTable(
  * alguien del padrón —porque lo pide, o porque lleva un año sin venir— tiene que
  * llevarse su nombre, su teléfono y su número, y lo hace. Lo que no puede hacer
  * es cambiar las entregas de un mes que ya se le dio al banco de alimentos: la
- * fila se queda, sin nadie detrás, y sigue contando. Lo que sí baja es «hogares
- * distintos» de ese mes: sin persona no se sabe si dos filas eran el mismo hogar,
- * y se prefiere contar de menos a inventar a alguien.
+ * fila se queda, sin nadie detrás, y sigue contando. Lo que sí baja es lo que
+ * se cuenta POR HOGAR —hogares atendidos, personas alcanzadas, nuevos—: sin
+ * persona no se sabe si dos filas eran el mismo hogar, y se prefiere contar de
+ * menos a inventar a alguien.
  *
  * Por eso `personas_hogar` se COPIA aquí al entregar, en vez de leerse del
  * padrón: sin persona no habría de dónde sacarlo, y si el hogar crece el mes
