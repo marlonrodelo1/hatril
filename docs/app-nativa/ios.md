@@ -119,10 +119,10 @@ Hace falta **Xcode 26 o posterior** (lo exige Capacitor 8, y Apple no acepta
 compilaciones con un SDK anterior a iOS 26 desde el 28 de abril de 2026) y
 **Node 22 o posterior**. CocoaPods no hace falta.
 
-Instalar Xcode desde la App Store del Mac. Después, en la Terminal:
+Instalar Xcode desde la App Store del Mac. Después, en la Terminal, que las herramientas activas sean las de Xcode (`xcode-select --install` dejaría las sueltas, y el siguiente paso fallaría con «requires Xcode»; Xcode ya trae git):
 
 ```bash
-xcode-select --install
+sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 ```
 
 ```bash
