@@ -22,6 +22,13 @@
  * 2. Lanza @capacitor/assets para Android e iOS. Nunca para PWA, que es lo
  *    que hace sin decirle nada, y tocaría el manifiesto de la web.
  *
+ *    Con `npx --yes @capacitor/assets@3.0.5`, y NO como devDependency. Era
+ *    devDependency y arrastraba sharp 0.32.6, cuya instalación descarga
+ *    libvips de GitHub: el `npm ci` del Dockerfile lo hacía en cada despliegue,
+ *    para una herramienta que solo se usa aquí, a mano, cuando cambia el
+ *    icono. Fuera de package.json el despliegue no la ve, y la versión sigue
+ *    fija en esta línea.
+ *
  * 3. Escribe a mano el icono adaptable de Android (8 en adelante), en
  *    vectorial. El de @capacitor/assets son PNG de 48 dp estirados a 72: en
  *    una pantalla densa la H salía blanda. El vectorial es la misma H del SVG,
@@ -38,9 +45,8 @@
  * 5. Deja en Versiones/Android la vista previa y el icono de 512 que pide la
  *    ficha de Google Play.
  */
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
 const raiz = process.cwd();
@@ -48,10 +54,19 @@ const assets = join(raiz, 'assets');
 const res = join(raiz, 'android', 'app', 'src', 'main', 'res');
 const versiones = join(raiz, 'Versiones', 'Android');
 
-// El sharp de @capacitor/assets, que es devDependency: el de Next es opcional
-// y no tiene por qué estar.
-const requerir = createRequire(join(raiz, 'node_modules', '@capacitor', 'assets', 'package.json'));
-const sharp = requerir('sharp');
+/** La versión exacta: un `npx` sin ella bajaría la última, sea la que sea. */
+const ASSETS = '@capacitor/assets@3.0.5';
+
+// El sharp de Next, que lo trae como dependencia opcional para optimizar
+// imágenes. npm instala las opcionales salvo que se le diga lo contrario, así
+// que en un `npm ci` normal está; si no, se dice en vez de reventar a medias.
+let sharp;
+try {
+  ({ default: sharp } = await import('sharp'));
+} catch {
+  console.error('\n✗ No encuentro sharp en node_modules (lo trae Next como opcional). Prueba con `npm ci`.\n');
+  process.exit(1);
+}
 
 const CREMA = '#FAF9F5';
 
@@ -203,8 +218,12 @@ async function vistaPrevia() {
 
 await rasterizar();
 
-const cli = join(raiz, 'node_modules', '@capacitor', 'assets', 'bin', 'capacitor-assets');
-execFileSync(process.execPath, [cli, 'generate', '--android', '--ios'], { stdio: 'inherit' });
+// La línea entera y con shell: en Windows `npx` es un .cmd (ver android.mjs).
+const generar = spawnSync(`npx --yes ${ASSETS} generate --android --ios`, { shell: true, stdio: 'inherit' });
+if (generar.status !== 0) {
+  console.error(`\n✗ Falló ${ASSETS}. La primera vez descarga el paquete: hace falta red.\n`);
+  process.exit(1);
+}
 
 adaptableAndroid();
 arranqueIos();
