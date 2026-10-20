@@ -223,9 +223,23 @@ Y los otros siete hallazgos:
   - Las nueve pantallas nuevas o tocadas miden 375 px, sin nada por fuera
     (el «Cancelar» de contar se salía hasta 474 y se arregló).
 
+**Tras la revisión y con `main` dentro** (app nativa, hatril.com y «quien
+solo lidera empieza en la app»), otra vez en verde: tsc, eslint, build,
+`test:aislamiento` (con los cuatro casos nuevos de la 0045: HT101 con la ficha
+propia, aprobar una solicitud sigue enlazando, la base pone la cuenta de quien
+cuenta, HT131 con la ficha reapuntada) y `test:puertas` (67 rutas, 0 fallos).
+En el navegador a 375 px: el resumen plegado de contar, «Descartar…» con su
+zona roja y el borrado real, archivar «Alimentos» con un arqueo esperando
+(rechazado, el fondo sigue activo), la caja por defecto «Efectivo» con
+«Cuenta Bancolombia» delante, el `select` de «Es el fondo de» a 16 px, y un
+tesorero sin ministerio (`miembro@` con el permiso un momento) que pulsa
+«Apuntar» con Finanzas recién apagada: acaba en el muro con «No se ha
+guardado…» y el libro sin tocar. Permisos y Finanzas, devueltos a como estaban.
+
 **Queda en la demo de Betania**, a propósito: el fondo «Alimentos» vinculado a
-Acción social, sus dos movimientos y un arqueo confirmado del 20-oct (contó
-Noemí, confirmó Brandon) con sus dos ingresos en General. Lo confirmado no se
+Acción social, sus dos movimientos, la caja «Cuenta Bancolombia» y un arqueo
+confirmado del 20-oct (contó Noemí, confirmó Brandon) con sus dos ingresos en
+General. Lo confirmado no se
 puede borrar desde una sesión (HT130); si hiciera falta, desde `dbAdmin`.
 
 ---
