@@ -106,19 +106,23 @@ export function FormularioReunion({
         {repetirHasta && !reunion && (
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="semanas">Repetir cada semana</Label>
-            <select
-              id="semanas"
-              name="semanas"
-              defaultValue="1"
-              className="h-[42px] w-full min-w-0 rounded-lg border border-input bg-surface-alt px-2.5 text-[15px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16 sm:max-w-[280px]"
-            >
-              <option value="1">No, solo ese día</option>
-              {Array.from({ length: repetirHasta - 1 }, (_, i) => i + 2).map((n) => (
-                <option key={n} value={n}>
-                  Durante {n} semanas
-                </option>
-              ))}
-            </select>
+            {/* En la misma rejilla que «Día» y «Hora», para que el desplegable
+                acabe donde acaba el día y no a un ancho suyo. */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <select
+                id="semanas"
+                name="semanas"
+                defaultValue="1"
+                className="h-[42px] w-full min-w-0 rounded-lg border border-input bg-surface-alt px-2.5 text-[15px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
+              >
+                <option value="1">No, solo ese día</option>
+                {Array.from({ length: repetirHasta - 1 }, (_, i) => i + 2).map((n) => (
+                  <option key={n} value={n}>
+                    Durante {n} semanas
+                  </option>
+                ))}
+              </select>
+            </div>
             <p className="t-label text-muted-foreground">
               Se apunta una vez por semana, el mismo día y a la misma hora, y
               cada una se puede cambiar o borrar sin tocar las demás. Si alguna
