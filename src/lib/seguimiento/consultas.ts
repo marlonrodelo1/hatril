@@ -109,6 +109,13 @@ export type PersonaEnSeguimiento = {
    * `null` si no está en el embudo de nuevos. Si está, NO sale en ausentes:
    * a quien acaba de llegar no se le llama por faltar, se le llama por haber
    * venido.
+   *
+   * Lo que llega con la tanda de células y la ruta de crecimiento va AL LADO
+   * de `etapa`, no dentro: `celula` (a qué grupo se le asignó) y `ruta` (los
+   * pasos que ha dado: encuentro, bautismo, escuela de líderes). La etapa se
+   * calcula de las asistencias; esos dos son hechos que alguien apunta, con su
+   * tabla y su migración, y mezclarlos haría que un dato guardado pisara uno
+   * calculado. La pantalla ya tiene su sitio: `Insignias` en `nuevos/page.tsx`.
    */
   nuevo: {
     etapa: EtapaNuevo;

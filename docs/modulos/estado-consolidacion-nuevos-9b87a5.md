@@ -56,6 +56,13 @@ será un módulo con su interruptor. Está contado en la cabecera de
 `nuevos/page.tsx`. En la pantalla es un selector «Ausentes · N / Nuevos · N»
 debajo de las pestañas del ministerio.
 
+**Preparada para la ruta de crecimiento y la célula**, que llegan en una tanda
+con migración. No son etapas (la etapa se calcula de las asistencias; la ruta y
+la célula son hechos que alguien apunta), así que no entran en los grupos: son
+insignias de cada fila, en el componente `Insignias` de `nuevos/page.tsx`, y
+campos `celula` y `ruta` al lado de `etapa` en `PersonaEnSeguimiento.nuevo`.
+Los dos sitios lo dicen en un comentario.
+
 **3. Cifras para el pastor en `/panel/hoy`**: llegaron este mes, han vuelto (de
 cuántos en nuevos), nuevos sin llamar y faltan 3 o más reuniones, con enlace.
 Solo números. Las ve quien puede abrir al menos un ministerio con seguimiento
@@ -101,6 +108,24 @@ en verde. En el navegador, contra la base, con los datos de
   seguimiento en su ministerio, sin bloque en Hoy, y la URL directa rebota con
   «No tienes acceso». Con él, el seguimiento de Alabanza (que no lleva) rebota.
 
+**Repaso visual** (20-oct, a petición de Marlon), con capturas a 375 px y en
+escritorio al lado de ausentes, turnos e Inicio:
+
+- La fila de «Nuevos» llevaba las insignias en un lateral: a 375 px dejaba el
+  nombre cortado en «Rosa Medi…» y el teléfono desbordado. Ahora van en una fila
+  dentro de la columna, como la tarjeta de turnos (`rounded-md px-2 py-0.5`,
+  12,5 px), y el teléfono se esconde en el móvil porque se llama desde la ficha.
+  «Sin acompañante» pasó a «Sin asignar», la palabra de ausentes, que además
+  cabe al lado de «Sin contactar».
+- Cabeceras de grupo con `px-1` como en turnos, y el estado vacío con su botón
+  `outline` que dice qué hacer.
+- Las cifras de Inicio copian a «La caja»: tarjeta entera como enlace,
+  `t-micro` y cifra a 22 px. Antes iban a 26 px con un botón aparte. La cuarta
+  etiqueta ocupaba dos líneas y desalineaba su cifra: ahora es «Faltan 3 o más»
+  con «reuniones seguidas» debajo.
+- Solo tokens de `globals.css` (comprobado con grep: ni hex, ni blancos, ni
+  sombras, ni degradados) e iconos de lucide. Un botón naranja por pantalla.
+
 **Sin ejecutar:** el aviso global «en 90 días no se ha pasado lista». Betania
 tiene listas y Sion está detrás del muro de suscripción, que no he tocado porque
 es dato de prueba de otras sesiones. Está leído, no pulsado.
@@ -141,6 +166,9 @@ es dato de prueba de otras sesiones. Está leído, no pulsado.
   tiene su propio tarro. `127.0.0.1` no: Next lo normaliza a `localhost` al
   montar `request.url`. `/auth/confirm` redirige igualmente a `localhost`, pero
   las cookies ya quedan en el subdominio: basta con navegar a mano después.
+- **`npm run build` y después `next dev` sobre la misma `.next` da 404** en
+  rutas que existen (aquí, `seguimiento/nuevos`), en 30 ms y sin error en el
+  log. Borrar `.next` antes de volver a arrancar el servidor de desarrollo.
 - **El pooler en modo sesión (5432) admite 15 clientes** y cada servidor de
   desarrollo abre hasta 10: con cinco servidores salta `EMAXCONNSESSION`. Mi
   `.env.local` (sin commitear) apunta al 6543, modo transacción, que la app ya

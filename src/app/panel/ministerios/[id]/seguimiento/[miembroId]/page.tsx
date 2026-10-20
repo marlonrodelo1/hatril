@@ -161,8 +161,8 @@ export default async function PersonaEnSeguimientoPage({
           <div className="flex flex-col gap-0.5">
             <h2 className="t-subtitulo">Quién le acompaña</h2>
             <p className="t-label text-muted-foreground">
-              Del equipo de {ministerio.nombre}. Sin un nombre al lado, una lista
-              de ausentes no la llama nadie porque todos suponen que llama otro.
+              Del equipo de {ministerio.nombre}. Sin un nombre al lado no llama
+              nadie, porque todos suponen que llama otro.
             </p>
           </div>
 

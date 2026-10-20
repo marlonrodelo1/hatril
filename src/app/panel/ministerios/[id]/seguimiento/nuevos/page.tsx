@@ -86,7 +86,7 @@ export default async function NuevosPage({
         volver={{ href: '/panel/ministerios', texto: 'Ministerios' }}
       >
         <Button render={<Link href={`${base}/nuevos/alta`} />}>
-          <UserPlus strokeWidth={1.9} />
+          <UserPlus strokeWidth={1.8} />
           Apuntar a alguien nuevo
         </Button>
       </CabeceraPanel>
@@ -151,9 +151,15 @@ export default async function NuevosPage({
             <p className="max-w-[60ch] text-[14.5px] leading-relaxed text-muted-foreground">
               Aquí sale quien tiene la ficha en Visitante o Nuevo y llegó hace
               menos de {DIAS_EN_NUEVOS} días. Cuando alguien venga por primera
-              vez, apúntalo con el botón de arriba y le seguirás la pista desde
-              aquí.
+              vez, apúntalo con su teléfono y verás aquí si vuelve.
             </p>
+            <Button
+              variant="outline"
+              render={<Link href={`${base}/nuevos/alta`} />}
+            >
+              <UserPlus strokeWidth={1.8} />
+              Apuntar a la primera persona
+            </Button>
           </div>
         ) : (
           <>
@@ -172,12 +178,12 @@ export default async function NuevosPage({
               if (delGrupo.length === 0) return null;
 
               return (
-                <section key={g.etapa} className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-0.5">
+                <section key={g.etapa} className="flex flex-col gap-2.5">
+                  <div className="flex flex-col gap-1 px-1">
                     <h2 className="t-micro">
                       {g.titulo} · {delGrupo.length}
                     </h2>
-                    <p className="text-[13px] text-muted-foreground">
+                    <p className="text-pretty text-[13px] leading-snug text-muted-foreground">
                       {g.etapa === 'se_queda'
                         ? editaFichas
                           ? 'Que ya sea de la casa lo decides tú: cámbiale el estado a Miembro en su ficha de Miembros, y saldrá de aquí.'
@@ -211,6 +217,10 @@ export default async function NuevosPage({
  * Primero quien solo vino una vez: es la llamada que más cuenta, y la que antes
  * caduca. Quien ya se queda va al final porque es quien menos necesita al
  * equipo.
+ *
+ * Solo etapas CALCULADAS de las asistencias. La ruta de crecimiento y la célula
+ * no son grupos de aquí sino insignias de cada fila (ver `Insignias`): quien se
+ * queda puede llevar ya «Encuentro» y una célula, y seguir en este grupo.
  */
 const GRUPOS: { etapa: EtapaNuevo; titulo: string; ayuda: string }[] = [
   {
@@ -249,68 +259,32 @@ function Fila({
     <li>
       <Link
         href={href}
-        className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4 text-foreground no-underline transition-colors hover:border-foreground/20 hover:bg-surface-alt hover:no-underline md:px-5"
+        className="flex items-center gap-3.5 rounded-xl border border-border bg-surface p-4 text-foreground no-underline transition-colors hover:border-foreground/20 hover:bg-surface-alt hover:no-underline md:gap-4 md:px-5"
       >
         <span
-          className={`flex size-10 flex-none items-center justify-center rounded-full text-[12px] font-bold ${ESTADOS[p.estado].avatar}`}
+          className={`flex size-10 flex-none items-center justify-center self-start rounded-full text-[12px] font-bold ${ESTADOS[p.estado].avatar}`}
         >
           {iniciales(p.nombre)}
         </span>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="truncate text-[15.5px] font-bold tracking-[-0.015em]">
-            {p.nombre}
-          </span>
-          <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-muted-foreground">
-            <span>
-              Llegó el {formatearFechaLarga(p.llegada)}
-              {dias > 0 && ` · hace ${dias} ${dias === 1 ? 'día' : 'días'}`}
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="truncate text-[16px] font-bold tracking-[-0.015em]">
+              {p.nombre}
             </span>
-            {p.telefono && (
-              <span className="inline-flex items-center gap-1">
-                <Phone className="size-3.5" strokeWidth={1.8} />
-                {p.telefono}
-              </span>
-            )}
-          </span>
-          <span className="text-[13px] text-muted-foreground">
+            <span className="text-[13px] text-muted-foreground first-letter:uppercase">
+              {dias === 0
+                ? 'Llegó hoy'
+                : `Llegó hace ${dias} ${dias === 1 ? 'día' : 'días'}, el ${formatearFechaLarga(p.llegada)}`}
+            </span>
+          </div>
+
+          <Insignias persona={p} />
+
+          <span className="text-pretty text-[13px] leading-snug text-muted-foreground">
             {detalleDeEtapa(p, hayListas)}
           </span>
         </div>
-
-        <div className="hidden flex-none flex-col items-end gap-1 sm:flex">
-          {p.acompana ? (
-            <span className="text-[13px] text-muted-foreground">
-              Le acompaña{' '}
-              <strong className="font-semibold text-foreground">
-                {p.acompana.nombre}
-              </strong>
-            </span>
-          ) : (
-            <span className="rounded-md border border-dashed border-border px-2 py-0.5 text-[12px] font-semibold text-muted-foreground">
-              Sin asignar
-            </span>
-          )}
-          {p.ultimoContacto ? (
-            <span
-              className={`rounded px-1.5 py-0.5 text-[11.5px] font-semibold ${RESULTADOS[p.ultimoContacto.resultado].badge}`}
-            >
-              {RESULTADOS[p.ultimoContacto.resultado].etiqueta}
-            </span>
-          ) : null}
-        </div>
-
-        {/*
-         * «Sin contactar» va fuera del bloque que se esconde en el móvil: es lo
-         * único de la fila que pide algo, y el móvil es donde se va a mirar
-         * después del culto. Con icono y no solo con color, como los errores.
-         */}
-        {!p.ultimoContacto && (
-          <span className="inline-flex flex-none items-center gap-1 rounded-md bg-badge-warning-bg px-2 py-1 text-[12px] font-semibold text-badge-warning-fg">
-            <CircleAlert className="size-3.5" strokeWidth={2} aria-hidden />
-            Sin contactar
-          </span>
-        )}
 
         <ChevronRight
           className="size-4 flex-none text-disabled-text"
@@ -319,6 +293,63 @@ function Fila({
         />
       </Link>
     </li>
+  );
+}
+
+/**
+ * Lo que pide algo, en una fila de insignias que se parte en el móvil.
+ *
+ * Dentro de la columna y no en un lateral, como en la tarjeta de turnos: a
+ * 375 px un lateral deja el nombre en una tira de tres palabras, y esconderlo en
+ * el móvil se lleva justo lo que se mira después del culto.
+ *
+ * AQUÍ ENTRA LO QUE VIENE
+ * -----------------------
+ * La célula a la que se le asigne y los pasos de la ruta de crecimiento
+ * (encuentro, bautismo, escuela de líderes) llegan en una tanda con migración.
+ * Son insignias de esta fila, una por dato, en este orden: primero lo que pide
+ * una llamada, después quién le lleva, después dónde está. No son etapas: la
+ * etapa se calcula de las asistencias y la ruta son hechos que alguien apunta,
+ * así que no se mezclan en `GRUPOS`.
+ */
+function Insignias({ persona: p }: { persona: PersonaNueva }) {
+  return (
+    <span className="flex flex-wrap items-center gap-1.5 text-[12.5px] font-semibold">
+      {/* Con icono y no solo con color, como los errores: es lo único de la
+          fila que pide algo. */}
+      {p.ultimoContacto ? (
+        <span
+          className={`rounded-md px-2 py-0.5 ${RESULTADOS[p.ultimoContacto.resultado].badge}`}
+        >
+          {RESULTADOS[p.ultimoContacto.resultado].etiqueta}
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1 rounded-md bg-badge-warning-bg px-2 py-0.5 text-badge-warning-fg">
+          <CircleAlert className="size-3.5" strokeWidth={2} aria-hidden />
+          Sin contactar
+        </span>
+      )}
+
+      {p.acompana ? (
+        <span className="rounded-md bg-badge-neutral-bg px-2 py-0.5 text-badge-neutral-fg">
+          Le acompaña {p.acompana.nombre}
+        </span>
+      ) : (
+        // «Sin asignar», como en ausentes, y sin color de alarma: que nadie la
+        // acompañe todavía es lo normal el primer día.
+        <span className="rounded-md border border-dashed border-border px-2 py-0.5 text-muted-foreground">
+          Sin asignar
+        </span>
+      )}
+
+      {/* En el móvil sobra: se llama desde la ficha, que tiene el botón. */}
+      {p.telefono && (
+        <span className="hidden items-center gap-1 px-1 font-medium text-muted-foreground sm:inline-flex">
+          <Phone className="size-3.5" strokeWidth={1.8} aria-hidden />
+          {p.telefono}
+        </span>
+      )}
+    </span>
   );
 }
 
