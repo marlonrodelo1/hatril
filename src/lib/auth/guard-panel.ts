@@ -13,9 +13,11 @@ import {
 import {
   esPastor,
   puede,
+  puedeGestionarDesdeDentro,
   puedeGestionarMinisterio,
   type Permiso,
 } from '@/lib/auth/permisos';
+import { tieneModulo, type ModuloId } from '@/lib/ministerios/modulos';
 import { createClient } from '@/lib/supabase/server';
 import { exigirPoderEscribir } from '@/lib/suscripcion/muro';
 
@@ -119,6 +121,25 @@ export async function requirePermiso(permiso: Permiso): Promise<UserContext> {
 }
 
 /**
+ * Para las dos guards de ministerio, la de página y la de action.
+ *
+ * `desdeDentro` estrecha la puerta a pastor y a quien lidera ESTE equipo, sin
+ * el camino de `gestionar_ministerios`. Es la de los módulos cuya RLS es por
+ * equipo y no por iglesia; el porqué, en `puedeGestionarDesdeDentro`.
+ */
+export type OpcionesMinisterio = { desdeDentro?: boolean };
+
+function puedeEntrarAlMinisterio(
+  ctx: UserContext,
+  ministerioId: string,
+  opciones?: OpcionesMinisterio,
+): boolean {
+  return opciones?.desdeDentro
+    ? puedeGestionarDesdeDentro(ctx, ministerioId)
+    : puedeGestionarMinisterio(ctx, ministerioId);
+}
+
+/**
  * Exige poder gestionar ESTE ministerio.
  *
  * A diferencia de `requirePermiso`, no basta con mirar el mapa de permisos: hay
@@ -130,10 +151,11 @@ export async function requirePermiso(permiso: Permiso): Promise<UserContext> {
  */
 export async function requireGestionMinisterio(
   ministerioId: string,
+  opciones?: OpcionesMinisterio,
 ): Promise<UserContext> {
   const ctx = await requireIglesia();
   if (
-    !puedeGestionarMinisterio(ctx, ministerioId) ||
+    !puedeEntrarAlMinisterio(ctx, ministerioId, opciones) ||
     !(await esMinisterioDeSuIglesia(ctx, ministerioId))
   ) {
     redirect('/panel/ministerios?error=' + encodeURIComponent(MENSAJE_SIN_PERMISO));
@@ -248,11 +270,12 @@ export async function requirePermisoAccion(
 export async function requireGestionMinisterioAccion(
   ministerioId: string,
   destinoError = '/panel/ministerios',
+  opciones?: OpcionesMinisterio,
 ): Promise<UserContext> {
   const ctx = await requireIglesiaAccion({ sinMuro: true });
   exigirPoderEscribir(ctx, destinoError);
   if (
-    !puedeGestionarMinisterio(ctx, ministerioId) ||
+    !puedeEntrarAlMinisterio(ctx, ministerioId, opciones) ||
     !(await esMinisterioDeSuIglesia(ctx, ministerioId))
   ) {
     redirect(
@@ -261,4 +284,55 @@ export async function requireGestionMinisterioAccion(
     );
   }
   return ctx;
+}
+
+/**
+ * Exige que la herramienta esté encendida en ESTE ministerio.
+ *
+ * Va DETRÁS de `requireGestionMinisterioAccion`, en cada action de módulo, y
+ * no sustituye a ninguna de las dos cosas que ya hay:
+ *
+ *   - El `layout.tsx` de cada módulo da 404 con la herramienta apagada, pero un
+ *     layout no corre en una server action. Hasta que existió esto, quien lleva
+ *     un equipo podía escribir en la agenda o el seguimiento apagados con un
+ *     POST fabricado. Lo escrito no se veía ni se podía borrar hasta que alguien
+ *     volviera a encender el módulo, y entonces aparecía de golpe.
+ *   - `requireGestionMinisterioAccion` dice quién puede tocar el equipo, no
+ *     qué herramientas tiene. Son dos preguntas, y la segunda la decide el
+ *     pastor desde `/panel/modulos` y la pantalla de editar.
+ *
+ * Lee la columna en su propia consulta, contra la clave primaria y acotada a
+ * la iglesia del contexto, igual que `esMinisterioDeSuIglesia`: un id de otra
+ * congregación sale como «apagado», que es lo que es para quien pregunta.
+ *
+ * Vuelve al ministerio y no a la herramienta, que con el módulo apagado da 404.
+ */
+export async function exigirModulo(
+  ctx: UserContext,
+  ministerioId: string,
+  modulo: ModuloId,
+  destinoError = `/panel/ministerios/${ministerioId}`,
+): Promise<void> {
+  const encendido =
+    z.string().uuid().safeParse(ministerioId).success &&
+    (await withUser(ctx.user.id, async (tx) => {
+      const [fila] = await tx
+        .select({ modulos: ministerios.modulos })
+        .from(ministerios)
+        .where(
+          and(
+            eq(ministerios.id, ministerioId),
+            eq(ministerios.iglesiaId, ctx.iglesia.id),
+          ),
+        )
+        .limit(1);
+      return fila ? tieneModulo(fila.modulos, modulo) : false;
+    }));
+
+  if (!encendido) {
+    redirect(
+      `${destinoError}?error=` +
+        encodeURIComponent('Esa herramienta no está encendida en este ministerio.'),
+    );
+  }
 }

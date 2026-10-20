@@ -3,6 +3,7 @@ import {
   CalendarClock,
   HeartHandshake,
   ListMusic,
+  PackageOpen,
   type LucideIcon,
   Radio,
 } from 'lucide-react';
@@ -35,7 +36,7 @@ import { z } from 'zod';
  *
  * SOLO ESTÁ LO QUE FUNCIONA
  * -------------------------
- * Cuatro módulos, y son los cuatro que existen de verdad. Material del equipo,
+ * Seis módulos, y son los seis que existen de verdad. Material del equipo,
  * inventario, vínculo con las familias y peticiones de oración están decididos
  * y NO se declaran aquí hasta que se puedan pulsar. Un interruptor que enciende
  * una pestaña vacía hace parecer roto un producto que funciona — la misma regla
@@ -87,6 +88,21 @@ export const MODULOS_MINISTERIO = [
     descripcion:
       'Quién lleva tiempo sin venir, quién le acompaña y qué se ha hablado con esa persona.',
     Icono: HeartHandshake,
+  },
+  {
+    /*
+     * «Reparto» y no «Entrega de alimentos»: la misma puerta sirve para ropa o
+     * kits escolares sin tocar código. La descripción sí habla de comida, que es
+     * lo que hace casi todo el que lo enciende.
+     *
+     * Es el único módulo con datos de personas que NO son de la congregación, y
+     * por eso su RLS es por ministerio y no por iglesia (`0042`).
+     */
+    id: 'reparto',
+    nombre: 'Reparto',
+    descripcion:
+      'La puerta del reparto de alimentos: quién ha venido hoy, a quién se le ha entregado y cuánto se repartió cada mes.',
+    Icono: PackageOpen,
   },
   {
     /*
