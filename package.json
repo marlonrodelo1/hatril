@@ -14,6 +14,8 @@
     "test:aislamiento": "tsx --env-file-if-exists=.env.local scripts/test-aislamiento.ts",
     "test:puertas": "node --env-file-if-exists=.env.local scripts/test-puertas.mjs",
     "app:android": "node scripts/app/android.mjs",
+    "app:ios": "node scripts/app/ios.mjs",
+    "app:version": "node scripts/app/version.mjs",
     "app:iconos": "node scripts/app/iconos.mjs",
     "capacitor:copy:after": "node scripts/app/destino.mjs"
   },

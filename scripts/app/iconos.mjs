@@ -4,8 +4,8 @@
  *
  *   npm run app:iconos
  *
- * Lanzarlo de nuevo tras cambiar el SVG, y en el Mac después de
- * `npx cap add ios` para que salgan también los de iOS.
+ * Lanzarlo de nuevo tras cambiar el SVG. Funciona en Windows: los iconos de
+ * iOS son ficheros del repo y no hace falta el Mac para generarlos.
  *
  * QUÉ HACE
  * --------
@@ -28,7 +28,14 @@
  *    nítida a cualquier tamaño, y sirve además de icono monocromo para los
  *    iconos temáticos de Android 13.
  *
- * 4. Deja en Versiones/Android la vista previa y el icono de 512 que pide la
+ * 4. Quita del arranque de iOS los PNG de ejemplo de la plantilla de
+ *    Capacitor: @capacitor/assets escribe los suyos al lado y los viejos se
+ *    quedan sueltos, sin nadie que los use, con Xcode avisando de ellos.
+ *
+ *    El icono de iOS sale sin canal alfa, que es lo que exige App Store
+ *    Connect: lo aplana @capacitor/assets (comprobado con sharp: 3 canales).
+ *
+ * 5. Deja en Versiones/Android la vista previa y el icono de 512 que pide la
  *    ficha de Google Play.
  */
 import { execFileSync } from 'node:child_process';
@@ -135,6 +142,14 @@ function adaptableAndroid() {
   }
 }
 
+function arranqueIos() {
+  const carpeta = join(raiz, 'ios', 'App', 'App', 'Assets.xcassets', 'Splash.imageset');
+  if (!existsSync(carpeta)) return;
+  for (const f of readdirSync(carpeta).filter((f) => /^splash-2732x2732(-\d)?\.png$/.test(f))) {
+    rmSync(join(carpeta, f));
+  }
+}
+
 /** El adaptable tal como lo pinta un lanzador: la zona visible, con su máscara. */
 async function adaptable(lado, mascara) {
   const forma =
@@ -192,9 +207,7 @@ const cli = join(raiz, 'node_modules', '@capacitor', 'assets', 'bin', 'capacitor
 execFileSync(process.execPath, [cli, 'generate', '--android', '--ios'], { stdio: 'inherit' });
 
 adaptableAndroid();
+arranqueIos();
 await vistaPrevia();
 
 console.log('\nIconos y arranque generados. Vista previa en Versiones/Android/icono-vista-previa.png');
-if (!existsSync(join(raiz, 'ios', 'App'))) {
-  console.log('iOS todavía no existe: se generarán al volver a lanzarlo después de `npx cap add ios`.');
-}
