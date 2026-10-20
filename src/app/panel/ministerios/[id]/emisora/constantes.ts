@@ -5,7 +5,7 @@
  * funciones async: exportar una constante desde ahí rompe el build.
  */
 export const CONFIRMACIONES: Record<string, string> = {
-  guardado: 'Guardado. La congregación ya lo ve en la aplicación.',
+  guardado: 'Guardado. Tu congregación ya lo ve en la aplicación.',
   'guardado-sin-senal':
     'Guardado. El reproductor no aparecerá en la aplicación hasta que pongas la dirección de la señal.',
   'fuera-de-la-web':

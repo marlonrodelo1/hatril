@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertCircle, ChevronUp, Loader2, Pause, Play } from 'lucide-react';
+import { AlertCircle, ChevronUp, Pause, Play } from 'lucide-react';
 
 import type { Programa } from '@/lib/emisora/config';
 import { servidorDe } from '@/lib/emisora/config';
@@ -9,6 +9,7 @@ import { Hoja } from '@/components/hoja';
 import { ProgramacionSemanal } from '@/components/radio/programacion';
 import { useAhora } from '@/components/radio/use-ahora';
 import { useSenal } from '@/components/radio/use-senal';
+import { Button } from '@/components/ui/button';
 
 /**
  * La radio de la iglesia, en una línea encima de las pestañas.
@@ -79,23 +80,26 @@ export function MiniReproductor({
         {/* Sin `crossOrigin` y con `preload="none"`: ver `use-senal.ts`. */}
         <audio ref={audio} preload="none" />
 
-        <button
+        {/* El botón carbón del sistema y no uno pintado aquí: el naranja es
+            de la acción principal de cada pantalla, y esta línea sale en
+            todas. Sin icono girando al conectar: lo dice la segunda línea. */}
+        <Button
           type="button"
+          variant="secondary"
+          size="icon"
           onClick={() => {
             setYaPulso(true);
             alternar();
           }}
           aria-label={suena ? `Parar ${nombre}` : `Escuchar ${nombre} en directo`}
-          className="flex size-10 flex-none cursor-pointer items-center justify-center rounded-full bg-support text-white outline-none transition-colors hover:bg-support-hover focus-visible:ring-3 focus-visible:ring-ring/20"
+          className="flex-none rounded-full"
         >
-          {estado === 'conectando' ? (
-            <Loader2 className="size-[18px] animate-spin" strokeWidth={2} />
-          ) : estado === 'sonando' ? (
+          {suena ? (
             <Pause className="size-[18px]" strokeWidth={1.8} fill="currentColor" />
           ) : (
             <Play className="ml-0.5 size-[18px]" strokeWidth={1.8} fill="currentColor" />
           )}
-        </button>
+        </Button>
 
         <button
           type="button"
@@ -104,16 +108,8 @@ export function MiniReproductor({
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg py-0.5 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/20"
         >
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="flex min-w-0 items-center gap-1.5 text-[13.5px] font-bold leading-tight">
-              {estado === 'sonando' && (
-                <span
-                  aria-hidden
-                  className="size-[7px] flex-none rounded-full bg-primary motion-safe:animate-pulse"
-                />
-              )}
-              <span className="truncate">
-                {ahora ? `${ahora.nombre} · ${nombre}` : `${nombre} · En directo`}
-              </span>
+            <span className="truncate text-[13.5px] font-bold leading-tight">
+              {ahora ? `${ahora.nombre} · ${nombre}` : `${nombre} · En directo`}
             </span>
 
             <span className="flex min-w-0 items-center gap-1 text-[12px] leading-tight text-muted-foreground">
@@ -126,8 +122,10 @@ export function MiniReproductor({
                   />
                   <span className="truncate text-danger">{error}</span>
                 </>
+              ) : estado === 'conectando' ? (
+                <span className="truncate">Conectando con {servidor}…</span>
               ) : !yaPulso ? (
-                <span className="truncate">Al pulsar ▶ te conectas a {servidor}</span>
+                <span className="truncate">Al escuchar te conectas a {servidor}</span>
               ) : luego ? (
                 <span className="truncate">
                   Luego: {luego.programa.nombre}, {luego.cuando}
@@ -167,7 +165,7 @@ export function MiniReproductor({
           )}
 
           <p className="text-[12.5px] leading-relaxed text-muted-foreground">
-            Al pulsar ▶, tu teléfono se conecta directamente a{' '}
+            Al darle a escuchar, tu teléfono se conecta directamente a{' '}
             <span className="font-semibold text-foreground">{servidor}</span>, el
             servidor de la emisora que ha elegido tu iglesia, y ese servidor ve tu
             dirección IP como la ve cualquier web que visitas. Hatril no apunta

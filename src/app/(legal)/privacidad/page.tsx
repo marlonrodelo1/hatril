@@ -309,7 +309,7 @@ export default function PrivacidadPage() {
         </Recuadro>
         <P>
           <strong className="font-semibold">Si tu iglesia tiene radio.</strong>{' '}
-          Al pulsar ▶ en su reproductor, tu teléfono o tu navegador se conecta
+          Al darle a escuchar en su reproductor, tu teléfono o tu navegador se conecta
           directamente al servidor de la emisora. Ese servidor es de un tercero que
           elige tu iglesia, no nosotros, y puede estar fuera de la Unión Europea;
           recibe tu dirección IP, como la recibe cualquier web que visitas. Hasta
@@ -318,7 +318,7 @@ export default function PrivacidadPage() {
           <strong className="font-semibold">
             Hatril no apunta quién escucha
           </strong>
-          : no hay ningún registro de oyentes, y pulsar ▶ no se apunta en
+          : no hay ningún registro de oyentes, y darle a escuchar no se apunta en
           ninguna parte ni se le cuenta a nadie.
         </P>
         <P>

@@ -1,18 +1,25 @@
 'use client';
 
-import { AlertCircle, Loader2, Pause, Play } from 'lucide-react';
+import { Pause, Play } from 'lucide-react';
 
 import { servidorDe, type Programa } from '@/lib/emisora/config';
+import { Aviso } from '@/components/aviso';
 import { ProgramacionSemanal } from '@/components/radio/programacion';
 import { useAhora } from '@/components/radio/use-ahora';
 import { useSenal } from '@/components/radio/use-senal';
+import { Button } from '@/components/ui/button';
 
 /**
  * «Radio en directo» en la web pública de la iglesia.
  *
  * Solo llega aquí si el pastor la marcó para la web y la web está publicada
- * (`radioPublica()`). Lo que se pinta es el nombre, el botón, qué suena y la
- * parrilla; nada de quién presenta.
+ * (`radioPublica()`). Lo que se pinta es el nombre, el botón, qué suena y de
+ * qué va, y la parrilla; nada de quién presenta.
+ *
+ * Una tarjeta blanca con borde, como el resto de la página. La primera versión
+ * era un bloque carbón con letra blanca, copiado de «Lo próximo» de los
+ * horarios: dos bloques oscuros en la misma página competían entre sí, y el de
+ * la radio no tenía más motivo para serlo que parecerse al otro.
  *
  * El aviso del servidor va SIEMPRE a la vista, no solo antes del primer play
  * como en `/mi`: quien llega a esta página no ha aceptado nada con nadie, y
@@ -43,52 +50,60 @@ export function RadioIglesia({
   const activo = estado === 'sonando' || estado === 'conectando';
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-support p-5 text-white sm:flex-row sm:items-center sm:gap-5 md:p-7">
-        {/* Sin `crossOrigin` y con `preload="none"`: ver `use-senal.ts`. */}
-        <audio ref={audio} preload="none" />
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-4 rounded-2xl border border-border bg-surface p-5 md:gap-5 md:p-6">
+          {/* Sin `crossOrigin` y con `preload="none"`: ver `use-senal.ts`. */}
+          <audio ref={audio} preload="none" />
 
-        <button
-          type="button"
-          onClick={() => alternar()}
-          aria-label={activo ? `Parar ${nombre}` : `Escuchar ${nombre} en directo`}
-          // Botón claro sobre el bloque oscuro, y no naranja: el naranja de esta
-          // página ya es «Cómo llegar».
-          className="flex size-16 flex-none cursor-pointer items-center justify-center rounded-full bg-surface text-foreground outline-none transition-colors hover:bg-surface-alt focus-visible:ring-3 focus-visible:ring-white/40"
-        >
-          {estado === 'conectando' ? (
-            <Loader2 className="size-7 animate-spin" strokeWidth={2} />
-          ) : estado === 'sonando' ? (
-            <Pause className="size-7" strokeWidth={1.6} fill="currentColor" />
-          ) : (
-            <Play className="ml-1 size-7" strokeWidth={1.6} fill="currentColor" />
-          )}
-        </button>
+          {/* Carbón y no naranja: el naranja de esta página es «Cómo llegar». */}
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            onClick={() => alternar()}
+            aria-label={activo ? `Parar ${nombre}` : `Escuchar ${nombre} en directo`}
+            className="size-14 flex-none rounded-full"
+          >
+            {activo ? (
+              <Pause className="size-6" strokeWidth={1.6} fill="currentColor" />
+            ) : (
+              <Play className="ml-0.5 size-6" strokeWidth={1.6} fill="currentColor" />
+            )}
+          </Button>
 
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <span className="t-micro text-white/70">
-            {estado === 'sonando' ? 'Sonando en directo' : 'En directo'}
-          </span>
-          <span className="text-[24px] font-extrabold leading-tight tracking-[-0.03em] md:text-[28px]">
-            {ahora ? ahora.nombre : nombre}
-          </span>
-          {luego && (
-            <span className="text-[14.5px] text-white/80">
-              Luego: {luego.programa.nombre}, {luego.cuando}
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="t-micro">
+              {estado === 'conectando'
+                ? 'Conectando…'
+                : estado === 'sonando'
+                  ? 'Sonando en directo'
+                  : 'En directo'}
             </span>
-          )}
-          {estado === 'error' && error ? (
-            <span role="alert" className="flex items-start gap-1.5 text-[13.5px] text-white">
-              <AlertCircle className="mt-px size-4 flex-none" strokeWidth={1.9} />
-              {error}
+            <span className="text-[20px] font-extrabold leading-tight tracking-[-0.025em] md:text-[24px]">
+              {ahora ? ahora.nombre : nombre}
             </span>
-          ) : (
-            <span className="text-[12.5px] leading-relaxed text-white/70">
-              Al pulsar ▶ te conectas a {servidorDe(streamUrl)}, el servidor de la
-              emisora. Esta web no apunta quién escucha.
-            </span>
-          )}
+            {ahora?.tema && (
+              <span className="text-pretty text-[14.5px] leading-snug text-muted-foreground">
+                {ahora.tema}
+              </span>
+            )}
+            {luego && (
+              <span className="text-[13.5px] text-muted-foreground">
+                Luego: {luego.programa.nombre}, {luego.cuando}
+              </span>
+            )}
+          </div>
         </div>
+
+        {estado === 'error' && error ? (
+          <Aviso>{error}</Aviso>
+        ) : (
+          <p className="px-1 text-[12.5px] leading-relaxed text-muted-foreground">
+            Al darle a escuchar te conectas a {servidorDe(streamUrl)}, el servidor de la
+            emisora. Esta web no apunta quién escucha.
+          </p>
+        )}
       </div>
 
       {parrilla.length > 0 && (

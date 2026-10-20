@@ -63,14 +63,17 @@ export async function guardarEmisora(ministerioId: string, formData: FormData) {
   for (let i = 0; i < total; i++) {
     const hora = campo(formData, `programa-${i}-hora`);
     const nombre = campo(formData, `programa-${i}-nombre`);
-    // Una fila sin hora y sin nombre es una fila en blanco, aunque el día y la
-    // duración vengan rellenos: esos dos tienen valor por defecto.
-    if (!hora && !nombre) continue;
+    const tema = campo(formData, `programa-${i}-tema`);
+    // Una fila sin hora, sin nombre y sin tema es una fila en blanco, aunque el
+    // día y la duración vengan rellenos: esos dos tienen valor por defecto. Con
+    // solo el tema escrito no se descarta: se le dice que falta lo demás.
+    if (!hora && !nombre && !tema) continue;
 
     parrilla.push({
       dia: campo(formData, `programa-${i}-dia`) ?? '',
       hora: hora ?? '',
       nombre: nombre ?? '',
+      tema,
       duracion_min: campo(formData, `programa-${i}-duracion`) ?? '60',
     });
   }

@@ -15,7 +15,9 @@
 --   Radio Betania         La emisora: señal de SomaFM (Groove Salad, https,
 --                         pública y sin registro, que es lo que hacía falta
 --                         para probar sin depender de una iglesia de verdad),
---                         tres programas en la parrilla y `en_web` marcado.
+--                         tres programas en la parrilla —dos con su tema y
+--                         uno sin él, para ver los dos casos— y `en_web`
+--                         marcado.
 --   Sara Nieto            colider@hatril.test pasa a ser COLÍDER de la radio,
 --                         con rol de iglesia `miembro`. Es el caso que prueba
 --                         que la casilla de la web es solo del pastor: Sara
@@ -54,7 +56,9 @@ begin
   if v_ministerio is null then
     insert into public.ministerios (iglesia_id, nombre, color_hex, tipo, modulos, orden)
     values (
-      v_iglesia, 'Radio', '#3D3D3A', 'radio',
+      -- El gris de `COLORES_MINISTERIO`: un hex fuera de la paleta caería al
+      -- gris de todos modos, y así el fichero dice la verdad.
+      v_iglesia, 'Radio', '#6B645C', 'radio',
       '{"agenda": {"activo": true}, "turnos": {"activo": true},
         "emisora": {"activo": true}, "repertorio": {"activo": false},
         "seguimiento": {"activo": false}}'::jsonb,
@@ -72,8 +76,8 @@ begin
          "nombre": "Radio Betania",
          "stream_url": "https://ice1.somafm.com/groovesalad-128-mp3",
          "parrilla": [
-           {"dia": "Lunes", "hora": "19:00", "nombre": "Alabanza de la tarde", "duracion_min": 120},
-           {"dia": "Lunes", "hora": "21:00", "nombre": "Palabra para hoy", "duracion_min": 60},
+           {"dia": "Lunes", "hora": "19:00", "nombre": "Alabanza de la tarde", "tema": "Canciones de la congregación para cerrar el día", "duracion_min": 120},
+           {"dia": "Lunes", "hora": "21:00", "nombre": "Palabra para hoy", "tema": "Un capítulo de los Salmos, leído y comentado", "duracion_min": 60},
            {"dia": "Domingo", "hora": "09:00", "nombre": "Culto en directo", "duracion_min": 60}
          ],
          "en_web": true

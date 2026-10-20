@@ -111,7 +111,7 @@ export function useSenal(url: string | null, metadatos?: MetadatosSenal) {
       if (!quiereSonar.current) return;
       fallar(
         e instanceof DOMException && e.name === 'NotAllowedError'
-          ? 'El navegador no ha dejado reproducir. Vuelve a pulsar ▶.'
+          ? 'El navegador no ha dejado reproducir. Vuelve a intentarlo.'
           : 'No se ha podido conectar con la emisora. Puede que esté fuera del aire, o que la dirección no sea la del audio.',
       );
     });
@@ -164,7 +164,7 @@ export function useSenal(url: string | null, metadatos?: MetadatosSenal) {
     const alPausar = () => {
       if (!quiereSonar.current) return;
       if (a.ended) {
-        fallar('La emisora ha cortado la señal. Vuelve a pulsar ▶ para reconectar.');
+        fallar('La emisora ha cortado la señal. Vuelve a darle a escuchar para reconectar.');
         return;
       }
       parar();

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { Globe, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { esPastor } from '@/lib/auth/permisos';
@@ -12,16 +12,17 @@ import {
   DURACION_MIN,
   MAX_LARGO_NOMBRE_EMISORA,
   MAX_LARGO_PROGRAMA,
+  MAX_LARGO_TEMA,
   MAX_PROGRAMAS,
   emisoraDeModulos,
 } from '@/lib/emisora/config';
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CabeceraPanel } from '../../../_components/cabecera';
 import { Contenedor } from '../../../_components/contenedor';
 import { PestanasMinisterio } from '../_components/pestanas';
+import { BotonGuardar } from './_components/boton-guardar';
 import { CampoSenal } from './_components/campo-senal';
 import { guardarEmisora } from './actions';
 import { CONFIRMACIONES, FILAS_DE_MAS } from './constantes';
@@ -35,8 +36,9 @@ export const metadata: Metadata = { title: 'Radio en directo' };
  * ------------------------------
  * Quién presenta cada programa este mes son los turnos del ministerio —puestos
  * Locución, Control técnico…—, con su confirmación y su aviso. Las reuniones
- * del equipo, la agenda. Y el tema de cada emisión no existe todavía: necesita
- * una columna en `turnos` y esta tanda va sin migraciones.
+ * del equipo, la agenda. Y el tema de UNA emisión concreta no existe todavía:
+ * necesita una columna en `turnos` y esta tanda va sin migraciones. Lo que sí
+ * hay es el tema fijo de cada programa, que va con la parrilla.
  *
  * La parrilla son filas numeradas en un formulario normal, como los horarios de
  * Ajustes: sin JavaScript para añadir filas. Se ofrecen siempre tres vacías de
@@ -87,10 +89,10 @@ export default async function EmisoraPage({
             <div className="flex flex-col gap-0.5">
               <h2 className="t-subtitulo">La emisora</h2>
               <p className="max-w-[62ch] text-pretty text-[14px] leading-relaxed text-muted-foreground">
-                Con la señal puesta, la congregación la escucha desde la
+                Con la señal puesta, tu congregación la escucha desde la
                 aplicación, en una línea encima de las pestañas. Hatril no
-                retransmite nada: cada oyente se conecta directamente al
-                servidor de vuestra emisora.
+                retransmite nada: cada oyente se conecta directamente al servidor
+                de tu emisora.
               </p>
             </div>
 
@@ -120,14 +122,14 @@ export default async function EmisoraPage({
             <div className="flex flex-col gap-0.5">
               <h2 className="t-subtitulo">La programación de la semana</h2>
               <p className="max-w-[62ch] text-pretty text-[14px] leading-relaxed text-muted-foreground">
-                Lo que suena cada día y a qué hora. Con esto la aplicación dice
-                qué programa va ahora y cuál viene después. Las filas que dejes en
-                blanco no se guardan.
+                Qué suena cada día, a qué hora y de qué va. Con esto la
+                aplicación dice qué programa va ahora y cuál viene después. Las
+                filas que dejes en blanco no se guardan.
               </p>
             </div>
 
-            {/* Fuera de la tarjeta de la web, porque aplica aunque la casilla
-                esté apagada: el pastor puede encenderla mañana. */}
+            {/* Aplica aunque la casilla de la web esté apagada: el pastor
+                puede encenderla mañana. */}
             <p className="flex items-start gap-2 rounded-lg border border-border bg-surface-alt px-3.5 py-3 text-[13.5px] leading-snug">
               <Info
                 className="mt-px size-4 flex-none text-muted-foreground"
@@ -135,7 +137,7 @@ export default async function EmisoraPage({
                 aria-hidden
               />
               <span>
-                Pon solo el nombre del programa, sin quién lo presenta: si la
+                No pongas quién presenta, ni en el nombre ni en el tema: si la
                 radio sale en la web, esta lista es pública. Quién presenta cada
                 día va en los turnos.
               </span>
@@ -143,31 +145,25 @@ export default async function EmisoraPage({
 
             <input type="hidden" name="filas" value={filas} />
 
-            <div className="flex flex-col gap-2">
-              {/* Las etiquetas de columna, solo cuando caben en fila. */}
-              <div
-                aria-hidden
-                className="hidden gap-2 px-3 text-[12px] font-semibold text-muted-foreground sm:flex"
-              >
-                <span className="w-36">Día</span>
-                <span className="w-28">Hora</span>
-                <span className="flex-1">Programa</span>
-                <span className="w-28">Minutos</span>
-              </div>
-
+            {/*
+             * Una lista con separadores y no una caja por fila: es como se
+             * pintan los turnos, y una pila de cajas de crema dentro de una
+             * tarjeta blanca se leía como cinco formularios en vez de uno.
+             */}
+            <ol className="-mx-5 flex flex-col border-t border-border">
               {Array.from({ length: filas }, (_, i) => {
                 const p = emisora.parrilla[i];
                 const n = i + 1;
                 return (
-                  <div
+                  <li
                     key={i}
-                    className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-surface-alt p-3 sm:flex sm:items-center"
+                    className="grid grid-cols-2 gap-2 border-b border-border px-5 py-3.5 last:border-b-0 sm:grid-cols-[9rem_7.5rem_1fr_6.5rem]"
                   >
                     <select
                       name={`programa-${i}-dia`}
                       defaultValue={p?.dia ?? DIAS_PARRILLA[0]}
                       aria-label={`Día del programa ${n}`}
-                      className="h-[42px] rounded-lg border border-input bg-surface px-2.5 text-[15px] text-foreground sm:w-36"
+                      className="h-[42px] w-full min-w-0 rounded-lg border border-input bg-surface-alt px-2.5 text-[15px] text-foreground outline-none focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/16"
                     >
                       {DIAS_PARRILLA.map((d) => (
                         <option key={d} value={d}>
@@ -180,17 +176,18 @@ export default async function EmisoraPage({
                       name={`programa-${i}-hora`}
                       defaultValue={p?.hora ?? ''}
                       aria-label={`Hora del programa ${n}`}
-                      className="bg-surface sm:w-28"
                     />
                     <Input
                       name={`programa-${i}-nombre`}
                       defaultValue={p?.nombre ?? ''}
                       maxLength={MAX_LARGO_PROGRAMA}
-                      placeholder="Palabra para hoy"
+                      placeholder="Nombre del programa"
                       aria-label={`Nombre del programa ${n}`}
-                      className="col-span-2 bg-surface sm:flex-1"
+                      className="col-span-2 sm:col-span-1"
                     />
-                    <label className="col-span-2 flex items-center gap-2 text-[13px] text-muted-foreground sm:col-auto sm:w-28">
+                    {/* Última en el móvil, para que el tema quede pegado al nombre;
+                        en escritorio, en la fila de arriba con el resto. */}
+                    <label className="order-last col-span-2 flex items-center gap-2 text-[13.5px] text-muted-foreground sm:order-none sm:col-span-1">
                       <Input
                         type="number"
                         name={`programa-${i}-duracion`}
@@ -199,31 +196,35 @@ export default async function EmisoraPage({
                         max={DURACION_MAX}
                         step={5}
                         aria-label={`Minutos que dura el programa ${n}`}
-                        className="w-24 bg-surface sm:w-full"
+                        // El color, explícito: dentro de la etiqueta heredaría el
+                        // gris y el número parecería un ejemplo sin rellenar.
+                        className="w-24 text-foreground sm:w-full"
                       />
                       <span className="sm:hidden">minutos</span>
+                      <span className="hidden sm:inline">min</span>
                     </label>
-                  </div>
+                    <Input
+                      name={`programa-${i}-tema`}
+                      defaultValue={p?.tema ?? ''}
+                      maxLength={MAX_LARGO_TEMA}
+                      placeholder="De qué va, en una línea (opcional)"
+                      aria-label={`De qué va el programa ${n}`}
+                      className="col-span-2 sm:col-span-4"
+                    />
+                  </li>
                 );
               })}
-            </div>
+            </ol>
           </section>
 
           <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5">
-            <div className="flex items-start gap-3">
-              <Globe
-                className="mt-0.5 size-5 flex-none text-muted-foreground"
-                strokeWidth={1.8}
-                aria-hidden
-              />
-              <div className="flex min-w-0 flex-col gap-1">
-                <h2 className="t-subtitulo">En la web de la iglesia</h2>
-                <p className="max-w-[62ch] text-pretty text-[14px] leading-relaxed text-muted-foreground">
-                  Un bloque «Radio en directo» con el reproductor y la
-                  programación, para cualquiera que entre en la web. Sin nombres
-                  de quien presenta.
-                </p>
-              </div>
+            <div className="flex flex-col gap-0.5">
+              <h2 className="t-subtitulo">En la web de la iglesia</h2>
+              <p className="max-w-[62ch] text-pretty text-[14px] leading-relaxed text-muted-foreground">
+                Un bloque «Radio en directo» con el reproductor y la programación,
+                para cualquiera que entre en la web. Sin nombres de quien
+                presenta.
+              </p>
             </div>
 
             {pastor ? (
@@ -238,8 +239,8 @@ export default async function EmisoraPage({
                   Mostrar la radio en la web de la iglesia
                   {!ctx.iglesia.webPublica && (
                     <span className="block text-[13px] text-muted-foreground">
-                      Vuestra web todavía no está publicada. Saldrá cuando la
-                      publiques en <Link href="/panel/ajustes">Ajustes</Link>.
+                      Tu web todavía no está publicada. Saldrá cuando la publiques
+                      en <Link href="/panel/ajustes">Ajustes</Link>.
                     </span>
                   )}
                 </span>
@@ -258,7 +259,7 @@ export default async function EmisoraPage({
           </section>
 
           <div>
-            <Button type="submit">Guardar la radio</Button>
+            <BotonGuardar />
           </div>
         </form>
       </Contenedor>

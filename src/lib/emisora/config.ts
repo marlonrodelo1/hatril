@@ -39,6 +39,7 @@ export type DiaParrilla = (typeof DIAS_PARRILLA)[number];
 export const MAX_PROGRAMAS = 40;
 export const MAX_LARGO_NOMBRE_EMISORA = 60;
 export const MAX_LARGO_PROGRAMA = 80;
+export const MAX_LARGO_TEMA = 140;
 export const MAX_LARGO_SENAL = 500;
 export const DURACION_MIN = 15;
 export const DURACION_MAX = 480;
@@ -46,7 +47,8 @@ export const DURACION_MAX = 480;
 /**
  * Un programa de la parrilla.
  *
- * Con la forma de `HorarioSemanal` —`dia`, `hora`, `nombre`— más la duración, a
+ * Con la forma de `HorarioSemanal` —`dia`, `hora`, `nombre`— más el tema y la
+ * duración, a
  * propósito: así `cultosEntre()` la expande a fechas sin adaptador el día que
  * los turnos se planifiquen desde la parrilla y no desde los cultos.
  */
@@ -61,6 +63,16 @@ export const EsquemaPrograma = z.object({
     .trim()
     .min(2, 'Ponle nombre al programa.')
     .max(MAX_LARGO_PROGRAMA, 'El nombre del programa es demasiado largo.'),
+  /**
+   * De qué va el programa, en una línea: «La Biblia leída de principio a fin»,
+   * «Música y oración para empezar el día». Es el mismo cada semana: el tema de
+   * UNA emisión concreta necesita una columna en `turnos` y está fuera.
+   */
+  tema: z
+    .string()
+    .trim()
+    .max(MAX_LARGO_TEMA, `De qué va: hasta ${MAX_LARGO_TEMA} caracteres.`)
+    .optional(),
   duracion_min: z.coerce
     .number('Revisa la duración.')
     .int('La duración va en minutos enteros.')

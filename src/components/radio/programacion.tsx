@@ -4,9 +4,10 @@ import { franjaDe, parrillaPorDia } from '@/lib/emisora/parrilla';
 /**
  * La parrilla de la semana, por días.
  *
- * Solo el nombre del programa y su franja. No hay sitio para quién presenta y
- * no es un olvido: la misma lista sale en la web pública, y el nombre de un
- * locutor al lado de su iglesia es su confesión religiosa publicada en internet.
+ * El nombre del programa, su franja y de qué va. No hay sitio para quién
+ * presenta y no es un olvido: la misma lista sale en la web pública, y el
+ * nombre de un locutor al lado de su iglesia es su confesión religiosa
+ * publicada en internet.
  * Los locutores de cada emisión son turnos, y esos los ve el equipo.
  */
 export function ProgramacionSemanal({
@@ -42,7 +43,7 @@ export function ProgramacionSemanal({
                 </span>
               )}
             </h3>
-            <ul className="flex flex-col gap-1.5">
+            <ul className="flex flex-col gap-2.5">
               {programas.map((p) => {
                 const suena = ahora === p;
                 return (
@@ -53,11 +54,18 @@ export function ProgramacionSemanal({
                     <span className="w-[104px] flex-none tabular-nums text-muted-foreground">
                       {franjaDe(p)}
                     </span>
-                    <span className="min-w-0 flex-1 font-semibold">
-                      {p.nombre}
-                      {suena && (
-                        <span className="ml-2 text-[12px] font-bold text-badge-accent-fg">
-                          Ahora
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="font-semibold">
+                        {p.nombre}
+                        {suena && (
+                          <span className="ml-2 text-[12px] font-bold text-badge-accent-fg">
+                            Ahora
+                          </span>
+                        )}
+                      </span>
+                      {p.tema && (
+                        <span className="text-pretty text-[13.5px] text-muted-foreground">
+                          {p.tema}
                         </span>
                       )}
                     </span>

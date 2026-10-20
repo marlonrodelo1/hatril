@@ -13,7 +13,8 @@ locutores son turnos, que ya existían. Para integrar en `ESTADO.md` al fusionar
   radio» de su descripción. El catálogo `/panel/modulos` lo enseña solo.
 - **Módulo `emisora`** («Radio en directo», `modulos.ts`), añadido al final del
   catálogo. Su config: `nombre` (≤60), `stream_url` (solo https, ≤500),
-  `parrilla` (día, hora, programa ≤80, minutos 15–480; hasta 40) y `en_web`.
+  `parrilla` (día, hora, programa ≤80, de qué va ≤140 opcional, minutos
+  15–480; hasta 40) y `en_web`.
   Esquema y lectura en `src/lib/emisora/config.ts`; «ahora / luego» en
   `parrilla.ts`, en la hora de la iglesia y en minutos de la semana, así que un
   programa que cruza la medianoche del domingo sigue «en antena» el lunes.
@@ -25,9 +26,11 @@ locutores son turnos, que ya existían. Para integrar en `ESTADO.md` al fusionar
   escribe la config en una transacción con `conConfigDeModulo`.
 - **`/mi`**: `MiniReproductor` en el layout, una línea encima de la barra, solo
   si la iglesia tiene una radio encendida con señal. Pulsar el texto abre una
-  hoja con la programación de la semana y el aviso del servidor y los datos.
+  hoja con la programación de la semana —con el tema de cada programa— y el
+  aviso del servidor y los datos.
 - **`/i/[slug]`**: bloque «Radio en directo» entre el devocional y los grupos,
-  con su entrada en el menú, solo con `en_web` y la web publicada.
+  con su entrada en el menú, solo con `en_web` y la web publicada. Enseña qué
+  suena, de qué va y lo que viene después, y la parrilla con sus temas.
 - **Legales**: un párrafo en `/terminos` §3 (la iglesia responde de derechos y
   licencias; Hatril no emite, no retransmite ni graba, y puede retirar el
   enlace) y otro en `/privacidad` §5 (tercero elegido por la iglesia, posible
@@ -45,7 +48,34 @@ locutores son turnos, que ya existían. Para integrar en `ESTADO.md` al fusionar
   de una web https), listas `.pls/.m3u`, HLS `.m3u8`, la ficha de zeno.fm,
   usuario y contraseña en la URL y direcciones de la red de casa.
 - **Dos radios en una iglesia**: se usa la primera por orden. Sin selector.
-- **El botón ▶ es carbón, no naranja**: `/mi` y la web ya tienen su naranja.
+- **El tema es de cada programa, no de cada emisión.** «De qué va» es fijo
+  semana a semana y viaja con la parrilla; el tema de UNA emisión por fecha
+  necesita `turnos.tema` y sigue fuera. Una fila con solo el tema escrito no se
+  descarta en silencio: la action dice qué le falta.
+- **El botón de escuchar es el `secondary` del sistema (carbón)**, no naranja:
+  `/mi` y la web ya tienen su acción principal. Va con el componente `Button`,
+  así que no hay ningún color escrito a mano.
+
+### Pasada visual (20-oct, a petición de Marlon)
+
+Se compararon a 375 px con turnos (panel), la barra y el muro de `/mi` y los
+horarios de la web pública, y se corrigió lo que no se parecía:
+
+- Sin ningún hex ni `text-white` en lo de la radio: el bloque público pasó de
+  un recuadro carbón con letra blanca —copiado de «Lo próximo», y dos bloques
+  oscuros en la misma página competían— a una tarjeta blanca con borde.
+- Sin animaciones: fuera el punto que latía al sonar y el icono girando al
+  conectar; el estado lo dice el texto («Conectando con…», «Sonando en
+  directo»).
+- Sin el carácter ▶ en los textos, que en el iPhone se pinta como emoji: ahora
+  es «darle a escuchar».
+- Errores y confirmaciones del «Probar» con `Aviso`, con su icono, como el resto
+  del panel. «Guardar la radio» se apaga mientras guarda.
+- La parrilla del panel, como lista con separadores dentro de la tarjeta (el
+  patrón de turnos) en vez de una caja de crema por fila. En el móvil el tema
+  queda pegado al nombre y los minutos al final; en escritorio, una fila con
+  día, hora, programa y minutos y el tema debajo.
+- Textos de tú: «tu congregación», «tu emisora».
 - **`VERSION_POLITICA_PRIVACIDAD` no se ha subido.** El párrafo nuevo describe
   a un tercero al que el miembro decide conectarse, no un uso nuevo de sus
   datos. El plan propone subirla una vez para toda la tanda; esa decisión es de
@@ -86,6 +116,9 @@ En el navegador, en `127.0.0.1:3002`, comprobando cada paso también en la base:
 - **lider@** rebota de la radio ajena, y su Alabanza da 404 en `/emisora`.
   **pastor.sion@** no llega: su suscripción vencida le manda a `/suscripcion`
   antes. El aislamiento entre iglesias lo cubre el test.
+- **El tema**: guardado desde el panel y comprobado en la base; sale debajo de
+  cada programa en la hoja de `/mi` y en la web, y el de lo que suena, en la
+  tarjeta de la web. Una fila con solo el tema da «Programa 4: Revisa la hora».
 - Fallos del reproductor: una dirección que no es audio (example.com) da
   «No se ha podido conectar…», y un servidor que corta la conexión da «La
   emisora ha cortado la señal».
@@ -118,8 +151,8 @@ dice. El segundo plano de verdad llega con Capacitor en la v2.
 ## Datos de prueba
 
 `scripts/seed-radio.sql`, idempotente y con la limpieza al final: en Betania un
-ministerio Radio con la señal de SomaFM, tres programas, `en_web` marcado, y
-Sara (colider@) como colíder. El ministerio de esta prueba se creó desde
+ministerio Radio con la señal de SomaFM, tres programas (dos con tema y uno
+sin él), `en_web` marcado, y Sara (colider@) como colíder. El ministerio de esta prueba se creó desde
 `/panel/modulos`; el seed lo encuentra por tipo y no crea otro.
 
 ---

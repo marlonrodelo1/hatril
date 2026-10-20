@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertCircle, CheckCircle2, Loader2, Play, Square } from 'lucide-react';
+import { Play, Square } from 'lucide-react';
 
 import { problemaDeLaSenal, servidorDe } from '@/lib/emisora/config';
 import { normalizarEnlace } from '@/lib/repertorio/enlaces';
 import { useSenal } from '@/components/radio/use-senal';
+import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -76,14 +77,12 @@ export function CampoSenal({ valorInicial }: { valorInicial: string }) {
           aria-describedby="ayuda-senal"
         />
         <Button type="button" variant="outline" onClick={probar} className="flex-none">
-          {estado === 'conectando' ? (
-            <Loader2 className="animate-spin" strokeWidth={2} />
-          ) : estado === 'sonando' ? (
+          {activo ? (
             <Square strokeWidth={1.8} fill="currentColor" className="size-4" />
           ) : (
             <Play strokeWidth={1.8} fill="currentColor" className="size-4" />
           )}
-          {activo ? 'Parar' : 'Probar'}
+          {estado === 'conectando' ? 'Conectando…' : activo ? 'Parar' : 'Probar'}
         </Button>
         {/* Sin `crossOrigin`: ver `use-senal.ts`. */}
         <audio ref={audio} preload="none" />
@@ -94,23 +93,12 @@ export function CampoSenal({ valorInicial }: { valorInicial: string }) {
         la abres en el navegador. Tiene que empezar por https://
       </p>
 
-      {(aviso || (estado === 'error' && error)) && (
-        <p
-          role="alert"
-          className="flex items-start gap-1.5 text-[13.5px] leading-snug text-danger"
-        >
-          <AlertCircle className="mt-px size-4 flex-none" strokeWidth={1.9} />
-          {aviso ?? error}
-        </p>
-      )}
+      {(aviso || (estado === 'error' && error)) && <Aviso>{aviso ?? error}</Aviso>}
       {!aviso && estado === 'sonando' && (
-        <p
-          role="status"
-          className="flex items-start gap-1.5 text-[13.5px] leading-snug text-badge-success-fg"
-        >
-          <CheckCircle2 className="mt-px size-4 flex-none" strokeWidth={1.9} />
-          Suena. Es lo que oirá la congregación al pulsar ▶. Acuérdate de guardar.
-        </p>
+        <Aviso tipo="ok">
+          Suena. Es lo que oirá tu congregación al darle a escuchar.
+          Acuérdate de guardar.
+        </Aviso>
       )}
     </div>
   );
