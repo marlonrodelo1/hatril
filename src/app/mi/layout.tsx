@@ -1,4 +1,6 @@
 import { getCurrentUserContext } from '@/lib/auth/user-context';
+import { ministeriosQueLlevoEnLaApp } from '@/lib/ministerios/en-la-app/guarda';
+import { RAIZ_APP } from '@/lib/ministerios/en-la-app/rutas';
 import { BarraInferior } from './_components/barra-inferior';
 
 /**
@@ -43,10 +45,22 @@ export default async function MiLayout({
    */
   if (!ctx) return <>{children}</>;
 
+  // La pestaña «Equipo», solo para quien lleva algo. Decidir AQUÍ si se pinta
+  // no protege nada —las pantallas de la zona ponen su propia guarda—; es para
+  // que al miembro raso la barra le quede igual. Con un ministerio, directo a
+  // su portada; con varios, a la lista.
+  const llevo = ministeriosQueLlevoEnLaApp(ctx);
+  const equipo =
+    llevo.length === 0
+      ? null
+      : llevo.length === 1
+        ? `${RAIZ_APP}/${llevo[0]!.id}`
+        : RAIZ_APP;
+
   return (
     <>
       {children}
-      <BarraInferior />
+      <BarraInferior equipo={equipo} />
       {/*
        * El hueco de la barra, que es `fixed` y flota sobre el contenido. Sin
        * esto la última publicación del muro queda debajo de las pestañas y no

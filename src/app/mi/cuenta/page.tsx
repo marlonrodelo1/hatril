@@ -6,6 +6,7 @@ import { requireIglesia } from '@/lib/auth/guard-panel';
 import { puedeGestionarMinisterio } from '@/lib/auth/permisos';
 import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { misMinisterios } from '@/lib/ministerios/consultas';
+import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
 import { donativosDeMiIglesia } from '@/lib/iglesias/donativos';
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { nombreDeLaCuenta } from '@/lib/auth/nombre';
@@ -108,9 +109,10 @@ export default async function MiCuentaPage() {
                       </div>
                     )}
                     {/*
-                     * Directo al ministerio y no a `/panel/hoy`, que es donde
-                     * deja «Ir al panel» del menú: quien lleva un equipo viene a
-                     * lo suyo. Una entrada para todos sus módulos.
+                     * A la portada del ministerio en la propia app, la de la
+                     * pestaña «Equipo»: quien lleva un equipo viene a lo suyo y
+                     * no tiene por qué salir al panel para hacerlo. Una entrada
+                     * para todos sus módulos.
                      *
                      * Con `puedeGestionarMinisterio` y no `esDelEquipo`: el
                      * voluntario que lleva la caja entra al panel, pero en ESTE
@@ -121,7 +123,7 @@ export default async function MiCuentaPage() {
                       <Button
                         variant="outline"
                         className="self-start"
-                        render={<Link href={`/panel/ministerios/${m.id}`} />}
+                        render={<Link href={rutaApp(m.id)} />}
                       >
                         <LayoutDashboard strokeWidth={1.8} />
                         Abrir herramientas

@@ -7,6 +7,8 @@ import {
   BookOpen,
   CalendarDays,
   MessagesSquare,
+  Users,
+  type LucideIcon,
 } from 'lucide-react';
 
 /**
@@ -91,7 +93,34 @@ const PESTANAS = [
 
 
 
-export function BarraInferior() {
+/*
+ * LA QUINTA, SOLO PARA QUIEN LLEVA UN MINISTERIO
+ * ----------------------------------------------
+ * «Equipo» es la zona del líder: las herramientas de lo que lleva, sin salir al
+ * panel. Sale al final y solo a quien lidera algo, así que el miembro raso
+ * sigue viendo sus cuatro pestañas exactamente donde estaban, y quien lleva un
+ * equipo no pierde ninguna de las suyas de sitio.
+ *
+ * Cinco caben a 375 px: «Comunidad», la más larga, mide unos 55 px a 10.5 y a
+ * cada pestaña le tocan unos 68. Seis ya no. Por eso la emisora va encima de la
+ * barra y no como pestaña (`docs/modulos/plan.md`, §6).
+ *
+ * El destino lo calcula el layout: con un solo ministerio, su portada directa,
+ * sin pasar por la lista. `raiz` es lo que decide cuándo está encendida, que es
+ * en cualquier pantalla de la zona.
+ */
+const EQUIPO = {
+  etiqueta: 'Equipo',
+  Icono: Users,
+  raiz: '/mi/equipo',
+} as const;
+
+export function BarraInferior({
+  equipo,
+}: {
+  /** A dónde lleva «Equipo». Sin él, la pestaña no se pinta. */
+  equipo?: string | null;
+}) {
   const pathname = usePathname();
 
   return (
@@ -129,6 +158,9 @@ export function BarraInferior() {
       {PESTANAS.map((p) => (
         <Pestana key={p.href} pestana={p} pathname={pathname} />
       ))}
+      {equipo && (
+        <Pestana pestana={{ ...EQUIPO, href: equipo }} pathname={pathname} />
+      )}
     </nav>
   );
 }
@@ -137,10 +169,11 @@ function Pestana({
   pestana: p,
   pathname,
 }: {
-  pestana: (typeof PESTANAS)[number];
+  pestana: { href: string; etiqueta: string; Icono: LucideIcon; raiz?: string };
   pathname: string;
 }) {
-  const esta = pathname === p.href || pathname.startsWith(`${p.href}/`);
+  const raiz = p.raiz ?? p.href;
+  const esta = pathname === raiz || pathname.startsWith(`${raiz}/`);
 
   return (
     <Link
