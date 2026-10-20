@@ -35,8 +35,10 @@ import { ESTADOS } from '@/lib/miembros/estados';
 import { iniciales } from '@/lib/format/iniciales';
 import { Button } from '@/components/ui/button';
 import { Aviso } from '@/components/aviso';
+import { cifrasDeSeguimiento } from '@/lib/seguimiento/consultas';
 import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
+import { BloqueSeguimiento } from './_components/seguimiento';
 
 export const metadata: Metadata = { title: 'Inicio' };
 
@@ -89,16 +91,27 @@ export default async function HoyPage({
     esPastor(ctx) || puede(ctx, 'ver_todos_los_miembros');
 
 
-  const [resumen, solicitudes, sinResponsable, recienLlegados, misTurnos] =
-    await Promise.all([
-      resumenCongregacion(ctx),
-      puedeVerSolicitudes ? listarSolicitudesPendientes(ctx) : [],
-      puedeGestionarMinisterios ? ministeriosSinResponsable(ctx) : [],
-      puedeVerLaCongregacion ? nuevosSinMinisterio(ctx) : [],
-      // Sin condición de permiso: son SUS turnos. La consulta ya filtra por su
-      // ficha, así que no puede devolver los de nadie más.
-      misTurnosPendientes(ctx),
-    ]);
+  const [
+    resumen,
+    solicitudes,
+    sinResponsable,
+    recienLlegados,
+    misTurnos,
+    seguimiento,
+  ] = await Promise.all([
+    resumenCongregacion(ctx),
+    puedeVerSolicitudes ? listarSolicitudesPendientes(ctx) : [],
+    puedeGestionarMinisterios ? ministeriosSinResponsable(ctx) : [],
+    puedeVerLaCongregacion ? nuevosSinMinisterio(ctx) : [],
+    // Sin condición de permiso: son SUS turnos. La consulta ya filtra por su
+    // ficha, así que no puede devolver los de nadie más.
+    misTurnosPendientes(ctx),
+    // Solo cifras. Decide ella misma si quien mira puede verlas —las tres
+    // llaves del seguimiento— y devuelve null sin consultar nada más si no.
+    // Aquí dentro y no después: son ocho consultas, y en serie retrasaban
+    // todo Inicio para el pastor.
+    cifrasDeSeguimiento(ctx),
+  ]);
 
   const hayAvisos =
     misTurnos.length > 0 ||
@@ -326,6 +339,8 @@ export default async function HoyPage({
               </div>
             </div>
           </section>
+
+          {seguimiento && <BloqueSeguimiento cifras={seguimiento} />}
 
           {resumen.total === 0 && puedeCrear && (
             <section className="flex flex-col items-start gap-3.5 rounded-xl border border-border bg-surface p-6">

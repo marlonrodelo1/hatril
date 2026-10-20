@@ -85,7 +85,7 @@ export const MODULOS_MINISTERIO = [
     id: 'seguimiento',
     nombre: 'Seguimiento de personas',
     descripcion:
-      'Quién lleva tiempo sin venir, quién le acompaña y qué se ha hablado con esa persona.',
+      'Quién ha llegado nuevo y si vuelve, quién lleva tiempo sin venir, quién le acompaña y qué se ha hablado con cada persona.',
     Icono: HeartHandshake,
   },
   {

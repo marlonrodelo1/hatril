@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { ChevronRight, Phone } from 'lucide-react';
 
 import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
-import { personasPorFaltas } from '@/lib/seguimiento/consultas';
+import { esAusente, personasPorFaltas } from '@/lib/seguimiento/consultas';
 import { RESULTADOS } from '@/lib/seguimiento/catalogos';
 import { formatearFechaLarga } from '@/lib/fecha/hoy';
 import { ESTADOS } from '@/lib/miembros/estados';
@@ -12,6 +12,7 @@ import { Aviso } from '@/components/aviso';
 import { CabeceraPanel } from '../../../_components/cabecera';
 import { Contenedor } from '../../../_components/contenedor';
 import { PestanasMinisterio } from '../_components/pestanas';
+import { VistasSeguimiento } from './_components/vistas';
 import { CONFIRMACIONES } from './constantes';
 
 export const metadata: Metadata = { title: 'Seguimiento' };
@@ -30,12 +31,20 @@ export default async function SeguimientoPage({
   });
   const { error, guardado } = await searchParams;
 
-  const personas = await personasPorFaltas(ctx, id);
+  const todas = await personasPorFaltas(ctx, id);
+
+  // Quien acaba de llegar no sale aquí aunque falte: está en «Nuevos», donde la
+  // pregunta es si vuelve, no por qué se fue. Si saliera en las dos listas, el
+  // visitante del domingo pasado encabezaría esta con «nunca se le ha marcado
+  // presente», y a los miembros de siempre que dejan de venir —la gente por la
+  // que existe esta pantalla— los empujaría hacia abajo.
+  const personas = todas.filter((p) => p.nuevo === null);
+  const nuevos = todas.length - personas.length;
 
   // Quien no se ha perdido nada no es trabajo de nadie esta semana. Se cuenta
   // pero no se pinta: una lista de 120 nombres donde 110 están bien es una lista
   // que nadie recorre, y el que necesita una llamada se pierde entre ellos.
-  const pendientes = personas.filter((p) => p.faltasSeguidas > 0);
+  const pendientes = personas.filter(esAusente);
   const alDia = personas.length - pendientes.length;
 
   return (
@@ -49,12 +58,19 @@ export default async function SeguimientoPage({
       <Contenedor>
         <PestanasMinisterio ctx={ctx} ministerio={ministerio} activa="seguimiento" />
 
+        <VistasSeguimiento
+          base={`/panel/ministerios/${id}/seguimiento`}
+          activa="ausentes"
+          nuevos={nuevos}
+          ausentes={pendientes.length}
+        />
+
         {error && <Aviso>{error}</Aviso>}
         {guardado && CONFIRMACIONES[guardado] && (
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
         )}
 
-        {personas.length === 0 ? (
+        {todas.length === 0 ? (
           <Vacio>
             <h2 className="t-subtitulo">No hay nadie en el fichero</h2>
             <p className="max-w-[56ch] text-[14.5px] leading-relaxed text-muted-foreground">
@@ -64,12 +80,17 @@ export default async function SeguimientoPage({
         ) : pendientes.length === 0 ? (
           <Vacio>
             <h2 className="t-subtitulo">Nadie se ha perdido ninguna reunión</h2>
+            {/* «No ha faltado», y no «vino a la última»: desde que las faltas
+                se cuentan a partir de la ficha, quien se dio de alta ayer no
+                se ha perdido nada sin haber venido nunca. */}
             <p className="max-w-[62ch] text-[14.5px] leading-relaxed text-muted-foreground">
-              {alDia === personas.length && personas.length > 0
-                ? 'Las ' +
-                  personas.length +
-                  ' personas del fichero han venido a la última reunión en la que se pasó lista. Si esto te sorprende, puede que falte apuntar algún culto en Reuniones.'
-                : 'Todavía no hay listas suficientes para saberlo.'}
+              {personas.length === 0
+                ? 'Todos los que hay en el fichero acaban de llegar: están en Nuevos.'
+                : (personas.length === 1
+                    ? 'Esa persona no ha faltado a ningún culto con lista desde que está en el fichero.'
+                    : `Ninguna de las ${personas.length} personas ha faltado a un culto con lista desde que está en el fichero.`) +
+                  ' Si esto te sorprende, puede que falte apuntar algún culto en Reuniones.' +
+                  (nuevos > 0 ? ' Quien acaba de llegar está en Nuevos.' : '')}
             </p>
           </Vacio>
         ) : (
@@ -78,7 +99,8 @@ export default async function SeguimientoPage({
               {pendientes.length}{' '}
               {pendientes.length === 1 ? 'persona' : 'personas'} se han perdido
               alguna reunión.{' '}
-              {alDia > 0 && `Las otras ${alDia} vinieron a la última.`}
+              {alDia > 0 &&
+                `Las otras ${alDia} no han faltado a ninguna desde que están en el fichero.`}
             </p>
 
             <ul className="flex flex-col gap-2.5">
