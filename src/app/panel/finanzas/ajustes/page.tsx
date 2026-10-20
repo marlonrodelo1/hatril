@@ -104,12 +104,15 @@ export default async function AjustesFinanzasPage({
                     className="flex flex-wrap items-end gap-2"
                   >
                     <input type="hidden" name="id" value={f.id} />
-                    <label className="flex min-w-[180px] flex-1 flex-col gap-1 text-[12.5px] font-medium text-muted-foreground">
+                    {/* Sin tamaño de letra en el `select`: la regla de 16 px
+                        del móvil de `globals.css` está en `@layer base`, y una
+                        utilidad la pisaría (Safari ampliaría la página). */}
+                    <label className="t-label flex min-w-[180px] flex-1 flex-col gap-1 text-muted-foreground">
                       Es el fondo de
                       <select
                         name="ministerioId"
                         defaultValue={f.ministerioId ?? ''}
-                        className="h-9 rounded-lg border border-border bg-surface-alt px-2.5 text-[15px] text-foreground"
+                        className="h-9 rounded-lg border border-border bg-surface-alt px-2.5 text-foreground"
                       >
                         <option value="">Ningún ministerio</option>
                         {ministerios.map((m) => {

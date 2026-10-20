@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 import { requireFinanzasAccion } from '@/lib/auth/guard-panel';
 import { withUser } from '@/lib/db';
-import { arqueos } from '@/lib/db/schema';
+import { arqueos, cajas, fondos } from '@/lib/db/schema';
 import { esGuardHatril } from '@/lib/db/error';
 import { campo, campoObligatorio } from '@/lib/api/formulario';
 import { parsearDinero } from '@/lib/format/dinero';
@@ -43,6 +43,48 @@ async function requireConFicha(destino: string): Promise<UserContext & { miembro
     );
   }
   return ctx as UserContext & { miembroId: string };
+}
+
+/**
+ * ¿Siguen vivos el fondo y la caja a donde irá el dinero?
+ *
+ * Un arqueo puede esperar días, y en ese tiempo el pastor puede archivar el
+ * fondo o la caja. Confirmado así, sus ingresos caerían en algo que ya no sale
+ * en «Saldo por fondo» ni en «Saldo por caja», y los saldos dejarían de
+ * cuadrar con el libro. `archivarFondo` y `archivarCaja` no dejan archivar
+ * con arqueos esperando; esto cubre el formulario abierto desde antes y lo que
+ * se archivó antes de ese cambio.
+ */
+async function destinoVivo(
+  ctx: UserContext,
+  fondoId: string,
+  cajaId: string,
+): Promise<boolean> {
+  return withUser(ctx.user.id, async (tx) => {
+    const [fondo] = await tx
+      .select({ id: fondos.id })
+      .from(fondos)
+      .where(
+        and(
+          eq(fondos.id, fondoId),
+          eq(fondos.iglesiaId, ctx.iglesia.id),
+          eq(fondos.activo, true),
+        ),
+      )
+      .limit(1);
+    const [caja] = await tx
+      .select({ id: cajas.id })
+      .from(cajas)
+      .where(
+        and(
+          eq(cajas.id, cajaId),
+          eq(cajas.iglesiaId, ctx.iglesia.id),
+          eq(cajas.activo, true),
+        ),
+      )
+      .limit(1);
+    return Boolean(fondo && caja);
+  });
 }
 
 /**
@@ -82,6 +124,13 @@ export async function crearArqueo(formData: FormData): Promise<void> {
   }
   const d = datos.data;
 
+  if (!(await destinoVivo(ctx, d.fondoId, d.cajaId))) {
+    volver(
+      DESTINO_NUEVO,
+      'Ese fondo o esa caja ya no están activos. Vuelve a abrir el formulario y elige otros.',
+    );
+  }
+
   try {
     await withUser(ctx.user.id, (tx) =>
       tx.insert(arqueos).values({
@@ -120,6 +169,26 @@ export async function confirmarArqueo(formData: FormData): Promise<void> {
   const ctx = await requireConFicha(DESTINO);
   if (!z.string().uuid().safeParse(id).success) volver(DESTINO, 'Ese arqueo no existe.');
 
+  const [pendiente] = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ fondoId: arqueos.fondoId, cajaId: arqueos.cajaId })
+      .from(arqueos)
+      .where(
+        and(
+          eq(arqueos.id, id),
+          eq(arqueos.iglesiaId, ctx.iglesia.id),
+          isNull(arqueos.confirmadoAt),
+        ),
+      )
+      .limit(1),
+  );
+  if (pendiente && !(await destinoVivo(ctx, pendiente.fondoId, pendiente.cajaId))) {
+    volver(
+      DESTINO,
+      'El fondo o la caja de este arqueo se archivó mientras esperaba. Descártalo y vuelve a contarlo con otro destino.',
+    );
+  }
+
   let filas: { id: string }[] = [];
   try {
     filas = await withUser(ctx.user.id, (tx) =>
@@ -136,7 +205,9 @@ export async function confirmarArqueo(formData: FormData): Promise<void> {
         .returning({ id: arqueos.id }),
     );
   } catch (e) {
-    if (esGuardHatril(e, 'HT130')) {
+    // HT131 es lo mismo visto por cuenta y no por ficha (`0045`): para quien
+    // lo lee, es que lo contó él.
+    if (esGuardHatril(e, 'HT130') || esGuardHatril(e, 'HT131')) {
       volver(
         DESTINO,
         'No puedes confirmar un arqueo que has contado tú: tiene que hacerlo otra persona que lleve la caja, o el pastor.',

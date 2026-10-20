@@ -304,6 +304,23 @@ export const arqueos = pgTable(
     /** La pone la base al confirmar (HT130), no quien confirma. */
     confirmadoAt: timestamp('confirmado_at', { withTimezone: true }),
 
+    /**
+     * Las dos CUENTAS, además de las dos fichas. Las pone la base
+     * (`auth.uid()`, HT131 en la `0045`), nunca la aplicación.
+     *
+     * Hacen falta porque la ficha de una sesión es `iglesia_usuarios.miembro_id`,
+     * y esa columna se podía reapuntar: el pastor contaba con su ficha, se
+     * cambiaba a la de la secretaria y confirmaba «como ella». La `0045` cierra
+     * eso en HT101, y esto es la segunda llave: aunque alguien llegara a cambiar
+     * de ficha, sigue siendo la misma cuenta, y la misma cuenta no confirma lo
+     * que contó.
+     *
+     * Nulas en lo que escribe un proceso sin sesión, y en el arqueo de la demo
+     * anterior a la `0045`.
+     */
+    contadoPorAuthId: uuid('contado_por_auth_id'),
+    confirmadoPorAuthId: uuid('confirmado_por_auth_id'),
+
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -325,6 +342,11 @@ export const arqueos = pgTable(
     check(
       'ck_arqueos_dos_personas',
       sql`${t.confirmadoPorMiembroId} <> ${t.contadoPorMiembroId}`,
+    ),
+    // Y por cuenta, por lo que cuenta `contadoPorAuthId`.
+    check(
+      'ck_arqueos_dos_cuentas',
+      sql`${t.confirmadoPorAuthId} <> ${t.contadoPorAuthId}`,
     ),
     index('idx_arqueos_iglesia').on(t.iglesiaId, t.fecha.desc()),
     // Los que esperan confirmación, que es lo que se busca al abrir la pantalla.

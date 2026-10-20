@@ -150,7 +150,13 @@ export type GuardHatril =
    * o es quien contó, un arqueo confirmado se intentó tocar, o un ingreso que
    * sale de un arqueo se intentó editar, borrar o apuntar a mano (`0044`).
    */
-  | 'HT130';
+  | 'HT130'
+  /**
+   * La misma cuenta que contó un arqueo intentó confirmarlo —aunque fuera con
+   * otra ficha—, o se intentó reescribir la cuenta de quien contó o confirmó
+   * (`0045`).
+   */
+  | 'HT131';
 
 /**
  * ¿Es este error uno de nuestros triggers guard?

@@ -32,6 +32,8 @@ interface Opcion {
   nombre: string;
   /** Solo en los fondos: el que va por defecto. */
   esGeneral?: boolean;
+  /** Solo en las cajas: la de efectivo va por defecto. */
+  tipo?: string;
 }
 
 export function FormularioMovimiento({
@@ -204,7 +206,15 @@ export function FormularioMovimiento({
             <select
               id="cajaId"
               name="cajaId"
-              defaultValue={valores.cajaId ?? cajas[0]?.id}
+              // La de efectivo, por lo mismo que el General arriba: van por
+              // nombre, y «Cuenta Bancolombia» va antes que «Efectivo». La
+              // ofrenda del domingo se guardaría en el banco y «Saldo por
+              // caja» dejaría de cuadrar con la caja fuerte.
+              defaultValue={
+                valores.cajaId ??
+                cajas.find((c) => c.tipo === 'efectivo')?.id ??
+                cajas[0]?.id
+              }
               className="h-11 w-full rounded-lg border border-border bg-surface-alt px-3 text-[15px] text-foreground"
             >
               {cajas.map((c) => (

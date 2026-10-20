@@ -5,10 +5,12 @@ migración. En pantalla sigue llamándose **Finanzas**: nada de partida doble,
 nóminas, facturas ni impuestos, y sigue sin guardarse quién dio cuánto. Para
 integrar en `ESTADO.md` al fusionar.
 
-**Numeración:** salen la `0043_finanzas_arqueo` (generada) y la
-`0044_finanzas_arqueo_rls` (a mano), **ya aplicadas en la base compartida**
-(`drizzle.__drizzle_migrations`: 45 filas). Cogen **HT128, HT129 y HT130**. La
-siguiente migración es la **0045** y el siguiente código, **HT131**.
+**Numeración:** salen la `0043_finanzas_arqueo` (generada), la
+`0044_finanzas_arqueo_rls` (a mano) y, tras la revisión, la
+`0045_arqueo_por_cuenta` (generada y completada a mano). **Las tres están
+aplicadas en la base compartida** (`drizzle.__drizzle_migrations`: 46 filas).
+Cogen **HT128, HT129, HT130 y HT131**, y la 0045 amplía HT101. La siguiente
+migración es la **0046** y el siguiente código, **HT132**.
 
 ---
 
@@ -110,6 +112,43 @@ siguiente migración es la **0045** y el siguiente código, **HT131**.
 - Es **opcional**: el tesorero puede seguir apuntando directo en el libro. Sin
   ficha en la iglesia no se cuenta ni se confirma (lo dice la pantalla).
 
+### 3 bis. La revisión: el arqueo, por cuenta y no solo por ficha (`0045`)
+
+La revisión vio que HT130 decidía quién es quién con `miembro_actual()`, es
+decir `iglesia_usuarios.miembro_id`, y que el pastor podía reapuntar esa
+columna en su propia fila: contaba con su ficha, se ponía la de la secretaria,
+confirmaba «como ella» y volvía a la suya. Ningún camino de la aplicación lo
+hacía. Dos llaves:
+
+- **HT101 ampliado** (`guard_iglesia_usuarios`): desde una sesión nadie cambia
+  su propia ficha, como no cambia su rol. Enlazar la ficha al aprobar una
+  solicitud toca la fila de otra persona y sigue funcionando (probado).
+- **HT131**: `arqueos.contado_por_auth_id` y `confirmado_por_auth_id`, que
+  pone la base con `auth.uid()` y no se reescriben; la misma cuenta no
+  confirma lo que contó, aunque cambie de ficha. `ck_arqueos_dos_cuentas` lo
+  repite sin atajo. Nulas en el arqueo de la demo anterior a la 0045: no se
+  rellenan adivinando la cuenta por la ficha, que es justo lo falsificable.
+
+Y los otros siete hallazgos:
+
+- **Fondo o caja archivados con un arqueo esperando**: `archivarFondo` y
+  `archivarCaja` no archivan mientras haya arqueos sin confirmar que van ahí,
+  y contar y confirmar comprueban que fondo y caja siguen activos (si no, piden
+  descartar y volver a contar).
+- **Finanzas apagada a mitad de un formulario**: la action ya no manda a
+  `/panel/hoy` (de donde el tesorero salía a `/mi` sin aviso), sino a
+  `inicioDe(ctx)` con el mensaje; si es `/mi`, al muro, que lo pinta.
+- **Descartar** pide un paso más, sin JavaScript: «Descartar…» abre la zona de
+  borrar con lo que pasa y «Sí, descartarlo» en rojo.
+- **El resumen plegado de contar** decía siempre «Va a General · Efectivo»
+  aunque dentro se eligiera otro fondo; ahora dice «Fondo y caja · por
+  defecto, General · Efectivo».
+- **Tamaños sueltos** en «Es el fondo de»: el rótulo va con `t-label` y el
+  `select` sin tamaño propio, para que le alcance la regla de 16 px del móvil.
+- **La caja por defecto** del formulario de movimientos es la de efectivo, no
+  la primera por orden alfabético (mismo fallo que el del fondo).
+- El de la privacidad, abajo: es de Marlon.
+
 ### 4. Textos legales (sin subir `VERSION_POLITICA_PRIVACIDAD`)
 
 - `/privacidad`, párrafo de finanzas: quién contó y quién confirmó el arqueo
@@ -119,6 +158,16 @@ siguiente migración es la **0045** y el siguiente código, **HT131**.
   confirmó».
 - Es la misma categoría que «con quién lo registró», ya declarada; lo trato
   como precisión. **Subir la versión o no lo decide Marlon.**
+- **Pendiente de Marlon (hallazgo 7 de la revisión):** el párrafo añade datos
+  (quién contó y quién confirmó) y destinatarios (quien lleva un ministerio ve
+  los gastos de su fondo), pero ni `VERSION_POLITICA_PRIVACIDAD`
+  (`privacidad-2026-09`) ni «Última actualización» (2026-08-21, en
+  `src/lib/legal/datos-responsable.ts`) cambian, y la sección 10 de la misma
+  página dice que esa fecha es «la única señal fiable». Quien aceptó la versión
+  anterior no tiene forma de ver el párrafo nuevo. Como mínimo habría que mover
+  la fecha; si se considera cambio de fondo, subir también la versión y volver
+  a pedir el consentimiento. No he tocado ninguna de las dos: va junto con la
+  subida que ya esperan consolidación y la radio.
 
 ### 5. Arreglos que salieron por el camino
 

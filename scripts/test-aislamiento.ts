@@ -115,6 +115,11 @@ declare
   ARQ_A uuid;
   ARQ_A2 uuid;
   MOV_ARQ uuid;
+  -- 0045: una ficha prestada para reapuntar la de Vero, y otra para enlazar al
+  -- aprobar la solicitud de USR_C.
+  ARQ_A3 uuid;
+  MIE_PRESTADA uuid;
+  MIE_SOL uuid;
   -- Lo que responde inscribir_en_evento. Un solo escalar a proposito: ver la
   -- cabecera de la 0024.
   v_res text;
@@ -2224,6 +2229,21 @@ begin
                    else format(E'  FALLO error inesperado en HT129: %s\\n', sqlerrm) end;
   end;
 
+  -- La cuenta de quien cuenta la pone la base (HT131), diga lo que diga el
+  -- INSERT.
+  begin
+    insert into public.arqueos (iglesia_id, fecha, total_ofrendas, fondo_id, caja_id,
+                                contado_por_miembro_id, contado_por_auth_id)
+    values (IGL_A, current_date, 3000, FON_A, CAJ_A, MIE_V, USR_L)
+    returning id into ARQ_A3;
+    select count(*) into n from public.arqueos
+     where id = ARQ_A3 and contado_por_auth_id = USR_V;
+    r := r || format(E'  %s la cuenta de quien cuenta la pone la base (%s)\\n',
+                     case when n = 1 then 'OK  ' else 'FALLO' end, n);
+  exception when others then
+    r := r || format(E'  FALLO no se pudo contar con otra cuenta escrita: %s\\n', sqlerrm);
+  end;
+
   -- Confirmarse a si misma.
   begin
     update public.arqueos set confirmado_por_miembro_id = MIE_V, confirmado_at = now()
@@ -2375,6 +2395,82 @@ begin
                    else format(E'  FALLO error inesperado colgando a mano: %s\\n', sqlerrm) end;
   end;
 
+  select count(*) into n from public.arqueos
+   where id = ARQ_A and contado_por_auth_id = USR_V and confirmado_por_auth_id = USR_L;
+  r := r || format(E'  %s el arqueo guarda las dos cuentas, la que conto y la que confirmo (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- LA FICHA REAPUNTADA (0045). El agujero que vio la revision: cambiarse la
+  -- ficha propia para confirmar como otra persona. Primero, que HT101 ya no
+  -- deja hacerlo desde una sesion, ni al pastor.
+  perform set_config('request.jwt.claims', '', true);
+  insert into public.miembros (iglesia_id, nombre) values (IGL_A, 'Ficha prestada')
+  returning id into MIE_PRESTADA;
+  insert into public.miembros (iglesia_id, nombre) values (IGL_A, 'Ficha de la solicitud')
+  returning id into MIE_SOL;
+
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  begin
+    update public.iglesia_usuarios set miembro_id = MIE_PRESTADA
+     where iglesia_id = IGL_A and auth_user_id = USR_A;
+    r := r || E'  FALLO el pastor se cambio su propia ficha\\n';
+  exception when others then
+    r := r || case when sqlerrm like 'HT101%'
+                   then E'  OK   HT101 no deja a nadie cambiarse su propia ficha, ni al pastor\\n'
+                   else format(E'  FALLO error inesperado cambiando la ficha propia: %s\\n', sqlerrm) end;
+  end;
+
+  -- Y que aprobar una solicitud, que enlaza la ficha de OTRA persona, sigue
+  -- funcionando: es lo que hace aprobarSolicitud.
+  begin
+    update public.iglesia_usuarios
+       set estado = 'activo', miembro_id = MIE_SOL
+     where iglesia_id = IGL_A and auth_user_id = USR_C;
+    get diagnostics n = row_count;
+    r := r || format(E'  %s aprobar una solicitud enlaza la ficha de otra persona (%s)\\n',
+                     case when n = 1 then 'OK  ' else 'FALLO' end, n);
+  exception when others then
+    r := r || format(E'  FALLO aprobar una solicitud ya no enlaza la ficha: %s\\n', sqlerrm);
+  end;
+
+  execute 'reset role';
+
+  -- Y la segunda llave: aunque la ficha de Vero se reapuntara por otra via (aqui,
+  -- el sistema, que HT101 deja pasar), su CUENTA sigue siendo la que conto, y
+  -- HT131 no la deja confirmar. HT130 no lo ve: las fichas ya son distintas.
+  perform set_config('request.jwt.claims', '', true);
+  update public.iglesia_usuarios set miembro_id = MIE_PRESTADA
+   where iglesia_id = IGL_A and auth_user_id = USR_V;
+
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_V), true);
+  execute 'set local role hatril_app';
+
+  begin
+    update public.arqueos
+       set confirmado_por_miembro_id = MIE_PRESTADA, confirmado_at = now()
+     where id = ARQ_A3;
+    r := r || E'  FALLO la cuenta que conto confirmo con otra ficha\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT131%'
+                   then E'  OK   HT131 no deja confirmar a la misma cuenta aunque cambie de ficha\\n'
+                   else format(E'  FALLO error inesperado en HT131: %s\\n', sqlerrm) end;
+  end;
+
+  execute 'reset role';
+  perform set_config('request.jwt.claims', '', true);
+  update public.iglesia_usuarios set miembro_id = MIE_V
+   where iglesia_id = IGL_A and auth_user_id = USR_V;
+
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_L), true);
+  execute 'set local role hatril_app';
+
   -- Descartar uno que espera si se puede: no ha movido dinero.
   begin
     insert into public.arqueos (iglesia_id, fecha, total_ofrendas,
@@ -2453,7 +2549,8 @@ begin
   end;
   execute 'reset role';
 
-  -- Las seis funciones nuevas, cerradas a todos (son de trigger).
+  -- Las funciones de la contabilidad, cerradas a todos (son de trigger), y
+  -- guard_iglesia_usuarios, que la 0045 reescribe.
   select count(*) into n
     from (values ('anon'), ('authenticated'), ('service_role')) as v(rol),
          (values ('public.validar_ministerio_fondo()'),
@@ -2461,7 +2558,9 @@ begin
                  ('public.validar_arqueo_movimiento()'),
                  ('public.guard_arqueos()'),
                  ('public.guard_movimientos_arqueo()'),
-                 ('public.arqueo_genera_ingresos()')) as f(fn)
+                 ('public.arqueo_genera_ingresos()'),
+                 ('public.guard_arqueos_cuentas()'),
+                 ('public.guard_iglesia_usuarios()')) as f(fn)
    where has_function_privilege(v.rol, f.fn, 'EXECUTE');
   r := r || format(E'  %s las funciones de la contabilidad, cerradas a anon, authenticated y service_role (%s)\\n',
                    case when n = 0 then 'OK  ' else 'FALLO' end, n);

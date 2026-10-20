@@ -14,6 +14,7 @@ import {
 import {
   esDelEquipo,
   esPastor,
+  inicioDe,
   puede,
   puedeGestionarDesdeDentro,
   puedeGestionarFinanzas,
@@ -461,8 +462,12 @@ export async function requirePermisoAccion(
  * herramienta encendida.
  *
  * Un layout no corre en una server action, y apagar la caja tiene que apagarla
- * también para un POST fabricado. A `/panel/hoy` y no al destino de siempre,
- * que con la herramienta apagada da 404.
+ * también para un POST fabricado. No al destino de siempre, que con la
+ * herramienta apagada da 404, sino a donde empieza esa persona (`inicioDe`),
+ * con el aviso. Ni siquiera a `/panel/hoy`: el tesorero que solo lleva la caja
+ * ya no es del equipo con Finanzas apagada, el panel le saca a `/mi` y el
+ * mensaje se perdía por el camino —con el movimiento sin guardar—. Su sitio es
+ * el muro, que pinta `?error=`.
  */
 export async function requireFinanzasAccion(
   destinoError = '/panel/finanzas',
@@ -472,9 +477,12 @@ export async function requireFinanzasAccion(
     ? await requirePastorAccion(destinoError, opciones)
     : await requirePermisoAccion('gestionar_finanzas', destinoError, opciones);
   if (!finanzasEncendida(ctx.iglesia)) {
+    const inicio = inicioDe(ctx);
     redirect(
-      '/panel/hoy?error=' +
-        encodeURIComponent('Finanzas está apagada en tu iglesia. La enciende el pastor desde Módulos.'),
+      `${inicio === '/mi' ? '/mi/comunidad' : inicio}?error=` +
+        encodeURIComponent(
+          'No se ha guardado: Finanzas está apagada en tu iglesia. La enciende el pastor desde Módulos.',
+        ),
     );
   }
   return ctx;

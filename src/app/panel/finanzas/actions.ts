@@ -2,12 +2,12 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { requireFinanzasAccion } from '@/lib/auth/guard-panel';
 import { withUser } from '@/lib/db';
-import { cajas, fondos, movimientos } from '@/lib/db/schema';
+import { arqueos, cajas, fondos, movimientos } from '@/lib/db/schema';
 import { esGuardHatril, isUniqueViolation } from '@/lib/db/error';
 import { campo, campoObligatorio } from '@/lib/api/formulario';
 import { parsearDinero } from '@/lib/format/dinero';
@@ -379,6 +379,10 @@ export async function archivarFondo(formData: FormData): Promise<void> {
   const id = campoObligatorio(formData, 'id');
   const ctx = await requirePastorFinanzas(DESTINO_AJUSTES);
 
+  if (await hayArqueosEsperando(ctx, { fondoId: id })) {
+    volver(DESTINO_AJUSTES, ESPERAN_ARQUEOS);
+  }
+
   const filas = await withUser(ctx.user.id, (tx) =>
     tx
       .update(fondos)
@@ -399,6 +403,40 @@ export async function archivarFondo(formData: FormData): Promise<void> {
 
   revalidatePath(DESTINO_AJUSTES);
   redirect(DESTINO_AJUSTES);
+}
+
+/**
+ * ¿Hay arqueos sin confirmar que van a este fondo o a esta caja?
+ *
+ * Archivarlo con uno esperando haría que, al confirmarlo, sus ingresos cayeran
+ * en algo que ya no sale en los saldos. Primero se confirma o se descarta.
+ */
+const ESPERAN_ARQUEOS =
+  'Hay un arqueo esperando confirmación que va aquí. Confírmalo o descártalo antes de archivar.';
+
+async function hayArqueosEsperando(
+  ctx: UserContext,
+  destino: { fondoId?: string; cajaId?: string },
+): Promise<boolean> {
+  if (!z.string().uuid().safeParse(destino.fondoId ?? destino.cajaId).success) {
+    return false;
+  }
+  const filas = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ id: arqueos.id })
+      .from(arqueos)
+      .where(
+        and(
+          eq(arqueos.iglesiaId, ctx.iglesia.id),
+          isNull(arqueos.confirmadoAt),
+          destino.fondoId
+            ? eq(arqueos.fondoId, destino.fondoId)
+            : eq(arqueos.cajaId, destino.cajaId!),
+        ),
+      )
+      .limit(1),
+  );
+  return filas.length > 0;
 }
 
 /**
@@ -471,6 +509,10 @@ export async function vincularFondo(formData: FormData): Promise<void> {
 export async function archivarCaja(formData: FormData): Promise<void> {
   const id = campoObligatorio(formData, 'id');
   const ctx = await requirePastorFinanzas(DESTINO_AJUSTES);
+
+  if (await hayArqueosEsperando(ctx, { cajaId: id })) {
+    volver(DESTINO_AJUSTES, ESPERAN_ARQUEOS);
+  }
 
   await withUser(ctx.user.id, (tx) =>
     tx

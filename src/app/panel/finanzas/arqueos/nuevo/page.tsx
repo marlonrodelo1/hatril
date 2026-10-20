@@ -111,8 +111,12 @@ export default async function NuevoArqueoPage({
 
               <details className="group rounded-lg border border-border">
                 <summary className="flex h-[42px] cursor-pointer list-none items-center justify-between gap-2 px-3 text-label font-medium text-muted-foreground [&::-webkit-details-marker]:hidden">
+                  {/* Lo que viene por defecto, y dicho así: el resumen lo pinta
+                      el servidor y no se entera si dentro se elige otro fondo.
+                      «Va a General» sería falso en cuanto se cambiara. */}
                   <span className="truncate">
-                    Va a {fondoDefecto.nombre} · {cajaDefecto.nombre}
+                    Fondo y caja · por defecto, {fondoDefecto.nombre} ·{' '}
+                    {cajaDefecto.nombre}
                   </span>
                   <ChevronDown
                     className="size-4 flex-none transition-transform group-open:rotate-180"

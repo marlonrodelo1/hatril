@@ -9,6 +9,7 @@ import { formatearDinero } from '@/lib/format/dinero';
 import type { Moneda } from '@/lib/db/schema';
 import { Aviso } from '@/components/aviso';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { CabeceraPanel } from '../../_components/cabecera';
 import { Contenedor } from '../../_components/contenedor';
 import { confirmarArqueo, descartarArqueo } from './actions';
@@ -195,7 +196,7 @@ function TarjetaPendiente({
           </p>
         )}
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col items-start gap-2">
           {!esMio && puedeConfirmar && (
             <form action={confirmarArqueo}>
               <input type="hidden" name="id" value={a.id} />
@@ -205,13 +206,38 @@ function TarjetaPendiente({
               </Button>
             </form>
           )}
-          <form action={descartarArqueo}>
-            <input type="hidden" name="id" value={a.id} />
-            <Button type="submit" variant="ghost">
+
+          {/*
+           * Descartar borra, y en el móvil está a un dedo de «Confirmar». Un
+           * paso más, sin JavaScript: el `<details>` abre la zona de borrar con
+           * lo que pasa y el botón de verdad, en rojo. Lo contado se pierde y
+           * habría que volver a contar un efectivo que quizá ya está en el
+           * sobre del banco.
+           */}
+          <details className="group w-full">
+            <summary
+              className={cn(
+                buttonVariants({ variant: 'ghost' }),
+                'w-fit list-none text-muted-foreground [&::-webkit-details-marker]:hidden',
+              )}
+            >
               <Trash2 strokeWidth={1.8} />
-              Descartar
-            </Button>
-          </form>
+              Descartar…
+            </summary>
+            <div className="mt-2 flex flex-col items-start gap-3 rounded-lg border border-danger-border bg-danger-soft p-4">
+              <p className="text-pretty text-label">
+                Se borra lo contado. El libro no cambia, porque aún no se había
+                apuntado nada, pero habrá que volver a contar el efectivo.
+              </p>
+              <form action={descartarArqueo}>
+                <input type="hidden" name="id" value={a.id} />
+                <Button type="submit" variant="destructive">
+                  <Trash2 strokeWidth={1.8} />
+                  Sí, descartarlo
+                </Button>
+              </form>
+            </div>
+          </details>
         </div>
       </div>
     </article>
