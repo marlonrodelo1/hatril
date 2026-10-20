@@ -1,5 +1,4 @@
 import { getCurrentUserContext } from '@/lib/auth/user-context';
-import { ministeriosQueLlevoEnLaApp } from '@/lib/ministerios/en-la-app/guarda';
 import { RAIZ_APP } from '@/lib/ministerios/en-la-app/rutas';
 import { BarraInferior } from './_components/barra-inferior';
 
@@ -45,16 +44,17 @@ export default async function MiLayout({
    */
   if (!ctx) return <>{children}</>;
 
-  // La pestaña «Equipo», solo para quien lleva algo. Decidir AQUÍ si se pinta
-  // no protege nada —las pantallas de la zona ponen su propia guarda—; es para
-  // que al miembro raso la barra le quede igual. Con un ministerio, directo a
-  // su portada; con varios, a la lista.
-  const llevo = ministeriosQueLlevoEnLaApp(ctx);
+  // La pestaña «Equipo», para quien sirve en algún equipo, lo lleve o no: el
+  // líder encuentra ahí sus herramientas y el voluntario, lo de su equipo.
+  // Decidir AQUÍ si se pinta no protege nada —las pantallas de la zona ponen su
+  // propia guarda—; es para que al miembro que no sirve en nada la barra le
+  // quede igual. Con un equipo, directo a su portada; con varios, a la lista.
+  const sirvo = ctx.ministerioIds;
   const equipo =
-    llevo.length === 0
+    sirvo.length === 0
       ? null
-      : llevo.length === 1
-        ? `${RAIZ_APP}/${llevo[0]!.id}`
+      : sirvo.length === 1
+        ? `${RAIZ_APP}/${sirvo[0]}`
         : RAIZ_APP;
 
   return (

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Las rutas de la zona del líder, en un sitio.
+ * Las rutas de la zona de equipos, en un sitio.
  *
  * LA MISMA FORMA QUE EL PANEL, CON OTRO PREFIJO
  * ---------------------------------------------

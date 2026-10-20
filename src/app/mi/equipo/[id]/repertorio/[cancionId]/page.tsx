@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Archive, ArchiveRestore, ExternalLink, Trash2 } from 'lucide-react';
@@ -13,9 +12,16 @@ import { tieneModulo } from '@/lib/ministerios/modulos';
 import { obtenerCancion } from '@/lib/repertorio/consultas';
 import { sitioDe } from '@/lib/repertorio/enlaces';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { CONFIRMACIONES } from '@/app/panel/ministerios/[id]/repertorio/constantes';
-import { MarcoEquipo, Rotulo } from '../../../_components/marco';
+import {
+  Fila,
+  FilaEnlace,
+  Lista,
+  MarcoEquipo,
+  Seccion,
+  ZonaDeBorrar,
+} from '../../../_components/marco';
 import { FormularioCancion } from '../_components/formulario';
 import { archivarCancion, borrarCancion, editarCancion } from '../actions';
 
@@ -25,8 +31,8 @@ export const metadata: Metadata = { title: 'Canción' };
  * Una canción del repertorio: dónde escucharla, cuándo ha sonado y sus datos.
  *
  * Arriba lo que se viene a mirar —los enlaces y la historia—, y el formulario
- * debajo: se abre esta pantalla más para ensayar que para corregir. Archivar y
- * borrar, plegados al final.
+ * debajo: se abre esta pantalla más para ensayar que para corregir. Archivar
+ * y borrar, al final; borrar, en su tarjeta roja.
  */
 export default async function CancionEnLaAppPage({
   params,
@@ -67,111 +73,116 @@ export default async function CancionEnLaAppPage({
       ok={guardado ? CONFIRMACIONES[guardado] : undefined}
     >
       {cancion.archivada && (
-        <p className="rounded-xl border border-dashed border-border bg-surface px-4 py-3 text-[14.5px] text-muted-foreground">
+        <p className="rounded-xl border border-border bg-surface px-4 py-3 text-label text-muted-foreground">
           Archivada: no sale al elegir las canciones de un culto.
         </p>
       )}
 
       {enlaces.length > 0 && (
         <div className="flex flex-col gap-2">
+          {/* `<a>` con las clases del botón y no un `Button` con `render`: es
+              un enlace de fuera, y Base UI le pondría `type="button"`. */}
           {enlaces.map((e) => (
-            <Button
+            <a
               key={e.texto}
-              variant="outline"
-              className="justify-start"
-              render={<a href={e.href} target="_blank" rel="noopener noreferrer" />}
+              href={e.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonVariants({ variant: 'outline', className: 'justify-start' })}
             >
               <ExternalLink strokeWidth={1.8} />
               {e.texto}
               <span className="truncate font-normal text-muted-foreground">
                 en {sitioDe(e.href)}
               </span>
-            </Button>
+            </a>
           ))}
         </div>
       )}
 
-      <Rotulo>Cuándo ha sonado</Rotulo>
-      {cancion.historial.length === 0 ? (
-        <p className="px-1 text-[14.5px] text-muted-foreground">
-          Todavía no ha salido en ninguna lista.
-        </p>
-      ) : (
-        <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
-          {cancion.historial.map((h) => {
-            const texto = (
-              <>
-                <span className="text-[14.5px] font-semibold">
-                  {diaCorto(h.fecha, hoy)}
-                </span>
-                <span className="text-[13px] text-muted-foreground">
-                  {h.titulo}
-                  {h.tono && ` · en ${h.tono}`}
-                  {h.fecha > hoy && ' · planificado'}
-                </span>
-              </>
-            );
-            return (
-              <li key={h.turnoId}>
-                {conTurnos ? (
-                  <Link
-                    href={rutaApp(id, 'turnos', h.turnoId)}
-                    className="flex flex-col px-4 py-2.5 text-foreground no-underline hover:bg-surface-alt hover:no-underline"
-                  >
-                    {texto}
-                  </Link>
-                ) : (
-                  <div className="flex flex-col px-4 py-2.5">{texto}</div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <Seccion rotulo="Cuándo ha sonado">
+        {cancion.historial.length === 0 ? (
+          <p className="px-1 text-body text-muted-foreground">
+            Todavía no ha salido en ninguna lista.
+          </p>
+        ) : (
+          <Lista>
+            {cancion.historial.map((h) => {
+              const texto = (
+                <>
+                  <span className="text-body font-semibold">
+                    {diaCorto(h.fecha, hoy)}
+                  </span>
+                  <span className="text-label text-muted-foreground">
+                    {h.titulo}
+                    {h.tono && ` · en ${h.tono}`}
+                    {h.fecha > hoy && ' · planificado'}
+                  </span>
+                </>
+              );
+              return (
+                <Fila key={h.turnoId}>
+                  {conTurnos ? (
+                    <FilaEnlace href={rutaApp(id, 'turnos', h.turnoId)}>{texto}</FilaEnlace>
+                  ) : (
+                    <div className="flex flex-col gap-0.5 px-4 py-3 md:px-5">{texto}</div>
+                  )}
+                </Fila>
+              );
+            })}
+          </Lista>
+        )}
+      </Seccion>
 
-      <Rotulo>Sus datos</Rotulo>
-      <FormularioCancion
-        accion={editarCancion.bind(null, id, cancionId)}
-        cancion={cancion}
-        texto="Guardar los cambios"
-      />
+      <Seccion rotulo="Sus datos">
+        <FormularioCancion
+          accion={editarCancion.bind(null, id, cancionId)}
+          cancion={cancion}
+          texto="Guardar los cambios"
+        />
+      </Seccion>
 
-      <details className="rounded-xl border border-border bg-surface">
-        <summary className="flex min-h-12 cursor-pointer list-none items-center px-4 py-3 text-[15px] font-semibold marker:hidden">
-          {cancion.archivada ? 'Volver a tocarla, o borrarla' : 'Si el equipo ya no la toca'}
-        </summary>
-        <div className="flex flex-col items-start gap-3 border-t border-border p-4">
-          <p className="text-pretty text-[14px] leading-relaxed text-muted-foreground">
+      <section className="flex flex-col items-start gap-3 rounded-xl border border-border bg-surface p-5">
+        <div className="flex flex-col gap-1">
+          <h2 className="t-subtitulo">
+            {cancion.archivada ? 'Volver a tocarla' : 'Si el equipo ya no la toca'}
+          </h2>
+          <p className="max-w-[62ch] text-pretty text-label text-muted-foreground">
             {cancion.archivada
               ? 'Devuélvela y vuelve a salir al elegir las canciones de un culto.'
               : 'Archívala: deja de salir al elegir las canciones de un culto, y los domingos en que sonó no se pierden.'}
           </p>
-          <form action={archivarCancion.bind(null, id, cancionId, !cancion.archivada)}>
-            <Button type="submit" variant="outline">
-              {cancion.archivada ? (
-                <ArchiveRestore strokeWidth={1.8} />
-              ) : (
-                <Archive strokeWidth={1.8} />
-              )}
-              {cancion.archivada ? 'Devolverla al repertorio' : 'Archivarla'}
-            </Button>
-          </form>
-          {cancion.historial.length === 0 && (
-            <>
-              <p className="text-pretty text-[14px] leading-relaxed text-muted-foreground">
-                Como no ha salido en ninguna lista, también se puede borrar del
-                todo.
-              </p>
-              <form action={borrarCancion.bind(null, id, cancionId)}>
-                <Button type="submit" variant="destructive">
-                  <Trash2 strokeWidth={1.8} />
-                  Borrarla
-                </Button>
-              </form>
-            </>
-          )}
         </div>
-      </details>
+        <form action={archivarCancion.bind(null, id, cancionId, !cancion.archivada)}>
+          <Button type="submit" variant="outline">
+            {cancion.archivada ? (
+              <ArchiveRestore strokeWidth={1.8} />
+            ) : (
+              <Archive strokeWidth={1.8} />
+            )}
+            {cancion.archivada ? 'Devolverla al repertorio' : 'Archivarla'}
+          </Button>
+        </form>
+      </section>
+
+      {/* Borrar solo se ofrece si nunca sonó: la base lo impediría de todos
+          modos, y un botón que siempre responde «archívala» no es un botón. */}
+      {cancion.historial.length === 0 && (
+        <ZonaDeBorrar
+          titulo="Borrar la canción"
+          boton={
+            <form action={borrarCancion.bind(null, id, cancionId)}>
+              <Button type="submit" variant="destructive">
+                <Trash2 strokeWidth={1.8} />
+                Borrarla
+              </Button>
+            </form>
+          }
+        >
+          Como no ha salido en ninguna lista, se puede borrar del todo. No hay
+          forma de recuperarla.
+        </ZonaDeBorrar>
+      )}
     </MarcoEquipo>
   );
 }

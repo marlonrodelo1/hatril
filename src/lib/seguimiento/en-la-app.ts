@@ -19,6 +19,13 @@ import { personasPorFaltas } from './consultas';
  * permiso de asistencia. No hay otra lista: la portada no puede enseñar a
  * alguien que la pantalla del seguimiento esconde.
  *
+ * SIN VISTA DE PARTICIPANTE, A PROPÓSITO
+ * --------------------------------------
+ * No declara `participante`: un voluntario de consolidación no lleva el
+ * seguimiento, y por qué alguien dejó de venir no se enseña a todo el equipo.
+ * Quien acompaña a alguien y necesita su ficha lo hace con `ver_seguimiento`
+ * y liderando, como en el panel.
+ *
  * Quien más se ha perdido va primero, que es el orden en que ya vienen. Sin
  * color de alarma para «nadie le acompaña» en sí —el primer día es lo normal—,
  * pero sí cuando se juntan tres faltas y nadie al lado: ese es el caso en que

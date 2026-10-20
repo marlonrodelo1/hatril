@@ -4,7 +4,8 @@ import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
 import type { ModuloId } from '@/lib/ministerios/modulos';
 
 /**
- * Lo que cada módulo declara para salir en la app del líder (`/mi/equipo`).
+ * Lo que cada módulo declara para salir en la zona de equipos de la app
+ * (`/mi/equipo`), para quien lo lleva y para quien participa.
  *
  * POR QUÉ UN CONTRATO Y NO UN `if` POR TIPO
  * -----------------------------------------
@@ -57,7 +58,28 @@ export type ResumenDeModulo = {
   proximo?: { texto: string; detalle?: string; href: string } | null;
   /** La frase cuando no hay ni pendientes ni próximo. */
   vacio: string;
+  /**
+   * El enlace del pie de la tarjeta, si no es el de siempre.
+   *
+   * Lo usa la vista del participante: su pie no lleva a la herramienta del
+   * líder —esa pantalla le daría 404— sino a donde lo suyo ya vive, que casi
+   * siempre es `/mi/agenda`. Sin él, la tarjeta del participante va sin pie.
+   */
+  enlace?: { texto: string; href: string } | null;
 };
+
+/**
+ * Las dos formas de mirar un ministerio desde la app.
+ *
+ * LA APP ES UNA, Y LA USAN LOS DOS
+ * --------------------------------
+ * Quien LLEVA el ministerio ve lo que pide atención y entra a arreglarlo. Quien
+ * PARTICIPA sin liderar ve lo suyo: sus turnos, el próximo ensayo, la lista del
+ * domingo. Nunca las respuestas de los demás —que Fulano dijo que no puede es
+ * una conversación entre él y quien lleva el equipo— ni nada de una
+ * herramienta que solo es del líder, como el seguimiento.
+ */
+export type ModoEnElEquipo = 'lider' | 'participante';
 
 export type ModuloEnLaApp = {
   id: ModuloId;
@@ -82,12 +104,24 @@ export type ModuloEnLaApp = {
    */
   visiblePara?: (ctx: ContextoPermisos) => boolean;
   /**
-   * La tarjeta de la portada. Recibe el ministerio ya cargado —con su equipo y
-   * sus módulos— para que ningún adaptador lo vuelva a pedir, y `hoy` en la
-   * zona de la iglesia, que es la fecha contra la que se decide qué está por
-   * venir.
+   * La tarjeta de la portada de quien LLEVA el ministerio. Recibe el ministerio
+   * ya cargado —con su equipo y sus módulos— para que ningún adaptador lo vuelva
+   * a pedir, y `hoy` en la zona de la iglesia, que es la fecha contra la que se
+   * decide qué está por venir.
    */
   resumen: (
+    ctx: UserContext,
+    ministerio: MinisterioDetalle,
+    hoy: string,
+  ) => Promise<ResumenDeModulo>;
+  /**
+   * La tarjeta de quien PARTICIPA sin liderar. Opcional a propósito: un módulo
+   * que no la declara no le enseña nada al participante —el seguimiento, por
+   * ejemplo, es solo del líder—. Lo que pinte aquí tiene que poder abrirlo
+   * cualquiera del equipo: sus enlaces van a pantallas del miembro (`/mi/...`),
+   * no a las herramientas de `/mi/equipo/[id]/...`, que le darían 404.
+   */
+  participante?: (
     ctx: UserContext,
     ministerio: MinisterioDetalle,
     hoy: string,

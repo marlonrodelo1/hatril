@@ -10,15 +10,17 @@ import {
   type ReunionResumen,
 } from '@/lib/asistencia/consultas';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { CONFIRMACIONES } from '@/app/panel/ministerios/[id]/agenda/constantes';
 import {
+  Fila,
   FilaEnlace,
   Lista,
   MarcoEquipo,
-  Rotulo,
+  Seccion,
   Vacio,
 } from '../../_components/marco';
+import { Insignia } from '../../_components/insignia';
 
 export const metadata: Metadata = { title: 'Agenda del equipo' };
 
@@ -45,16 +47,16 @@ export default async function AgendaEnLaAppPage({
   const reuniones = await listarReuniones(ctx, { ministerioId: id, limite: 40 });
   const base = rutaApp(id, 'agenda');
 
+  // Hoy va con lo próximo: es el ensayo de esta noche, el que se abre para
+  // pasar lista, y tiene que estar arriba.
   const proximas = reuniones
-    .filter((r) => r.fecha > hoy)
+    .filter((r) => r.fecha >= hoy)
     .sort((a, b) =>
       a.fecha === b.fecha
         ? (a.hora ?? '').localeCompare(b.hora ?? '')
         : a.fecha.localeCompare(b.fecha),
     );
-  // Las de hoy van con las pasadas: es donde se pasa lista, y el ensayo de esta
-  // noche tiene que estar a mano para hacerlo.
-  const pasadas = reuniones.filter((r) => r.fecha <= hoy);
+  const anteriores = reuniones.filter((r) => r.fecha < hoy);
 
   return (
     <MarcoEquipo
@@ -65,84 +67,85 @@ export default async function AgendaEnLaAppPage({
       error={error}
       ok={guardado ? CONFIRMACIONES[guardado] : undefined}
     >
-      <Button className="self-start" render={<Link href={`${base}/nueva`} />}>
+      <Link href={`${base}/nueva`} className={buttonVariants({ className: 'self-start' })}>
         <CalendarPlus strokeWidth={1.8} />
         Apuntar en la agenda
-      </Button>
+      </Link>
 
       {reuniones.length === 0 && (
-        <Vacio>
-          <p>
-            No hay nada en la agenda del equipo. Apunta el próximo ensayo o
-            reunión y el equipo lo verá en su propia agenda.
-          </p>
+        <Vacio
+          titulo="La agenda del equipo está vacía"
+          accion={
+            <Link href={`${base}/nueva`} className={buttonVariants({ variant: 'outline' })}>
+              <CalendarPlus strokeWidth={1.8} />
+              Apuntar el próximo ensayo
+            </Link>
+          }
+        >
+          Apunta el próximo ensayo o reunión y el equipo lo verá en su propia
+          agenda. Después, el mismo día, pasas lista desde aquí.
         </Vacio>
       )}
 
       {proximas.length > 0 && (
-        <>
-          <Rotulo>Lo que viene</Rotulo>
+        <Seccion rotulo="Próximos">
           <Lista>
             {proximas.map((r) => (
-              <Fila key={r.id} reunion={r} href={`${base}/${r.id}`} hoy={hoy} />
+              <FilaReunion key={r.id} reunion={r} href={`${base}/${r.id}`} hoy={hoy} />
             ))}
           </Lista>
-        </>
+        </Seccion>
       )}
 
-      {pasadas.length > 0 && (
-        <>
-          <Rotulo>Hoy y antes</Rotulo>
+      {anteriores.length > 0 && (
+        <Seccion rotulo="Anteriores">
           <Lista>
-            {pasadas.map((r) => (
-              <Fila key={r.id} reunion={r} href={`${base}/${r.id}`} hoy={hoy} conLista />
+            {anteriores.map((r) => (
+              <FilaReunion key={r.id} reunion={r} href={`${base}/${r.id}`} hoy={hoy} />
             ))}
           </Lista>
-        </>
+        </Seccion>
       )}
     </MarcoEquipo>
   );
 }
 
-function Fila({
+function FilaReunion({
   reunion: r,
   href,
   hoy,
-  conLista,
 }: {
   reunion: ReunionResumen;
   href: string;
   hoy: string;
-  /** Solo lo que ya ha llegado tiene lista que pasar. */
-  conLista?: boolean;
 }) {
+  // Solo lo que ya ha llegado tiene lista que pasar.
+  const llego = r.fecha <= hoy;
+
   return (
-    <li>
+    <Fila>
       <FilaEnlace
         href={href}
         derecha={
-          conLista ? (
-            r.marcados === 0 ? (
-              <span className="inline-flex flex-none items-center gap-1 rounded-md bg-badge-neutral-bg px-2 py-0.5 text-[12px] font-semibold text-badge-neutral-fg">
-                <CircleDashed className="size-3" strokeWidth={2.2} aria-hidden />
-                Sin lista
-              </span>
-            ) : (
-              <span className="flex-none text-[13px] font-semibold tabular-nums text-muted-foreground">
-                {r.presentes} de {r.marcados}
-              </span>
-            )
-          ) : undefined
+          !llego ? undefined : r.marcados === 0 ? (
+            <Insignia tono="neutro" Icono={CircleDashed}>
+              Sin lista
+            </Insignia>
+          ) : (
+            <span className="flex-none text-label font-semibold tabular-nums text-muted-foreground">
+              {r.presentes} de {r.marcados}
+            </span>
+          )
         }
       >
-        <span className="text-[15px] font-bold tracking-[-0.012em]">
+        <span className="text-body font-semibold">
           {cuandoCorto(r.fecha, r.hora, hoy)}
         </span>
-        <span className="truncate text-[13.5px] text-muted-foreground">
+        <span className="truncate text-label text-muted-foreground">
           {r.titulo}
           {r.lugar && ` · ${r.lugar}`}
         </span>
       </FilaEnlace>
-    </li>
+    </Fila>
   );
 }

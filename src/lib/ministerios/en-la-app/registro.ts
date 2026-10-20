@@ -10,10 +10,10 @@ import { agendaEnLaApp } from '@/lib/agenda/en-la-app';
 import { repertorioEnLaApp } from '@/lib/repertorio/en-la-app';
 import { seguimientoEnLaApp } from '@/lib/seguimiento/en-la-app';
 import { turnosEnLaApp } from '@/lib/turnos/en-la-app';
-import type { ModuloEnLaApp } from './contrato';
+import type { ModoEnElEquipo, ModuloEnLaApp } from './contrato';
 
 /**
- * Qué módulos saben pintarse en la app del líder.
+ * Qué módulos saben pintarse en la zona de equipos de la app.
  *
  * PARA ENGANCHAR UN MÓDULO NUEVO, UNA LÍNEA
  * -----------------------------------------
@@ -47,13 +47,19 @@ export type ModuloEnLaPortada = {
  * Solo las encendidas, y de esas solo las que esta persona puede abrir: la
  * misma regla que `PestanasMinisterio` en el panel. Una tarjeta que lleva a una
  * pantalla que rebota es peor que no tenerla.
+ *
+ * Para quien participa, solo los módulos que declaran `participante`, y sin
+ * tarjeta de respaldo: el respaldo lleva al panel, y a un voluntario el panel
+ * le rebota. Un módulo que no dice qué ve el equipo no le enseña nada.
  */
 export function modulosDeLaPortada(
   ctx: ContextoPermisos,
   modulosGuardados: unknown,
+  modo: ModoEnElEquipo,
 ): ModuloEnLaPortada[] {
   return modulosActivos(modulosGuardados).flatMap((modulo) => {
     const app = ADAPTADORES[modulo.id] ?? null;
+    if (modo === 'participante') return app?.participante ? [{ modulo, app }] : [];
     if (app?.visiblePara && !app.visiblePara(ctx)) return [];
     return [{ modulo, app }];
   });

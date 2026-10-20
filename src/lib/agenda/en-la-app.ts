@@ -1,6 +1,9 @@
 import 'server-only';
 
-import { listarReuniones } from '@/lib/asistencia/consultas';
+import {
+  listarReuniones,
+  proximasDeMisMinisterios,
+} from '@/lib/asistencia/consultas';
 import type {
   ModuloEnLaApp,
   Pendiente,
@@ -69,7 +72,33 @@ export const agendaEnLaApp: ModuloEnLaApp = {
             href: `${base}/${siguiente.id}`,
           }
         : null,
-      vacio: 'No hay nada en la agenda del equipo.',
+      vacio:
+        'No hay nada en la agenda del equipo. Apunta el próximo ensayo o reunión y el equipo lo verá en su agenda.',
+    };
+  },
+
+  /**
+   * El próximo ensayo o reunión del equipo, para quien va a ir.
+   *
+   * `proximasDeMisMinisterios`, la consulta de la agenda del miembro, acotada a
+   * este equipo. Sin listas ni asistencia: quién vino al ensayo es del líder.
+   * El enlace abre el día en la agenda, que es donde el miembro ya tiene el
+   * lugar y la hora junto a lo demás de esa semana.
+   */
+  async participante(ctx, ministerio, hoy) {
+    const [siguiente] = await proximasDeMisMinisterios(ctx, [ministerio.id], hoy);
+
+    return {
+      pendientes: [],
+      proximo: siguiente
+        ? {
+            texto: `${cuandoCorto(siguiente.fecha, siguiente.hora, hoy)} · ${siguiente.titulo}`,
+            detalle: siguiente.lugar ?? undefined,
+            href: `/mi/agenda?v=dia&d=${siguiente.fecha}`,
+          }
+        : null,
+      vacio: 'El equipo no tiene nada apuntado por delante.',
+      enlace: { texto: 'Ver la agenda', href: '/mi/agenda' },
     };
   },
 };

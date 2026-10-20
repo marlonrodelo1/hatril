@@ -1,6 +1,12 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ExternalLink, HandCoins, LayoutDashboard, LogOut } from 'lucide-react';
+import {
+  ExternalLink,
+  HandCoins,
+  LayoutDashboard,
+  LogOut,
+  Users,
+} from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { puedeGestionarMinisterio } from '@/lib/auth/permisos';
@@ -12,7 +18,7 @@ import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { nombreDeLaCuenta } from '@/lib/auth/nombre';
 import { iniciales } from '@/lib/format/iniciales';
 import { createClient } from '@/lib/supabase/server';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { salir } from '../../(auth)/actions';
 import { CabeceraMiembro } from '../_components/cabecera-miembro';
 
@@ -109,26 +115,38 @@ export default async function MiCuentaPage() {
                       </div>
                     )}
                     {/*
-                     * A la portada del ministerio en la propia app, la de la
-                     * pestaña «Equipo»: quien lleva un equipo viene a lo suyo y
-                     * no tiene por qué salir al panel para hacerlo. Una entrada
-                     * para todos sus módulos.
+                     * A la portada del equipo en la propia app, la de la
+                     * pestaña «Equipo». Quien lo lleva entra a sus
+                     * herramientas; quien sirve sin llevarlo, a lo suyo: sus
+                     * turnos, el próximo ensayo, la lista del domingo. Los dos
+                     * van al mismo sitio, y lo que ven lo decide la portada.
                      *
                      * Con `puedeGestionarMinisterio` y no `esDelEquipo`: el
                      * voluntario que lleva la caja entra al panel, pero en ESTE
                      * equipo no tiene herramientas. En contorno porque con dos
-                     * ministerios serían dos naranjas, y se admite uno.
+                     * ministerios serían dos naranjas, y se admite uno. Y un
+                     * `Link` con las clases del botón, no un `Button` con
+                     * `render`: Base UI le pondría `type="button"` a un enlace.
                      */}
-                    {puedeGestionarMinisterio(ctx, m.id) && (
-                      <Button
-                        variant="outline"
-                        className="self-start"
-                        render={<Link href={rutaApp(m.id)} />}
-                      >
-                        <LayoutDashboard strokeWidth={1.8} />
-                        Abrir herramientas
-                      </Button>
-                    )}
+                    <Link
+                      href={rutaApp(m.id)}
+                      className={buttonVariants({
+                        variant: 'outline',
+                        className: 'self-start',
+                      })}
+                    >
+                      {puedeGestionarMinisterio(ctx, m.id) ? (
+                        <>
+                          <LayoutDashboard strokeWidth={1.8} />
+                          Abrir herramientas
+                        </>
+                      ) : (
+                        <>
+                          <Users strokeWidth={1.8} />
+                          Ver tu equipo
+                        </>
+                      )}
+                    </Link>
                   </li>
                 );
               })}

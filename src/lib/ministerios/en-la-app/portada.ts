@@ -4,16 +4,22 @@ import type { UserContext } from '@/lib/auth/user-context';
 import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
 import type { ModuloMinisterio } from '@/lib/ministerios/modulos';
 import { captureException } from '@/lib/observability';
-import type { ModuloEnLaApp, ResumenDeModulo } from './contrato';
+import type {
+  ModoEnElEquipo,
+  ModuloEnLaApp,
+  ResumenDeModulo,
+} from './contrato';
 import { modulosDeLaPortada } from './registro';
 import { RAIZ_APP } from './rutas';
 
 export type TarjetaDePortada = {
   modulo: ModuloMinisterio;
-  /** A dónde lleva su enlace: la pantalla de la app, o la del panel. */
-  href: string;
-  /** El texto de ese enlace. */
-  abrir: string;
+  /**
+   * El enlace del pie: la herramienta del líder, la pantalla del panel de un
+   * módulo sin adaptador, o lo que diga la vista del participante. `null`, sin
+   * pie.
+   */
+  enlace: { texto: string; href: string } | null;
   /**
    * Lo que trae el adaptador. `null` en dos casos que se pintan distinto: el
    * módulo no tiene adaptador todavía (`sinAdaptador`) o lo tiene y ha fallado.
@@ -22,24 +28,29 @@ export type TarjetaDePortada = {
   sinAdaptador: boolean;
 };
 
-function destinoDe(
+/** El pie de la tarjeta del líder: su herramienta en la app, o en el panel. */
+function herramientaDe(
   ministerioId: string,
   modulo: ModuloMinisterio,
   app: ModuloEnLaApp | null,
-): string {
+): { texto: string; href: string } {
   return app?.pantalla === 'app'
-    ? `${RAIZ_APP}/${ministerioId}/${modulo.id}`
-    : `/panel/ministerios/${ministerioId}/${modulo.id}`;
+    ? { texto: app.abrir, href: `${RAIZ_APP}/${ministerioId}/${modulo.id}` }
+    : {
+        texto: app?.abrir ?? 'Abrir en el panel',
+        href: `/panel/ministerios/${ministerioId}/${modulo.id}`,
+      };
 }
 
 /**
- * Las tarjetas de la portada de un ministerio, ya resueltas.
+ * Las tarjetas de la portada de un ministerio, ya resueltas, para quien lo
+ * lleva o para quien participa en él.
  *
  * UN ADAPTADOR QUE FALLA NO SE LLEVA LA PORTADA
  * ---------------------------------------------
  * Con `allSettled` y no `all`. Los adaptadores los escriben ramas distintas, y
- * la portada es lo primero que abre el líder: que el resumen del reparto lance
- * no puede dejarle sin ver los turnos del domingo. La tarjeta que falla sale
+ * la portada es lo primero que se abre: que el resumen del reparto lance no
+ * puede dejar a nadie sin ver los turnos del domingo. La tarjeta que falla sale
  * diciendo que no se ha podido cargar, con su enlace, y el error va a Sentry —
  * no se traga en silencio—.
  */
@@ -47,13 +58,19 @@ export async function tarjetasDeLaPortada(
   ctx: UserContext,
   ministerio: MinisterioDetalle,
   hoy: string,
+  modo: ModoEnElEquipo,
 ): Promise<TarjetaDePortada[]> {
-  const modulos = modulosDeLaPortada(ctx, ministerio.modulos);
+  const modulos = modulosDeLaPortada(ctx, ministerio.modulos, modo);
 
   const resueltos = await Promise.allSettled(
-    modulos.map(({ app }) =>
-      app ? app.resumen(ctx, ministerio, hoy) : Promise.resolve(null),
-    ),
+    modulos.map(({ app }) => {
+      if (!app) return Promise.resolve(null);
+      // `modulosDeLaPortada` solo deja pasar al participante los que declaran
+      // su vista, así que aquí `participante` existe.
+      return modo === 'participante'
+        ? app.participante!(ctx, ministerio, hoy)
+        : app.resumen(ctx, ministerio, hoy);
+    }),
   );
 
   return Promise.all(
@@ -61,17 +78,20 @@ export async function tarjetasDeLaPortada(
       const r = resueltos[i]!;
       if (r.status === 'rejected') {
         await captureException(r.reason, {
-          donde: 'portada del líder',
+          donde: `portada del equipo (${modo})`,
           modulo: modulo.id,
           ministerioId: ministerio.id,
         });
       }
+      const resumen = r.status === 'fulfilled' ? r.value : null;
 
       return {
         modulo,
-        href: destinoDe(ministerio.id, modulo, app),
-        abrir: app?.abrir ?? 'Abrir en el panel',
-        resumen: r.status === 'fulfilled' ? r.value : null,
+        enlace:
+          modo === 'participante'
+            ? (resumen?.enlace ?? null)
+            : herramientaDe(ministerio.id, modulo, app),
+        resumen,
         sinAdaptador: app === null,
       };
     }),

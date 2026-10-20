@@ -1,51 +1,51 @@
-# La app del líder — estado de la rama `claude/app-lider-551adf`
+# Los equipos en la app — estado de la rama `claude/app-lider-551adf`
 
-20 de octubre de 2026. Encargo: que `/mi` esté completa para quien lleva un
-ministerio. El miembro raso sigue viendo lo básico; quien lidera tiene, en la
-misma app, las herramientas de lo suyo sin salir al panel.
+20 de octubre de 2026. Encargo: que `/mi` esté completa para quien sirve en un
+ministerio. La app es UNA para líderes y miembros: quien lleva un equipo tiene
+ahí sus herramientas sin salir al panel; quien sirve sin llevarlo ve lo suyo; y
+quien no sirve en nada sigue con su barra de siempre.
 
 Sin migraciones. No toca `drizzle/`, ni `src/lib/db/schema`, ni ninguna action
-del panel.
+del panel. Sigue la guía visual de la rama `claude/diseno-auditoria-4e606f`
+(`docs/diseno/guia-visual.md`).
 
 ---
 
 ## Qué hay
 
-**Pestaña «Equipo»** (`/mi/equipo`), la quinta de la barra, solo para quien
-lidera algo (`ministeriosQueLlevoEnLaApp`: `ministeriosQueLlevo` filtrado por
-`puedeGestionarMinisterio`). Va al final: el miembro raso ve sus cuatro pestañas
-exactamente donde estaban y el líder no pierde ninguna de sitio. Con un solo
-ministerio la pestaña lleva directa a su portada; con varios, a una lista con lo
-que pide atención en cada uno. Cinco caben a 375 px; seis no, y por eso la
-emisora va encima de la barra y no como pestaña.
+**Pestaña «Equipo»** (`/mi/equipo`), la quinta de la barra, para todo el que
+sirve en algún equipo (`ctx.ministerioIds`), lo lleve o no. Va al final: nadie
+pierde ninguna de sus pestañas de sitio, y el miembro que no sirve en nada no
+la ve. Con un solo equipo lleva directa a su portada; con varios, a una lista
+en dos bloques: «Lo que llevas» y «Donde sirves», con lo pendiente de cada uno.
 
-**Portada por ministerio** (`/mi/equipo/[id]`): una línea arriba con el total
-(«3 cosas piden atención» / «Todo en orden») y una tarjeta por módulo encendido.
-Hoy:
+**Por qué ahí y no un bloque en Agenda o en Mi cuenta.** Para el voluntario
+«lo de mi equipo» es un sitio al que volver cada semana —el turno, el ensayo, la
+lista del domingo—, no un dato más de su calendario ni un ajuste de su cuenta.
+En Agenda ya están sus turnos sueltos entre los cultos y eventos; lo que faltaba
+era verlos juntos por equipo, con quién más está y qué se toca. Y una sola
+entrada para los dos papeles evita que alguien que es voluntario en un equipo y
+líder en otro tenga que saber cuál de los dos sitios toca. Mi cuenta, además,
+lleva desde cada ministerio a su portada: «Abrir herramientas» si lo lleva,
+«Ver tu equipo» si participa.
 
-| Módulo | Qué enseña la tarjeta |
-|---|---|
-| Agenda | Ensayos de las últimas 3 semanas (y hoy) sin lista pasada; el siguiente que viene |
-| Turnos | Los próximos turnos (3 semanas) con puestos sin cubrir, «no puedo» o sin contestar; si no hay ninguno planificado, eso |
-| Repertorio | La lista del próximo culto: «sin lista» (urgente a 3 días) o cuántas canciones y cuáles |
-| Seguimiento | Quién más reuniones se ha perdido, con quién le acompaña. Solo con `ver_seguimiento` |
+**Portada por equipo** (`/mi/equipo/[id]`), en dos modos:
 
-Debajo, el equipo plegado (solo lectura).
+| Módulo | Quien lo LLEVA ve | Quien PARTICIPA ve |
+|---|---|---|
+| Agenda | Ensayos de las últimas 3 semanas (y hoy) sin lista; el siguiente | El próximo ensayo, con lugar; enlace al día en su agenda |
+| Turnos | Próximos turnos con puestos sin cubrir, «no puedo» o sin contestar | Sus turnos: los sin confirmar como pendientes; enlace a su turno en la agenda, donde confirma |
+| Repertorio | La lista del próximo culto, urgente si falta a 3 días | La lista del próximo culto del equipo (sin pendiente: no es cosa suya) |
+| Seguimiento | Quién más reuniones se ha perdido (solo con `ver_seguimiento`) | Nada: es solo del líder |
 
-**Las tareas, en la app**, con las MISMAS rutas que el panel y otro prefijo:
+Debajo, el equipo: nombres, papel y quién es responsable o colíder. Nunca las
+respuestas de los demás a un turno; eso es del líder.
 
-- `turnos` (lista), `turnos/planificar`, `turnos/[turnoId]`: poner y quitar gente
-  por puesto, marcar quién confirmó o no puede, copiar el cuadrante anterior,
-  editar y borrar el turno, y **la lista de canciones del culto** (añadir con su
-  tono, subir, bajar, cambiar el tono del día, quitar).
-- `agenda`, `agenda/nueva`, `agenda/[reunionId]` (**pasar lista**),
-  `agenda/[reunionId]/editar`.
-- `repertorio`, `repertorio/nueva`, `repertorio/[cancionId]` (enlaces, cuándo ha
-  sonado, editar, archivar, borrar si nunca sonó).
-- `seguimiento` (con botón de llamar en cada fila) y `seguimiento/[miembroId]`
-  (llamar, **apuntar el contacto**, quién le acompaña, historia).
-
-**«Abrir herramientas»** de `/mi/cuenta` lleva ahora a `/mi/equipo/[id]`.
+**Las herramientas del líder, en la app**, con las MISMAS rutas que el panel
+bajo `/mi/equipo/[id]/…`: turnos (lista, planificar, cuadrante con la lista de
+canciones del culto), agenda (lista, nueva, pasar lista, editar), repertorio
+(lista, nueva, ficha) y seguimiento (lista con llamada, ficha con apuntar el
+contacto). Al voluntario le dan 404.
 
 ---
 
@@ -55,67 +55,71 @@ Debajo, el equipo plegado (solo lectura).
 panel acaba en un `redirect()` a su pantalla. `enLaApp()`
 (`src/lib/ministerios/en-la-app/acciones.ts`) la ejecuta, atrapa ese `redirect`,
 cambia `/panel/ministerios` por `/mi/equipo` (`traducirAlApp`, en `rutas.ts`) y
-lo relanza. El mensaje viaja intacto (`?guardado=asignado`, `?error=…`,
-`#canciones`). Así no hay ni una línea de lógica copiada —guardas, tercer
-cinturón, permiso de asistencia, avisos— y no se toca ningún fichero de
-actions, que es justo donde trabajan la tanda 1 (`exigirModulo`) y las ramas de
-alabanza y consolidación. La alternativa, darles un parámetro de destino, habría
-chocado con las tres.
+lo relanza con su mensaje intacto. Ni una línea de lógica copiada, y nada que
+choque con la tanda 1 (`exigirModulo`, ya en main) ni con alabanza y
+consolidación, que trabajan sobre esos mismos ficheros.
 
-Antes de llamar a la action del panel, `enLaApp()` comprueba dos cosas con el
-destino de la app:
-
-- El muro de suscripción (`exigirPoderEscribir(ctx, volver)`): en `solo_lectura`
-  el aviso sale en la pantalla desde la que se pulsó, y no en la raíz de la zona.
-- Que el módulo esté encendido (en una lista: la lista de canciones pide
-  `turnos` y `repertorio`, como su `guardaDeLaLista` en la tanda 1).
-  **Al fusionar la tanda 1 esto pasa a ser redundante**: cada action del panel
-  lleva ya su `exigirModulo()`, cuyo destino `/panel/ministerios/[id]?error=` se
-  traduce solo a la portada de la app. Se puede cambiar la consulta de
-  `enLaApp()` por una llamada a `exigirModulo(ctx, id, m, rutaApp(id))` por
-  módulo, o quitarla.
+Antes de llamar a la del panel, `enLaApp()` comprueba con el destino de la app
+el muro de suscripción (en `solo_lectura` el aviso sale donde se pulsó) y que
+el módulo esté encendido. **Al fusionar con main, esto segundo es redundante**:
+cada action del panel ya lleva su `exigirModulo()`, cuyo destino
+`/panel/ministerios/[id]?error=` se traduce solo a la portada. Se puede cambiar
+por `exigirModulo(ctx, id, m, rutaApp(id))` o quitar.
 
 `isRedirectError` y `getURLFromRedirectError` se importan de
-`next/dist/client/components/…`: no salen por `next/navigation`, pero son las
-que usa Next para leer su propio `redirect`. Si cambian de sitio, el build falla
-en esa línea, que es mejor que un `digest` partido a mano que deje de coincidir
-en silencio. Si algún día el formato no se entendiera, la action seguiría
-redirigiendo al panel: se degrada, no se rompe ni abre nada.
+`next/dist/client/components/…`: son las que usa Next para leer su propio
+`redirect`. Si cambian de sitio, el build falla en esa línea; si el formato
+cambiara sin romper el build, la action seguiría yendo al panel: se degrada, no
+abre nada.
 
-**Versión de app de cada pantalla, no la del panel dentro del marco.** Las del
-panel se ven a 375 px, pero:
+**El contrato tiene dos huecos.** `ModuloEnLaApp.resumen` es la tarjeta del que
+lleva; `ModuloEnLaApp.participante`, opcional, la del que participa. Sus enlaces
+van a pantallas del miembro (`/mi/agenda`, `/mi/agenda/turno/[id]`), nunca a
+las herramientas. Un módulo sin `participante` no enseña nada al voluntario, y
+para él no hay tarjeta de respaldo (llevaría al panel, que le rebota).
 
-- Sus campos van a 15 px: `globals.css` pone 16 px a los campos en móvil, pero
-  esa regla vive en `@layer base` y la clase `text-[15px]` de `Input` en
-  `utilities`, que gana siempre. **Comprobado en el navegador**: un `Input` del
-  panel mide 15 px a 375. En la app cada campo lleva `max-md:text-[16px]`
-  (`_components/estilos.ts`). Ver «Hallazgos».
-- Cambiar la respuesta de alguien en un turno son dos iconos con `title`: sin
-  ratón son dibujos sin nombre. En la app van escritas («Confirma», «No puede»,
-  «Sin contestar»), solo las dos que no tiene ya.
-- Las listas resumen cada culto o ensayo en una línea —lo que falta—, con las
-  mismas cuentas que la portada (`estadoDeTurno`).
+**Pantallas propias y no las del panel dentro del marco.** Las del panel usan
+`<Button render={<Link/>}>` (la guía lo descarta: aviso de Base UI en consola),
+y en el móvil sus respuestas de turno son iconos con `title` sin ratón. Las
+consultas y las actions son las del panel; lo que se repite es maquetación.
 
-Lo que no se duplica son las consultas (`src/lib/*/consultas.ts`) ni las
-actions. Lo que sí se repite es maquetación.
+**Puertas: las del panel, en cada página.** `requireMiEquipo(id)` decide el
+modo (líder si `puedeGestionarMinisterio`, participante si sirve en él, si no
+404). `requireMinisterioEnLaApp(id, modulo)` guarda las herramientas: iglesia y
+consentimiento al día, suscripción no `bloqueada` (si lo está, a
+`/suscripcion`), llevar ese ministerio, ministerio de su iglesia, módulo
+encendido y la puerta de más del adaptador (`ver_seguimiento`). En cada página
+y no en un layout porque un layout no se vuelve a ejecutar al navegar entre las
+páginas que cuelgan de él.
 
-**Puertas: las del panel, en cada página.** `requireMinisterioEnLaApp(id,
-modulo)` (`en-la-app/guarda.ts`): iglesia y consentimiento al día (`/mi` no
-tiene guard en su layout), suscripción no `bloqueada` (si lo está, a
-`/suscripcion`), `puedeGestionarMinisterio`, ministerio de su iglesia, módulo
-encendido y la puerta de más del adaptador (`ver_seguimiento`). Va en cada
-página y no en un layout porque un layout no se vuelve a ejecutar al navegar
-entre las páginas que cuelgan de él. Para quien no lleva nada, 404 y no un
-rebote con mensaje: la zona no existe para él y el mensaje confirmaría que hay
-algo detrás de la URL.
+**Quien negó el permiso de asistencia** no aparece en ninguna lista: son las
+del panel (`listaDelEquipo`, `personasPorFaltas`).
 
-**El pastor**: no ve la pestaña si no lidera nada (tiene el panel), pero puede
-abrir cualquier `/mi/equipo/[id]`, igual que en el panel.
+---
 
-**Quien negó el permiso de asistencia** no aparece en ninguna lista porque las
-listas son las del panel: `listaDelEquipo` para pasar lista y `personasPorFaltas`
-para el seguimiento. Los turnos no lo filtran, igual que en el panel: servir en
-un culto no es la asistencia que cubre ese permiso.
+## La guía visual, aplicada
+
+- Escala con nombre (`t-subtitulo`, `text-body`, `text-label`, `t-micro`), sin
+  `text-[Npx]` salvo dentro de la insignia.
+- Insignias en pastilla (`_components/insignia.tsx`, a la espera de la
+  compartida de la fase 2), avatares con `AvatarPersona`, iconos a 1.8.
+- Rótulos de sección fuera de la tarjeta («Próximos / Anteriores»), listas como
+  una tarjeta con filas, filas-enlace en `text-foreground`.
+- Estados vacíos con título, qué hacer y botón de contorno.
+- Borrar, en su tarjeta roja al final.
+- Botones que son enlaces: `<Link>`/`<a>` con `buttonVariants()`.
+- Un naranja por pantalla como mucho: la acción de la lista (planificar,
+  apuntar) o el envío del formulario. La portada y el cuadrante no llevan
+  ninguno.
+- **Los campos no llevan tamaño propio.** La guía pide arreglar los 16 px del
+  móvil en un solo sitio (inventario M1, sacar la regla de `@layer base`), no
+  campo a campo. Hasta que entre M1, los `<Input>` de la app miden 15 px en el
+  móvil, como en el resto de la aplicación.
+- Retoques tras comparar con `/mi/agenda` y el muro a 375 px: el logo en la
+  raíz de la pestaña, la lista de pasar lista sin teñir las filas marcadas (la
+  lista entera en salmón borraba avatares y líneas), «Vinieron 2 de 3» en una
+  línea en vez de cifra grande, la búsqueda a 36 px de alto, y «Tú» en la lista
+  del equipo sin cortar el nombre.
 
 ---
 
@@ -123,8 +127,8 @@ un culto no es la asistencia que cubre ese permiso.
 
 Un adaptador en la carpeta del módulo y **una línea** en
 `src/lib/ministerios/en-la-app/registro.ts`. La portada lo recoge sola a partir
-de `modulosActivos()`. Mientras no tenga adaptador, el módulo sale igualmente en
-la portada con una tarjeta de respaldo que lleva a su pantalla del panel.
+de `modulosActivos()`. Sin adaptador, el módulo sale al líder con una tarjeta
+que lleva a su pantalla del panel, y al participante no le sale.
 
 ```ts
 // src/lib/reparto/en-la-app.ts
@@ -146,11 +150,22 @@ export const repartoEnLaApp: ModuloEnLaApp = {
         ? [{
             texto: `Jornada de hoy · ${jornada.entregados} de ${jornada.inscritos} entregados`,
             href: rutaApp(ministerio.id, 'reparto'),
-            urgente: false,
           }]
         : [],
-      proximo: null,
-      vacio: 'No hay jornada de reparto abierta.',
+      vacio: 'No hay jornada de reparto abierta. Empieza la del domingo desde el reparto.',
+    };
+  },
+  // Lo que ve el voluntario del reparto. Sin datos de las familias: el padrón
+  // es del equipo que lo lleva.
+  async participante(ctx, ministerio, hoy) {
+    const jornada = await jornadaDeHoy(ctx, ministerio.id, hoy);
+    return {
+      pendientes: [],
+      proximo: jornada
+        ? { texto: `Reparto · ${jornada.hora}`, detalle: jornada.lugar, href: '/mi/agenda' }
+        : null,
+      vacio: 'No hay reparto apuntado por delante.',
+      enlace: { texto: 'Ver mi agenda', href: '/mi/agenda' },
     };
   },
 };
@@ -167,156 +182,127 @@ const ADAPTADORES: Partial<Record<ModuloId, ModuloEnLaApp>> = {
 };
 ```
 
-Para darle **pantalla en la app** (`pantalla: 'app'`):
+Para darle **pantalla en la app** al líder (`pantalla: 'app'`): la página en
+`src/app/mi/equipo/[id]/reparto/page.tsx`, con la misma ruta que en el panel,
+abriendo con `requireMinisterioEnLaApp(id, 'reparto')` y dentro de
+`MarcoEquipo`; y sus actions en `…/reparto/actions.ts`, envolviendo las del
+panel:
 
-1. La página en `src/app/mi/equipo/[id]/reparto/page.tsx`, con la misma ruta que
-   en el panel, abriendo con `requireMinisterioEnLaApp(id, 'reparto')` y
-   pintando dentro de `MarcoEquipo`.
-2. Sus actions en `src/app/mi/equipo/[id]/reparto/actions.ts`, envolviendo las
-   del panel:
+```ts
+export async function marcarEntregado(ministerioId: string, formData: FormData) {
+  await enLaApp(
+    { ministerioId, modulos: ['reparto'], volver: rutaApp(ministerioId, 'reparto') },
+    () => panel.marcarEntregado(ministerioId, formData),
+  );
+}
+```
 
-   ```ts
-   export async function marcarEntregado(ministerioId: string, formData: FormData) {
-     await enLaApp(
-       { ministerioId, modulos: ['reparto'], volver: rutaApp(ministerioId, 'reparto') },
-       () => panel.marcarEntregado(ministerioId, formData),
-     );
-   }
-   ```
-
-   Si la action del panel redirige a `/panel/ministerios/[id]/reparto/…`, cada
-   subruta que use tiene que existir también bajo `/mi/equipo/[id]/reparto/…`.
+Cada subruta a la que redirija la action del panel tiene que existir también
+bajo `/mi/equipo/[id]/reparto/…`.
 
 Casos concretos:
 
-- **Reparto (tanda 1)**: como el ejemplo. Su pantalla «Hoy» ya está pensada
-  para el móvil; la versión de app es la misma pantalla dentro de `MarcoEquipo`.
-- **Emisora (radio)**: su tarjeta puede decir el próximo programa y quién lo
-  locuta, y si los programas son turnos, sus huecos ya los cuenta
-  `turnosEnLaApp`. El reproductor va en el layout de `/mi` y no depende de esto.
-- **Nuevos (consolidación)**: si es una vista dentro del seguimiento y no un
-  módulo propio, se amplía `seguimientoEnLaApp.resumen` con los nuevos sin
-  acompañante y se añade `/mi/equipo/[id]/seguimiento/nuevos` si el panel la
-  tiene en `/panel/ministerios/[id]/seguimiento/nuevos`. Si es módulo propio,
-  adaptador nuevo como el de arriba.
+- **Reparto** (ya en main): sin adaptador, al fusionar sale al líder con la
+  tarjeta de respaldo. Con el ejemplo de arriba, también al voluntario.
+- **Emisora**: la tarjeta del líder puede decir el próximo programa; si los
+  programas son turnos, sus huecos ya los cuenta `turnosEnLaApp`. La radio la
+  escucha cualquiera desde el reproductor del layout de `/mi`, que no depende
+  de esto.
+- **Nuevos (consolidación)**: si es una vista del seguimiento, se amplía
+  `seguimientoEnLaApp.resumen`; si es módulo propio, adaptador nuevo. Sin
+  `participante`: quién es nuevo y cómo va no es para todo el equipo.
+- **Células y escuela**, cuando existan: «Mi célula» y «la clase de mi hijo»
+  son exactamente el `participante` de su módulo.
 
 ---
 
 ## Verificado ejecutándolo
 
-Navegador integrado a 375 × 812, en `127.0.0.1:3005` para no compartir cookies
-con las otras sesiones. Cada escritura, comprobada después en la base.
+Navegador integrado a 375 × 812 (y a 1280), en `127.0.0.1:3005` para no
+compartir cookies con las otras sesiones. Cada escritura, comprobada en la base.
 
-**lider@ (David, responsable de Alabanza: agenda, turnos, repertorio)**
+**lider@ (David, responsable de Alabanza)** — en la primera tanda: puso a
+alguien en un turno, marcó una respuesta, montó y ordenó la lista del domingo,
+creó un ensayo y pasó lista, planificó dos cultos y apuntó una canción; cada
+fila comprobada en la base y deshecha desde la propia app. Tras el repaso
+visual: portada, turnos, cuadrante, agenda, pasar lista y repertorio otra vez a
+375, sin desbordar y sin avisos de Base UI en consola.
 
-- Ve la quinta pestaña; con un solo ministerio, `/mi/equipo` le lleva a la
-  portada de Alabanza. Portada sin desbordar (`scrollWidth` 375).
-- Turno del domingo 25: puso a David en Dirección → fila en
-  `turno_asignaciones` con `asignado_por` David, y la app volvió a
-  `/mi/equipo/…/turnos/…?guardado=asignado`.
-- Marcó que Lucía confirma → `respuesta = confirmado` con `respondido_at`.
-- Lista del domingo: añadió «Santo, santo, santo» en Mi → fila en
-  `turno_canciones` con `tono = 'E'`, orden 3; la subió → orden 2.
-- Agenda: creó un ensayo, pasó lista desmarcando a Marta → tres filas en
-  `asistencias`, `registrado_por` David, Marta `presente = false`; lo borró →
-  cero filas.
-- Planificar: dos cultos marcados → dos turnos `creado_por` David; borrados los
-  dos desde su pantalla.
-- Repertorio: apuntó una canción y la borró (nunca sonó).
-- Al terminar deshizo desde la app todo lo anterior en el turno del 25 (quitar a
-  David de Dirección, Lucía a «sin contestar», quitar la canción y dejar el
-  orden como estaba), comprobado en la base.
-- `/mi/cuenta`: «Abrir herramientas» → `/mi/equipo/eeeeeeee-…-001`.
-- 404 en: seguimiento de Alabanza (apagado), Consolidación y Acción social
-  (no los lleva), `turnos/hola` y un uuid de turno inexistente.
+**colider@ (Sara, rol miembro, colíder de Acción social y de Radio)**: lista con
+sus dos equipos; pasó lista en Acción social (filas con `registrado_por` Sara) y
+la borró.
 
-**colider@ (Sara, rol miembro, colíder de Acción social; agenda)**
+**consolidacion@ (Noemí, responsable de Consolidación, con `ver_seguimiento`)**:
+apuntó un contacto (firmado por Noemí) y lo borró. Tomás y Brandon, que negaron
+el permiso de asistencia, no salen y su ficha da 404.
 
-- Ve la quinta pestaña. Lleva dos ministerios —la sesión de radio la ha hecho
-  líder de Radio en la base compartida—, así que sale la lista y de ahí la
-  portada de Acción social, con su agenda.
-- Creó una reunión, pasó lista desmarcando a Marcel → filas en `asistencias`
-  con `registrado_por` Sara; la borró → cero filas.
+**miembro@ (Lucía, voluntaria de Alabanza y de Jóvenes)**: ve la pestaña; la
+lista dice «Donde sirves» con sus dos equipos y un pendiente en Alabanza. En
+Alabanza, en modo participante: su turno sin confirmar («Te toca Voces»), que
+lleva a su ficha en la agenda donde confirma; el próximo ensayo; la lista del
+domingo; y el equipo. En Jóvenes (sin herramientas), el estado vacío. 404 en
+las herramientas de Alabanza (turnos, un turno, agenda, repertorio) y en
+equipos que no son suyos.
 
-**consolidacion@ (Noemí, rol miembro, responsable de Consolidación, con
-`ver_seguimiento`)**
+**enlace@ (Andrés, voluntario de Acción social)**: la pestaña le lleva directo a
+Acción social en modo participante; 404 en su agenda de líder y en Alabanza.
 
-- Portada con la tarjeta del seguimiento (y agenda).
-- Tomás y Brandon, que negaron el permiso de asistencia, no salen en la lista y
-  sus fichas dan 404.
-- Apuntó un contacto («No contestó», con próximo paso) → fila en
-  `seguimiento_contactos` firmada por Noemí; lo borró → cero filas.
-- Con su sesión, el turno de Alabanza da 404.
+**secretaria@ (no sirve en ningún equipo)**: sin pestaña y 404 en `/mi/equipo`.
+Es la cuenta de demo que no sirve en nada; no hay un «miembro» sin equipo en
+Betania, y la pestaña depende de servir, no del rol.
 
-**miembro@ (Lucía, voluntaria)**: cuatro pestañas, sin «Equipo», y 404 en
-`/mi/equipo`, en la portada de Alabanza, en sus turnos y en un turno concreto.
-
-**pastor.sion@**: Sion tiene la suscripción `bloqueada`, y toda la zona le manda
-a `/suscripcion`.
+**pastor.sion@**: Sion está `bloqueada` y toda la zona le manda a `/suscripcion`.
 
 **Comprobaciones**: `npx tsc --noEmit`, `npx eslint`, `npm run build` y
 `npm run test:aislamiento`, las cuatro en verde.
 
-**Datos de prueba**: ninguno queda. Todo lo que se creó para probar se borró
-desde la propia app y se comprobó en la base, así que no hay script en
-`scripts/`.
+**Datos de prueba**: ninguno queda; todo se creó y se borró desde la app.
 
 ---
 
 ## Lo que falta o no se ha podido comprobar
 
-- **`solo_lectura` no se ha ejercitado.** Haría falta mover la fecha de una
-  iglesia de la base compartida, y Betania la usan todas las sesiones. El código
-  pasa por `exigirPoderEscribir(ctx, volver)` antes de cada action.
+- **`solo_lectura` no se ha ejercitado**: haría falta mover la fecha de Betania,
+  que usan todas las sesiones. Cada action pasa antes por
+  `exigirPoderEscribir(ctx, volver)`.
 - **Una cuenta de otra iglesia abriendo un ministerio de Betania** no se pudo
-  probar entrando: Sion está bloqueada y rebota antes. Lo cubren
-  `obtenerMinisterio` (acotado a la iglesia del contexto) y el test de
-  aislamiento.
-- **El aviso «X no puede» enlaza al panel** (`/mi/agenda/actions.ts`,
-  `responderTurno`). El líder entra al panel desde la base común, así que
-  funciona, pero le saca de la app. Arreglarlo bien es que la campana de `/mi`
-  traduzca el enlace con `traducirAlApp`; no se ha tocado porque esa action la
-  usa la rama de alabanza.
-- **`/mi` sigue mandando al panel a quien solo lidera** (`inicioDe`). Quien abre
-  la app y pulsa la pestaña está dentro; quien entra por `/mi` a secas, no. Para
-  la app nativa de la v2 conviene decidir si el líder empieza en
-  `/mi/equipo`. Es una decisión de Marlon, no se ha tocado.
-- **Gestionar el equipo** (sumar gente, nombrar colíderes, los puestos) sigue en
-  el panel. La portada solo enseña el equipo.
-- **`asistencias.origen` queda `'panel'`** al pasar lista desde la app, porque la
-  action es la misma. Distinguirlo pediría un valor de enum: migración.
-- Tras una action la página vuelve arriba (es un `redirect`), con el aviso de
-  confirmación. En un cuadrante largo, después de poner a alguien en el sexto
-  puesto hay que volver a bajar. Las actions del panel no llevan ancla.
-- En desarrollo cada pantalla tarda 4–7 s (base en Irlanda, pooler). No se ha
-  medido en producción.
+  probar entrando: Sion rebota antes por la suscripción. Lo cubren
+  `obtenerMinisterio` (acotado a la iglesia) y el test de aislamiento.
+- **Campos a 15 px en el móvil** hasta que entre M1 de la guía (ver arriba).
+- **Las 404 salen con la página de Next**, en inglés (inventario M2). Aquí solo
+  se llega por una URL escrita a mano, no desde un flujo normal.
+- **El aviso «X no puede» enlaza al panel** (`responderTurno`, en
+  `/mi/agenda/actions.ts`). Funciona, pero saca al líder de la app; lo arregla
+  que la campana de `/mi` traduzca con `traducirAlApp`. No se ha tocado porque
+  esa action la usa la rama de alabanza.
+- **`/mi` sigue mandando al panel a quien solo lidera** (`inicioDe`). Para la
+  app nativa de la v2 conviene decidir si empieza en `/mi/equipo`. Es de Marlon.
+- **Gestionar el equipo** (sumar gente, colíderes, puestos) sigue en el panel.
+- **`asistencias.origen` queda `'panel'`** al pasar lista desde la app: es la
+  misma action. Distinguirlo pide un valor de enum, es decir, migración.
+- Tras una action la página vuelve arriba (es un `redirect`) con su aviso; las
+  actions del panel no llevan ancla.
 
 ---
 
 ## Hallazgos fuera del encargo
 
-1. **Los campos del panel miden 15 px en el móvil.** La regla de 16 px de
-   `globals.css` está en `@layer base` y pierde contra `text-[15px]` de
-   `Input`, que está en `utilities`. Comprobado con `getComputedStyle` a 375 px.
-   En Safari de iOS eso amplía la página al tocar cualquier campo del panel. Se
-   arregla en `components/ui/input.tsx` (`max-md:text-[16px]`) o sacando la
-   regla de `@layer base`.
-2. **`/panel/ministerios/<no-uuid>` da 500**: la página del ministerio llama a
-   `obtenerMinisterio` sin validar el id y Postgres revienta en el cast
-   (`22P02`). Las de módulo se salvan porque su layout valida antes.
+1. **`/panel/ministerios/<id-que-no-es-uuid>` da 500**: la página del
+   ministerio llama a `obtenerMinisterio` sin validar el id (Postgres `22P02`).
+   Las de módulo se salvan porque su layout valida antes.
+2. Los campos de 15 px en el móvil ya están en el inventario visual (M1).
 
 ---
 
 ## Trampas
 
-- **Las cookies de `localhost` no distinguen puerto**: otra sesión que entra con
-  un enlace mágico te cambia la cuenta. Usar `127.0.0.1:<puerto>`; tras canjear
-  el enlace, `/auth/confirm` redirige a `localhost` y hay que volver a navegar a
-  mano a `127.0.0.1`.
-- **El pooler en modo sesión (5432) se llena** con varias sesiones a la vez.
-  En `.env.local` de este worktree `DATABASE_URL` va al 6543 (transacción); no se
-  commitea.
-- **Con el panel del navegador oculto** algún clic no llega y `javascript_tool`
-  se queda colgado. Comprobar siempre en la base, no en la captura.
-- La fecha de «hoy» es la de la iglesia (Bogotá): a las dos de la mañana en
-  España, en Betania todavía es ayer.
+- **Las cookies de `localhost` no distinguen puerto**: usar `127.0.0.1:<puerto>`.
+  Tras canjear el enlace, `/auth/confirm` redirige a `localhost` y hay que
+  volver a navegar a mano a `127.0.0.1`. Ahí el HMR no conecta (el websocket
+  sale rechazado en consola): hay que recargar a mano tras cada cambio.
+- **El pooler en modo sesión (5432) se llena** con varias sesiones: en el
+  `.env.local` de este worktree `DATABASE_URL` va al 6543. No se commitea.
+- **Con el panel del navegador oculto** algún clic no llega y las capturas
+  salen atrasadas. Comprobar en la base, no en la captura.
+- La fecha de «hoy» es la de la iglesia (Bogotá): de madrugada en España, en
+  Betania todavía es ayer.

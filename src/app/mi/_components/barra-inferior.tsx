@@ -94,12 +94,14 @@ const PESTANAS = [
 
 
 /*
- * LA QUINTA, SOLO PARA QUIEN LLEVA UN MINISTERIO
- * ----------------------------------------------
- * «Equipo» es la zona del líder: las herramientas de lo que lleva, sin salir al
- * panel. Sale al final y solo a quien lidera algo, así que el miembro raso
- * sigue viendo sus cuatro pestañas exactamente donde estaban, y quien lleva un
- * equipo no pierde ninguna de las suyas de sitio.
+ * LA QUINTA, SOLO PARA QUIEN SIRVE EN UN EQUIPO
+ * ---------------------------------------------
+ * «Equipo» es lo de sus equipos: quien lleva uno encuentra ahí sus
+ * herramientas sin salir al panel, y el voluntario, sus turnos, el ensayo y la
+ * lista del domingo sin tener que adivinar dónde buscarlos. Sale al final y
+ * solo a quien sirve en algo, así que el miembro que no sirve en nada sigue
+ * viendo sus cuatro pestañas exactamente donde estaban, y nadie pierde ninguna
+ * de las suyas de sitio.
  *
  * Cinco caben a 375 px: «Comunidad», la más larga, mide unos 55 px a 10.5 y a
  * cada pestaña le tocan unos 68. Seis ya no. Por eso la emisora va encima de la

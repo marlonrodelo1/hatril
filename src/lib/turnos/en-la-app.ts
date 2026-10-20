@@ -10,11 +10,12 @@ import type {
 } from '@/lib/ministerios/en-la-app/contrato';
 import { cuandoCorto } from '@/lib/ministerios/en-la-app/fechas';
 import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
-import { listarTurnos, type TurnoResumen } from './consultas';
+import { listarTurnos, misTurnos, type TurnoResumen } from './consultas';
 import { puestosDelMinisterio } from './puestos';
+import { ETIQUETA_RESPUESTA } from './respuestas';
 
 /**
- * Los turnos en la app del líder: el adaptador de la portada y las cuentas que
+ * Los turnos en la zona de equipos: el adaptador de la portada y las cuentas que
  * comparten la portada y la lista de turnos.
  */
 
@@ -178,6 +179,43 @@ export const turnosEnLaApp: ModuloEnLaApp = {
           }
         : null,
       vacio: '',
+    };
+  },
+
+  /**
+   * Los turnos de quien mira, en este equipo. Con `misTurnos`, que se acota
+   * sola a sus propias filas: aquí no sale ni el cuadrante ni lo que han
+   * contestado los demás.
+   *
+   * Pide atención lo que tiene sin contestar. Lo confirmado sale como
+   * «próximo» y el «no puedo» se dice tal cual, sin alarma: ya lo dijo, y a
+   * quien lleva el equipo ya le llegó el aviso.
+   */
+  async participante(ctx, ministerio, hoy) {
+    const mios = (
+      await misTurnos(ctx, hoy, sumarDias(hoy, DIAS_POR_DELANTE - 1))
+    ).filter((t) => t.ministerio.id === ministerio.id);
+
+    const sinContestar = mios.filter((t) => t.respuesta === 'pendiente');
+    const siguiente = mios.find((t) => t.respuesta !== 'pendiente');
+
+    return {
+      pendientes: sinContestar.slice(0, EN_LA_PORTADA).map((t) => ({
+        texto: `${cuandoCorto(t.fecha, t.hora, hoy)} · ${t.titulo}`,
+        detalle: `Te toca ${t.puestos.join(' y ')} · sin confirmar`,
+        href: `/mi/agenda/turno/${t.id}`,
+      })),
+      restantes: Math.max(0, sinContestar.length - EN_LA_PORTADA),
+      proximo:
+        siguiente && sinContestar.length === 0
+          ? {
+              texto: `${cuandoCorto(siguiente.fecha, siguiente.hora, hoy)} · ${siguiente.titulo}`,
+              detalle: `${siguiente.puestos.join(' y ')} · ${ETIQUETA_RESPUESTA[siguiente.respuesta].miembro}`,
+              href: `/mi/agenda/turno/${siguiente.id}`,
+            }
+          : null,
+      vacio: 'No te han puesto en ningún turno de las próximas tres semanas.',
+      enlace: { texto: 'Ver mi agenda', href: '/mi/agenda' },
     };
   },
 };

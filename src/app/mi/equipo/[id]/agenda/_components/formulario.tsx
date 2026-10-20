@@ -2,14 +2,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ReunionDetalle } from '@/lib/asistencia/consultas';
-import { AREA, CAMPO } from '../../../_components/estilos';
+import { AREA } from '../../../_components/estilos';
 
 /**
  * El formulario de una reunión del equipo: un ensayo, una reunión, una salida.
  *
  * Los mismos campos que el del panel —la action que lo recibe es la misma—,
- * con los campos a 16 px y el día y la hora lado a lado, que a 375 px caben y
- * así el botón se ve sin bajar.
+ * dentro de un bloque y en una columna en el móvil, como pide la guía. Lo
+ * obligatorio no se marca; lo opcional, sí.
  */
 export function FormularioReunion({
   accion,
@@ -25,7 +25,7 @@ export function FormularioReunion({
   return (
     <form
       action={accion}
-      className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4"
+      className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5"
     >
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="titulo">Qué es</Label>
@@ -36,11 +36,10 @@ export function FormularioReunion({
           maxLength={120}
           defaultValue={reunion?.titulo ?? ''}
           placeholder="Ensayo del jueves"
-          className={CAMPO}
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-1.5">
           <Label htmlFor="fecha">Día</Label>
           <Input
@@ -49,17 +48,18 @@ export function FormularioReunion({
             type="date"
             required
             defaultValue={reunion?.fecha ?? hoy}
-            className={CAMPO}
           />
         </div>
         <div className="flex min-w-0 flex-col gap-1.5">
-          <Label htmlFor="hora">Hora</Label>
+          <Label htmlFor="hora">
+            Hora
+            <span className="ml-1.5 font-normal text-muted-foreground">(opcional)</span>
+          </Label>
           <Input
             id="hora"
             name="hora"
             type="time"
             defaultValue={reunion?.hora?.slice(0, 5) ?? ''}
-            className={CAMPO}
           />
         </div>
       </div>
@@ -75,7 +75,6 @@ export function FormularioReunion({
           maxLength={160}
           defaultValue={reunion?.lugar ?? ''}
           placeholder="Salón de abajo"
-          className={CAMPO}
         />
       </div>
 

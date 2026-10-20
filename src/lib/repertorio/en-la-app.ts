@@ -2,7 +2,7 @@ import 'server-only';
 
 import { sumarDias } from '@/lib/agenda/horarios';
 import type { ModuloEnLaApp } from '@/lib/ministerios/en-la-app/contrato';
-import { cuandoCorto } from '@/lib/ministerios/en-la-app/fechas';
+import { cuandoCorto, diaCorto } from '@/lib/ministerios/en-la-app/fechas';
 import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
 import { proximosTurnos } from '@/lib/turnos/en-la-app';
 import { cancionesDelTurno } from './consultas';
@@ -32,8 +32,9 @@ export const repertorioEnLaApp: ModuloEnLaApp = {
     if (!siguiente) {
       return {
         pendientes: [],
+        // Que lo diga es cosa de la tarjeta de los turnos; aquí, dónde se hace.
         vacio:
-          'La lista de canciones cuelga de cada turno, y no hay ninguno en las próximas semanas.',
+          'No hay cultos en las próximas tres semanas. La lista de canciones se monta dentro de cada turno.',
       };
     }
 
@@ -55,18 +56,62 @@ export const repertorioEnLaApp: ModuloEnLaApp = {
       };
     }
 
-    const titulos = lista.map((c) => c.titulo);
     return {
       pendientes: [],
-      proximo: {
-        texto: `${cuando} · ${lista.length} ${lista.length === 1 ? 'canción' : 'canciones'}`,
-        detalle:
-          titulos.length > 3
-            ? `${titulos.slice(0, 3).join(', ')}…`
-            : titulos.join(', '),
-        href,
-      },
+      proximo: { texto: `${cuando} · ${cuantas(lista.length)}`, detalle: primeras(lista), href },
       vacio: '',
     };
   },
+
+  /**
+   * Lo que se toca el próximo culto del equipo, para quien lo va a tocar.
+   *
+   * El del EQUIPO y no solo el suyo: el músico quiere ensayar lo del domingo
+   * aunque esta semana no le toque, y la ficha del turno en la agenda
+   * (`turnoParaMiembro`) se la abre a cualquiera del equipo. Una lista que
+   * todavía no está no es un pendiente suyo, así que no pide atención.
+   */
+  async participante(ctx, ministerio, hoy) {
+    const [siguiente] = await proximosTurnos(ctx, ministerio.id, hoy);
+    if (!siguiente) {
+      return {
+        pendientes: [],
+        vacio: 'No hay ningún culto del equipo en las próximas tres semanas.',
+      };
+    }
+
+    const lista = await cancionesDelTurno(ctx, siguiente.id);
+    const cuando = `${cuandoCorto(siguiente.fecha, siguiente.hora, hoy)} · ${siguiente.titulo}`;
+
+    return {
+      pendientes: [],
+      proximo:
+        lista.length > 0
+          ? {
+              texto: `${cuando} · ${cuantas(lista.length)}`,
+              detalle: primeras(lista),
+              href: `/mi/agenda/turno/${siguiente.id}`,
+            }
+          : null,
+      vacio: `Todavía no está la lista ${paraElDia(siguiente.fecha, hoy)}. Saldrá aquí en cuanto la monten.`,
+    };
+  },
 };
+
+/** «para hoy», «para mañana», «del domingo 25». */
+function paraElDia(fecha: string, hoy: string): string {
+  const dia = diaCorto(fecha, hoy);
+  if (dia === 'Hoy') return 'para hoy';
+  if (dia === 'Mañana') return 'para mañana';
+  return `del ${dia.toLocaleLowerCase('es')}`;
+}
+
+function cuantas(n: number): string {
+  return `${n} ${n === 1 ? 'canción' : 'canciones'}`;
+}
+
+/** «Way Maker, Cuán grande es Él, Santo…»: las tres primeras, y basta. */
+function primeras(lista: { titulo: string }[]): string {
+  const titulos = lista.map((c) => c.titulo);
+  return titulos.length > 3 ? `${titulos.slice(0, 3).join(', ')}…` : titulos.join(', ');
+}

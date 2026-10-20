@@ -1,116 +1,168 @@
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
-import { colorDeMinisterio } from '@/lib/ministerios/colores';
+import { puedeGestionarMinisterio } from '@/lib/auth/permisos';
 import {
-  ministeriosQueLlevoEnLaApp,
-  requireZonaDelLider,
-} from '@/lib/ministerios/en-la-app/guarda';
+  misMinisterios,
+  obtenerMinisterio,
+  type MiMinisterio,
+} from '@/lib/ministerios/consultas';
+import { colorDeMinisterio } from '@/lib/ministerios/colores';
+import { requireMisEquipos } from '@/lib/ministerios/en-la-app/guarda';
 import {
   tarjetasDeLaPortada,
   totalPendientes,
 } from '@/lib/ministerios/en-la-app/portada';
 import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
+import type { ModoEnElEquipo } from '@/lib/ministerios/en-la-app/contrato';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
-import { FilaEnlace, Lista, MarcoEquipo, Rotulo } from './_components/marco';
+import type { UserContext } from '@/lib/auth/user-context';
+import {
+  Fila,
+  FilaEnlace,
+  Lista,
+  MarcoEquipo,
+  Seccion,
+} from './_components/marco';
+import { Insignia } from './_components/insignia';
 
 export const metadata: Metadata = { title: 'Equipo' };
 
 /**
- * La pestaña «Equipo»: los ministerios que lleva esta persona.
+ * La pestaña «Equipo»: los equipos en los que sirve esta persona.
  *
  * Con uno solo no hay nada que elegir y se va directo a su portada; la pestaña
  * ya apunta ahí (`mi/layout.tsx`), esto cubre a quien llegue escribiendo la
  * dirección o desde un enlace viejo.
  *
- * Con varios, una fila por ministerio con cuántas cosas piden atención y las
- * dos primeras. Es lo que contesta «¿tengo algo que hacer?» sin abrir cada uno,
- * y para eso hace falta resumir todos: con dos o tres ministerios —lo normal en
- * quien lleva más de uno— son unas pocas consultas en paralelo.
+ * Con varios, dos bloques: «Lo que llevas», donde entra a sus herramientas, y
+ * «Donde sirves», donde ve lo suyo. Separados porque son dos cosas que se
+ * vienen a hacer distintas, y mezclados el voluntario no sabría por qué en una
+ * fila hay «2 pendientes» y en la otra no. En cada fila, cuántas cosas piden
+ * atención y las dos primeras; si no hay, lo siguiente que viene.
  */
 export default async function EquipoPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const ctx = await requireZonaDelLider();
+  const ctx = await requireMisEquipos();
   const { error } = await searchParams;
 
-  const llevo = ministeriosQueLlevoEnLaApp(ctx);
   // Sin `error`, que se perdería: un aviso que vuelve aquí tiene que leerse.
-  if (llevo.length === 1 && !error) redirect(rutaApp(llevo[0]!.id));
+  if (ctx.ministerioIds.length === 1 && !error) {
+    redirect(rutaApp(ctx.ministerioIds[0]!));
+  }
 
   const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
-  const resumenes = await Promise.all(
-    llevo.map(async (m) => {
-      const ministerio = await obtenerMinisterio(ctx, m.id);
-      if (!ministerio) return null;
-      const tarjetas = await tarjetasDeLaPortada(ctx, ministerio, hoy);
-      const pendientes = tarjetas.flatMap((t) => t.resumen?.pendientes ?? []);
-      return {
-        ministerio,
-        total: totalPendientes(tarjetas),
-        // Lo urgente primero: si solo caben dos líneas, que sean esas.
-        primeros: [...pendientes]
-          .sort((a, b) => Number(b.urgente ?? false) - Number(a.urgente ?? false))
-          .slice(0, 2),
-      };
-    }),
+  const filas = await Promise.all(
+    (await misMinisterios(ctx)).map((m) => resumir(ctx, m, hoy)),
   );
+  const llevo = filas.filter((f) => f?.modo === 'lider');
+  const sirvo = filas.filter((f) => f?.modo === 'participante');
 
   return (
     <MarcoEquipo
       ctx={ctx}
       titulo="Equipo"
       subtitulo={ctx.iglesia.nombre}
+      conLogo
       error={error}
     >
-      <Rotulo>Lo que llevas</Rotulo>
-      <Lista>
-        {resumenes.map((r) => {
-          if (!r) return null;
-          const color = colorDeMinisterio(r.ministerio.colorHex);
-          return (
-            <li key={r.ministerio.id}>
-              <FilaEnlace
-                href={rutaApp(r.ministerio.id)}
-                derecha={
-                  r.total > 0 ? (
-                    <span className="flex-none rounded-md bg-badge-warning-bg px-2 py-0.5 text-[12px] font-semibold text-badge-warning-fg">
-                      {r.total}
-                    </span>
-                  ) : undefined
-                }
-              >
-                <span className="flex items-center gap-2 text-[15.5px] font-bold tracking-[-0.015em]">
-                  <span
-                    className="size-2.5 flex-none rounded-full"
-                    style={{ backgroundColor: color.hex }}
-                    aria-hidden
-                  />
-                  <span className="truncate">{r.ministerio.nombre}</span>
-                </span>
-                {r.primeros.length === 0 ? (
-                  <span className="text-[13px] text-muted-foreground">
-                    Nada pendiente
-                  </span>
-                ) : (
-                  r.primeros.map((p, i) => (
-                    <span
-                      key={i}
-                      className="truncate text-[13px] text-muted-foreground"
-                    >
-                      {p.texto}
-                      {p.detalle && ` · ${p.detalle}`}
-                    </span>
-                  ))
-                )}
-              </FilaEnlace>
-            </li>
-          );
-        })}
-      </Lista>
+      {llevo.length > 0 && (
+        <Seccion rotulo="Lo que llevas">
+          <Lista>
+            {llevo.map((f) => f && <FilaEquipo key={f.id} fila={f} />)}
+          </Lista>
+        </Seccion>
+      )}
+      {sirvo.length > 0 && (
+        <Seccion rotulo="Donde sirves">
+          <Lista>
+            {sirvo.map((f) => f && <FilaEquipo key={f.id} fila={f} />)}
+          </Lista>
+        </Seccion>
+      )}
     </MarcoEquipo>
+  );
+}
+
+type ResumenDeEquipo = {
+  id: string;
+  nombre: string;
+  colorHex: string;
+  modo: ModoEnElEquipo;
+  total: number;
+  lineas: string[];
+};
+
+async function resumir(
+  ctx: UserContext,
+  m: MiMinisterio,
+  hoy: string,
+): Promise<ResumenDeEquipo | null> {
+  const ministerio = await obtenerMinisterio(ctx, m.id);
+  if (!ministerio) return null;
+
+  const modo: ModoEnElEquipo = puedeGestionarMinisterio(ctx, m.id)
+    ? 'lider'
+    : 'participante';
+  const tarjetas = await tarjetasDeLaPortada(ctx, ministerio, hoy, modo);
+
+  // Lo urgente primero: si solo caben dos líneas, que sean esas.
+  const pendientes = tarjetas
+    .flatMap((t) => t.resumen?.pendientes ?? [])
+    .sort((a, b) => Number(b.urgente ?? false) - Number(a.urgente ?? false))
+    .slice(0, 2)
+    .map((p) => (p.detalle ? `${p.texto} · ${p.detalle}` : p.texto));
+
+  const proximo = tarjetas.find((t) => t.resumen?.proximo)?.resumen?.proximo;
+
+  return {
+    id: m.id,
+    nombre: m.nombre,
+    colorHex: m.colorHex,
+    modo,
+    total: totalPendientes(tarjetas),
+    lineas:
+      pendientes.length > 0
+        ? pendientes
+        : proximo
+          ? [proximo.texto]
+          : ['Nada pendiente'],
+  };
+}
+
+function FilaEquipo({ fila: f }: { fila: ResumenDeEquipo }) {
+  const color = colorDeMinisterio(f.colorHex);
+  return (
+    <Fila>
+      <FilaEnlace
+        href={rutaApp(f.id)}
+        derecha={
+          f.total > 0 ? (
+            <Insignia tono="aviso">
+              {f.total === 1 ? '1 pendiente' : `${f.total} pendientes`}
+            </Insignia>
+          ) : undefined
+        }
+      >
+        <span className="flex items-center gap-2 text-body font-semibold">
+          {/* El color del ministerio, de `colorDeMinisterio()`: el único
+              color que no sale de un token, y por eso en línea. */}
+          <span
+            className="size-2.5 flex-none rounded-full"
+            style={{ backgroundColor: color.hex }}
+            aria-hidden
+          />
+          <span className="truncate">{f.nombre}</span>
+        </span>
+        {f.lineas.map((l, i) => (
+          <span key={i} className="truncate text-label text-muted-foreground">
+            {l}
+          </span>
+        ))}
+      </FilaEnlace>
+    </Fila>
   );
 }

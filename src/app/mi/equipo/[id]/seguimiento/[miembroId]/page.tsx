@@ -19,14 +19,19 @@ import {
   VIAS_ELEGIBLES,
 } from '@/lib/seguimiento/catalogos';
 import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
-import { ESTADOS } from '@/lib/miembros/estados';
-import { iniciales } from '@/lib/format/iniciales';
-import { Button } from '@/components/ui/button';
+import { AvatarPersona } from '@/components/avatar-persona';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CONFIRMACIONES } from '@/app/panel/ministerios/[id]/seguimiento/constantes';
-import { MarcoEquipo, Rotulo } from '../../../_components/marco';
-import { CAMPO, SELECT } from '../../../_components/estilos';
+import {
+  Fila,
+  Lista,
+  MarcoEquipo,
+  Seccion,
+} from '../../../_components/marco';
+import { Insignia } from '../../../_components/insignia';
+import { SELECT } from '../../../_components/estilos';
 import {
   asignarAcompanante,
   borrarContacto,
@@ -82,37 +87,34 @@ export default async function PersonaEnLaAppPage({
       error={error}
       ok={guardado ? CONFIRMACIONES[guardado] : undefined}
     >
-      <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
+      <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5">
         <div className="flex items-center gap-3">
-          <span
-            className={`flex size-12 flex-none items-center justify-center rounded-full text-[14px] font-bold ${ESTADOS[persona.estado].avatar}`}
-          >
-            {iniciales(persona.nombre)}
-          </span>
+          <AvatarPersona nombre={persona.nombre} tamano="lg" />
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-[14.5px] font-semibold leading-snug">
+            <span className="text-body font-semibold leading-snug">
               {persona.ultimaAsistencia
                 ? `Vino por última vez el ${formatearFechaLarga(persona.ultimaAsistencia)}`
                 : 'Nunca se le ha marcado presente en una reunión'}
             </span>
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-label text-muted-foreground">
               Se ha perdido {persona.faltasSeguidas}{' '}
               {persona.faltasSeguidas === 1 ? 'reunión' : 'reuniones'} de las que
               se pasó lista.
             </span>
           </div>
         </div>
+        {/* `<a>` con las clases del botón: un `tel:` no se precarga, y un
+            `Button` con `render` le pondría `type="button"` a un enlace. */}
         {persona.telefono ? (
-          <Button
-            variant="outline"
-            size="lg"
-            render={<a href={`tel:${persona.telefono}`} />}
+          <a
+            href={`tel:${persona.telefono}`}
+            className={buttonVariants({ variant: 'outline', size: 'lg' })}
           >
             <Phone strokeWidth={1.8} />
             Llamar · {persona.telefono}
-          </Button>
+          </a>
         ) : (
-          <p className="text-[13.5px] text-muted-foreground">
+          <p className="text-label text-muted-foreground">
             No tiene teléfono apuntado en su ficha.
           </p>
         )}
@@ -120,28 +122,20 @@ export default async function PersonaEnLaAppPage({
 
       <form
         action={registrarContacto.bind(null, id, miembroId)}
-        className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4"
+        className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5"
       >
         <input type="hidden" name="miembroId" value={miembroId} />
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-1">
           <h2 className="t-subtitulo">Apuntar un contacto</h2>
-          <p className="t-label text-muted-foreground">
+          <p className="text-label text-muted-foreground">
             Lo que se intentó y qué pasó. Queda con tu nombre y con la fecha.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-1.5">
             <Label htmlFor="fecha">Cuándo</Label>
-            <Input
-              id="fecha"
-              name="fecha"
-              type="date"
-              required
-              defaultValue={hoy}
-              max={hoy}
-              className={CAMPO}
-            />
+            <Input id="fecha" name="fecha" type="date" required defaultValue={hoy} max={hoy} />
           </div>
           <div className="flex min-w-0 flex-col gap-1.5">
             <Label htmlFor="via">Cómo</Label>
@@ -155,8 +149,8 @@ export default async function PersonaEnLaAppPage({
           </div>
         </div>
 
-        {/* Radios y no un desplegable, como en el panel: son siete opciones que
-            hay que LEER, con su explicación al lado. */}
+        {/* Radios y no un desplegable, como en el panel: son siete opciones
+            que hay que LEER, con su explicación al lado. */}
         <fieldset className="flex flex-col gap-2">
           <legend className="t-label mb-2">Qué pasó</legend>
           {RESULTADOS_ELEGIBLES.map((r, i) => (
@@ -172,10 +166,8 @@ export default async function PersonaEnLaAppPage({
                 className="mt-0.5 size-[18px] flex-none accent-primary"
               />
               <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="text-[14.5px] font-semibold">
-                  {RESULTADOS[r].etiqueta}
-                </span>
-                <span className="text-[13px] leading-snug text-muted-foreground">
+                <span className="text-body font-semibold">{RESULTADOS[r].etiqueta}</span>
+                <span className="text-label leading-snug text-muted-foreground">
                   {RESULTADOS[r].ayuda}
                 </span>
               </span>
@@ -192,8 +184,7 @@ export default async function PersonaEnLaAppPage({
             id="proximoPaso"
             name="proximoPaso"
             maxLength={200}
-            placeholder="Llamarla otra vez el sábado"
-            className={CAMPO}
+            placeholder="p. ej. llamarla otra vez el sábado"
           />
           {/* El aviso va en el único campo libre del módulo, en el momento en
               que alguien está a punto de escribir. */}
@@ -204,22 +195,20 @@ export default async function PersonaEnLaAppPage({
         </div>
 
         <div>
-          <Button type="submit" size="lg">
-            Apuntar el contacto
-          </Button>
+          <Button type="submit">Apuntar el contacto</Button>
         </div>
       </form>
 
-      <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
-        <div className="flex flex-col gap-0.5">
+      <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5">
+        <div className="flex flex-col gap-1">
           <h2 className="t-subtitulo">Quién le acompaña</h2>
-          <p className="t-label text-muted-foreground">
+          <p className="text-label text-muted-foreground">
             Del equipo de {ministerio.nombre}. Sin un nombre al lado, nadie llama
             porque todos suponen que llama otro.
           </p>
         </div>
         {ministerio.equipo.length === 0 ? (
-          <p className="text-[14px] text-muted-foreground">
+          <p className="text-label text-muted-foreground">
             Este ministerio todavía no tiene a nadie en su equipo.
           </p>
         ) : (
@@ -248,54 +237,52 @@ export default async function PersonaEnLaAppPage({
         )}
       </section>
 
-      <Rotulo>Lo que se ha hablado</Rotulo>
-      {contactos.length === 0 ? (
-        <p className="px-1 text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
-          Todavía nada. Lo que apuntes aquí evita que la próxima persona que abra
-          esta pantalla vuelva a empezar de cero.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {contactos.map((c) => (
-            <li
-              key={c.id}
-              className="flex items-start gap-3 rounded-xl border border-border bg-surface p-3.5"
-            >
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-[11.5px] font-semibold ${RESULTADOS[c.resultado].badge}`}
-                  >
-                    {RESULTADOS[c.resultado].etiqueta}
-                  </span>
-                  <span className="text-[13px] text-muted-foreground first-letter:uppercase">
-                    {formatearFechaLarga(c.fecha)} · {VIAS[c.via]}
-                  </span>
-                </span>
-                {c.proximoPaso && (
-                  <span className="text-pretty text-[14px] leading-snug">
-                    {c.proximoPaso}
-                  </span>
-                )}
-                <span className="text-[12.5px] text-muted-foreground">
-                  Lo apuntó {c.autor}
-                </span>
-              </div>
-              <form action={borrarContacto.bind(null, id, miembroId, c.id)}>
-                <Button
-                  type="submit"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Borrar este contacto"
-                  className="text-muted-foreground hover:bg-muted hover:text-foreground"
-                >
-                  <Trash2 strokeWidth={1.8} />
-                </Button>
-              </form>
-            </li>
-          ))}
-        </ul>
-      )}
+      <Seccion rotulo="Lo que se ha hablado">
+        {contactos.length === 0 ? (
+          <p className="px-1 text-pretty text-body leading-relaxed text-muted-foreground">
+            Todavía nada. Lo que apuntes aquí evita que la próxima persona que
+            abra esta pantalla vuelva a empezar de cero.
+          </p>
+        ) : (
+          <Lista>
+            {contactos.map((c) => (
+              <Fila key={c.id}>
+                <div className="flex items-start gap-3 px-4 py-3 md:px-5">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <Insignia clase={RESULTADOS[c.resultado].badge}>
+                        {RESULTADOS[c.resultado].etiqueta}
+                      </Insignia>
+                      <span className="text-label text-muted-foreground first-letter:uppercase">
+                        {formatearFechaLarga(c.fecha)} · {VIAS[c.via]}
+                      </span>
+                    </span>
+                    {c.proximoPaso && (
+                      <span className="text-pretty text-body leading-snug">
+                        {c.proximoPaso}
+                      </span>
+                    )}
+                    <span className="text-label text-muted-foreground">
+                      Lo apuntó {c.autor}
+                    </span>
+                  </div>
+                  <form action={borrarContacto.bind(null, id, miembroId, c.id)}>
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Borrar este contacto"
+                      className="text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <Trash2 strokeWidth={1.8} />
+                    </Button>
+                  </form>
+                </div>
+              </Fila>
+            ))}
+          </Lista>
+        )}
+      </Seccion>
     </MarcoEquipo>
   );
 }

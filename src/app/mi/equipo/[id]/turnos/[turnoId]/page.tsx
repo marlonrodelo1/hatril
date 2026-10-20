@@ -38,13 +38,19 @@ import { puestosDelMinisterio } from '@/lib/turnos/puestos';
 import { ETIQUETA_RESPUESTA } from '@/lib/turnos/respuestas';
 import type { RespuestaTurno } from '@/lib/db/schema/turnos';
 import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
-import { iniciales } from '@/lib/format/iniciales';
-import { Button } from '@/components/ui/button';
+import { AvatarPersona } from '@/components/avatar-persona';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CONFIRMACIONES } from '@/app/panel/ministerios/[id]/turnos/constantes';
-import { MarcoEquipo, Rotulo, Vacio } from '../../../_components/marco';
-import { AREA, CAMPO, SELECT } from '../../../_components/estilos';
+import {
+  MarcoEquipo,
+  Seccion,
+  Vacio,
+  ZonaDeBorrar,
+} from '../../../_components/marco';
+import { AREA, SELECT } from '../../../_components/estilos';
+import { Insignia } from '../../../_components/insignia';
 import {
   agregarCancionAlTurno,
   asignarAlTurno,
@@ -80,7 +86,8 @@ export const metadata: Metadata = { title: 'Turno' };
  * -----------
  * Cada puesto tiene su «Añadir», cada canción sus flechas. Con un naranja en
  * cualquiera de ellos habría siete, así que todo va en contorno y la regla de
- * uno por pantalla se cumple por abajo.
+ * uno por pantalla se cumple por abajo. Borrar va al final en su propia
+ * tarjeta roja, como en eventos.
  */
 export default async function TurnoEnLaAppPage({
   params,
@@ -144,27 +151,27 @@ export default async function TurnoEnLaAppPage({
     >
       <p
         className={
-          'flex items-start gap-2 px-1 text-[14.5px] font-semibold leading-snug ' +
+          'flex items-start gap-2 px-1 text-body font-semibold leading-snug ' +
           (falta ? 'text-badge-warning-fg' : 'text-badge-success-fg')
         }
       >
         {falta ? (
-          <TriangleAlert className="mt-0.5 size-4 flex-none" strokeWidth={2} aria-hidden />
+          <TriangleAlert className="mt-0.5 size-4 flex-none" strokeWidth={1.8} aria-hidden />
         ) : (
-          <CircleCheck className="mt-0.5 size-4 flex-none" strokeWidth={2} aria-hidden />
+          <CircleCheck className="mt-0.5 size-4 flex-none" strokeWidth={1.8} aria-hidden />
         )}
         {falta ?? 'Todo cubierto y confirmado'}
       </p>
 
       {turno.notas && (
-        <p className="rounded-xl border border-border bg-surface px-4 py-3 text-pretty text-[14.5px] leading-relaxed">
+        <p className="rounded-xl border border-border bg-surface px-4 py-3 text-pretty text-body leading-relaxed">
           {turno.notas}
         </p>
       )}
 
       {paraCopiar && (
-        <section className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-border bg-surface p-4">
-          <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
+        <section className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-border bg-surface p-5">
+          <p className="text-pretty text-body leading-relaxed text-muted-foreground">
             Este turno está vacío. Puedes empezar con la gente del{' '}
             <span className="font-semibold text-foreground">
               {diaCorto(paraCopiar.fecha, hoy).toLocaleLowerCase('es')}
@@ -182,125 +189,118 @@ export default async function TurnoEnLaAppPage({
         </section>
       )}
 
-      <Rotulo>Quién va</Rotulo>
+      <Seccion rotulo="Quién va">
+        {ministerio.equipo.length === 0 ? (
+          <Vacio titulo="El equipo está vacío">
+            Solo se puede poner en un turno a gente del equipo. Quien lleva el
+            ministerio la suma desde el panel; en cuanto esté, aparecerá aquí.
+          </Vacio>
+        ) : (
+          <ul className="flex flex-col gap-2.5">
+            {filas.map((puesto) => {
+              const clave = puesto.toLocaleLowerCase('es');
+              const aqui = turno.personas.filter(
+                (p) => p.puesto.toLocaleLowerCase('es') === clave,
+              );
+              const yaAqui = new Set(aqui.map((p) => p.miembroId));
+              const candidatos = ministerio.equipo.filter(
+                (p) => !yaAqui.has(p.miembroId),
+              );
+              const huerfano = !enLista.has(clave);
+              const sinCubrir = !huerfano && estado.huecos.includes(puesto);
 
-      {ministerio.equipo.length === 0 ? (
-        <Vacio>
-          <p>
-            El equipo está vacío, y solo se puede poner en un turno a gente del
-            equipo. Súmale gente desde el panel y vuelve aquí.
-          </p>
-        </Vacio>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {filas.map((puesto) => {
-            const clave = puesto.toLocaleLowerCase('es');
-            const aqui = turno.personas.filter(
-              (p) => p.puesto.toLocaleLowerCase('es') === clave,
-            );
-            const yaAqui = new Set(aqui.map((p) => p.miembroId));
-            const candidatos = ministerio.equipo.filter(
-              (p) => !yaAqui.has(p.miembroId),
-            );
-            const huerfano = !enLista.has(clave);
-            const sinCubrir = !huerfano && estado.huecos.includes(puesto);
-
-            return (
-              <li
-                key={puesto}
-                className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4"
-              >
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="text-[15.5px] font-bold tracking-[-0.012em]">
-                    {puesto}
-                  </h3>
-                  {huerfano ? (
-                    <span className="text-[12.5px] text-muted-foreground">
-                      Ya no está en la lista de puestos
-                    </span>
-                  ) : (
-                    sinCubrir && (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-badge-warning-bg px-2 py-0.5 text-[12px] font-semibold text-badge-warning-fg">
-                        <TriangleAlert className="size-3" strokeWidth={2.2} aria-hidden />
-                        Sin cubrir
+              return (
+                <li
+                  key={puesto}
+                  className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="t-subtitulo">{puesto}</h3>
+                    {huerfano ? (
+                      <span className="text-label text-muted-foreground">
+                        Ya no está en la lista de puestos
                       </span>
-                    )
-                  )}
-                </div>
+                    ) : (
+                      sinCubrir && (
+                        <Insignia tono="aviso" Icono={TriangleAlert}>
+                          Sin cubrir
+                        </Insignia>
+                      )
+                    )}
+                  </div>
 
-                {aqui.length > 0 && (
-                  <ul className="flex flex-col gap-2">
-                    {aqui.map((p) => (
-                      <FilaPersona
-                        key={p.asignacionId}
-                        persona={p}
-                        responder={marcarRespuesta.bind(null, id, turnoId, p.miembroId)}
-                        quitar={quitarDelTurno.bind(null, id, turnoId, p.asignacionId)}
-                      />
-                    ))}
-                  </ul>
-                )}
-
-                {!huerfano && candidatos.length > 0 && (
-                  <form
-                    action={asignarAlTurno.bind(null, id, turnoId)}
-                    className="flex items-center gap-2"
-                  >
-                    <input type="hidden" name="puesto" value={puesto} />
-                    <select
-                      name="miembroId"
-                      required
-                      defaultValue=""
-                      aria-label={`Quién va a ${puesto}`}
-                      className={SELECT}
-                    >
-                      <option value="" disabled>
-                        Poner a alguien…
-                      </option>
-                      {candidatos.map((c) => (
-                        <option key={c.miembroId} value={c.miembroId}>
-                          {textoCandidato(c, otros.get(c.miembroId))}
-                        </option>
+                  {aqui.length > 0 && (
+                    <ul className="flex flex-col gap-2">
+                      {aqui.map((p) => (
+                        <FilaPersona
+                          key={p.asignacionId}
+                          persona={p}
+                          responder={marcarRespuesta.bind(null, id, turnoId, p.miembroId)}
+                          quitar={quitarDelTurno.bind(null, id, turnoId, p.asignacionId)}
+                        />
                       ))}
-                    </select>
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      size="icon"
-                      aria-label={`Añadir a ${puesto}`}
-                      title={`Añadir a ${puesto}`}
+                    </ul>
+                  )}
+
+                  {!huerfano && candidatos.length > 0 && (
+                    <form
+                      action={asignarAlTurno.bind(null, id, turnoId)}
+                      className="flex items-center gap-2"
                     >
-                      <UserPlus strokeWidth={1.8} />
-                    </Button>
-                  </form>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                      <input type="hidden" name="puesto" value={puesto} />
+                      <select
+                        name="miembroId"
+                        required
+                        defaultValue=""
+                        aria-label={`Quién va a ${puesto}`}
+                        className={SELECT}
+                      >
+                        <option value="" disabled>
+                          Poner a alguien…
+                        </option>
+                        {candidatos.map((c) => (
+                          <option key={c.miembroId} value={c.miembroId}>
+                            {textoCandidato(c, otros.get(c.miembroId))}
+                          </option>
+                        ))}
+                      </select>
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        size="icon"
+                        aria-label={`Añadir a ${puesto}`}
+                        title={`Añadir a ${puesto}`}
+                      >
+                        <UserPlus strokeWidth={1.8} />
+                      </Button>
+                    </form>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Seccion>
 
       {conRepertorio && (
         <section
           id="canciones"
-          className="flex scroll-mt-20 flex-col gap-3 rounded-xl border border-border bg-surface p-4"
+          className="flex scroll-mt-20 flex-col gap-4 rounded-xl border border-border bg-surface p-5"
         >
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-[15.5px] font-bold tracking-[-0.012em]">
-              Qué se toca
-            </h2>
+            <h2 className="t-subtitulo">Qué se toca</h2>
             <Link
               href={rutaApp(id, 'repertorio')}
-              className="text-[13px] font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              className="text-label font-semibold text-muted-foreground no-underline hover:text-foreground hover:underline"
             >
               El repertorio
             </Link>
           </div>
 
           {lista.length === 0 ? (
-            <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
-              Todavía no hay canciones para este culto. El equipo las verá en su
-              agenda, con su tono y dónde escucharlas.
+            <p className="text-pretty text-body leading-relaxed text-muted-foreground">
+              Todavía no hay canciones para este culto. Elígelas aquí debajo: el
+              equipo las verá en su agenda, con su tono y dónde escucharlas.
             </p>
           ) : (
             <ol className="flex flex-col gap-2">
@@ -323,7 +323,7 @@ export default async function TurnoEnLaAppPage({
           {candidatas.length > 0 ? (
             <form
               action={agregarCancionAlTurno.bind(null, id, turnoId)}
-              className="flex flex-col gap-2 border-t border-border pt-3"
+              className="flex flex-col gap-2 border-t border-border pt-4"
             >
               <Label htmlFor="cancionId">Añadir una canción</Label>
               <select
@@ -350,7 +350,7 @@ export default async function TurnoEnLaAppPage({
                   maxLength={12}
                   placeholder="Tono, si cambia"
                   aria-label="Tono para este culto, si no es el de siempre"
-                  className={`min-w-0 flex-1 ${CAMPO}`}
+                  className="min-w-0 flex-1"
                 />
                 <Button type="submit" variant="outline">
                   <Plus strokeWidth={1.8} />
@@ -360,63 +360,55 @@ export default async function TurnoEnLaAppPage({
             </form>
           ) : (
             repertorio.length === 0 && (
-              <p className="text-[14px] text-muted-foreground">
-                El repertorio está vacío.{' '}
-                <Link href={rutaApp(id, 'repertorio', 'nueva')} className="underline">
-                  Apunta la primera canción
-                </Link>{' '}
-                y vuelve aquí.
-              </p>
+              <div className="flex flex-col items-start gap-3 border-t border-border pt-4">
+                <p className="text-pretty text-label text-muted-foreground">
+                  El repertorio del equipo está vacío. Apunta la primera canción
+                  y vuelve aquí para ponerla en la lista.
+                </p>
+                <Link
+                  href={rutaApp(id, 'repertorio', 'nueva')}
+                  className={buttonVariants({ variant: 'outline' })}
+                >
+                  <Plus strokeWidth={1.8} />
+                  Apuntar una canción
+                </Link>
+              </div>
             )
           )}
         </section>
       )}
 
       <details className="rounded-xl border border-border bg-surface">
-        <summary className="flex min-h-12 cursor-pointer list-none items-center px-4 py-3 text-[15px] font-semibold marker:hidden">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center px-5 py-3 text-body font-semibold marker:hidden">
           Cambiar el día, el nombre o las notas
         </summary>
 
         <form
           action={editarTurno.bind(null, id, turnoId)}
-          className="flex flex-col gap-4 border-t border-border p-4"
+          className="flex flex-col gap-4 border-t border-border p-5"
         >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="titulo">Qué es</Label>
-            <Input
-              id="titulo"
-              name="titulo"
-              required
-              maxLength={120}
-              defaultValue={turno.titulo}
-              className={CAMPO}
-            />
+            <Input id="titulo" name="titulo" required maxLength={120} defaultValue={turno.titulo} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex min-w-0 flex-col gap-1.5">
               <Label htmlFor="fecha">Día</Label>
-              <Input
-                id="fecha"
-                name="fecha"
-                type="date"
-                required
-                defaultValue={turno.fecha}
-                className={CAMPO}
-              />
+              <Input id="fecha" name="fecha" type="date" required defaultValue={turno.fecha} />
             </div>
             <div className="flex min-w-0 flex-col gap-1.5">
-              <Label htmlFor="hora">Hora</Label>
-              <Input
-                id="hora"
-                name="hora"
-                type="time"
-                defaultValue={turno.hora ?? ''}
-                className={CAMPO}
-              />
+              <Label htmlFor="hora">
+                Hora
+                <span className="ml-1.5 font-normal text-muted-foreground">(opcional)</span>
+              </Label>
+              <Input id="hora" name="hora" type="time" defaultValue={turno.hora ?? ''} />
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="notas">Para el equipo</Label>
+            <Label htmlFor="notas">
+              Para el equipo
+              <span className="ml-1.5 font-normal text-muted-foreground">(opcional)</span>
+            </Label>
             <textarea
               id="notas"
               name="notas"
@@ -437,27 +429,29 @@ export default async function TurnoEnLaAppPage({
             </Button>
           </div>
         </form>
+      </details>
 
-        <div className="flex flex-col items-start gap-3 border-t border-border p-4">
-          <p className="text-pretty text-[14px] leading-relaxed text-muted-foreground">
-            Borrar el turno se lleva su cuadrante y su lista. No avisa a nadie:
-            si ya había gente puesta, díselo tú.
-          </p>
+      <ZonaDeBorrar
+        titulo="Borrar el turno"
+        boton={
           <form action={borrarTurno.bind(null, id, turnoId)}>
             <Button type="submit" variant="destructive">
               <Trash2 strokeWidth={1.8} />
               Borrar el turno
             </Button>
           </form>
-        </div>
-      </details>
+        }
+      >
+        Se lleva su cuadrante y su lista. No avisa a nadie: si ya había gente
+        puesta, díselo tú.
+      </ZonaDeBorrar>
     </MarcoEquipo>
   );
 }
 
 /**
  * Las dos respuestas que se pueden marcar desde cada estado. La que tiene ya
- * la dice su insignia, debajo del nombre; repetirla como botón ocupaba una
+ * la dice su insignia, junto al nombre; repetirla como botón ocupaba una
  * tercera ficha que a 375 px saltaba de línea.
  */
 const SIGUIENTES: Record<RespuestaTurno, RespuestaTurno[]> = {
@@ -466,7 +460,7 @@ const SIGUIENTES: Record<RespuestaTurno, RespuestaTurno[]> = {
   no_puede: ['confirmado', 'pendiente'],
 };
 
-/** Lo que dice cada ficha: lo que se marca, en dos palabras. */
+/** Lo que dice cada botón: lo que se marca, en dos palabras. */
 const MARCAR: Record<RespuestaTurno, string> = {
   confirmado: 'Confirma',
   no_puede: 'No puede',
@@ -479,45 +473,40 @@ function FilaPersona({
   quitar,
 }: {
   persona: PersonaEnTurno;
-  /** La respuesta viaja en el campo oculto de cada ficha. */
+  /** La respuesta viaja en el campo oculto de cada botón. */
   responder: (formData: FormData) => Promise<void>;
   quitar: () => Promise<void>;
 }) {
   const estado = ETIQUETA_RESPUESTA[p.respuesta];
 
   return (
-    <li className="flex flex-col gap-2 rounded-lg border border-border bg-surface-alt p-2.5">
-      <div className="flex items-center gap-2.5">
-        <span className="flex size-8 flex-none items-center justify-center rounded-full bg-muted text-[11px] font-bold text-muted-foreground">
-          {iniciales(p.nombre)}
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="truncate text-[14.5px] font-medium">{p.nombre}</span>
-          <span
-            className={`inline-flex w-fit items-center gap-1 rounded-md px-1.5 py-px text-[11.5px] font-semibold ${estado.clase}`}
-          >
-            <estado.Icono className="size-3" strokeWidth={2.2} aria-hidden />
+    <li className="flex flex-col gap-2.5 rounded-lg bg-surface-alt p-3">
+      <div className="flex items-center gap-3">
+        <AvatarPersona nombre={p.nombre} tamano="sm" />
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="truncate text-body font-semibold">{p.nombre}</span>
+          <Insignia clase={estado.clase} Icono={estado.Icono}>
             {estado.equipo}
-          </span>
+          </Insignia>
         </span>
         <form action={quitar}>
           <Button
             type="submit"
             variant="ghost"
             size="icon-sm"
-            title={`Quitar a ${p.nombre} de este puesto`}
             aria-label={`Quitar a ${p.nombre} de este puesto`}
+            title={`Quitar a ${p.nombre} de este puesto`}
             className="text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            <UserMinus strokeWidth={1.7} />
+            <UserMinus strokeWidth={1.8} />
           </Button>
         </form>
       </div>
 
-      {/* Un formulario por ficha: con el `bind` de las server actions, dos
+      {/* Un formulario por botón: con el `bind` de las server actions, dos
           submits en el mismo form comparten destino. */}
       <div
-        className="flex flex-wrap gap-1.5 pl-[42px]"
+        className="flex flex-wrap gap-2"
         role="group"
         aria-label={`Marcar la respuesta de ${p.nombre}`}
       >
@@ -526,14 +515,15 @@ function FilaPersona({
           return (
             <form key={r} action={responder}>
               <input type="hidden" name="respuesta" value={r} />
-              <button
+              <Button
                 type="submit"
+                variant="outline"
+                size="sm"
                 aria-label={`${MARCAR[r]}: ${p.nombre}`}
-                className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-border bg-surface px-2.5 text-[12.5px] font-semibold text-muted-foreground transition-colors hover:bg-surface-active hover:text-foreground"
               >
-                <Icono className="size-3.5" strokeWidth={2.1} aria-hidden />
+                <Icono strokeWidth={1.8} />
                 {MARCAR[r]}
-              </button>
+              </Button>
             </form>
           );
         })}
@@ -569,12 +559,12 @@ function FilaCancion({
   const icono = 'text-muted-foreground hover:bg-muted hover:text-foreground';
 
   return (
-    <li className="flex flex-col gap-2 rounded-lg border border-border bg-surface-alt px-3 py-2.5">
+    <li className="flex flex-col gap-2 rounded-lg bg-surface-alt px-3 py-2.5">
       <span className="flex min-w-0 items-baseline gap-2.5">
-        <span className="w-5 flex-none text-right text-[13px] font-bold tabular-nums text-muted-foreground">
+        <span className="w-5 flex-none text-right text-label font-bold tabular-nums text-muted-foreground">
           {posicion}
         </span>
-        <span className="min-w-0 text-[14.5px] font-semibold leading-snug">
+        <span className="min-w-0 text-body font-semibold leading-snug">
           {c.titulo}
           {c.autor && (
             <span className="font-normal text-muted-foreground"> · {c.autor}</span>
@@ -590,13 +580,12 @@ function FilaCancion({
             defaultValue={c.tonoDelDia ?? ''}
             placeholder={c.tono ?? 'Tono'}
             aria-label={`Tono de ${c.titulo} en este culto`}
-            className={`h-9 w-[72px] px-2 text-center ${CAMPO}`}
+            className="h-9 w-[72px] bg-surface px-2 text-center"
           />
           <Button
             type="submit"
             variant="ghost"
             size="icon-sm"
-            title="Guardar el tono"
             aria-label={`Guardar el tono de ${c.titulo}`}
             className={icono}
           >

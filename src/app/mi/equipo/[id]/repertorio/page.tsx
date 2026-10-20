@@ -7,11 +7,17 @@ import { diaCorto } from '@/lib/ministerios/en-la-app/fechas';
 import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
 import { listarCanciones } from '@/lib/repertorio/consultas';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CONFIRMACIONES } from '@/app/panel/ministerios/[id]/repertorio/constantes';
-import { FilaEnlace, Lista, MarcoEquipo, Vacio } from '../../_components/marco';
-import { CAMPO } from '../../_components/estilos';
+import {
+  Fila,
+  FilaEnlace,
+  Lista,
+  MarcoEquipo,
+  Vacio,
+} from '../../_components/marco';
+import { Insignia } from '../../_components/insignia';
 
 export const metadata: Metadata = { title: 'Repertorio' };
 
@@ -58,10 +64,10 @@ export default async function RepertorioEnLaAppPage({
       error={error}
       ok={guardado ? CONFIRMACIONES[guardado] : undefined}
     >
-      <Button className="self-start" render={<Link href={`${base}/nueva`} />}>
+      <Link href={`${base}/nueva`} className={buttonVariants({ className: 'self-start' })}>
         <Plus strokeWidth={1.8} />
         Apuntar una canción
-      </Button>
+      </Link>
 
       <form action={base} className="flex items-center gap-2">
         {verArchivadas && <input type="hidden" name="archivadas" value="1" />}
@@ -71,39 +77,52 @@ export default async function RepertorioEnLaAppPage({
           defaultValue={busqueda ?? ''}
           placeholder="Buscar por título o por quién la canta"
           aria-label="Buscar en el repertorio"
-          className={`flex-1 ${CAMPO}`}
+          className="h-9 flex-1"
         />
-        <Button type="submit" variant="outline" size="icon" aria-label="Buscar">
+        {/* Barra de filtro: todo a 36, campo y botón, como pide la guía. */}
+        <Button type="submit" variant="outline" size="sm">
           <Search strokeWidth={1.8} />
+          Buscar
         </Button>
       </form>
 
       {canciones.length === 0 ? (
-        <Vacio>
-          <p>
+        // Un vacío de búsqueda es una línea; el del repertorio entero, una
+        // tarjeta que dice qué hacer.
+        busqueda || verArchivadas ? (
+          <p className="px-1 text-body text-muted-foreground">
             {busqueda
               ? `Ninguna canción coincide con «${busqueda}».`
-              : verArchivadas
-                ? 'No hay canciones archivadas.'
-                : 'El repertorio está vacío. Apunta las canciones que toca el equipo y podrás montar la lista de cada culto.'}
+              : 'No hay canciones archivadas.'}
           </p>
-        </Vacio>
+        ) : (
+          <Vacio
+            titulo="El repertorio está vacío"
+            accion={
+              <Link href={`${base}/nueva`} className={buttonVariants({ variant: 'outline' })}>
+                <Plus strokeWidth={1.8} />
+                Apuntar la primera
+              </Link>
+            }
+          >
+            Apunta las canciones que toca el equipo, con su tono y dónde
+            escucharlas, y podrás montar la lista de cada culto.
+          </Vacio>
+        )
       ) : (
         <Lista>
           {canciones.map((c) => (
-            <li key={c.id}>
+            <Fila key={c.id}>
               <FilaEnlace
                 href={`${base}/${c.id}`}
                 derecha={
                   c.tono ? (
-                    <span className="flex-none rounded-md bg-badge-neutral-bg px-2 py-0.5 text-[13px] font-bold text-foreground">
-                      {c.tono}
-                    </span>
+                    <Insignia tono="neutro">{c.tono}</Insignia>
                   ) : undefined
                 }
               >
-                <span className="truncate text-[15px] font-semibold">{c.titulo}</span>
-                <span className="truncate text-[13px] text-muted-foreground">
+                <span className="truncate text-body font-semibold">{c.titulo}</span>
+                <span className="truncate text-label text-muted-foreground">
                   {[
                     c.autor,
                     c.veces === 0
@@ -114,14 +133,14 @@ export default async function RepertorioEnLaAppPage({
                     .join(' · ')}
                 </span>
               </FilaEnlace>
-            </li>
+            </Fila>
           ))}
         </Lista>
       )}
 
       <Link
         href={verArchivadas ? base : `${base}?archivadas=1`}
-        className="self-start px-1 text-[13.5px] font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        className="self-start px-1 text-label font-semibold text-muted-foreground no-underline hover:text-foreground hover:underline"
       >
         {verArchivadas ? 'Volver a las que se tocan' : 'Ver las archivadas'}
       </Link>

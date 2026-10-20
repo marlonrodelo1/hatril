@@ -2,16 +2,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Cancion } from '@/lib/repertorio/consultas';
-import { AREA, CAMPO } from '../../../_components/estilos';
+import { AREA } from '../../../_components/estilos';
 
 /**
  * Una canción del repertorio, para apuntarla o corregirla desde el móvil.
  *
  * Los mismos campos que `FormularioCancion` del panel, porque la action es la
- * misma. No se reutiliza aquel tal cual por los campos: van a 15 px con la
- * clase de `Input`, y en un iPhone eso amplía la página al tocarlos (ver
- * `_components/estilos.ts`). Lo que sí se mantiene es el aviso de derechos:
- * Hatril enlaza, no guarda letras ni acordes.
+ * misma. No se reutiliza aquel tal cual porque su «Cancelar» es un
+ * `<Button render={<Link/>}>`, que la guía visual descarta —Base UI avisa en
+ * consola y le pone `type="button"` a un enlace—, y aquí ya hay flecha de
+ * volver. Lo que sí se mantiene es el aviso de derechos: Hatril enlaza, no
+ * guarda letras ni acordes.
  */
 export function FormularioCancion({
   accion,
@@ -25,7 +26,7 @@ export function FormularioCancion({
   return (
     <form
       action={accion}
-      className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4"
+      className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5"
     >
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="titulo">Título</Label>
@@ -36,7 +37,6 @@ export function FormularioCancion({
           maxLength={120}
           defaultValue={cancion?.titulo}
           placeholder="Cuán grande es Él"
-          className={CAMPO}
         />
       </div>
 
@@ -49,7 +49,6 @@ export function FormularioCancion({
             maxLength={120}
             defaultValue={cancion?.autor ?? ''}
             placeholder="Marcos Witt"
-            className={CAMPO}
           />
         </div>
         <div className="flex min-w-0 flex-col gap-1.5">
@@ -60,7 +59,6 @@ export function FormularioCancion({
             maxLength={12}
             defaultValue={cancion?.tono ?? ''}
             placeholder="G, Re…"
-            className={CAMPO}
           />
         </div>
       </div>
@@ -75,7 +73,6 @@ export function FormularioCancion({
           maxLength={500}
           defaultValue={cancion?.enlaceAudio ?? ''}
           placeholder="https://www.youtube.com/watch?v=…"
-          className={CAMPO}
         />
       </div>
 
@@ -89,7 +86,6 @@ export function FormularioCancion({
           maxLength={500}
           defaultValue={cancion?.enlacePartitura ?? ''}
           placeholder="La página de acordes o el PDF del Drive"
-          className={CAMPO}
         />
         <p className="t-label text-pretty text-muted-foreground">
           Pega el enlace tal cual. Hatril no guarda letras ni acordes: casi todo

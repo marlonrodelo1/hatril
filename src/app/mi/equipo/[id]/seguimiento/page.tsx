@@ -8,10 +8,16 @@ import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
 import { personasPorFaltas } from '@/lib/seguimiento/consultas';
 import { RESULTADOS } from '@/lib/seguimiento/catalogos';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
-import { ESTADOS } from '@/lib/miembros/estados';
-import { iniciales } from '@/lib/format/iniciales';
+import { AvatarPersona } from '@/components/avatar-persona';
 import { CONFIRMACIONES } from '@/app/panel/ministerios/[id]/seguimiento/constantes';
-import { MarcoEquipo, Vacio } from '../../_components/marco';
+import {
+  Fila,
+  Lista,
+  MarcoEquipo,
+  Seccion,
+  Vacio,
+} from '../../_components/marco';
+import { Insignia } from '../../_components/insignia';
 
 export const metadata: Metadata = { title: 'Seguimiento' };
 
@@ -58,82 +64,78 @@ export default async function SeguimientoEnLaAppPage({
       ok={guardado ? CONFIRMACIONES[guardado] : undefined}
     >
       {ausentes.length === 0 ? (
-        <Vacio>
-          <p>
-            {personas.length === 0
-              ? 'No hay nadie en el fichero todavía.'
-              : 'Nadie se ha perdido ninguna de las reuniones en las que se pasó lista. Si te sorprende, puede que falte apuntar algún culto.'}
-          </p>
-        </Vacio>
+        personas.length === 0 ? (
+          <Vacio titulo="Todavía no hay nadie en el fichero">
+            Cuando la iglesia tenga a su gente dada de alta y se pase lista en
+            los cultos, aquí saldrá quién lleva tiempo sin venir.
+          </Vacio>
+        ) : (
+          <Vacio titulo="Nadie se ha perdido ninguna reunión">
+            Todas las personas vinieron a la última reunión en la que se pasó
+            lista. Si te sorprende, puede que falte apuntar algún culto.
+          </Vacio>
+        )
       ) : (
-        <>
-          <p className="px-1 text-[14px] text-muted-foreground">
-            {ausentes.length}{' '}
-            {ausentes.length === 1 ? 'persona se ha' : 'personas se han'} perdido
-            alguna reunión.
-          </p>
-
-          <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+        <Seccion
+          rotulo={`${ausentes.length} ${ausentes.length === 1 ? 'persona sin venir' : 'personas sin venir'}`}
+        >
+          <Lista>
             {ausentes.map((p) => (
-              <li key={p.miembroId} className="flex items-stretch">
-                <Link
-                  href={`${base}/${p.miembroId}`}
-                  className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-2 text-foreground no-underline hover:bg-surface-alt hover:no-underline"
-                >
-                  <span
-                    className={`flex size-10 flex-none items-center justify-center rounded-full text-[12px] font-bold ${ESTADOS[p.estado].avatar}`}
+              <Fila key={p.miembroId}>
+                <div className="flex items-stretch">
+                  <Link
+                    href={`${base}/${p.miembroId}`}
+                    className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-2 text-foreground no-underline hover:bg-surface-alt hover:no-underline md:pl-5"
                   >
-                    {iniciales(p.nombre)}
-                  </span>
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="truncate text-[15px] font-bold tracking-[-0.012em]">
-                      {p.nombre}
+                    <AvatarPersona nombre={p.nombre} />
+                    <span className="flex min-w-0 flex-1 flex-col gap-1">
+                      <span className="truncate text-body font-semibold">
+                        {p.nombre}
+                      </span>
+                      <span className="truncate text-label text-muted-foreground">
+                        {p.faltasSeguidas}{' '}
+                        {p.faltasSeguidas === 1 ? 'reunión' : 'reuniones'} sin venir
+                        {p.ultimaAsistencia
+                          ? ` · vino el ${diaCorto(p.ultimaAsistencia, hoy).toLocaleLowerCase('es')}`
+                          : ''}
+                      </span>
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        {p.acompana ? (
+                          <span className="text-label text-muted-foreground">
+                            Le acompaña {p.acompana.nombre}
+                          </span>
+                        ) : (
+                          // Neutra y no de aviso: que nadie la acompañe todavía
+                          // es lo normal el primer día, no un fallo.
+                          <Insignia tono="neutro">Sin asignar</Insignia>
+                        )}
+                        {p.ultimoContacto && (
+                          <Insignia clase={RESULTADOS[p.ultimoContacto.resultado].badge}>
+                            {RESULTADOS[p.ultimoContacto.resultado].etiqueta}
+                          </Insignia>
+                        )}
+                      </span>
                     </span>
-                    <span className="truncate text-[13px] text-muted-foreground">
-                      {p.faltasSeguidas}{' '}
-                      {p.faltasSeguidas === 1 ? 'reunión' : 'reuniones'} sin venir
-                      {p.ultimaAsistencia
-                        ? ` · vino el ${diaCorto(p.ultimaAsistencia, hoy).toLocaleLowerCase('es')}`
-                        : ''}
-                    </span>
-                    <span className="flex flex-wrap items-center gap-1.5 text-[12.5px] text-muted-foreground">
-                      {p.acompana ? (
-                        <span>Le acompaña {p.acompana.nombre}</span>
-                      ) : (
-                        // Sin color de alarma: que nadie la acompañe todavía es
-                        // lo normal el primer día, no un fallo.
-                        <span className="rounded-md border border-dashed border-border px-1.5 py-px font-semibold">
-                          Sin asignar
-                        </span>
-                      )}
-                      {p.ultimoContacto && (
-                        <span
-                          className={`rounded px-1.5 py-px font-semibold ${RESULTADOS[p.ultimoContacto.resultado].badge}`}
-                        >
-                          {RESULTADOS[p.ultimoContacto.resultado].etiqueta}
-                        </span>
-                      )}
-                    </span>
-                  </span>
-                  <ChevronRight
-                    className="size-4 flex-none text-disabled-text"
-                    strokeWidth={1.9}
-                    aria-hidden
-                  />
-                </Link>
-                {p.telefono && (
-                  <a
-                    href={`tel:${p.telefono}`}
-                    aria-label={`Llamar a ${p.nombre}`}
-                    className="flex w-14 flex-none items-center justify-center border-l border-border text-foreground no-underline hover:bg-surface-alt hover:no-underline"
-                  >
-                    <Phone className="size-5" strokeWidth={1.8} />
-                  </a>
-                )}
-              </li>
+                    <ChevronRight
+                      className="size-4 flex-none text-disabled-text"
+                      strokeWidth={1.8}
+                      aria-hidden
+                    />
+                  </Link>
+                  {p.telefono && (
+                    <a
+                      href={`tel:${p.telefono}`}
+                      aria-label={`Llamar a ${p.nombre}`}
+                      className="flex w-14 flex-none items-center justify-center border-l border-border text-foreground no-underline hover:bg-surface-alt hover:no-underline"
+                    >
+                      <Phone className="size-5" strokeWidth={1.8} aria-hidden />
+                    </a>
+                  )}
+                </div>
+              </Fila>
             ))}
-          </ul>
-        </>
+          </Lista>
+        </Seccion>
       )}
     </MarcoEquipo>
   );
