@@ -66,7 +66,7 @@ export default async function CancionPage({
 
       <Contenedor ancho="formulario">
         {error && <Aviso>{error}</Aviso>}
-        {guardado && CONFIRMACIONES[guardado] && (
+        {guardado && Object.hasOwn(CONFIRMACIONES, guardado) && (
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
         )}
 

@@ -36,11 +36,12 @@ migraciones. Para integrar en `ESTADO.md` al fusionar.
    «Foto del grupo guardada» y «Foto del grupo quitada» con `?guardado=`, como
    las demás pantallas.
 5. **`/panel/lideres`.** Desmarcar «Llevar sus propios ministerios» funciona
-   (abajo). Tres retoques para que se entienda: el grupo dice «Viene puesto
-   para todos · puedes quitárselo» —a secas se leía como algo fijo—, la
-   tarjeta cerrada dice «Lidera Acción social, sin poder llevarlo» cuando se
-   ha quitado —antes no se notaba en ningún sitio— y la descripción dice
-   «desde el panel» en vez de «desde aquí».
+   (abajo). Tres retoques para que se entienda: el grupo dice «Viene para
+   todos · puedes quitárselo» —«Viene puesto para todos» a secas se leía como
+   algo fijo—; la tarjeta cerrada lleva, en su propia línea y con el icono
+   `ShieldOff`, «Sin permiso para llevarlo» (o «llevarlos») cuando esa persona
+   lidera algo que no puede llevar —antes no se notaba en ningún sitio—; y la
+   descripción del permiso dice «desde el panel» en vez de «desde aquí».
 
 ## Segunda pasada: el listón visual
 
@@ -61,15 +62,46 @@ cada clase sale de un token expuesto en `globals.css`. Lo que no se parecía:
   enlace «Leer la política» en naranja sobre el fondo marcado da 4.15:1 y
   sobre el de `hover`, 4.32. Pasa a `accent-foreground` en esos dos estados
   (5.64:1), que es lo que CLAUDE.md manda para lo escrito sobre `bg-accent`.
-- **«Sin poder llevarlo» se leía como un ministerio más**: con dos, «Lidera
-  Acción social, Radio, sin poder llevarlo». Va en su línea, con el icono
-  `ShieldOff`, y concuerda en número.
+- **El aviso de la tarjeta se leía como un ministerio más.** La primera
+  versión lo pegaba detrás de la lista: con dos, «Lidera Acción social, Radio,
+  sin poder llevarlo». Ahora es «Sin permiso para llevarlo» / «llevarlos», en
+  su línea y con el icono `ShieldOff`.
 - **El encabezado del grupo se partía a media frase a 375 px** («…· PUEDES /
   QUITÁRSELO»). Ahora «Viene para todos · puedes quitárselo», medido en una
   línea.
 
 La confirmación de la foto ya era el `Aviso` de las demás, en el mismo sitio
 que la agenda y el repertorio pintan las suyas: no cambió.
+
+## Tercera pasada: la revisión, y `main` dentro
+
+Revisión con seis hallazgos, todos menores; aplicados los seis:
+
+- **La tarjeta decía «Sin permiso para llevarlo» a quien sí podía** (dos
+  hallazgos, el mismo). Solo miraba `gestionar_su_ministerio`, y
+  `puedeGestionarMinisterio` deja pasar también por `gestionar_ministerios`.
+  Ahora la tarjeta llama a esa misma función, con la fila del equipo como
+  contexto, en vez de copiar la condición: no pueden contradecirse.
+- **`/registro` no decía cómo retirar el permiso**, que promete el texto
+  legal. Lleva debajo de las casillas la línea de `/acepta`, con el correo de
+  `DATOS_RESPONSABLE` y sin «escribe a tu iglesia» —al pastor le mandaba a sí
+  mismo—, y dice «dar o retirar»: hoy no hay pantalla para ninguna de las dos
+  cosas. La pantalla de verdad sigue en «Qué falta».
+- **`?guardado=constructor` tumbaba la página** con un 500. `CONFIRMACIONES`
+  es un objeto literal y hereda las claves de `Object.prototype`: la función
+  `Object` es verdadera y React no la puede pintar. Reproducido en
+  `/panel/lideres` antes de tocar nada. Arreglado con `Object.hasOwn` en las
+  **21** pantallas con el patrón (la revisión contaba 10; `main` trajo las
+  del reparto, y faltaban las de `/mi/agenda`).
+- **La paginación arrastraba `?error=` y `?guardado=`**: un aviso de la acción
+  anterior volvía a salir en la página 2. `href()` los quita, como ya quitaba
+  `ficha`.
+- **Este documento citaba textos que no están en el código.** Corregido.
+
+`main` entró con `git merge main` y sin conflictos: el único fichero común
+era `permisos.ts`, cada lado en su zona. Se hizo a mano y no con la
+herramienta de la app porque esa trae la base desde `origin`, y la tanda de
+alimentos está solo en el `main` local, sin push.
 
 ## Verificado ejecutándolo (localhost:3004)
 
@@ -123,6 +155,12 @@ sitio: se entró después por enlace mágico y se borró al terminar.
   falta un sitio en `/mi/cuenta` o en la ficha para darlo o retirarlo cuando
   se quiera, que además es lo que promete el texto («puedo retirar este
   permiso cuando quiera»).
+- **`/panel/miembros?ficha=abc` da un 500.** Salió probando la paginación:
+  el parámetro llega a Postgres sin comprobar que sea un UUID, y la consulta
+  revienta con «invalid input syntax for type uuid». Es la misma familia que
+  el `?guardado=constructor`, pero en otra pantalla y fuera de este encargo.
+  Lo probable es que pase igual con `?desde=` y `?hasta=` del libro si no son
+  fechas: CLAUDE.md pide Zod en toda query, y estas pantallas no lo tienen.
 - **El aviso de Base UI de los botón-enlace** («expected a native
   `<button>`…») sale en `/panel/lideres` y en el ministerio. Es el pendiente
   que ya documenta `button.tsx`, afecta a 32 ficheros y no es de esta rama.

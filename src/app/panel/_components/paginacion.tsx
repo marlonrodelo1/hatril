@@ -44,6 +44,11 @@ export function Paginacion({
     // La ficha abierta no sobrevive al cambio de página: casi seguro que ya no
     // está en la lista que se está mirando.
     siguientes.delete('ficha');
+    // Ni los avisos: son de una sola vez, de la acción que acaba de pasar, y
+    // no estado del listado. Copiados, un «no puedes guardar cambios» del
+    // libro de caja volvía a salir en la página 2 como si fallara otra vez.
+    siguientes.delete('error');
+    siguientes.delete('guardado');
     const cadena = siguientes.toString();
     return cadena ? `?${cadena}` : '?';
   }

@@ -78,7 +78,7 @@ export default async function RepertorioPage({
         <PestanasMinisterio ctx={ctx} ministerio={ministerio} activa="repertorio" />
 
         {error && <Aviso>{error}</Aviso>}
-        {guardado && CONFIRMACIONES[guardado] && (
+        {guardado && Object.hasOwn(CONFIRMACIONES, guardado) && (
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
         )}
 

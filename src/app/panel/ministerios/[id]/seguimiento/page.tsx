@@ -52,7 +52,7 @@ export default async function SeguimientoPage({
         <PestanasMinisterio ctx={ctx} ministerio={ministerio} activa="seguimiento" />
 
         {error && <Aviso>{error}</Aviso>}
-        {guardado && CONFIRMACIONES[guardado] && (
+        {guardado && Object.hasOwn(CONFIRMACIONES, guardado) && (
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
         )}
 

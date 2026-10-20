@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PASSWORD_PISTA } from '@/lib/auth/password';
+import { DATOS_RESPONSABLE } from '@/lib/legal/datos-responsable';
 import { TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS } from '@/lib/rgpd/consentimiento';
 
 export const metadata: Metadata = { title: 'Crea tu iglesia' };
@@ -160,6 +161,23 @@ export default async function RegistroPage({
             </>
           }
         />
+
+        {/*
+         * Cómo se cambia de idea, que es lo que promete el texto legal («puedo
+         * retirar este permiso cuando quiera») y la línea de `/acepta`. Aquí
+         * solo con el correo de Hatril: a quien registra la iglesia, «escribe
+         * a tu iglesia» le manda a sí mismo. Y dice «dar» además de «retirar»,
+         * porque hoy no hay pantalla para ninguna de las dos cosas: `/acepta`
+         * solo sale cuando cambia la versión de la política.
+         */}
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
+          Para dar o retirar cualquiera de los dos permisos más adelante,
+          escríbenos a{' '}
+          <a href={`mailto:${DATOS_RESPONSABLE.email}`} className="underline">
+            {DATOS_RESPONSABLE.email}
+          </a>
+          . Lo que ya pasó antes sigue siendo válido.
+        </p>
 
         <Button type="submit" className="mt-1">
           Crear la iglesia
