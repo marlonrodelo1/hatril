@@ -43,6 +43,14 @@
 --                            permiso de asistencia (general al día, sin el de
 --                            asistencia). No puede salir en ninguna lista ni
 --                            contar en ninguna cifra.
+--     Lorena Gaitán Ruiz     visitante, llegó el lunes de esta semana con los
+--                            dos permisos, como la deja el alta rápida. Y
+--                            alguien volvió a guardar después las listas de los
+--                            dos últimos domingos: `guardarLista` escribe una
+--                            fila por cada ficha que existe al guardar, así que
+--                            le quedó un «no vino» en dos cultos ANTERIORES a
+--                            su llegada. No pueden contarle como faltas: tiene
+--                            que salir con cero y «no sabemos si ha vuelto».
 --
 -- Las fichas nuevas se crean HOY, con su fecha de llegada atrás: es la tarjeta
 -- de papel tecleada después. Sus filas de asistencia son de listas pasadas con
@@ -204,7 +212,8 @@ begin
       ('Valeria', 'Ospina Ríos',    '+573001234582', 'visitante'::estado_miembro_enum, v_d2),
       ('Julián',  'Pardo Mesa',     '+573001234583', 'nuevo'::estado_miembro_enum,     v_d2),
       ('Camila',  'Restrepo Gil',   '+573001234584', 'nuevo'::estado_miembro_enum,     v_d2),
-      ('Tomás',   'Herrera Vidal',  '+573001234585', 'visitante'::estado_miembro_enum, v_d1)
+      ('Tomás',   'Herrera Vidal',  '+573001234585', 'visitante'::estado_miembro_enum, v_d1),
+      ('Lorena',  'Gaitán Ruiz',    '+573001234586', 'visitante'::estado_miembro_enum, v_d0 + 1)
     ) as t(nombre, apellidos, telefono, estado, llegada)
   loop
     if not exists (
@@ -222,6 +231,15 @@ begin
       if v_nuevo.nombre = 'Tomás' then
         insert into public.consentimientos (iglesia_id, miembro_id, tipo, version_texto)
         values (v_iglesia, v_id, 'datos_religiosos', 'privacidad-2026-09')
+        on conflict do nothing;
+      end if;
+
+      -- Como la deja el alta rápida con las dos casillas marcadas.
+      if v_nuevo.nombre = 'Lorena' then
+        insert into public.consentimientos (iglesia_id, miembro_id, tipo, version_texto)
+        values
+          (v_iglesia, v_id, 'datos_religiosos', 'privacidad-2026-09'),
+          (v_iglesia, v_id, 'asistencia_y_seguimiento', 'privacidad-2026-09')
         on conflict do nothing;
       end if;
     end if;
@@ -288,6 +306,25 @@ begin
       )
     on conflict (reunion_id, miembro_id) do nothing;
   end loop;
+
+  -- --------------------------------------------------------------------------
+  -- 4 bis. Las listas vueltas a guardar después de apuntar a Lorena
+  --
+  -- Las dos ya existían; al guardarlas otra vez, ella sale desmarcada en las
+  -- dos, ocho y un día antes de llegar.
+  -- --------------------------------------------------------------------------
+  select id into v_id
+    from public.miembros
+   where iglesia_id = v_iglesia and nombre = 'Lorena' and apellidos = 'Gaitán Ruiz';
+
+  insert into public.asistencias (iglesia_id, reunion_id, miembro_id, presente)
+  select v_iglesia, r.id, v_id, false
+    from public.reuniones r
+   where r.iglesia_id = v_iglesia
+     and r.ministerio_id is null
+     and r.titulo = 'Culto del domingo'
+     and r.fecha in (v_d1, v_d0)
+  on conflict (reunion_id, miembro_id) do nothing;
 
   -- --------------------------------------------------------------------------
   -- 5. Julián: le acompaña Noemí, y ya le llamó

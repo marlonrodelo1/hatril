@@ -12,6 +12,7 @@ import {
 } from '@/lib/auth/guard-panel';
 import { withUser } from '@/lib/db';
 import {
+  consentimientos,
   miembros,
   seguimientoAsignaciones,
   seguimientoContactos,
@@ -27,7 +28,9 @@ import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import {
   DIAS_EN_NUEVOS,
   estaEnSeguimiento,
+  personasPorFaltas,
 } from '@/lib/seguimiento/consultas';
+import { VERSION_POLITICA_PRIVACIDAD } from '@/lib/rgpd/consentimiento';
 import { normalizarTelefono } from '@/lib/telefono/normalizar';
 import type { UserContext } from '@/lib/auth/user-context';
 
@@ -302,15 +305,20 @@ const EsquemaVisitante = z.object({
  * aplicación, como en `crearMiembro`. Y entra por `withUser`, así que la ficha
  * no puede caer en otra iglesia, y `auditar()` deja escrito quién la creó.
  *
- * LO QUE FALTA, Y NECESITA MIGRACIÓN
- * ----------------------------------
- * Las dos casillas se exigen y NO se guardan. Guardar «lo tecleó el equipo con
- * la tarjeta firmada» pide la columna `canal` de la tabla `llegadas` del plan,
- * y apuntarlo como fila de `consentimientos` diría que la persona aceptó la
- * política de Hatril, que no ha leído: además, con el general al día y sin el
- * de asistencia, `miembrosSinPermisoDeAsistencia` la sacaría de esta misma
- * lista. Es lo mismo que hace hoy el alta de Miembros, que no registra ninguno.
- * La prueba del permiso es la tarjeta, y la guarda la iglesia.
+ * LOS DOS PERMISOS SE GUARDAN, Y EL SEGUNDO SOLO SI SE DA
+ * -------------------------------------------------------
+ * Quien acaba de llegar no está en ninguna de las bases que `/privacidad` §4
+ * daba por buenas: no pidió entrar desde el directorio ni «ya era de la casa».
+ * La base es su consentimiento, dado a la iglesia de palabra o en una tarjeta:
+ * quien le apunta le lee los dos textos y marca lo que dice. Se registra como
+ * en `aprobarSolicitud`: el general en la versión vigente, y el de asistencia
+ * solo si lo marcó. Sin el segundo, `miembrosSinPermisoDeAsistencia` le saca
+ * de «Nuevos» y de las listas, que es lo que tiene que pasar: el silencio no
+ * cuenta como sí.
+ *
+ * Sin IP ni navegador, como en el reparto: serían los del voluntario, y
+ * guardarlos como si fueran de esa persona sería fabricar una prueba. La prueba
+ * de verdad es la tarjeta firmada, si la hubo, y la guarda la iglesia.
  */
 export async function apuntarVisitante(
   ministerioId: string,
@@ -332,7 +340,7 @@ export async function apuntarVisitante(
 
   if (!casilla(formData, 'permiso')) {
     volver(
-      'Antes de apuntarle, pregúntale si quiere que la iglesia guarde sus datos y le llame.',
+      'Sin su permiso no se le puede apuntar. Léele el texto de la primera casilla y márcala si dice que sí.',
       formulario,
     );
   }
@@ -342,6 +350,7 @@ export async function apuntarVisitante(
       formulario,
     );
   }
+  const aceptaAsistencia = casilla(formData, 'asistencia');
 
   // Una fecha fuera de los últimos noventa días crearía una ficha que no sale
   // en «Nuevos», que es la única pantalla desde la que quien la crea la vería.
@@ -355,40 +364,17 @@ export async function apuntarVisitante(
 
   const telefono = normalizarTelefono(d.telefono || null, ctx.iglesia.pais);
 
-  // `miembros` no tiene único por teléfono, y el mismo visitante apuntado el
-  // domingo por una persona y el miércoles por otra acaba con su historia
-  // partida en dos fichas. Si ya está, se lleva a su ficha en vez de crear
-  // otra; si está pero el seguimiento no puede enseñarla —negó el permiso de
-  // asistencia—, se para sin decir de quién es, igual que hace la lista.
   if (telefono) {
-    const [existente] = await withUser(ctx.user.id, (tx) =>
-      tx
-        .select({ id: miembros.id })
-        .from(miembros)
-        .where(
-          and(
-            eq(miembros.iglesiaId, ctx.iglesia.id),
-            eq(miembros.telefono, telefono),
-            isNull(miembros.archivadoAt),
-            ne(miembros.estado, 'baja'),
-          ),
-        )
-        .limit(1),
-    );
-
-    if (existente) {
-      if (await estaEnSeguimiento(ctx, ministerioId, existente.id)) {
-        redirect(`${base(ministerioId)}/${existente.id}?guardado=existe`);
-      }
-      volver(
-        'Ya hay una ficha con ese teléfono en el fichero. Pide a quien lleva Miembros que la revise.',
-        formulario,
-      );
-    }
+    await noDuplicar(ctx, ministerioId, formulario, {
+      nombre: d.nombre,
+      apellidos: d.apellidos || null,
+      telefono,
+      esOtraPersona: casilla(formData, 'otraPersona'),
+    });
   }
 
-  const [creada] = await withUser(ctx.user.id, (tx) =>
-    tx
+  const creada = await withUser(ctx.user.id, async (tx) => {
+    const [fila] = await tx
       .insert(miembros)
       .values({
         iglesiaId: ctx.iglesia.id,
@@ -400,9 +386,141 @@ export async function apuntarVisitante(
         estado: 'visitante',
         fechaIngreso: d.fecha,
       })
-      .returning({ id: miembros.id }),
-  );
+      .returning({ id: miembros.id });
+
+    await tx.insert(consentimientos).values([
+      {
+        iglesiaId: ctx.iglesia.id,
+        miembroId: fila!.id,
+        tipo: 'datos_religiosos' as const,
+        versionTexto: VERSION_POLITICA_PRIVACIDAD,
+      },
+      ...(aceptaAsistencia
+        ? [
+            {
+              iglesiaId: ctx.iglesia.id,
+              miembroId: fila!.id,
+              tipo: 'asistencia_y_seguimiento' as const,
+              versionTexto: VERSION_POLITICA_PRIVACIDAD,
+            },
+          ]
+        : []),
+    ]);
+
+    return fila!;
+  });
 
   revalidatePath(base(ministerioId));
-  redirect(`${base(ministerioId)}/${creada!.id}?guardado=alta`);
+
+  // Sin el permiso de asistencia, su ficha no sale en el seguimiento y la de
+  // `[miembroId]` le daría 404. Se vuelve a «Nuevos» diciendo por qué no está.
+  if (!aceptaAsistencia) {
+    redirect(`${base(ministerioId)}/nuevos?guardado=sinPermiso`);
+  }
+  redirect(`${base(ministerioId)}/${creada.id}?guardado=alta`);
+}
+
+/**
+ * Que el mismo visitante no acabe con dos fichas, sin cerrarle la puerta a su
+ * pareja ni contar de más.
+ *
+ * `miembros` no tiene único por teléfono, y el visitante apuntado el domingo
+ * por una persona y el miércoles por otra acabaría con su historia partida en
+ * dos. Pero un teléfono solo no identifica a nadie: en una familia que viene
+ * junta suele haber un móvil para todos. Así que:
+ *
+ *   - mismo teléfono y mismo nombre, en una ficha que el seguimiento enseña: es
+ *     esa persona, y se lleva a su ficha sin crear otra;
+ *   - mismo teléfono y otro nombre: se pregunta si es otra persona. Nunca se
+ *     lleva sin preguntar a la ficha de alguien que se llama distinto;
+ *   - el teléfono solo está en fichas que el seguimiento NO enseña (quien negó
+ *     el permiso de asistencia): un mensaje que no dice que la ficha exista.
+ *
+ * El tercer caso tiene un residuo que no se puede quitar: cualquier respuesta
+ * distinta de «apuntado» es una señal. Se acepta, y está escrito en el
+ * documento de estado: la alternativa es crear duplicados de quien pidió no
+ * aparecer.
+ *
+ * Con «es otra persona» marcado se crea sin más, salvo que el nombre también
+ * coincida con una ficha visible: eso ya no es otra persona.
+ */
+async function noDuplicar(
+  ctx: UserContext,
+  ministerioId: string,
+  formulario: string,
+  nuevo: {
+    nombre: string;
+    apellidos: string | null;
+    telefono: string;
+    esOtraPersona: boolean;
+  },
+) {
+  const conEseTelefono = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({
+        id: miembros.id,
+        nombre: miembros.nombre,
+        apellidos: miembros.apellidos,
+      })
+      .from(miembros)
+      .where(
+        and(
+          eq(miembros.iglesiaId, ctx.iglesia.id),
+          eq(miembros.telefono, nuevo.telefono),
+          isNull(miembros.archivadoAt),
+          ne(miembros.estado, 'baja'),
+        ),
+      )
+      .limit(10),
+  );
+  if (conEseTelefono.length === 0) return;
+
+  // La lista del seguimiento decide qué se puede enseñar: lo mismo que la
+  // ficha y que `exigirEnLaLista`. Una sola consulta para todas.
+  const visibles = new Set(
+    (await personasPorFaltas(ctx, ministerioId)).map((p) => p.miembroId),
+  );
+  const enLaLista = conEseTelefono.filter((m) => visibles.has(m.id));
+
+  const misma = enLaLista.find((m) => mismoNombre(m, nuevo));
+  if (misma) {
+    redirect(`${base(ministerioId)}/${misma.id}?guardado=existe`);
+  }
+  if (nuevo.esOtraPersona) return;
+
+  if (enLaLista.length > 0) {
+    redirect(
+      `${formulario}?repetido=1&error=` +
+        encodeURIComponent('Ese teléfono ya es de otra ficha. ¿Es otra persona?'),
+    );
+  }
+
+  volver(
+    'No se puede apuntar a esta persona desde aquí. Pide a quien lleva Miembros que la dé de alta.',
+    formulario,
+  );
+}
+
+/**
+ * ¿El mismo nombre? Sin tildes, sin mayúsculas y sin espacios de más. Los
+ * apellidos solo cuentan si los dos los tienen: en la tarjeta suele faltar
+ * alguno, y «Rosa» y «Rosa Medina Pinto» con el mismo móvil son la misma Rosa.
+ */
+function mismoNombre(
+  a: { nombre: string; apellidos: string | null },
+  b: { nombre: string; apellidos: string | null },
+): boolean {
+  if (normalizar(a.nombre) !== normalizar(b.nombre)) return false;
+  const ap = normalizar(a.apellidos ?? '');
+  const bp = normalizar(b.apellidos ?? '');
+  return !ap || !bp || ap === bp;
+}
+
+function normalizar(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
 }

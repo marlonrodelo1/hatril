@@ -90,16 +90,27 @@ export default async function HoyPage({
     esPastor(ctx) || puede(ctx, 'ver_todos_los_miembros');
 
 
-  const [resumen, solicitudes, sinResponsable, recienLlegados, misTurnos] =
-    await Promise.all([
-      resumenCongregacion(ctx),
-      puedeVerSolicitudes ? listarSolicitudesPendientes(ctx) : [],
-      puedeGestionarMinisterios ? ministeriosSinResponsable(ctx) : [],
-      puedeVerLaCongregacion ? nuevosSinMinisterio(ctx) : [],
-      // Sin condición de permiso: son SUS turnos. La consulta ya filtra por su
-      // ficha, así que no puede devolver los de nadie más.
-      misTurnosPendientes(ctx),
-    ]);
+  const [
+    resumen,
+    solicitudes,
+    sinResponsable,
+    recienLlegados,
+    misTurnos,
+    seguimiento,
+  ] = await Promise.all([
+    resumenCongregacion(ctx),
+    puedeVerSolicitudes ? listarSolicitudesPendientes(ctx) : [],
+    puedeGestionarMinisterios ? ministeriosSinResponsable(ctx) : [],
+    puedeVerLaCongregacion ? nuevosSinMinisterio(ctx) : [],
+    // Sin condición de permiso: son SUS turnos. La consulta ya filtra por su
+    // ficha, así que no puede devolver los de nadie más.
+    misTurnosPendientes(ctx),
+    // Solo cifras. Decide ella misma si quien mira puede verlas —las tres
+    // llaves del seguimiento— y devuelve null sin consultar nada más si no.
+    // Aquí dentro y no después: son ocho consultas, y en serie retrasaban
+    // todo Inicio para el pastor.
+    cifrasDeSeguimiento(ctx),
+  ]);
 
   const hayAvisos =
     misTurnos.length > 0 ||
@@ -128,10 +139,6 @@ export default async function HoyPage({
   const eventosProximos = puedeGestionarEventos(ctx)
     ? await proximosEventos(ctx, 3)
     : [];
-
-  // Solo cifras. Decide ella misma si quien mira puede verlas —las tres llaves
-  // del seguimiento— y devuelve null sin consultar nada más si no.
-  const seguimiento = await cifrasDeSeguimiento(ctx);
 
   const sirviendoPct =
     resumen.total > 0

@@ -146,7 +146,8 @@ export default function PrivacidadPage() {
           </li>
           <li>
             <strong className="font-semibold">
-              Lo que se habla contigo si llevas tiempo sin aparecer
+              Lo que se habla contigo si acabas de llegar o si llevas tiempo sin
+              aparecer
             </strong>{' '}
             y alguien de tu iglesia te contacta: la fecha, si fue una llamada, un
             mensaje o una visita, y qué pasó. Ese «qué pasó» se elige de una
@@ -178,6 +179,18 @@ export default function PrivacidadPage() {
         <P>
           De quien solo pide entrar desde el directorio: nombre, correo,
           teléfono si lo das, y el mensaje que escribas.
+        </P>
+        <P>
+          De quien visita una iglesia por primera vez y le apunta alguien del
+          equipo, si da su permiso: nombre, apellidos, teléfono y correo si los
+          da, y el día en que vino. Además, la fecha en que dio su permiso, la
+          versión del texto que se le leyó y quién de la iglesia le apuntó. No
+          se guardan la IP ni el navegador, que serían los de quien apunta. Entra
+          en el fichero como visitante, y{' '}
+          <strong className="font-semibold">
+            si no da el permiso de asistencia, no sale en ninguna lista
+          </strong>
+          : ni en la de quién ha llegado, ni en la de pasar lista.
         </P>
         <P>
           De quien se apunta a un evento abierto sin tener cuenta: nombre,
@@ -256,6 +269,16 @@ export default function PrivacidadPage() {
           </li>
           <li>
             <strong className="font-semibold">
+              Tu consentimiento explícito, dado a tu iglesia
+            </strong>{' '}
+            (art. 9.2.a), cuando te apunta su equipo la primera vez que vienes.
+            Alguien te lee qué se guarda y para qué —el mismo texto que firma
+            quien entra desde el directorio—, y si dices que sí, lo marca. Aquí
+            queda la fecha y la versión del texto; si lo diste por escrito en una
+            tarjeta, esa tarjeta es la prueba, y la guarda tu iglesia.
+          </li>
+          <li>
+            <strong className="font-semibold">
               La base de tu propia iglesia
             </strong>{' '}
             (art. 9.2.d), cuando es ella la que te da de alta en su fichero
@@ -278,7 +301,9 @@ export default function PrivacidadPage() {
           permiso general habla de guardar tus datos «para que la congregación
           pueda organizarse», y un registro semanal de dónde estuviste no cabe en
           esa frase. Si no lo das, o si lo retiras, dejas de aparecer en la lista
-          de asistencia y en la de seguimiento de tu iglesia.
+          de asistencia y en la de seguimiento de tu iglesia. También cuando te
+          apunta el equipo: se te pregunta aparte, y si dices que no, tu ficha
+          existe pero no sales en esas listas.
         </P>
         <P>
           <strong className="font-semibold">
@@ -341,6 +366,19 @@ export default function PrivacidadPage() {
             </Dato>
           ))}
         </Recuadro>
+        <P>
+          Una cosa que no pasa por nosotros, pero conviene que sepas: en la ficha
+          de seguimiento hay un botón para llamarte y otro para escribirte por
+          WhatsApp. Abren la llamada o el chat en el teléfono de quien te
+          acompaña, que es suyo: Hatril no envía nada ni guarda la conversación.
+          Pero{' '}
+          <strong className="font-semibold">
+            si te escriben por WhatsApp, tu número pasa por WhatsApp (wa.me, de
+            Meta)
+          </strong>{' '}
+          y queda en la aplicación de esa persona, como cuando alguien te escribe
+          desde su móvil.
+        </P>
         <P>
           Ninguna otra iglesia de Hatril puede ver los datos de la tuya. Eso no
           lo garantiza nuestra buena intención: lo impone la base de datos, que

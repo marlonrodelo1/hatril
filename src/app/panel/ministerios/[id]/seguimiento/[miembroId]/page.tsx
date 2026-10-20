@@ -9,6 +9,7 @@ import {
   acompanaDe,
   contactosDe,
   personasPorFaltas,
+  queSabemosDeSiVolvio,
   type EtapaNuevo,
 } from '@/lib/seguimiento/consultas';
 import {
@@ -134,9 +135,7 @@ export default async function PersonaEnSeguimientoPage({
               <span className="text-[13.5px] text-muted-foreground">
                 {ETAPAS[persona.nuevo.etapa]}
                 {persona.nuevo.etapa === 'llego'
-                  ? persona.faltasSeguidas > 0
-                    ? ` No ha vuelto en ${persona.faltasSeguidas === 1 ? 'la reunión' : `las ${persona.faltasSeguidas} reuniones`} con lista que ha habido después.`
-                    : ' Aún no se ha pasado lista en ningún culto desde que llegó.'
+                  ? ` ${queSabemosDeSiVolvio(persona.faltasSeguidas, persona.nuevo)}`
                   : persona.ultimaAsistencia &&
                     ` La última vez que vino fue el ${formatearFechaLarga(persona.ultimaAsistencia)}.`}
               </span>
@@ -186,7 +185,7 @@ export default async function PersonaEnSeguimientoPage({
                   id="responsable"
                   name="responsable"
                   defaultValue={acompanaId ?? ''}
-                  className="h-[42px] rounded-lg border border-input bg-surface-alt px-3 text-[15px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
+                  className={CLASE_SELECT}
                 >
                   <option value="">Sin asignar</option>
                   {equipo.map((p) => (
@@ -359,8 +358,13 @@ export default async function PersonaEnSeguimientoPage({
   );
 }
 
+/**
+ * 16 px por debajo de `md`, como el `Input` de `components/ui`: con menos,
+ * Safari de iOS amplía la página al tocar el desplegable y no la devuelve. Es
+ * el camino de después del alta rápida, que se hace con el móvil en la mano.
+ */
 const CLASE_SELECT =
-  'h-[42px] rounded-lg border border-input bg-surface-alt px-3 text-[15px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16';
+  'h-[42px] rounded-lg border border-input bg-surface-alt px-3 text-[16px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16 md:text-[15px]';
 
 const ETAPAS: Record<EtapaNuevo, string> = {
   llego: 'Ha venido una vez.',

@@ -103,6 +103,10 @@ export type PersonaEnSeguimiento = {
   /**
    * El día que llegó: `fecha_ingreso`, o el día que se creó su ficha si nadie
    * la apuntó. Es la fecha del embudo de nuevos.
+   *
+   * Nunca después de hoy. El alta de Miembros rellenaba la fecha vacía con el
+   * día en UTC, que en Bogotá a partir de las 19:00 ya es mañana, y la pantalla
+   * acababa diciendo «llegó hace -1 días».
    */
   llegada: string;
   /**
@@ -121,6 +125,14 @@ export type PersonaEnSeguimiento = {
     etapa: EtapaNuevo;
     /** Presencias en las últimas `SE_QUEDA.deLasUltimas` reuniones con lista. */
     presenciasRecientes: number;
+    /**
+     * Reuniones con lista posteriores a su llegada, haya salido en ellas o no.
+     *
+     * Hace falta para no mentir en «vinieron una vez»: con cero faltas puede
+     * ser que no haya habido listas, o que las hubo antes de que se tecleara su
+     * ficha y por eso no salía en ellas. Son dos frases distintas.
+     */
+    listasDesdeQueLlego: number;
   } | null;
   /** Quién la acompaña, si alguien la acompaña. */
   acompana: { miembroId: string; nombre: string } | null;
@@ -322,7 +334,10 @@ async function calcular(
         ...f,
         creadaEl: timestampAFechaHoraLocal(f.createdAt, tz).fecha,
       }))
-      .map((f) => ({ ...f, llegada: f.fechaIngreso ?? f.creadaEl }));
+      .map((f) => {
+        const llegada = f.fechaIngreso ?? f.creadaEl;
+        return { ...f, llegada: llegada > hoy ? hoy : llegada };
+      });
 
     const enEmbudo = visibles
       .filter(
@@ -365,6 +380,12 @@ async function calcular(
     //    existía. Solo las de antes del corte —las de después ya las cuenta la
     //    resta de fechas—, así que lo normal es que esto devuelva cero filas.
     //    El día de la ficha, en la zona de la iglesia, como `creadaEl`.
+    //
+    //    Y solo las POSTERIORES a su llegada. `guardarLista` escribe una fila
+    //    por cada ficha que existe al guardar, no el día del culto: volver a
+    //    guardar la lista del 11 después de apuntar el 19 a un visitante le
+    //    deja un «no vino» el 11, ocho días antes de que llegara. Estricto, como
+    //    el `>` de `desdeCuandoCuenta()`: el día que llega estaba allí.
     const ausenciasPrevias = await tx
       .select({ miembroId: asistencias.miembroId, fecha: reuniones.fecha })
       .from(asistencias)
@@ -376,6 +397,7 @@ async function calcular(
           isNull(reuniones.ministerioId),
           eq(asistencias.presente, false),
           sql`${reuniones.fecha} <= greatest(${miembros.fechaIngreso}, (${miembros.createdAt} at time zone ${tz})::date)`,
+          sql`(${miembros.fechaIngreso} is null or ${reuniones.fecha} > ${miembros.fechaIngreso})`,
         ),
       );
 
@@ -413,7 +435,12 @@ async function calcular(
         faltasSeguidas,
         llegada: f.llegada,
         nuevo: embudo.has(f.miembroId)
-          ? etapaDe(f.llegada, presenciasDe.get(f.miembroId) ?? [], recientes)
+          ? etapaDe(
+              f.llegada,
+              presenciasDe.get(f.miembroId) ?? [],
+              recientes,
+              fechas,
+            )
           : null,
         acompana: acompanaId
           ? {
@@ -450,6 +477,7 @@ function etapaDe(
   llegada: string,
   presencias: { reunionId: string; fecha: string }[],
   recientes: Set<string>,
+  fechas: string[],
 ): NonNullable<PersonaEnSeguimiento['nuevo']> {
   const primera = presencias.reduce(
     (min, p) => (p.fecha < min ? p.fecha : min),
@@ -468,7 +496,34 @@ function etapaDe(
           ? 'volvio'
           : 'llego',
     presenciasRecientes,
+    listasDesdeQueLlego: fechas.filter((d) => d > primera).length,
   };
+}
+
+/**
+ * Lo que se sabe de si ha vuelto quien solo ha venido una vez.
+ *
+ * Aquí y no en cada pantalla porque la lista de nuevos y la ficha lo dicen las
+ * dos, y si cada una lo deduce a su manera acaban contando cosas distintas de
+ * la misma persona. Tres casos, y solo se afirma lo que el dato respalda:
+ *
+ *   - hubo listas en las que salía y no vino: «no ha vuelto en N»;
+ *   - hubo listas después de que llegara, pero se pasaron antes de teclear su
+ *     ficha, así que no salía en ellas: eso, y no «no ha habido listas»;
+ *   - no ha habido ninguna lista desde que llegó: no se sabe.
+ */
+export function queSabemosDeSiVolvio(
+  faltasSeguidas: number,
+  nuevo: NonNullable<PersonaEnSeguimiento['nuevo']>,
+): string {
+  if (faltasSeguidas > 0) {
+    return faltasSeguidas === 1
+      ? 'No vino a la reunión con lista que hubo después.'
+      : `No ha vuelto en las ${faltasSeguidas} reuniones con lista que ha habido después.`;
+  }
+  return nuevo.listasDesdeQueLlego > 0
+    ? 'Todavía no ha salido en ninguna lista desde que tiene ficha.'
+    : 'Aún no se ha pasado lista en ningún culto desde que llegó: no sabemos si ha vuelto.';
 }
 
 /**

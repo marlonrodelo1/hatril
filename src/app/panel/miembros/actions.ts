@@ -18,6 +18,7 @@ import { miembros, ministerioMiembros, ministerios } from '@/lib/db/schema';
 import { isUniqueViolation } from '@/lib/db/error';
 import { ESTADOS_ELEGIBLES } from '@/lib/miembros/estados';
 import { normalizarTelefono } from '@/lib/telefono/normalizar';
+import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { campo, campoObligatorio, campos, casilla } from '@/lib/api/formulario';
 
 /**
@@ -81,8 +82,13 @@ function leerFormulario(formData: FormData) {
 
 type Tx = Parameters<Parameters<typeof withUser>[1]>[0];
 
-function hoy(): string {
-  return new Date().toISOString().slice(0, 10);
+/**
+ * Hoy en la iglesia, no en UTC. Con `toISOString()`, en Bogotá a partir de las
+ * 19:00 ya era mañana: el alta de la tarde entraba con fecha del día siguiente
+ * y «Nuevos» decía «llegó hace -1 días».
+ */
+function hoy(ctx: UserContext): string {
+  return hoyEnLaIglesia(ctx.iglesia.timezone);
 }
 
 /**
@@ -220,7 +226,7 @@ async function aplicarMinisterios(
   miembroId: string,
   plan: PlanMinisterios,
 ) {
-  const fecha = hoy();
+  const fecha = hoy(ctx);
 
   // Se desactivan, NO se borran: el índice único parcial deja convivir el
   // histórico con el vínculo vivo, y así un pastor puede ver que alguien
@@ -314,7 +320,7 @@ export async function crearMiembro(formData: FormData) {
         estado: d.estado as (typeof ESTADOS_ELEGIBLES)[number],
         // Si no se dice, la persona entra hoy. Es lo que espera quien apunta a
         // alguien justo después del culto.
-        fechaIngreso: oNulo(d.fechaIngreso) ?? hoy(),
+        fechaIngreso: oNulo(d.fechaIngreso) ?? hoy(ctx),
         ...datosProtegidos(ctx, d),
         bautizado: d.bautizado === 'on',
         fechaBautismo: oNulo(d.fechaBautismo),
@@ -442,7 +448,7 @@ export async function darDeBaja(miembroId: string) {
 
     await tx
       .update(ministerioMiembros)
-      .set({ activo: false, hasta: hoy() })
+      .set({ activo: false, hasta: hoy(ctx) })
       .where(
         and(
           eq(ministerioMiembros.iglesiaId, ctx.iglesia.id),

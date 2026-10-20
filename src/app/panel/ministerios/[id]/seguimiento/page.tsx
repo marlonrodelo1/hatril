@@ -86,11 +86,13 @@ export default async function SeguimientoPage({
                 se cuentan a partir de la ficha, quien se dio de alta ayer no
                 se ha perdido nada sin haber venido nunca. */}
             <p className="max-w-[62ch] text-[14.5px] leading-relaxed text-muted-foreground">
-              Ninguna de las {personas.length}{' '}
-              {personas.length === 1 ? 'persona' : 'personas'} ha faltado a un
-              culto con lista desde que está en el fichero. Si esto te sorprende,
-              puede que falte apuntar algún culto en Reuniones.
-              {nuevos > 0 && ' Quien acaba de llegar está en Nuevos.'}
+              {personas.length === 0
+                ? 'Todos los que hay en el fichero acaban de llegar: están en Nuevos.'
+                : (personas.length === 1
+                    ? 'Esa persona no ha faltado a ningún culto con lista desde que está en el fichero.'
+                    : `Ninguna de las ${personas.length} personas ha faltado a un culto con lista desde que está en el fichero.`) +
+                  ' Si esto te sorprende, puede que falte apuntar algún culto en Reuniones.' +
+                  (nuevos > 0 ? ' Quien acaba de llegar está en Nuevos.' : '')}
             </p>
           </Vacio>
         ) : (

@@ -9,6 +9,7 @@ import {
   DIAS_EN_NUEVOS,
   SE_QUEDA,
   nuevosDelSeguimiento,
+  queSabemosDeSiVolvio,
   type EtapaNuevo,
   type NuevosDelSeguimiento,
 } from '@/lib/seguimiento/consultas';
@@ -199,7 +200,6 @@ export default async function NuevosPage({
                         persona={p}
                         href={`${base}/${p.miembroId}`}
                         hoy={hoy}
-                        hayListas={hayListas}
                       />
                     ))}
                   </ul>
@@ -246,14 +246,14 @@ function Fila({
   persona: p,
   href,
   hoy,
-  hayListas,
 }: {
   persona: PersonaNueva;
   href: string;
   hoy: string;
-  hayListas: boolean;
 }) {
-  const dias = diasEntre(p.llegada, hoy);
+  // Nunca negativo: `llegada` ya no pasa de hoy, pero una fecha mal guardada
+  // no puede volver a pintar «hace -1 días».
+  const dias = Math.max(0, diasEntre(p.llegada, hoy));
 
   return (
     <li>
@@ -282,7 +282,7 @@ function Fila({
           <Insignias persona={p} />
 
           <span className="text-pretty text-[13px] leading-snug text-muted-foreground">
-            {detalleDeEtapa(p, hayListas)}
+            {detalleDeEtapa(p)}
           </span>
         </div>
 
@@ -353,7 +353,7 @@ function Insignias({ persona: p }: { persona: PersonaNueva }) {
   );
 }
 
-function detalleDeEtapa(p: PersonaNueva, hayListas: boolean): string {
+function detalleDeEtapa(p: PersonaNueva): string {
   switch (p.nuevo.etapa) {
     case 'se_queda':
       return `Ha venido a ${p.nuevo.presenciasRecientes} de las últimas ${SE_QUEDA.deLasUltimas} reuniones con lista.`;
@@ -368,16 +368,7 @@ function detalleDeEtapa(p: PersonaNueva, hayListas: boolean): string {
         : 'Volvió.';
     }
     case 'llego':
-      // «No ha vuelto» solo si hubo listas después en las que pudo salir. Sin
-      // ellas, la respuesta honrada es que no se sabe.
-      if (p.faltasSeguidas > 0) {
-        return p.faltasSeguidas === 1
-          ? 'No vino a la reunión con lista que hubo después.'
-          : `No ha vuelto en las ${p.faltasSeguidas} reuniones con lista que ha habido después.`;
-      }
-      return hayListas
-        ? 'Aún no se ha pasado lista en ningún culto desde que llegó.'
-        : 'Sin lista de los cultos no sabemos si ha vuelto.';
+      return queSabemosDeSiVolvio(p.faltasSeguidas, p.nuevo);
   }
 }
 
