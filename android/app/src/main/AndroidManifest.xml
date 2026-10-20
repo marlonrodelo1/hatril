@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      allowBackup="false": SIN COPIA EN GOOGLE DRIVE.
+
+      Con "true", Android sube a la copia de seguridad de la cuenta de Google
+      lo que la app guarda en el teléfono, y aquí eso son las cookies del
+      WebView: la sesión de Supabase, con la que se entra en la cuenta sin
+      contraseña. Una sesión que da acceso a la pertenencia a una iglesia
+      (dato del art. 9 RGPD) no puede acabar en un servicio que Hatril no
+      controla ni nombra en /privacidad. Lo que se pierde es nada: al cambiar
+      de teléfono se vuelve a entrar con el correo.
+
+      Con objetivo Android 12 o más, esto no corta el paso de un teléfono a
+      otro durante la configuración del nuevo (va directo, por cable o wifi,
+      y es la misma persona). Si algún día molesta, eso se cierra con
+      android:dataExtractionRules.
+    -->
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+
+    <!-- Permissions -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+      Sin este permiso el WebView no se entera de que vuelve la red:
+      navigator.onLine se queda en true para siempre y el evento «online»
+      no llega nunca. La página de sin conexión promete «en cuanto vuelva la
+      conexión, lo intentamos solos», y eso depende de ese evento (probado en
+      el emulador: sin el permiso, con el modo avión puesto y quitado, nada).
+      Es un permiso normal: no pregunta nada a la persona y solo deja saber
+      si hay red, no cuál ni dónde.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+</manifest>

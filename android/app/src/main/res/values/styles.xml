@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <!--
+      El tema con el que vive la app. Claro siempre, no DayNight: la web tiene
+      un solo modo, y con un teléfono en modo oscuro el fondo de la ventana se
+      volvía casi negro.
+
+      Ese fondo importa más de lo que parece. Con objetivo Android 16 el
+      sistema dibuja de borde a borde y la barra de estado no tiene color
+      propio: se ve el windowBackground por detrás (Capacitor 8, SystemBars).
+      Crema aquí es la barra crema arriba y abajo, a juego con la web.
+    -->
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+        <item name="android:windowBackground">@color/crema</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!-- El arranque: el icono sobre crema, también en modo oscuro. -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/crema</item>
+    </style>
+</resources>

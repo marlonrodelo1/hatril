@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generado por scripts/app/iconos.mjs desde assets/icono.svg. No editar. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1536"
+    android:viewportHeight="1536">
+    <group android:translateX="256" android:translateY="256">
+        <path android:fillColor="#FFFFFF" android:pathData="M319 282H425V457H599V282H705V742H599V535H425V742H319Z" />
+    </group>
+</vector>

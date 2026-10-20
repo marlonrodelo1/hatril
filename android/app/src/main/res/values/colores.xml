@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- El crema de la web: hatril-bg-base en src/app/globals.css. -->
+    <color name="crema">#FAF9F5</color>
+</resources>

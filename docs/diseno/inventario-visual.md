@@ -464,7 +464,7 @@ la etiqueta ya lo dice.
 `/panel/suscripcion`: «Falta configurar los precios (esencial/mensual,
 esencial/anual, …)» (`suscripcion/_components/planes.tsx:51`). Al pastor le
 llegan claves internas. **Arreglo**: «Los planes todavía no están disponibles.
-Escríbenos a hola@hatril.app» y el detalle al registro del servidor.
+Escríbenos a hola@hatril.com» y el detalle al registro del servidor.
 
 ### D9 · «Apuntar la reunión» en la agenda de un ministerio
 

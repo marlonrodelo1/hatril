@@ -126,8 +126,8 @@ export default async function AceptaPage() {
         <p className="text-[13px] leading-relaxed text-muted-foreground">
           Puedes retirar cualquiera de los dos permisos cuando quieras
           escribiendo a tu iglesia o a{' '}
-          <a href="mailto:hola@hatril.app" className="underline">
-            hola@hatril.app
+          <a href="mailto:hola@hatril.com" className="underline">
+            hola@hatril.com
           </a>
           . Lo que ya pasó antes sigue siendo válido — lo dice el artículo 7.3
           del RGPD.

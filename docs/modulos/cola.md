@@ -78,6 +78,5 @@ La siguiente migración es la **0043** y el siguiente código de trigger,
 
 - **Subir `VERSION_POLITICA_PRIVACIDAD`**, con los textos ya redactados de
   consolidación y radio. Antes, guardar la negativa de asistencia como fila.
-- **Dónde empieza quien solo lidera**: el panel, como hoy, o `/mi/equipo`.
 - **Si el reparto entra en `sinMuro`**: con el pago caído no se pueden marcar
   entregas un domingo.

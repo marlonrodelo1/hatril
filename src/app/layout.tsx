@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
+import { AppNativa } from '@/components/app-nativa';
 import './globals.css';
 
 /**
@@ -52,7 +53,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${jakarta.variable} h-full`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        {/* Botón atrás, barra de estado y arranque; fuera de la app, nada. */}
+        <AppNativa />
+      </body>
     </html>
   );
 }

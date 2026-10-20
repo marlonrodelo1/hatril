@@ -8,8 +8,12 @@
  *
  * PENDIENTE ANTES DE PUBLICAR
  * ---------------------------
- *   - `url` y `email` apuntan a un dominio en trámite de registro. Cuando esté,
- *     no hay que tocar nada más: todo sale de aquí.
+ *   - **El buzón de `email` no existe todavía.** El dominio, hatril.com, ya
+ *     sirve la web (20-oct-2026), pero no tiene registros MX: no hay buzón que
+ *     reciba lo que se escriba a `hola@hatril.com`. Y `/privacidad` manda ahí
+ *     a quien quiera ejercer sus derechos, así que un correo que no llega es un
+ *     derecho que no se puede ejercer. Crear el buzón antes de publicar las
+ *     apps.
  *   - **`ALOJAMIENTO` está sin rellenar.** Ver su comentario justo abajo.
  *   - Para Colombia hace falta además el registro del tratamiento ante la SIC si
  *     se supera el umbral de registros.
@@ -27,8 +31,8 @@ export const DATOS_RESPONSABLE = {
     'Carretera España 79, 38390 Santa Úrsula, Santa Cruz de Tenerife',
 
   /** Contacto de soporte y para el ejercicio de derechos del RGPD. */
-  email: 'hola@hatril.app',
-  url: 'https://hatril.app',
+  email: 'hola@hatril.com',
+  url: 'https://hatril.com',
 
   /** Solo sociedades. Vacío para autónomo. */
   registroMercantil: '',
