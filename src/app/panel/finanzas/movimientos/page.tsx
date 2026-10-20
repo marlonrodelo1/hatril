@@ -11,6 +11,7 @@ import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
 import { CabeceraPanel } from '../../_components/cabecera';
 import { Contenedor } from '../../_components/contenedor';
+import { Paginacion } from '../../_components/paginacion';
 
 export const metadata: Metadata = { title: 'Libro de movimientos' };
 
@@ -22,6 +23,7 @@ export default async function MovimientosPage({
     desde?: string;
     hasta?: string;
     fondo?: string;
+    pagina?: string;
   }>;
 }) {
   // La guarda entera, también aquí: el layout no protege la página (CLAUDE.md).
@@ -35,19 +37,38 @@ export default async function MovimientosPage({
   const desde = params.desde ?? mes.desde;
   const hasta = params.hasta ?? mes.hasta;
 
-  const [filas, { fondos: listaFondos }] = await Promise.all([
-    libro(ctx, { desde, hasta, fondoId: params.fondo }),
-    opciones(ctx),
-  ]);
+  const [{ filas, total, pagina, porPagina }, { fondos: listaFondos }] =
+    await Promise.all([
+      libro(
+        ctx,
+        { desde, hasta, fondoId: params.fondo },
+        { pagina: Number(params.pagina) || 1 },
+      ),
+      opciones(ctx),
+    ]);
+
+  // Arriba Y abajo. Abajo es donde se busca la página siguiente; arriba es
+  // donde se ve que la tabla no es todo, antes de recorrer 50 filas buscando
+  // el apunte que está en la página dos.
+  const paginacion = (alPie: boolean) =>
+    total > porPagina && (
+      <Paginacion
+        total={total}
+        pagina={pagina}
+        porPagina={porPagina}
+        unidad={['movimiento', 'movimientos']}
+        alPie={alPie}
+      />
+    );
 
   return (
     <>
       <CabeceraPanel
         titulo="Libro de movimientos"
         subtitulo={
-          filas.length === 0
+          total === 0
             ? 'Nada apuntado en este periodo'
-            : `${filas.length} ${filas.length === 1 ? 'movimiento' : 'movimientos'}`
+            : `${total} ${total === 1 ? 'movimiento' : 'movimientos'}`
         }
       >
         <Button
@@ -113,6 +134,8 @@ export default async function MovimientosPage({
           </a>
         </form>
 
+        {paginacion(false)}
+
         {filas.length === 0 ? (
           <p className="rounded-xl border border-border bg-surface px-4 py-8 text-center text-[14px] text-muted-foreground">
             No hay movimientos en este periodo.
@@ -166,6 +189,8 @@ export default async function MovimientosPage({
             </table>
           </div>
         )}
+
+        {paginacion(true)}
       </Contenedor>
     </>
   );

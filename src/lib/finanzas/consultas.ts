@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, lte, sql } from 'drizzle-orm';
 
 import { withUser } from '@/lib/db/with-tenant';
 import { cajas, fondos, movimientos } from '@/lib/db/schema';
@@ -139,19 +139,52 @@ export async function saldosPorCaja(ctx: UserContext): Promise<Saldo[]> {
   );
 }
 
-/** El libro, con los últimos arriba. */
+export const POR_PAGINA_LIBRO = 50;
+
+export interface PaginaLibro {
+  filas: MovimientoListado[];
+  /** Los que cumplen el filtro, no los de esta página. */
+  total: number;
+  pagina: number;
+  porPagina: number;
+}
+
+/**
+ * El libro, con los últimos arriba, de página en página.
+ *
+ * DEVUELVE EL TOTAL, Y ES LO QUE IMPORTA DE ESTA FUNCIÓN
+ * ------------------------------------------------------
+ * Antes devolvía las filas a secas con un `limit 50`, y la pantalla contaba las
+ * que le llegaban: el mes 51 movimientos salía «50 movimientos», el apunte más
+ * antiguo no estaba en ninguna parte y nada decía que faltara. En un libro de
+ * caja eso es peor que un error, porque el tesorero lo busca, no lo encuentra
+ * y concluye que no se apuntó. Con el total al lado, quien llame a esto sabe
+ * siempre si lo que pinta es todo o una parte.
+ *
+ * La página se recorta al rango que existe: una `?pagina=9` que ya no cabe
+ * —porque se borró algo, o porque el enlace es de otro filtro— enseña la última
+ * en vez de una tabla vacía con «120 movimientos» encima.
+ */
 export async function libro(
   ctx: UserContext,
   filtros: { desde?: string; hasta?: string; fondoId?: string } = {},
-  limite = 50,
-): Promise<MovimientoListado[]> {
+  { pagina = 1, porPagina = POR_PAGINA_LIBRO } = {},
+): Promise<PaginaLibro> {
   const condiciones = [eq(movimientos.iglesiaId, ctx.iglesia.id)];
   if (filtros.desde) condiciones.push(gte(movimientos.fecha, filtros.desde));
   if (filtros.hasta) condiciones.push(lte(movimientos.fecha, filtros.hasta));
   if (filtros.fondoId) condiciones.push(eq(movimientos.fondoId, filtros.fondoId));
 
-  return withUser(ctx.user.id, (tx) =>
-    tx
+  return withUser(ctx.user.id, async (tx) => {
+    const [{ total }] = await tx
+      .select({ total: count() })
+      .from(movimientos)
+      .where(and(...condiciones));
+
+    const ultima = Math.max(1, Math.ceil(total / porPagina));
+    const enRango = Math.min(Math.max(1, Math.trunc(pagina)), ultima);
+
+    const filas = await tx
       .select({
         id: movimientos.id,
         tipo: movimientos.tipo,
@@ -169,10 +202,20 @@ export async function libro(
       .leftJoin(cajas, eq(cajas.id, movimientos.cajaId))
       .where(and(...condiciones))
       // `id` de desempate: dos movimientos del mismo día sin él salen en orden
-      // arbitrario y la lista «baila» entre recargas.
+      // arbitrario y la lista «baila» entre recargas. Con páginas pesa el
+      // doble: un orden que no es total repite o se salta filas en el salto
+      // de una página a la siguiente.
       .orderBy(desc(movimientos.fecha), desc(movimientos.id))
-      .limit(limite),
-  ) as Promise<MovimientoListado[]>;
+      .limit(porPagina)
+      .offset((enRango - 1) * porPagina);
+
+    return {
+      filas: filas as MovimientoListado[],
+      total,
+      pagina: enRango,
+      porPagina,
+    };
+  });
 }
 
 /** Un movimiento concreto, para su ficha. */

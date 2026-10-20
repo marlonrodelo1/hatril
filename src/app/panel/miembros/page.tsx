@@ -18,7 +18,7 @@ import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
 import { FiltrosMiembros, BuscadorMiembros } from './_components/filtros';
 import { FichaMiembroPanel } from './_components/ficha';
-import { Paginacion } from './_components/paginacion';
+import { Paginacion } from '../_components/paginacion';
 
 export const metadata: Metadata = { title: 'Miembros' };
 

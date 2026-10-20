@@ -151,7 +151,7 @@ export default async function RepartoHoyPage({
             {jornada ? ' Ya está esperando en la cola.' : ''}
           </Aviso>
         )}
-        {guardado && CONFIRMACIONES[guardado] && (
+        {guardado && Object.hasOwn(CONFIRMACIONES, guardado) && (
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
         )}
 

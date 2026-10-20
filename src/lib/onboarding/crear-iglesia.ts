@@ -106,6 +106,11 @@ export async function crearIglesiaConSeeds(opts: {
   nombrePastor: string;
   pais?: string;
   ciudad?: string;
+  /**
+   * La casilla de asistencia de `/registro`, marcada o no. Obligatorio y sin
+   * defecto a propósito: ver el comentario del insert.
+   */
+  aceptaAsistencia: boolean;
   /** Evidencia del consentimiento del art. 9, recogida en el formulario. */
   ip?: string | null;
   userAgent?: string | null;
@@ -117,6 +122,7 @@ export async function crearIglesiaConSeeds(opts: {
     nombrePastor,
     pais = 'CO',
     ciudad,
+    aceptaAsistencia,
     ip,
     userAgent,
   } = opts;
@@ -209,6 +215,29 @@ export async function crearIglesiaConSeeds(opts: {
           ip: ip ?? null,
           userAgent: userAgent ?? null,
         });
+
+        // LA CASILLA DE ASISTENCIA, CON LA MISMA VERSIÓN QUE LA DE ARRIBA
+        // ----------------------------------------------------------------
+        // El insert de arriba deja al pastor con la política vigente aceptada,
+        // y `miembrosSinPermisoDeAsistencia` lee «vigente y sin asistencia»
+        // como «vio la casilla y no la marcó». Hasta ahora `/registro` no la
+        // enseñaba, así que todo pastor que registraba su iglesia desaparecía
+        // de la lista del culto sin haber dicho nada: la primera trampa de
+        // ESTADO.md, por la segunda puerta que la tenía.
+        //
+        // Por eso `aceptaAsistencia` es obligatorio y sin defecto: una puerta
+        // de alta nueva que llame aquí sin preguntar la casilla no compila, en
+        // vez de repetir el fallo en silencio.
+        if (aceptaAsistencia) {
+          await tx.insert(consentimientos).values({
+            iglesiaId: iglesia.id,
+            miembroId: fichaPastor.id,
+            tipo: 'asistencia_y_seguimiento',
+            versionTexto: VERSION_POLITICA_PRIVACIDAD,
+            ip: ip ?? null,
+            userAgent: userAgent ?? null,
+          });
+        }
 
         return { ok: true as const, iglesia };
       });

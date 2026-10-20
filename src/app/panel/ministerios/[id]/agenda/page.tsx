@@ -147,7 +147,12 @@ function textoDeConfirmacion(
   if (guardado === 'ya-estaba' && n.estaban && n.otras !== null) {
     return confirmacionYaEstaba(n.estaban, n.otras);
   }
-  return guardado ? (CONFIRMACIONES[guardado] ?? null) : null;
+  // `hasOwn` y no `CONFIRMACIONES[guardado]` a pelo: el objeto hereda las
+  // claves de `Object.prototype`, y `?guardado=constructor` devolvía una
+  // función que React no puede pintar.
+  return guardado && Object.hasOwn(CONFIRMACIONES, guardado)
+    ? (CONFIRMACIONES[guardado] ?? null)
+    : null;
 }
 
 /** Un número de semanas de la URL, entre 0 y el tope, o null. */

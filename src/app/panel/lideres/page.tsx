@@ -4,6 +4,7 @@ import {
   ChevronRight,
   HandHeart,
   ShieldCheck,
+  ShieldOff,
   SquarePen,
   UserMinus,
   UserPlus,
@@ -16,6 +17,7 @@ import {
   PERMISOS,
   PERMISOS_DE_TODOS,
   ROLES_IGLESIA,
+  puedeGestionarMinisterio,
   type Permiso,
 } from '@/lib/auth/permisos';
 import { listarEquipo, type FilaEquipo } from '@/lib/equipo/consultas';
@@ -59,6 +61,28 @@ function contarConcedidos(p: FilaEquipo): number {
   return PERMISOS_A_REPARTIR.filter((permiso) => p.permisos[permiso]).length;
 }
 
+/**
+ * Los ministerios que lidera y NO puede llevar desde el panel.
+ *
+ * Pregunta a `puedeGestionarMinisterio`, la misma regla que el guard, en vez
+ * de copiar la condición. La primera versión solo miraba
+ * `gestionar_su_ministerio` y se olvidaba del otro camino,
+ * `gestionar_ministerios`: a quien tenía ese y no el primero, la tarjeta le
+ * decía «Sin permiso para llevarlo» mientras editaba su ministerio sin
+ * problema. Una pantalla de permisos que dice menos acceso del que hay es peor
+ * que ninguna.
+ */
+function ministeriosSinLlevar(p: FilaEquipo): { id: string; nombre: string }[] {
+  const comoContexto = {
+    rol: p.rol,
+    permisos: p.permisos,
+    miembroId: p.miembroId,
+    ministerioIds: p.lidera.map((m) => m.id),
+    ministeriosQueLidera: p.lidera.map((m) => m.id),
+  };
+  return p.lidera.filter((m) => !puedeGestionarMinisterio(comoContexto, m.id));
+}
+
 const CONFIRMACIONES: Record<string, string> = {
   rol: 'Rol cambiado. Los permisos volvieron a los de ese rol.',
   permisos: 'Permisos guardados.',
@@ -89,7 +113,7 @@ export default async function LideresPage({
           enteras —«Con acceso» y «Sin acceso»—, no tarjetas sueltas. */}
       <Contenedor className="gap-8">
         {error && <Aviso>{error}</Aviso>}
-        {guardado && CONFIRMACIONES[guardado] && (
+        {guardado && Object.hasOwn(CONFIRMACIONES, guardado) && (
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
         )}
 
@@ -182,6 +206,8 @@ export default async function LideresPage({
 }
 
 function TarjetaPersona({ persona: p }: { persona: FilaEquipo }) {
+  const sinLlevar = ministeriosSinLlevar(p);
+
   return (
     <details className="group/persona rounded-xl border border-border bg-surface open:pb-5">
       {/*
@@ -225,6 +251,25 @@ function TarjetaPersona({ persona: p }: { persona: FilaEquipo }) {
             <span className="mt-0.5 inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
               <HandHeart className="size-3.5 flex-none" strokeWidth={1.7} />
               Lidera {p.lidera.map((m) => m.nombre).join(', ')}
+            </span>
+          )}
+
+          {/*
+           * Desmarcar «Llevar sus propios ministerios» no se nota en ningún
+           * otro sitio: el ministerio le sigue teniendo de responsable y la
+           * tarjeta cerrada decía lo mismo que antes. Sin esto, el pastor que
+           * lo quitó hace un mes no recuerda por qué esa persona no entra.
+           *
+           * En su línea y con su icono, no pegado detrás de la lista: con dos
+           * ministerios, «Lidera Acción social, Radio, sin poder llevarlo» se
+           * leía como un tercero.
+           */}
+          {sinLlevar.length > 0 && (
+            <span className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
+              <ShieldOff className="size-3.5 flex-none" strokeWidth={1.7} />
+              {sinLlevar.length === 1
+                ? 'Sin permiso para llevarlo'
+                : 'Sin permiso para llevarlos'}
             </span>
           )}
         </div>
@@ -345,7 +390,14 @@ function TarjetaPersona({ persona: p }: { persona: FilaEquipo }) {
 
               {PERMISOS_DE_TODOS.length > 0 && (
                 <div className="flex flex-col gap-3 border-t border-border pt-3">
-                  <span className="t-micro">Viene puesto para todos</span>
+                  {/* «Viene puesto para todos» a secas se leía como algo fijo,
+                      que no va con esta persona y no se toca. Es de esta
+                      persona, y se le puede quitar. Sin el «puesto»: con él
+                      no cabe en una línea a 375 px y la versalita partida a
+                      media frase parece un descuido. */}
+                  <span className="t-micro">
+                    Viene para todos · puedes quitárselo
+                  </span>
                   {PERMISOS_DE_TODOS.map((permiso) => (
                     <CasillaPermiso
                       key={permiso}

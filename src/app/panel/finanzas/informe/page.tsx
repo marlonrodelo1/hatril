@@ -41,10 +41,10 @@ export default async function InformePage({
 
   const { desde, hasta, etiqueta } = mesEnLaIglesia(ctx.iglesia.timezone, mes);
 
-  const [delMes, porFondo, filas] = await Promise.all([
+  const [delMes, porFondo, { filas, total }] = await Promise.all([
     resumen(ctx, desde, hasta, etiqueta),
     saldosPorFondo(ctx),
-    libro(ctx, { desde, hasta }, 500),
+    libro(ctx, { desde, hasta }, { porPagina: 500 }),
   ]);
 
   return (
@@ -172,10 +172,15 @@ export default async function InformePage({
             </table>
           </div>
         )}
-        {filas.length === 500 && (
+        {/* Contra el total y no contra `filas.length === 500`, que avisaba
+            también del mes con justo 500 y no decía cuántos faltaban. Y «más
+            recientes», no «primeros»: el libro sale de la fecha más nueva a la
+            más vieja. Las tres cifras de arriba sí son del mes entero: las suma
+            Postgres, no esta tabla. */}
+        {total > filas.length && (
           <p className="text-[12.5px] text-muted-foreground">
-            Se muestran los primeros 500 movimientos. Descarga el CSV para verlos
-            todos.
+            Se muestran los {filas.length} movimientos más recientes de los{' '}
+            {total} del mes. Descarga el CSV para verlos todos.
           </p>
         )}
       </section>

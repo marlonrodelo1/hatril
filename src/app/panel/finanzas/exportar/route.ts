@@ -64,7 +64,11 @@ export async function GET(request: Request): Promise<Response> {
 
   // Sin límite bajo: el punto de esto es llevarse el periodo entero. Un año de
   // una iglesia mediana son unos centenares de filas.
-  const filas = await libro(ctx, { desde, hasta, fondoId: fondo }, 10_000);
+  const { filas, total } = await libro(
+    ctx,
+    { desde, hasta, fondoId: fondo },
+    { porPagina: 10_000 },
+  );
 
   const lineas = [
     'sep=;',
@@ -83,6 +87,15 @@ export async function GET(request: Request): Promise<Response> {
       ].join(';'),
     ),
     '',
+    // Si el tope corta, el fichero lo dice, y por lo mismo que el aviso de
+    // abajo: quien lo abre en Excel no ha visto ninguna pantalla.
+    ...(total > filas.length
+      ? [
+          celda(
+            `Aviso: este fichero trae los ${filas.length} movimientos mas recientes de los ${total} del periodo. Descarga un periodo mas corto para tener el resto.`,
+          ),
+        ]
+      : []),
     // El aviso viaja DENTRO del fichero. Puesto solo en la pantalla, se queda en
     // la pantalla: quien reenvía el CSV a su contador ya no lo está viendo.
     celda(

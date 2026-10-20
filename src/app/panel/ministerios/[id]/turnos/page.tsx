@@ -81,7 +81,7 @@ export default async function TurnosPage({
         <PestanasMinisterio ctx={ctx} ministerio={ministerio} activa="turnos" />
 
         {error && <Aviso>{error}</Aviso>}
-        {guardado && CONFIRMACIONES[guardado] && (
+        {guardado && Object.hasOwn(CONFIRMACIONES, guardado) && (
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
         )}
 

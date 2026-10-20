@@ -231,7 +231,7 @@ export const ETIQUETAS_PERMISOS: Record<
     // su propio grupo con ese encabezado (`PERMISOS_DE_TODOS`).
     titulo: 'Llevar sus propios ministerios',
     descripcion:
-      'Solo abre algo a quien sea responsable o colíder de un ministerio: entra al panel a llevarlo —editarlo y mover a su gente— sin que tengas que cambiarle el rol. No le deja crear ministerios ni tocar los de los demás. Desmárcalo solo si alguien lidera y no quieres que lo gestione desde aquí.',
+      'Solo abre algo a quien sea responsable o colíder de un ministerio: entra al panel a llevarlo —editarlo y mover a su gente— sin que tengas que cambiarle el rol. No le deja crear ministerios ni tocar los de los demás. Desmárcalo solo si lidera algo y no quieres que lo lleve desde el panel.',
   },
   escribir_devocionales: {
     titulo: 'Escribir el devocional',
