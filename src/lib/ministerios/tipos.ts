@@ -122,7 +122,7 @@ export const TIPOS_MINISTERIO = [
   {
     id: 'medios',
     nombre: 'Medios y comunicación',
-    descripcion: 'Sonido, transmisión, redes sociales y radio.',
+    descripcion: 'Sonido, transmisión y redes sociales.',
     modulos: ['turnos', 'agenda'],
     puestos: [
       'Sonido',
@@ -131,6 +131,19 @@ export const TIPOS_MINISTERIO = [
       'Transmisión',
       'Redes sociales',
     ],
+  },
+  {
+    /*
+     * Tipo propio y no dentro de Medios: una radio tiene parrilla, locutores y
+     * una señal que escucha la congregación, y el equipo de sonido del culto no
+     * necesita nada de eso. Medios puede encender la emisora a mano.
+     */
+    id: 'radio',
+    nombre: 'Radio',
+    descripcion:
+      'La emisora de la iglesia: la señal en directo, la programación y quién presenta cada programa.',
+    modulos: ['emisora', 'turnos', 'agenda'],
+    puestos: ['Locución', 'Control técnico', 'Producción', 'Redes'],
   },
   {
     id: 'otro',

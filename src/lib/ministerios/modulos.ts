@@ -4,6 +4,7 @@ import {
   HeartHandshake,
   ListMusic,
   type LucideIcon,
+  Radio,
 } from 'lucide-react';
 import { z } from 'zod';
 
@@ -86,6 +87,19 @@ export const MODULOS_MINISTERIO = [
     descripcion:
       'Quién lleva tiempo sin venir, quién le acompaña y qué se ha hablado con esa persona.',
     Icono: HeartHandshake,
+  },
+  {
+    /*
+     * La señal en directo de la radio, su parrilla y si sale en la web. La
+     * configuración entera vive aquí, en `modulos.emisora` —ver
+     * `lib/emisora/config.ts`—, y los programas del mes con sus locutores son
+     * turnos, que ya existen.
+     */
+    id: 'emisora',
+    nombre: 'Radio en directo',
+    descripcion:
+      'La señal de la emisora y su programación. La congregación la escucha desde la aplicación, y en la web si lo decides tú.',
+    Icono: Radio,
   },
 ] as const satisfies readonly ModuloDeclarado[];
 

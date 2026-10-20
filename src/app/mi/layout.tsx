@@ -1,5 +1,7 @@
 import { getCurrentUserContext } from '@/lib/auth/user-context';
+import { radioDeLaIglesia } from '@/lib/emisora/consultas';
 import { BarraInferior } from './_components/barra-inferior';
+import { MiniReproductor } from './_components/mini-reproductor';
 
 /**
  * El marco del área del miembro.
@@ -43,9 +45,23 @@ export default async function MiLayout({
    */
   if (!ctx) return <>{children}</>;
 
+  // Solo si la iglesia tiene una radio encendida y con señal. Sin ella no se
+  // pinta nada: ni un hueco, ni un botón apagado.
+  const radio = await radioDeLaIglesia(ctx);
+
   return (
     <>
       {children}
+      {radio && (
+        <MiniReproductor
+          nombre={radio.nombre}
+          streamUrl={radio.streamUrl}
+          parrilla={radio.parrilla}
+          timezone={ctx.iglesia.timezone}
+          iglesiaNombre={ctx.iglesia.nombre}
+          caratula={ctx.iglesia.logoUrl}
+        />
+      )}
       <BarraInferior />
       {/*
        * El hueco de la barra, que es `fixed` y flota sobre el contenido. Sin

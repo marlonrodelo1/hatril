@@ -127,6 +127,17 @@ export default function TerminosPage() {
           Quien se apunta a un evento abierto sí puede estar: te dio permiso él
           mismo al apuntarse. Esos datos valen para ese evento y para nada más.
         </P>
+        <P>
+          <strong className="font-semibold">Si la iglesia enlaza su radio.</strong>{' '}
+          Hatril no emite, no retransmite y no graba nada: guarda la dirección de
+          la señal que la iglesia elige, y el reproductor de quien escucha se
+          conecta directamente al servidor de esa emisora. Lo que suena es cosa de
+          la iglesia, y responde ella de tener los derechos y las licencias de la
+          música y de los programas —en España los gestionan entidades como SGAE
+          y AGEDI/AIE; en Colombia, SAYCO-ACINPRO— y de cualquier permiso que su
+          país pida a una emisora. Si nos llega un requerimiento fundado sobre lo
+          que emite, podemos retirar el enlace mientras se aclara.
+        </P>
       </Seccion>
 
       <Seccion numero={4} titulo="Precio y prueba">

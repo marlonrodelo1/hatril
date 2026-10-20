@@ -23,6 +23,8 @@ import { proximaReunion } from '@/lib/iglesias/proxima-reunion';
 import { devocionalPublico } from '@/lib/devocionales/consultas';
 import { pulsoDelMuro } from '@/lib/comunidad/consultas';
 import { formatearFechaLarga } from '@/lib/fecha/hoy';
+import { radioPublica } from '@/lib/emisora/consultas';
+import { RadioIglesia } from './_components/radio';
 
 /**
  * La web pública de una iglesia.
@@ -103,6 +105,9 @@ export default async function WebIglesiaPage({
   // Va por `dbAdmin`, como todo lo de esta página, y NO consulta inscripciones:
   // ni siquiera para contarlas. El porqué, en `src/lib/eventos/publica.ts`.
   const eventosDeLaIglesia = await eventosPublicos(iglesia.id);
+  // Solo si el pastor la marcó para la web. Va después de comprobar que la web
+  // está publicada: `obtenerIglesiaPublica` ya habría devuelto null.
+  const radio = await radioPublica(iglesia.id);
   const monedaIglesia = iglesia.moneda as Moneda;
   const secciones: { href: string; texto: string }[] = [];
   if (iglesia.horarios.length > 0) {
@@ -114,6 +119,9 @@ export default async function WebIglesiaPage({
   }
   if (devocional) {
     secciones.push({ href: '#devocional', texto: 'Devocional' });
+  }
+  if (radio) {
+    secciones.push({ href: '#radio', texto: 'Radio' });
   }
   // El orden de este array es el del menú, y tiene que ser el mismo en el que
   // aparecen las secciones al bajar. Si discrepan, los enlaces saltan hacia
@@ -592,6 +600,32 @@ export default async function WebIglesiaPage({
               </div>
             </div>
           </article>
+        </section>
+      )}
+
+      {/* --- Radio ---
+          Detrás del devocional y delante de los grupos, en el mismo orden que
+          su entrada en `secciones`. */}
+      {radio && (
+        <section
+          id="radio"
+          className="mx-auto max-w-[1180px] scroll-mt-20 px-4 py-14 sm:px-5 md:px-10 md:py-16 lg:py-20"
+        >
+          <div className="mb-8 flex flex-col gap-3">
+            <span className="t-micro text-badge-accent-fg">Radio en directo</span>
+            <h2 className="max-w-[600px] text-pretty text-[30px] font-extrabold leading-[1.06] tracking-[-0.035em] md:text-[38px]">
+              {radio.nombre}
+            </h2>
+          </div>
+
+          <RadioIglesia
+            nombre={radio.nombre}
+            streamUrl={radio.streamUrl}
+            parrilla={radio.parrilla}
+            timezone={iglesia.timezone}
+            iglesiaNombre={iglesia.nombre}
+            caratula={iglesia.logoUrl}
+          />
         </section>
       )}
 

@@ -1713,6 +1713,16 @@ begin
     r := r || E'  OK   anon no llega a las listas\\n';
   end;
 
+  -- La radio (tanda 6) vive en modulos -> 'emisora' sin tabla propia, y la
+  -- web publica la saca por dbAdmin extrayendo solo esa clave. Eso solo es
+  -- un recorte si anon no puede leer la columna entera por PostgREST.
+  begin
+    select count(*) into n from (select modulos from public.ministerios) t;
+    r := r || format(E'  FALLO anon lee la config de los modulos (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a la config de los modulos (la emisora)\\n';
+  end;
+
   execute 'reset role';
 
   execute 'set local role service_role';
