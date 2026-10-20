@@ -8,6 +8,7 @@ import { CabeceraPanel } from '../../../../_components/cabecera';
 import { Contenedor } from '../../../../_components/contenedor';
 import { FormularioReunion } from '../../../../reuniones/_components/formulario';
 import { crearReunionDeMinisterio } from '../actions';
+import { SEMANAS_MAXIMAS } from '../constantes';
 
 export const metadata: Metadata = { title: 'Apuntar en la agenda' };
 
@@ -49,6 +50,7 @@ export default async function NuevaReunionMinisterioPage({
             ejemploTitulo: 'Ensayo del jueves',
             ejemploLugar: 'La sala de música',
           }}
+          repetirHasta={SEMANAS_MAXIMAS}
         />
       </Contenedor>
     </>

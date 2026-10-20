@@ -4,7 +4,9 @@ import type { Metadata } from 'next';
 import {
   ArrowDown,
   ArrowUp,
+  CalendarClock,
   Check,
+  ChevronRight,
   Copy,
   Plus,
   Trash2,
@@ -28,8 +30,9 @@ import {
   type PersonaEnTurno,
 } from '@/lib/turnos/consultas';
 import { puestosDelMinisterio } from '@/lib/turnos/puestos';
+import { diaYHora, ensayoAntesDelTurno } from '@/lib/agenda/ensayos';
 import { ETIQUETA_RESPUESTA } from '@/lib/turnos/respuestas';
-import { formatearFechaLarga } from '@/lib/fecha/hoy';
+import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { iniciales } from '@/lib/format/iniciales';
 import type { RespuestaTurno } from '@/lib/db/schema/turnos';
 import { Aviso } from '@/components/aviso';
@@ -97,14 +100,18 @@ export default async function TurnoPage({
   // equipo de ujieres no tiene nada que tocar, y un bloque vacío de «Canciones»
   // en su cuadrante se leería como algo que falta.
   const conRepertorio = tieneModulo(ministerio.modulos, 'repertorio');
+  // La ficha del ensayo vive en la agenda, y con la agenda apagada esa ruta da
+  // 404: el ensayo se enseña igual, pero sin enlace.
+  const conAgenda = tieneModulo(ministerio.modulos, 'agenda');
 
-  const [otros, paraCopiar, lista, repertorio] = await Promise.all([
+  const [otros, paraCopiar, lista, repertorio, ensayo] = await Promise.all([
     otrosTurnosDelDia(ctx, turno),
     turno.personas.length === 0
       ? turnoParaCopiar(ctx, turno, id)
       : Promise.resolve(null),
     conRepertorio ? cancionesDelTurno(ctx, turnoId) : Promise.resolve([]),
     conRepertorio ? cancionesParaElegir(ctx, id) : Promise.resolve([]),
+    ensayoAntesDelTurno(ctx, turno),
   ]);
 
   const enLaLista = new Set(lista.map((c) => c.id));
@@ -146,6 +153,30 @@ export default async function TurnoPage({
           <p className="rounded-xl border border-border bg-surface px-5 py-4 text-pretty text-[14.5px] leading-relaxed">
             {turno.notas}
           </p>
+        )}
+
+        {ensayo ? (
+          <LineaEnsayo
+            ensayo={ensayo}
+            href={conAgenda ? `/panel/ministerios/${id}/agenda/${ensayo.id}` : null}
+          />
+        ) : (
+          // El aviso de que falta, solo a un equipo que ensaya —el que tiene
+          // repertorio—, que puede apuntarlo y cuando todavía está a tiempo. A
+          // los ujieres no les falta nada, y al domingo pasado ya tampoco.
+          conRepertorio &&
+          conAgenda &&
+          turno.fecha >= hoyEnLaIglesia(ctx.iglesia.timezone) && (
+            <p className="rounded-xl border border-dashed border-border bg-surface px-5 py-3.5 text-pretty text-[14px] leading-relaxed text-muted-foreground">
+              No hay ensayo apuntado en la semana de antes.{' '}
+              <Link
+                href={`/panel/ministerios/${id}/agenda/nueva`}
+                className="font-semibold text-foreground underline-offset-4 hover:underline"
+              >
+                Apuntarlo en la agenda
+              </Link>
+            </p>
+          )
         )}
 
         {paraCopiar && (
@@ -437,6 +468,51 @@ export default async function TurnoPage({
         </details>
       </Contenedor>
     </>
+  );
+}
+
+/**
+ * «Ensayo: jueves 16, 19:30 · La sala de música».
+ *
+ * Con el título que le puso el responsable delante, y no con «Ensayo» fijo: la
+ * pantalla de turnos es la misma para alabanza que para acción social, y la
+ * reunión del jueves de un equipo de reparto no es un ensayo.
+ */
+function LineaEnsayo({
+  ensayo,
+  href,
+}: {
+  ensayo: { titulo: string; fecha: string; hora: string | null; lugar: string | null };
+  href: string | null;
+}) {
+  const cuerpo = (
+    <>
+      <CalendarClock
+        className="size-[18px] flex-none text-muted-foreground"
+        strokeWidth={1.8}
+        aria-hidden
+      />
+      <span className="min-w-0 flex-1 text-pretty text-[14.5px] leading-snug">
+        <span className="font-semibold">{ensayo.titulo}:</span>{' '}
+        {diaYHora(ensayo.fecha, ensayo.hora)}
+        {ensayo.lugar && <span className="text-muted-foreground"> · {ensayo.lugar}</span>}
+      </span>
+    </>
+  );
+
+  const clases =
+    'flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3.5 md:px-5';
+
+  return href ? (
+    <Link
+      href={href}
+      className={`${clases} text-foreground no-underline transition-colors hover:border-support-hover hover:bg-surface-alt hover:no-underline`}
+    >
+      {cuerpo}
+      <ChevronRight className="size-4 flex-none text-disabled-text" strokeWidth={1.9} aria-hidden />
+    </Link>
+  ) : (
+    <div className={clases}>{cuerpo}</div>
   );
 }
 

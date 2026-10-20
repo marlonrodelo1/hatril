@@ -27,6 +27,7 @@ export function FormularioReunion({
   hoy,
   cancelarHref,
   etiquetas,
+  repetirHasta,
 }: {
   accion: (formData: FormData) => Promise<void>;
   reunion?: ReunionDetalle;
@@ -42,6 +43,12 @@ export function FormularioReunion({
    * correcto.
    */
   etiquetas?: { titulo?: string; ejemploTitulo?: string; ejemploLugar?: string };
+  /**
+   * Hasta cuántas semanas se puede repetir, o nada para no ofrecerlo. Solo lo
+   * pasa la agenda de un equipo, y solo al crear: el culto del domingo ya se
+   * repite solo desde el horario, y una reunión guardada es una sola.
+   */
+  repetirHasta?: number;
 }) {
   const t = {
     titulo: etiquetas?.titulo ?? 'Qué reunión es',
@@ -95,6 +102,30 @@ export function FormularioReunion({
             />
           </div>
         </div>
+
+        {repetirHasta && !reunion && (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="semanas">Repetir cada semana</Label>
+            <select
+              id="semanas"
+              name="semanas"
+              defaultValue="1"
+              className="h-[42px] w-full min-w-0 rounded-lg border border-input bg-surface-alt px-2.5 text-[15px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16 sm:max-w-[280px]"
+            >
+              <option value="1">No, solo ese día</option>
+              {Array.from({ length: repetirHasta - 1 }, (_, i) => i + 2).map((n) => (
+                <option key={n} value={n}>
+                  Durante {n} semanas
+                </option>
+              ))}
+            </select>
+            <p className="t-label text-muted-foreground">
+              Se apunta una vez por semana, el mismo día y a la misma hora, y
+              cada una se puede cambiar o borrar sin tocar las demás. Si alguna
+              semana ya tiene algo a esa hora, esa se salta.
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="lugar">

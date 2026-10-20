@@ -200,7 +200,10 @@ export async function agendaEntre(
       detalle: r.lugar ?? r.ministerioNombre,
       tipo: 'ministerio',
       color: colorDeMinisterio(r.ministerioColor).claro,
-      enlace: `/mi/agenda`,
+      // A su ficha, que enseña el lugar entero y las notas del ensayo. Antes
+      // llevaba a `/mi/agenda`, la misma pantalla, y las notas no le llegaban
+      // a nadie del equipo.
+      enlace: `/mi/agenda/reunion/${r.id}`,
     });
   }
 

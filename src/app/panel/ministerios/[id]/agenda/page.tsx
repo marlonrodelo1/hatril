@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { CabeceraPanel } from '../../../_components/cabecera';
 import { Contenedor } from '../../../_components/contenedor';
 import { PestanasMinisterio } from '../_components/pestanas';
-import { CONFIRMACIONES } from './constantes';
+import { CONFIRMACIONES, confirmacionDeSemanas, SEMANAS_MAXIMAS } from './constantes';
 
 export const metadata: Metadata = { title: 'Agenda del ministerio' };
 
@@ -21,11 +21,29 @@ export default async function AgendaPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; guardado?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    guardado?: string;
+    creadas?: string;
+    saltadas?: string;
+  }>;
 }) {
   const { id } = await params;
   const ctx = await requireIglesia();
-  const { error, guardado } = await searchParams;
+  const { error, guardado, creadas, saltadas } = await searchParams;
+
+  // Las cuentas vienen en la URL, así que se leen como lo que son: algo que
+  // cualquiera puede escribir. Fuera de rango, no se enseña nada.
+  const semanas = cuenta(creadas);
+  const sinTocar = cuenta(saltadas);
+  const confirmacion =
+    guardado === 'semanas'
+      ? semanas !== null && semanas > 0 && sinTocar !== null
+        ? confirmacionDeSemanas(semanas, sinTocar)
+        : null
+      : guardado
+        ? CONFIRMACIONES[guardado]
+        : null;
 
   const ministerio = await obtenerMinisterio(ctx, id);
   if (!ministerio) notFound();
@@ -49,9 +67,7 @@ export default async function AgendaPage({
         <PestanasMinisterio ctx={ctx} ministerio={ministerio} activa="agenda" />
 
         {error && <Aviso>{error}</Aviso>}
-        {guardado && CONFIRMACIONES[guardado] && (
-          <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
-        )}
+        {confirmacion && <Aviso tipo="ok">{confirmacion}</Aviso>}
 
         {reuniones.length === 0 ? (
           <div className="flex flex-col items-start gap-3 rounded-xl border border-border bg-surface p-8">
@@ -118,4 +134,12 @@ export default async function AgendaPage({
       </Contenedor>
     </>
   );
+}
+
+/** Un número de semanas de la URL, entre 0 y el tope, o null. */
+function cuenta(valor: string | undefined): number | null {
+  const n = Number(valor);
+  return valor !== undefined && Number.isInteger(n) && n >= 0 && n <= SEMANAS_MAXIMAS
+    ? n
+    : null;
 }
