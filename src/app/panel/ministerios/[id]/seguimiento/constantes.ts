@@ -6,4 +6,6 @@ export const CONFIRMACIONES: Record<string, string> = {
   contacto: 'Contacto apuntado.',
   asignado: 'Cambiado quién le acompaña.',
   borrado: 'Contacto borrado.',
+  alta: 'Apuntado como visitante. Ahora elige quién le acompaña y apunta la primera llamada.',
+  existe: 'Ya estaba en el fichero con ese teléfono. Es esta ficha: no se ha creado otra.',
 };

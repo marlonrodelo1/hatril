@@ -1,13 +1,15 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { Phone, Trash2 } from 'lucide-react';
+import { MessageCircle, Phone, Trash2 } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import {
+  SE_QUEDA,
   acompanaDe,
   contactosDe,
   personasPorFaltas,
+  type EtapaNuevo,
 } from '@/lib/seguimiento/consultas';
 import {
   RESULTADOS,
@@ -71,6 +73,7 @@ export default async function PersonaEnSeguimientoPage({
 
   const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
   const base = `/panel/ministerios/${id}/seguimiento`;
+  const whatsapp = enlaceWhatsApp(persona.telefono);
 
   // Quien acompaña sale del equipo de ESTE ministerio, que es lo que HT118
   // exige en la base. Ofrecer la congregación entera dejaría elegir a alguien
@@ -81,12 +84,32 @@ export default async function PersonaEnSeguimientoPage({
     <>
       <CabeceraPanel
         titulo={persona.nombre}
-        volver={{ href: base, texto: ministerio.nombre }}
+        // Vuelve a la lista de la que vino: a quien acaba de llegar se le abre
+        // desde «Nuevos», y en ausentes no está.
+        volver={
+          persona.nuevo
+            ? { href: `${base}/nuevos`, texto: 'Nuevos' }
+            : { href: base, texto: ministerio.nombre }
+        }
       >
         {persona.telefono && (
           <Button variant="outline" render={<a href={`tel:${persona.telefono}`} />}>
             <Phone strokeWidth={1.8} />
             {persona.telefono}
+          </Button>
+        )}
+        {/*
+         * WhatsApp abre la conversación con ese número, nada más: no se manda
+         * nada desde Hatril ni se le pasa ningún texto. El mensaje lo escribe
+         * quien acompaña, desde su teléfono, y el contacto lo apunta aquí.
+         */}
+        {whatsapp && (
+          <Button
+            variant="outline"
+            render={<a href={whatsapp} target="_blank" rel="noopener noreferrer" />}
+          >
+            <MessageCircle strokeWidth={1.8} />
+            WhatsApp
           </Button>
         )}
       </CabeceraPanel>
@@ -103,18 +126,35 @@ export default async function PersonaEnSeguimientoPage({
           >
             {iniciales(persona.nombre)}
           </span>
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-[15px] font-semibold">
-              {persona.ultimaAsistencia
-                ? `Vino por última vez el ${formatearFechaLarga(persona.ultimaAsistencia)}`
-                : 'Nunca se le ha marcado presente en una reunión'}
-            </span>
-            <span className="text-[13.5px] text-muted-foreground">
-              Se ha perdido {persona.faltasSeguidas}{' '}
-              {persona.faltasSeguidas === 1 ? 'reunión' : 'reuniones'} de las que
-              se pasó lista.
-            </span>
-          </div>
+          {persona.nuevo ? (
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-[15px] font-semibold">
+                Llegó el {formatearFechaLarga(persona.llegada)}
+              </span>
+              <span className="text-[13.5px] text-muted-foreground">
+                {ETAPAS[persona.nuevo.etapa]}
+                {persona.nuevo.etapa === 'llego'
+                  ? persona.faltasSeguidas > 0
+                    ? ` No ha vuelto en ${persona.faltasSeguidas === 1 ? 'la reunión' : `las ${persona.faltasSeguidas} reuniones`} con lista que ha habido después.`
+                    : ' Aún no se ha pasado lista en ningún culto desde que llegó.'
+                  : persona.ultimaAsistencia &&
+                    ` La última vez que vino fue el ${formatearFechaLarga(persona.ultimaAsistencia)}.`}
+              </span>
+            </div>
+          ) : (
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-[15px] font-semibold">
+                {persona.ultimaAsistencia
+                  ? `Vino por última vez el ${formatearFechaLarga(persona.ultimaAsistencia)}`
+                  : 'Nunca se le ha marcado presente en una reunión'}
+              </span>
+              <span className="text-[13.5px] text-muted-foreground">
+                Se ha perdido {persona.faltasSeguidas}{' '}
+                {persona.faltasSeguidas === 1 ? 'reunión' : 'reuniones'} de las que
+                se pasó lista.
+              </span>
+            </div>
+          )}
         </section>
 
         <section className="flex flex-col gap-3.5 rounded-xl border border-border bg-surface p-5">
@@ -321,3 +361,22 @@ export default async function PersonaEnSeguimientoPage({
 
 const CLASE_SELECT =
   'h-[42px] rounded-lg border border-input bg-surface-alt px-3 text-[15px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16';
+
+const ETAPAS: Record<EtapaNuevo, string> = {
+  llego: 'Ha venido una vez.',
+  volvio: 'Ha vuelto a algún culto con lista después de su primera visita.',
+  se_queda: `Viene: ${SE_QUEDA.presencias} o más de las últimas ${SE_QUEDA.deLasUltimas} reuniones con lista.`,
+};
+
+/**
+ * El enlace de WhatsApp, o `null` si el número no está en internacional.
+ *
+ * `wa.me` quiere el número con su prefijo y sin el más, igual que en
+ * `iglesias/redes.ts`. Un teléfono que `normalizarTelefono` no supo poner en
+ * E.164 se queda sin botón: adivinarle el país abriría el chat de otra persona.
+ */
+function enlaceWhatsApp(telefono: string | null): string | null {
+  if (!telefono?.startsWith('+')) return null;
+  const digitos = telefono.slice(1).replace(/\D/g, '');
+  return digitos.length >= 8 ? `https://wa.me/${digitos}` : null;
+}

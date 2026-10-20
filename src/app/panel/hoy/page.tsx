@@ -35,8 +35,10 @@ import { ESTADOS } from '@/lib/miembros/estados';
 import { iniciales } from '@/lib/format/iniciales';
 import { Button } from '@/components/ui/button';
 import { Aviso } from '@/components/aviso';
+import { cifrasDeSeguimiento } from '@/lib/seguimiento/consultas';
 import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
+import { BloqueSeguimiento } from './_components/seguimiento';
 
 export const metadata: Metadata = { title: 'Inicio' };
 
@@ -126,6 +128,10 @@ export default async function HoyPage({
   const eventosProximos = puedeGestionarEventos(ctx)
     ? await proximosEventos(ctx, 3)
     : [];
+
+  // Solo cifras. Decide ella misma si quien mira puede verlas —las tres llaves
+  // del seguimiento— y devuelve null sin consultar nada más si no.
+  const seguimiento = await cifrasDeSeguimiento(ctx);
 
   const sirviendoPct =
     resumen.total > 0
@@ -325,6 +331,8 @@ export default async function HoyPage({
               </div>
             </div>
           </section>
+
+          {seguimiento && <BloqueSeguimiento cifras={seguimiento} />}
 
           {resumen.total === 0 && puedeCrear && (
             <section className="flex flex-col items-start gap-3.5 rounded-xl border border-border bg-surface p-6">
