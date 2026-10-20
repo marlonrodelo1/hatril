@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import type { EmailOtpType } from '@supabase/supabase-js';
 
 import { createClient } from '@/lib/supabase/server';
+import { destinoSeguro } from '@/lib/url/destino-seguro';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,15 +24,11 @@ export async function GET(request: NextRequest) {
 
   const token_hash = searchParams.get('token_hash');
   const type = searchParams.get('type') as EmailOtpType | null;
-  const nextParam = searchParams.get('next');
 
-  const next =
-    nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')
-      ? nextParam
-      // Sin destino, a `/mi`, que reparte a cada quien con `inicioDe()`: el
-      // equipo al panel, quien solo lleva sus ministerios a la app, el miembro
-      // a su muro. Un `/panel/hoy` fijo mandaba a todos al panel.
-      : '/mi';
+  // Sin destino, a `/mi`, que reparte a cada quien con `inicioDe()`: el equipo
+  // al panel, quien solo lleva sus ministerios a la app, el miembro a su muro.
+  // Un `/panel/hoy` fijo mandaba a todos al panel.
+  const next = destinoSeguro(searchParams.get('next')) ?? '/mi';
 
   if (!token_hash || !type) {
     return NextResponse.redirect(

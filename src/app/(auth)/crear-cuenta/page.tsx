@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PASSWORD_PISTA } from '@/lib/auth/password';
+import { destinoSeguro } from '@/lib/url/destino-seguro';
 
 export const metadata: Metadata = { title: 'Crear cuenta' };
 
@@ -31,7 +32,10 @@ export default async function CrearCuentaPage({
 }: {
   searchParams: Promise<{ error?: string; next?: string }>;
 }) {
-  const { error, next } = await searchParams;
+  const parametros = await searchParams;
+  const { error } = parametros;
+  // Igual que en el acceso: solo una ruta nuestra llega al campo oculto.
+  const next = destinoSeguro(parametros.next) ?? undefined;
 
   // De vuelta al acceso con el mismo destino: quien ya tenía cuenta y pulsó
   // aquí por error no debe perder la iglesia a la que iba.

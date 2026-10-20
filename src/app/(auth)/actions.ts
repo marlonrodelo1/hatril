@@ -13,6 +13,7 @@ import { getOrigin } from '@/lib/auth/get-origin';
 import { getCurrentUserContext } from '@/lib/auth/user-context';
 import { inicioDe } from '@/lib/auth/permisos';
 import { campo, campoObligatorio, casilla } from '@/lib/api/formulario';
+import { destinoSeguro } from '@/lib/url/destino-seguro';
 
 /**
  * Acciones de acceso, registro y recuperación.
@@ -24,8 +25,17 @@ import { campo, campoObligatorio, casilla } from '@/lib/api/formulario';
  * no son correctos», nunca «invalid_grant».
  */
 
-function volverCon(ruta: string, error: string): never {
-  redirect(`${ruta}?error=${encodeURIComponent(error)}`);
+/**
+ * El `next` viaja con el error. Sin él, quien llegaba desde «pedir unirme» y se
+ * equivocaba de contraseña volvía a un acceso sin destino y, al acertar,
+ * aterrizaba en su inicio en vez de en la iglesia a la que iba. Pasa por
+ * `destinoSeguro` también aquí: lo que se escribe en la URL de vuelta acaba en
+ * el campo oculto del formulario.
+ */
+function volverCon(ruta: string, error: string, next?: string): never {
+  const destino = destinoSeguro(next);
+  const extra = destino ? `&next=${encodeURIComponent(destino)}` : '';
+  redirect(`${ruta}?error=${encodeURIComponent(error)}${extra}`);
 }
 
 // ============================================================================
@@ -48,7 +58,11 @@ export async function acceder(formData: FormData) {
   });
 
   if (!parsed.success) {
-    volverCon('/acceso', parsed.error.issues[0]!.message);
+    volverCon(
+      '/acceso',
+      parsed.error.issues[0]!.message,
+      campo(formData, 'next'),
+    );
   }
 
   const { email, password, next } = parsed.data;
@@ -57,18 +71,18 @@ export async function acceder(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    volverCon('/acceso', traducirErrorAuth(error.message));
+    volverCon('/acceso', traducirErrorAuth(error.message), next);
   }
 
   // Solo se acepta una ruta interna. Con la URL completa esto sería un
   // redirector abierto: un enlace con nuestro dominio que lleva a otro sitio.
+  // El porqué de no comprobarlo con `startsWith` está en `destinoSeguro`.
   // Sin `next`, el destino depende de quién sea: el panel es de quien lleva algo
   // en la iglesia y `/mi` del resto. Mandarlos a todos al panel funcionaba —el
   // layout devuelve al miembro— pero le enseñaba una pantalla en blanco por el
   // camino.
-  const destino = next && next.startsWith('/') && !next.startsWith('//')
-    ? next
-    : inicioDe(await getCurrentUserContext());
+  const destino =
+    destinoSeguro(next) ?? inicioDe(await getCurrentUserContext());
 
   redirect(destino);
 }

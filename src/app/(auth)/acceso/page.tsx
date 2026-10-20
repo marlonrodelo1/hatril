@@ -13,6 +13,7 @@ import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { destinoSeguro } from '@/lib/url/destino-seguro';
 
 export const metadata: Metadata = { title: 'Entrar' };
 
@@ -21,7 +22,11 @@ export default async function AccesoPage({
 }: {
   searchParams: Promise<{ error?: string; next?: string }>;
 }) {
-  const { error, next } = await searchParams;
+  const parametros = await searchParams;
+  const { error } = parametros;
+  // Lo que no sea una ruta nuestra ni se pinta: así no viaja en el formulario
+  // ni en el enlace a crear cuenta. La acción lo vuelve a comprobar igual.
+  const next = destinoSeguro(parametros.next) ?? undefined;
 
   // Quien llega aquí desde «pedir unirme» y todavía no tiene cuenta tiene que
   // volver a esa iglesia después de crearla, no aterrizar en el directorio.

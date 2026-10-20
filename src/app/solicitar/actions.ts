@@ -14,6 +14,7 @@ import { checkRateLimit, getClientIp } from '@/lib/api/rate-limit';
 import { validarPassword, traducirErrorAuth } from '@/lib/auth/password';
 import { normalizarTelefono } from '@/lib/telefono/normalizar';
 import { campo, campoObligatorio, casilla } from '@/lib/api/formulario';
+import { destinoSeguro } from '@/lib/url/destino-seguro';
 import { VERSION_POLITICA_PRIVACIDAD } from '@/lib/rgpd/consentimiento';
 import {
   cuentasQueAprueban,
@@ -39,8 +40,15 @@ import {
  * duplicando la que ya está en la policy de INSERT.
  */
 
-function volverCon(ruta: string, error: string): never {
-  redirect(`${ruta}?error=${encodeURIComponent(error)}`);
+/**
+ * Con el `next` detrás cuando lo hay: un error al crear la cuenta no debe
+ * hacer perder la iglesia a la que se iba. Pasa por `destinoSeguro` porque
+ * vuelve a la URL y de ahí al campo oculto del formulario.
+ */
+function volverCon(ruta: string, error: string, next?: string): never {
+  const destino = destinoSeguro(next);
+  const extra = destino ? `&next=${encodeURIComponent(destino)}` : '';
+  redirect(`${ruta}?error=${encodeURIComponent(error)}${extra}`);
 }
 
 const EsquemaSolicitud = z.object({
@@ -204,13 +212,17 @@ export async function crearCuentaPersonal(formData: FormData) {
   });
 
   if (!parsed.success) {
-    volverCon('/crear-cuenta', parsed.error.issues[0]!.message);
+    volverCon(
+      '/crear-cuenta',
+      parsed.error.issues[0]!.message,
+      campo(formData, 'next'),
+    );
   }
 
   const { nombre, email, password, next } = parsed.data;
 
   const errorPassword = validarPassword(password);
-  if (errorPassword) volverCon('/crear-cuenta', errorPassword);
+  if (errorPassword) volverCon('/crear-cuenta', errorPassword, next);
 
   const cabeceras = await headers();
   const ip = getClientIp(new Request('https://hatril', { headers: cabeceras }));
@@ -220,6 +232,7 @@ export async function crearCuentaPersonal(formData: FormData) {
     volverCon(
       '/crear-cuenta',
       'Se han creado demasiadas cuentas desde esta conexión hoy. Inténtalo mañana.',
+      next,
     );
   }
 
@@ -233,7 +246,11 @@ export async function crearCuentaPersonal(formData: FormData) {
   });
 
   if (errorAuth || !creado.user) {
-    volverCon('/crear-cuenta', traducirErrorAuth(errorAuth?.message ?? ''));
+    volverCon(
+      '/crear-cuenta',
+      traducirErrorAuth(errorAuth?.message ?? ''),
+      next,
+    );
   }
 
   const supabase = await createClient();
@@ -243,13 +260,12 @@ export async function crearCuentaPersonal(formData: FormData) {
   });
 
   if (errorSesion) {
-    volverCon('/acceso', 'Tu cuenta ya está creada. Entra con tu correo.');
+    volverCon('/acceso', 'Tu cuenta ya está creada. Entra con tu correo.', next);
   }
 
   // Aquí no hay nada que deshacer si algo falla después: a diferencia del alta
   // de iglesia, esta cuenta suelta es útil por sí misma.
-  const destino =
-    next && next.startsWith('/') && !next.startsWith('//') ? next : '/mi';
+  const destino = destinoSeguro(next) ?? '/mi';
 
   redirect(destino);
 }
