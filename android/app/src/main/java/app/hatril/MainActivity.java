@@ -69,6 +69,9 @@ public class MainActivity extends BridgeActivity {
 
         private final Bridge bridge;
 
+        /** Se ha pintado la pantalla de sin conexión y aún no ha vuelto la web. */
+        private boolean venimosDeSinConexion = false;
+
         ClienteHatril(Bridge bridge) {
             super(bridge);
             this.bridge = bridge;
@@ -78,17 +81,45 @@ public class MainActivity extends BridgeActivity {
         public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
             handler.cancel();
 
-            String servidor = bridge.getServerUrl();
             String pantallaDeError = bridge.getErrorUrl();
-            if (servidor == null || pantallaDeError == null || error.getUrl() == null) {
-                return;
-            }
-
-            String hostServidor = Uri.parse(servidor).getHost();
-            String hostFallo = Uri.parse(error.getUrl()).getHost();
-            if (hostServidor != null && hostServidor.equalsIgnoreCase(hostFallo)) {
+            if (pantallaDeError != null && esDelServidor(error.getUrl())) {
                 view.loadUrl(pantallaDeError);
             }
+        }
+
+        /*
+         * AL VOLVER DE «SIN CONEXIÓN», ATRÁS NO TIENE QUE IR A LA CARGA QUE FALLÓ
+         *
+         * Cuando la primera carga falla, a veces queda en el historial una
+         * entrada con esa dirección por debajo de la pantalla de error (en el
+         * emulador salía una vez sí y otra no). «Reintentar» sustituye la
+         * pantalla de error, pero no esa entrada: tras volver la red, el primer
+         * atrás recargaba la web desde ella —la misma pantalla otra vez— y
+         * hacía falta un segundo para salir. Al llegar la primera página buena
+         * después de la de error, el historial se vacía y la web empieza limpia,
+         * como al abrir la app.
+         */
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            super.onPageFinished(view, url);
+            if (url == null) {
+                return;
+            }
+            if (url.equals(bridge.getErrorUrl())) {
+                venimosDeSinConexion = true;
+            } else if (venimosDeSinConexion && esDelServidor(url)) {
+                venimosDeSinConexion = false;
+                view.clearHistory();
+            }
+        }
+
+        private boolean esDelServidor(String url) {
+            String servidor = bridge.getServerUrl();
+            if (servidor == null || url == null) {
+                return false;
+            }
+            String hostServidor = Uri.parse(servidor).getHost();
+            return hostServidor != null && hostServidor.equalsIgnoreCase(Uri.parse(url).getHost());
         }
     }
 }

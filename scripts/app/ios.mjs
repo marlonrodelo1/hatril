@@ -1,7 +1,7 @@
 /**
  * Prepara el proyecto de iOS para compilar: comprueba y sincroniza.
  *
- *   CAP_SERVER_URL=https://<dominio> npm run app:ios
+ *   CAP_SERVER_URL=https://hatril.com npm run app:ios
  *
  * Es `npx cap sync ios` con tres comprobaciones delante. Se lanza en el Mac
  * después de cada `git pull` y antes de abrir Xcode o de archivar: lo que

@@ -1,8 +1,8 @@
 /**
  * Compila la app de Android firmada y la deja en Versiones/Android.
  *
- *   CAP_SERVER_URL=https://<dominio> npm run app:android          (bash)
- *   $env:CAP_SERVER_URL='https://<dominio>'; npm run app:android  (PowerShell)
+ *   CAP_SERVER_URL=https://hatril.com npm run app:android          (bash)
+ *   $env:CAP_SERVER_URL='https://hatril.com'; npm run app:android  (PowerShell)
  *
  * Sale el .aab, que es lo que se sube a Google Play, y el .apk, que se instala
  * a mano en un teléfono para probar. Los dos firmados con la clave de subida.

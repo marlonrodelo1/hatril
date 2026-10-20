@@ -19,10 +19,10 @@ import type { CapacitorConfig } from '@capacitor/cli';
  * nadie se dé cuenta. Y tiene que ser https: no se abre ni `cleartext` ni
  * nada parecido, ni siquiera mientras el dominio definitivo no exista.
  *
- *   CAP_SERVER_URL=https://... npm run app:android
+ *   CAP_SERVER_URL=https://hatril.com npm run app:android
  *
- * La de ahora, la de traefik.me, lleva un certificado que Android e iOS
- * rechazan, y por eso lo que se compila con ella sale marcado como PRUEBA
+ * La de traefik.me, la temporal de Dokploy, lleva un certificado que Android
+ * e iOS rechazan, y lo que se compila con ella sale marcado como PRUEBA
  * (`scripts/app/android.mjs`).
  */
 function direccionDelServidor(): URL {
@@ -31,7 +31,7 @@ function direccionDelServidor(): URL {
   if (!cruda) {
     throw new Error(
       'Falta CAP_SERVER_URL: la dirección https de la web que carga la app. ' +
-        'Ejemplo: CAP_SERVER_URL=https://<dominio> npm run app:android',
+        'Ejemplo: CAP_SERVER_URL=https://hatril.com npm run app:android',
     );
   }
 
@@ -85,6 +85,16 @@ const config: CapacitorConfig = {
     // `/mi` es el desvío que decide a dónde va cada quien: sin sesión, al
     // acceso; el miembro, al muro; quien lleva algo, a lo suyo. La portada es
     // publicidad para pastores y dentro de la app no pinta nada.
+    //
+    // Que la primera carga sea una redirección es seguro en un Android al día,
+    // y no lo sería en uno con el WebView sin actualizar en años. Capacitor
+    // solo pide él las páginas —siguiendo la redirección por su cuenta y
+    // entregando el destino con la dirección pedida— cuando el WebView no
+    // sabe inyectar su puente al empezar el documento (DOCUMENT_START_SCRIPT,
+    // `Bridge.loadWebView` y `WebViewLocalServer.handleProxyRequest`). Si lo
+    // sabe, se aparta y el WebView navega solo, como un navegador. Probado en
+    // el emulador: la barra dice /acceso?next=%2Fmi y el formulario envía
+    // ahí. Detalle y límite en docs/app-nativa/android.md.
     appStartPath: '/mi',
 
     // El propio host ya está permitido por ser el de `url`; se escribe para que

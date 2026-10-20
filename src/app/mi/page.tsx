@@ -40,7 +40,9 @@ export const metadata: Metadata = { title: 'Mi cuenta' };
  * a alguien que sigue siendo `miembro`, o nombrarle colíder de un ministerio, y
  * esa persona tiene que poder entrar.
  *
- * Esta es la ruta que envuelve la app móvil de la v2.
+ * Es también la ruta con la que arranca la app nativa (`appStartPath` en
+ * capacitor.config.ts). Que redirija siempre no le estorba al WebView; el
+ * porqué, y el caso raro en que sí, en la nota de ese fichero.
  */
 export default async function MiPage({
   searchParams,
