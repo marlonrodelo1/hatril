@@ -7,11 +7,17 @@ import {
   type ModuloMinisterio,
 } from '@/lib/ministerios/modulos';
 import { agendaEnLaApp } from '@/lib/agenda/en-la-app';
+import { fondoEnLaApp } from '@/lib/finanzas/en-la-app';
+import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
 import { repartoEnLaApp } from '@/lib/reparto/en-la-app';
 import { repertorioEnLaApp } from '@/lib/repertorio/en-la-app';
 import { seguimientoEnLaApp } from '@/lib/seguimiento/en-la-app';
 import { turnosEnLaApp } from '@/lib/turnos/en-la-app';
-import type { ModoEnElEquipo, ModuloEnLaApp } from './contrato';
+import type {
+  HerramientaDerivada,
+  ModoEnElEquipo,
+  ModuloEnLaApp,
+} from './contrato';
 
 /**
  * Qué módulos saben pintarse en la zona de equipos de la app.
@@ -71,6 +77,31 @@ export function modulosDeLaPortada(
     if (modo === 'participante') return app?.participante ? [{ modulo, app }] : [];
     if (app?.visiblePara && !app.visiblePara(ctx, ministerioId)) return [];
     return [{ modulo, app }];
+  });
+}
+
+/**
+ * Lo que sale en la portada sin ser un módulo del ministerio (ver
+ * `HerramientaDerivada`). Detrás de los módulos, en este orden.
+ */
+const DERIVADAS: HerramientaDerivada[] = [fondoEnLaApp];
+
+/**
+ * Las herramientas derivadas que tocan en esta portada. Aparte de
+ * `modulosDeLaPortada`, y no dentro, para no cambiar la firma que ya usan otras
+ * ramas: la portada junta las dos listas.
+ *
+ * La misma regla del participante que los módulos: solo si la herramienta
+ * declara su vista. El fondo no la declara.
+ */
+export function derivadasDeLaPortada(
+  ctx: ContextoPermisos,
+  ministerio: MinisterioDetalle,
+  modo: ModoEnElEquipo,
+): HerramientaDerivada[] {
+  return DERIVADAS.filter((h) => {
+    if (!h.aplica(ctx, ministerio)) return false;
+    return modo === 'lider' || h.participante !== undefined;
   });
 }
 

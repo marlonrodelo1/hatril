@@ -238,6 +238,13 @@ export default function PrivacidadPage() {
           que no ponga nombres ahí.
         </P>
         <P>
+          Si tu iglesia cuenta la ofrenda a dos personas al acabar el culto,
+          guardamos además quién la contó y quién lo confirmó, que son del
+          equipo de la iglesia, no de quien da. Y si un fondo es de un
+          ministerio —el de alimentos, por ejemplo—, quienes lo llevan ven su
+          saldo y sus gastos; lo que entra en él, solo en total.
+        </P>
+        <P>
           Lo único que sí une a una persona con un pago es la marca de «plaza
           pagada» de un evento, y eso lo apunta la iglesia, no nosotros.
         </P>

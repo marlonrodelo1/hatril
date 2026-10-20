@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { Users } from 'lucide-react';
+import { Users, Wallet } from 'lucide-react';
 
 import {
   esPastor,
   puede,
   puedeGestionarDesdeDentro,
   puedeGestionarMinisterio,
+  puedeVerFondoDe,
   type ContextoPermisos,
 } from '@/lib/auth/permisos';
 import { modulosActivos } from '@/lib/ministerios/modulos';
@@ -67,6 +68,11 @@ export function PestanasMinisterio({
       })
     : [];
 
+  // El fondo no es un módulo del ministerio: sale si el pastor le vinculó uno
+  // desde Finanzas. La puerta, la de `fondo/guarda.ts`: quien lo lleva desde
+  // dentro y con Finanzas encendida. Al final, porque es lo que menos se abre.
+  const conFondo = ministerio.conFondo && puedeVerFondoDe(ctx, ministerio.id);
+
   const pestanas = [
     { id: 'equipo', etiqueta: 'El equipo', href: base, Icono: Users },
     ...herramientas.map((m) => ({
@@ -75,6 +81,9 @@ export function PestanasMinisterio({
       href: `${base}/${m.id}`,
       Icono: m.Icono,
     })),
+    ...(conFondo
+      ? [{ id: 'fondo', etiqueta: 'Fondo', href: `${base}/fondo`, Icono: Wallet }]
+      : []),
   ];
 
   if (pestanas.length < 2) return null;

@@ -221,6 +221,26 @@ export const iglesias = pgTable(
      */
     comunidadFotos: boolean('comunidad_fotos').notNull().default(true),
 
+    /**
+     * Las herramientas de la iglesia entera que el pastor ha apagado.
+     *
+     * La misma forma que `ministerios.modulos` —`{ finanzas: { activo: false } }`—
+     * y el significado al revés en lo que falta: aquí una clave AUSENTE es
+     * ENCENDIDA. Así ninguna iglesia que ya lleva su caja se la encuentra
+     * desaparecida el lunes, sin que haga falta rellenar la columna en la
+     * migración. Lo lee `lib/iglesia/herramientas.ts`, y solo eso.
+     *
+     * Apagar oculta, no borra: los datos siguen y el tratamiento continúa.
+     *
+     * Sin policy propia: la escribe solo el pastor por `iglesias_update_pastor`
+     * (`0001`), y lo que oculta —las tablas de finanzas— no lo alcanza nadie
+     * por PostgREST, solo el servidor con `withUser`.
+     */
+    modulos: jsonb('modulos')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+
     // Suscripción. Los precios NO están aquí: ver `enums.ts`.
     plan: planEnum('plan').notNull().default('trial'),
     trialUntil: timestamp('trial_until', { withTimezone: true }),

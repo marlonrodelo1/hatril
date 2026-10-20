@@ -73,6 +73,16 @@ export type UserContext = {
       comentarios: boolean;
       fotos: boolean;
     };
+    /**
+     * Las herramientas de la iglesia que el pastor ha apagado
+     * (`iglesias.modulos`). Se lee con `lib/iglesias/herramientas.ts`, nunca a
+     * mano: aquí una clave ausente significa ENCENDIDA.
+     *
+     * En el contexto y no en una consulta aparte por lo mismo que `comunidad`:
+     * lo necesitan el menú, Inicio y cada guarda de Finanzas, y la columna ya
+     * viene en el mismo `select`.
+     */
+    modulos: unknown;
   };
   rol: RolIglesia;
   permisos: MapaPermisos;
@@ -146,6 +156,7 @@ export const getCurrentUserContext = cache(async function getCurrentUserContext(
       comunidadQuienPublica: iglesias.comunidadQuienPublica,
       comunidadComentarios: iglesias.comunidadComentarios,
       comunidadFotos: iglesias.comunidadFotos,
+      modulos: iglesias.modulos,
     })
     .from(iglesiaUsuarios)
     .innerJoin(iglesias, eq(iglesias.id, iglesiaUsuarios.iglesiaId))
@@ -242,6 +253,7 @@ export const getCurrentUserContext = cache(async function getCurrentUserContext(
         comentarios: fila.comunidadComentarios,
         fotos: fila.comunidadFotos,
       },
+      modulos: fila.modulos,
     },
     rol: fila.rol,
     permisos: resolverPermisos(fila.rol, fila.permisos),

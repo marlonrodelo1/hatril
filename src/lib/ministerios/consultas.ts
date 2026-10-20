@@ -145,6 +145,15 @@ export type MinisterioDetalle = MinisterioResumen & {
    * garantiza — puede haberla escrito una versión anterior del producto.
    */
   modulos: unknown;
+  /**
+   * ¿Tiene un fondo de la caja vinculado (`fondos.ministerio_id`)?
+   *
+   * Solo el sí o el no, y no el fondo: es lo que necesitan la pestaña «Fondo» y
+   * la portada de la app para decidir si salen, y lo piden en cada carga. Las
+   * cifras las pide la pestaña por su cuenta (`lib/finanzas/del-ministerio.ts`),
+   * detrás de su guarda.
+   */
+  conFondo: boolean;
   equipo: IntegranteEquipo[];
 };
 
@@ -169,6 +178,19 @@ export async function obtenerMinisterio(
         vision: ministerios.vision,
         objetivo: ministerios.objetivo,
         modulos: ministerios.modulos,
+        // En el mismo viaje: se pide en cada pantalla del ministerio. Solo los
+        // fondos vivos, como `uq_fondos_ministerio`.
+        //
+        // Los nombres, escritos a mano y cualificados. Con `${ministerios.id}`
+        // Drizzle escribe `"id"` a secas —en un select de una sola tabla no
+        // pone prefijo—, y dentro de la subconsulta `"id"` es el del FONDO: la
+        // condición comparaba cada fondo consigo mismo y salía siempre falso.
+        conFondo: sql<boolean>`exists (
+          select 1 from fondos f
+           where f.ministerio_id = "ministerios"."id"
+             and f.iglesia_id = "ministerios"."iglesia_id"
+             and f.activo
+        )`,
       })
       .from(ministerios)
       .where(
@@ -234,6 +256,7 @@ export async function obtenerMinisterio(
       vision: m.vision,
       objetivo: m.objetivo,
       modulos: m.modulos,
+      conFondo: m.conFondo === true,
       voluntarios: integrantes.length,
       lider: responsable
         ? { id: responsable.miembroId, nombre: responsable.nombre }

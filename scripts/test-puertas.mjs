@@ -187,6 +187,11 @@ async function leerDemo() {
            order by numero limit 1`),
         movimiento: await uno(sql`
           select id from movimientos where iglesia_id = ${B} order by fecha desc limit 1`),
+        // El fondo que el pastor vinculó a Acción social desde Fondos y cajas.
+        // Sin él, la pestaña «Fondo» no existe para nadie y el caso pasa a 404.
+        fondoAccionSocial: await uno(sql`
+          select id from fondos
+           where ministerio_id = ${min['Acción social']} and activo limit 1`),
         evento: await uno(sql`
           select e.id from eventos e left join evento_inscripciones i on i.evento_id = e.id
            where e.iglesia_id = ${B}
@@ -488,6 +493,10 @@ function rutas(ids) {
     { ...CAJA, [PASTOR]: ids.movimiento ? 'pinta' : '404' },
   );
   pagina('/panel/finanzas/ajustes', '/panel/finanzas/ajustes', 'panel/finanzas/ajustes/page.tsx', CAJA);
+  // El arqueo del culto, con la misma puerta que la caja. Con Finanzas apagada
+  // darían 404 a todos; la demo la tiene encendida (clave ausente).
+  pagina('/panel/finanzas/arqueos', '/panel/finanzas/arqueos', 'panel/finanzas/arqueos/page.tsx', CAJA);
+  pagina('/panel/finanzas/arqueos/nuevo', '/panel/finanzas/arqueos/nuevo', 'panel/finanzas/arqueos/nuevo/page.tsx', CAJA);
   ruta('/panel/finanzas/exportar', '/panel/finanzas/exportar?desde=2000-01-01&hasta=2100-12-31', 'panel/finanzas/exportar/route.ts', {
     [SECRETARIA]: 403,
     [LIDER]: 403,
@@ -579,6 +588,31 @@ function rutas(ids) {
   }
   pagina('…<Acción social>/reparto/historial', `${S}/reparto/historial`, 'panel/ministerios/[id]/reparto/historial/page.tsx', ACCION);
   pagina('…<Acción social>/reparto/informe', `${S}/reparto/informe`, 'panel/ministerios/[id]/reparto/informe/page.tsx', ACCION);
+  // El fondo de Acción social, de solo lectura: quien lleva el equipo desde
+  // dentro, y solo si el pastor le vinculó un fondo. `gestionar_ministerios`
+  // no entra (secretaría), ni el voluntario.
+  const conFondo = ids.fondoAccionSocial ? 'pinta' : '404';
+  pagina(
+    ids.fondoAccionSocial ? '…<Acción social>/fondo' : '…<Acción social>/fondo (sin fondo vinculado)',
+    `${S}/fondo`,
+    'panel/ministerios/[id]/fondo/page.tsx',
+    {
+      [PASTOR]: conFondo,
+      [COLIDER]: conFondo,
+      [LIDER]: 'min',
+      [SECRETARIA]: 'min',
+      [CONSOLIDACION]: 'min',
+      [ENLACE]: '/mi',
+    },
+  );
+  // Y en Alabanza, que no tiene fondo: quien lo lleva llega al 404.
+  pagina('…<Alabanza>/fondo (sin fondo)', `${A}/fondo`, 'panel/ministerios/[id]/fondo/page.tsx', {
+    [PASTOR]: '404',
+    [LIDER]: '404',
+    [COLIDER]: 'min',
+    [SECRETARIA]: 'min',
+  });
+
   // Turnos está APAGADO en Acción social: ni el pastor ni el colíder la tienen.
   pagina('…<Acción social>/turnos (apagado)', `${S}/turnos`, 'panel/ministerios/[id]/turnos/page.tsx', {
     [PASTOR]: '404',

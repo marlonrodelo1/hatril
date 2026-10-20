@@ -2,15 +2,12 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
-import {
-  requirePastorAccion,
-  requirePermisoAccion,
-} from '@/lib/auth/guard-panel';
+import { requireFinanzasAccion } from '@/lib/auth/guard-panel';
 import { withUser } from '@/lib/db';
-import { cajas, fondos, movimientos } from '@/lib/db/schema';
+import { arqueos, cajas, fondos, movimientos } from '@/lib/db/schema';
 import { esGuardHatril, isUniqueViolation } from '@/lib/db/error';
 import { campo, campoObligatorio } from '@/lib/api/formulario';
 import { parsearDinero } from '@/lib/format/dinero';
@@ -20,8 +17,10 @@ import type { UserContext } from '@/lib/auth/user-context';
 /**
  * Las acciones de la caja.
  *
- * Todas exigen `gestionar_finanzas`. El pastor pasa siempre, por
- * `requirePermisoAccion`, que ya comprueba `esPastor` antes que el mapa.
+ * Todas exigen `gestionar_finanzas` y la herramienta encendida
+ * (`requireFinanzasAccion`). El pastor pasa el permiso siempre, por
+ * `requirePermisoAccion`, que ya comprueba `esPastor` antes que el mapa; la
+ * herramienta apagada, no.
  *
  * Los errores se devuelven con `redirect('?error=')`, que es la convención del
  * repo: una action que redirige al fallar es indistinguible del éxito para
@@ -36,7 +35,12 @@ function volver(destino: string, mensaje: string): never {
 }
 
 async function requireFinanzas(destino = DESTINO): Promise<UserContext> {
-  return requirePermisoAccion('gestionar_finanzas', destino);
+  return requireFinanzasAccion(destino);
+}
+
+/** Fondos y cajas: gobierno, solo el pastor (ver más abajo). */
+async function requirePastorFinanzas(destino: string): Promise<UserContext> {
+  return requireFinanzasAccion(destino, { soloPastor: true });
 }
 
 /**
@@ -138,6 +142,12 @@ function traducirError(e: unknown, destino: string): never {
   }
   if (esGuardHatril(e, 'HT111')) {
     volver(destino, 'Un movimiento no puede cambiar de iglesia.');
+  }
+  if (esGuardHatril(e, 'HT130')) {
+    volver(
+      destino,
+      'Este ingreso sale de un arqueo confirmado y no se cambia. Si hay un error, apunta un ajuste aparte.',
+    );
   }
   throw e;
 }
@@ -242,13 +252,19 @@ export async function borrarMovimiento(formData: FormData): Promise<void> {
   const id = campoObligatorio(formData, 'id');
   const ctx = await requireFinanzas(DESTINO_LIBRO);
 
-  await withUser(ctx.user.id, (tx) =>
-    tx
-      .delete(movimientos)
-      .where(
-        and(eq(movimientos.id, id), eq(movimientos.iglesiaId, ctx.iglesia.id)),
-      ),
-  );
+  try {
+    await withUser(ctx.user.id, (tx) =>
+      tx
+        .delete(movimientos)
+        .where(
+          and(eq(movimientos.id, id), eq(movimientos.iglesiaId, ctx.iglesia.id)),
+        ),
+    );
+  } catch (e) {
+    // La ficha de un ingreso de arqueo no pinta el botón; esto es para el POST
+    // que llegue igual.
+    traducirError(e, `${DESTINO_LIBRO}/${id}`);
+  }
 
   revalidatePath(DESTINO);
   revalidatePath(DESTINO_LIBRO);
@@ -265,7 +281,7 @@ export async function fechaDeHoy(timezone: string): Promise<string> {
 //
 // Gobierno, no operativa: crear un fondo es decidir cómo se estructura el
 // dinero de la congregación, y eso es del pastor. El tesorero apunta en los que
-// existan. Por eso estas cuatro usan `requirePastorAccion` y no el permiso.
+// existan. Por eso estas usan `requirePastorFinanzas` y no el permiso.
 // ===========================================================================
 
 const DESTINO_AJUSTES = '/panel/finanzas/ajustes';
@@ -288,7 +304,7 @@ const EsquemaCaja = z.object({
 });
 
 export async function crearFondo(formData: FormData): Promise<void> {
-  const ctx = await requirePastorAccion(DESTINO_AJUSTES);
+  const ctx = await requirePastorFinanzas(DESTINO_AJUSTES);
   const datos = EsquemaFondo.safeParse({
     nombre: campoObligatorio(formData, 'nombre'),
   });
@@ -320,7 +336,7 @@ export async function crearFondo(formData: FormData): Promise<void> {
 }
 
 export async function crearCaja(formData: FormData): Promise<void> {
-  const ctx = await requirePastorAccion(DESTINO_AJUSTES);
+  const ctx = await requirePastorFinanzas(DESTINO_AJUSTES);
   const datos = EsquemaCaja.safeParse({
     nombre: campoObligatorio(formData, 'nombre'),
     tipo: campoObligatorio(formData, 'tipo'),
@@ -361,7 +377,11 @@ export async function crearCaja(formData: FormData): Promise<void> {
  */
 export async function archivarFondo(formData: FormData): Promise<void> {
   const id = campoObligatorio(formData, 'id');
-  const ctx = await requirePastorAccion(DESTINO_AJUSTES);
+  const ctx = await requirePastorFinanzas(DESTINO_AJUSTES);
+
+  if (await hayArqueosEsperando(ctx, { fondoId: id })) {
+    volver(DESTINO_AJUSTES, ESPERAN_ARQUEOS);
+  }
 
   const filas = await withUser(ctx.user.id, (tx) =>
     tx
@@ -385,9 +405,114 @@ export async function archivarFondo(formData: FormData): Promise<void> {
   redirect(DESTINO_AJUSTES);
 }
 
+/**
+ * ¿Hay arqueos sin confirmar que van a este fondo o a esta caja?
+ *
+ * Archivarlo con uno esperando haría que, al confirmarlo, sus ingresos cayeran
+ * en algo que ya no sale en los saldos. Primero se confirma o se descarta.
+ */
+const ESPERAN_ARQUEOS =
+  'Hay un arqueo esperando confirmación que va aquí. Confírmalo o descártalo antes de archivar.';
+
+async function hayArqueosEsperando(
+  ctx: UserContext,
+  destino: { fondoId?: string; cajaId?: string },
+): Promise<boolean> {
+  if (!z.string().uuid().safeParse(destino.fondoId ?? destino.cajaId).success) {
+    return false;
+  }
+  const filas = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ id: arqueos.id })
+      .from(arqueos)
+      .where(
+        and(
+          eq(arqueos.iglesiaId, ctx.iglesia.id),
+          isNull(arqueos.confirmadoAt),
+          destino.fondoId
+            ? eq(arqueos.fondoId, destino.fondoId)
+            : eq(arqueos.cajaId, destino.cajaId!),
+        ),
+      )
+      .limit(1),
+  );
+  return filas.length > 0;
+}
+
+/**
+ * Vincular un fondo a un ministerio, o desvincularlo con el valor vacío.
+ *
+ * Es lo que le enseña el fondo a quien lleva ese ministerio, así que es
+ * gobierno y va con el pastor, como crear el fondo. El general no se vincula
+ * (`ck_fondos_general_sin_ministerio`): es el dinero de toda la iglesia.
+ *
+ * Tres cosas las garantiza la base y aquí solo se traducen: un fondo vivo por
+ * ministerio (`uq_fondos_ministerio`), el ministerio de esta iglesia (HT128) y
+ * el general fuera.
+ */
+const EsquemaVinculo = z.object({
+  id: z.string().uuid('Ese fondo no existe.'),
+  ministerioId: z.union([z.literal(''), z.string().uuid('Elige un ministerio.')]),
+});
+
+export async function vincularFondo(formData: FormData): Promise<void> {
+  const ctx = await requirePastorFinanzas(DESTINO_AJUSTES);
+  const datos = EsquemaVinculo.safeParse({
+    id: campoObligatorio(formData, 'id'),
+    ministerioId: campo(formData, 'ministerioId') ?? '',
+  });
+  if (!datos.success) {
+    volver(DESTINO_AJUSTES, datos.error.issues[0]?.message ?? 'Revisa los datos.');
+  }
+
+  const { id, ministerioId } = datos.data;
+  let filas: { id: string }[] = [];
+
+  try {
+    filas = await withUser(ctx.user.id, (tx) =>
+      tx
+        .update(fondos)
+        .set({ ministerioId: ministerioId || null })
+        .where(
+          and(
+            eq(fondos.id, id),
+            eq(fondos.iglesiaId, ctx.iglesia.id),
+            eq(fondos.esGeneral, false),
+            eq(fondos.activo, true),
+          ),
+        )
+        .returning({ id: fondos.id }),
+    );
+  } catch (e) {
+    if (isUniqueViolation(e)) {
+      volver(
+        DESTINO_AJUSTES,
+        'Ese ministerio ya tiene un fondo. Desvincula antes el otro.',
+      );
+    }
+    if (esGuardHatril(e, 'HT128')) {
+      volver(DESTINO_AJUSTES, 'Ese ministerio no es de tu iglesia.');
+    }
+    throw e;
+  }
+
+  // Fuera del `try`: `redirect()` funciona lanzando, y el `catch` se lo comería.
+  if (filas.length === 0) {
+    volver(DESTINO_AJUSTES, 'El fondo general no se vincula a ningún ministerio.');
+  }
+
+  revalidatePath(DESTINO_AJUSTES);
+  if (ministerioId) revalidatePath(`/panel/ministerios/${ministerioId}`, 'layout');
+  redirect(`${DESTINO_AJUSTES}?guardado=${ministerioId ? 'vinculado' : 'desvinculado'}`);
+}
+
 export async function archivarCaja(formData: FormData): Promise<void> {
   const id = campoObligatorio(formData, 'id');
-  const ctx = await requirePastorAccion(DESTINO_AJUSTES);
+  const ctx = await requirePastorFinanzas(DESTINO_AJUSTES);
+
+  if (await hayArqueosEsperando(ctx, { cajaId: id })) {
+    volver(DESTINO_AJUSTES, ESPERAN_ARQUEOS);
+  }
 
   await withUser(ctx.user.id, (tx) =>
     tx

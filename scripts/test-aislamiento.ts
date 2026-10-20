@@ -110,6 +110,16 @@ declare
   JOR_B uuid;
   JOR_OTRO uuid;
   ENT_A uuid;
+  -- Contabilidad (0044). Un fondo de ministerio y un arqueo en Betania.
+  FON_ALI uuid;
+  ARQ_A uuid;
+  ARQ_A2 uuid;
+  MOV_ARQ uuid;
+  -- 0045: una ficha prestada para reapuntar la de Vero, y otra para enlazar al
+  -- aprobar la solicitud de USR_C.
+  ARQ_A3 uuid;
+  MIE_PRESTADA uuid;
+  MIE_SOL uuid;
   -- Lo que responde inscribir_en_evento. Un solo escalar a proposito: ver la
   -- cabecera de la 0024.
   v_res text;
@@ -2104,6 +2114,457 @@ begin
   r := r || format(E'  %s sirve_en_ministerio y lidera_ministerio cerradas a anon, authenticated y service_role (%s)\\n',
                    case when n = 0 then 'OK  ' else 'FALLO' end, n);
 
+  -- ==========================================================================
+  -- CONTABILIDAD (HT128, HT129, HT130) -- el fondo de un ministerio y el
+  -- arqueo a dos personas
+  --
+  -- Lo que se prueba aqui que no prueba ningun otro modulo: una regla que
+  -- depende de QUIEN tiene la sesion, no de a que iglesia pertenece. Quien
+  -- cuenta un arqueo no puede confirmarlo, y eso tiene que pararlo la base con
+  -- dos cuentas de la MISMA iglesia y con el mismo permiso: en la aplicacion
+  -- seria decorativo. Vero y Lola son de Betania, con ficha; Amparo es de Sion.
+  -- ==========================================================================
+
+  perform set_config('request.jwt.claims', '', true);
+
+  -- El pastor de Sion, con ficha: sin ella no podria ni intentar confirmar.
+  update public.iglesia_usuarios set miembro_id = MIE_B1
+   where iglesia_id = IGL_B and auth_user_id = USR_B;
+
+  insert into public.fondos (iglesia_id, nombre) values (IGL_A, 'Alimentos test')
+  returning id into FON_ALI;
+
+  -- HT128, por la sesion del pastor de Betania: un fondo suyo, a un
+  -- ministerio de Sion.
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  begin
+    update public.fondos set ministerio_id = MIN_REP_B where id = FON_ALI;
+    r := r || E'  FALLO un fondo de Betania se vinculo a un ministerio de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT128%'
+                   then E'  OK   HT128 no vincula un fondo a un ministerio de otra iglesia\\n'
+                   else format(E'  FALLO error inesperado en HT128: %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    update public.fondos set ministerio_id = MIN_REP where id = FON_ALI;
+    r := r || E'  OK   el pastor vincula un fondo a un ministerio de su iglesia\\n';
+  exception when others then
+    r := r || format(E'  FALLO no se pudo vincular el fondo: %s\\n', sqlerrm);
+  end;
+
+  begin
+    update public.fondos set ministerio_id = MIN_A where id = FON_A;
+    r := r || E'  FALLO el fondo general se vinculo a un ministerio\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%ck_fondos_general_sin_ministerio%'
+                   then E'  OK   el fondo general no se vincula a ningun ministerio\\n'
+                   else format(E'  FALLO error inesperado con el general: %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    insert into public.fondos (iglesia_id, nombre, ministerio_id)
+    values (IGL_A, 'Alimentos bis', MIN_REP);
+    r := r || E'  FALLO un ministerio tiene dos fondos vivos\\n';
+  exception when others then
+    r := r || case when sqlstate = '23505'
+                   then E'  OK   un ministerio tiene un solo fondo vivo\\n'
+                   else format(E'  FALLO error inesperado con dos fondos: %s\\n', sqlerrm) end;
+  end;
+
+  execute 'reset role';
+
+  -- Vero cuenta.
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_V), true);
+  execute 'set local role hatril_app';
+
+  begin
+    insert into public.arqueos (iglesia_id, fecha, total_diezmos, total_ofrendas,
+                                fondo_id, caja_id, contado_por_miembro_id)
+    values (IGL_A, current_date, 300000, 125000, FON_A, CAJ_A, MIE_V)
+    returning id into ARQ_A;
+    r := r || E'  OK   quien tiene la sesion cuenta un arqueo a su nombre\\n';
+  exception when others then
+    r := r || format(E'  FALLO no se pudo contar el arqueo: %s\\n', sqlerrm);
+  end;
+
+  -- A nombre de otra persona.
+  begin
+    insert into public.arqueos (iglesia_id, fecha, total_ofrendas,
+                                fondo_id, caja_id, contado_por_miembro_id)
+    values (IGL_A, current_date, 1000, FON_A, CAJ_A, MIE_L);
+    r := r || E'  FALLO Vero conto un arqueo a nombre de Lola\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT130%'
+                   then E'  OK   HT130 no deja contar a nombre de otro\\n'
+                   else format(E'  FALLO error inesperado al contar por otro: %s\\n', sqlerrm) end;
+  end;
+
+  -- Ya confirmado al nacer.
+  begin
+    insert into public.arqueos (iglesia_id, fecha, total_ofrendas, fondo_id, caja_id,
+                                contado_por_miembro_id, confirmado_por_miembro_id,
+                                confirmado_at)
+    values (IGL_A, current_date, 1000, FON_A, CAJ_A, MIE_V, MIE_L, now());
+    r := r || E'  FALLO un arqueo nacio confirmado\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT130%'
+                   then E'  OK   HT130 no deja nacer un arqueo confirmado\\n'
+                   else format(E'  FALLO error inesperado al nacer confirmado: %s\\n', sqlerrm) end;
+  end;
+
+  -- HT129: contra el fondo de Sion.
+  begin
+    insert into public.arqueos (iglesia_id, fecha, total_ofrendas,
+                                fondo_id, caja_id, contado_por_miembro_id)
+    values (IGL_A, current_date, 1000, FON_B, CAJ_A, MIE_V);
+    r := r || E'  FALLO un arqueo de Betania fue al fondo de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT129%'
+                   then E'  OK   HT129 rechaza el fondo de otra iglesia en un arqueo\\n'
+                   else format(E'  FALLO error inesperado en HT129: %s\\n', sqlerrm) end;
+  end;
+
+  -- La cuenta de quien cuenta la pone la base (HT131), diga lo que diga el
+  -- INSERT.
+  begin
+    insert into public.arqueos (iglesia_id, fecha, total_ofrendas, fondo_id, caja_id,
+                                contado_por_miembro_id, contado_por_auth_id)
+    values (IGL_A, current_date, 3000, FON_A, CAJ_A, MIE_V, USR_L)
+    returning id into ARQ_A3;
+    select count(*) into n from public.arqueos
+     where id = ARQ_A3 and contado_por_auth_id = USR_V;
+    r := r || format(E'  %s la cuenta de quien cuenta la pone la base (%s)\\n',
+                     case when n = 1 then 'OK  ' else 'FALLO' end, n);
+  exception when others then
+    r := r || format(E'  FALLO no se pudo contar con otra cuenta escrita: %s\\n', sqlerrm);
+  end;
+
+  -- Confirmarse a si misma.
+  begin
+    update public.arqueos set confirmado_por_miembro_id = MIE_V, confirmado_at = now()
+     where id = ARQ_A;
+    r := r || E'  FALLO Vero confirmo su propio arqueo\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT130%'
+                   then E'  OK   HT130 no deja confirmar el arqueo que uno conto\\n'
+                   else format(E'  FALLO error inesperado al autoconfirmar: %s\\n', sqlerrm) end;
+  end;
+
+  -- Retocar lo contado antes de que lo confirmen.
+  begin
+    update public.arqueos set total_ofrendas = 999999 where id = ARQ_A;
+    r := r || E'  FALLO lo contado se reescribio\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT130%'
+                   then E'  OK   HT130 no deja reescribir lo contado\\n'
+                   else format(E'  FALLO error inesperado al reescribir: %s\\n', sqlerrm) end;
+  end;
+
+  select count(*) into n from public.movimientos where arqueo_id = ARQ_A;
+  r := r || format(E'  %s un arqueo sin confirmar no suma en el libro (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- Sion no ve ni confirma el arqueo de Betania.
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.arqueos where iglesia_id = IGL_A;
+  r := r || format(E'  %s Sion no ve los arqueos de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  update public.arqueos set confirmado_por_miembro_id = MIE_B1, confirmado_at = now()
+   where id = ARQ_A;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s Sion no confirma un arqueo de Betania (%s filas)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  -- Ni le cuelga un ingreso suyo: la policy de Sion lo deja escribir en Sion.
+  -- Lo para HT130 (el arqueo no esta confirmado ni es su fondo) antes que
+  -- HT129; cualquiera de los dos vale.
+  begin
+    insert into public.movimientos
+      (iglesia_id, tipo, fecha, importe, concepto, fondo_id, caja_id, tipo_ingreso, arqueo_id)
+    values (IGL_B, 'ingreso', current_date, 300000, 'Colado', FON_B, CAJ_B, 'diezmo', ARQ_A);
+    r := r || E'  FALLO Sion colgo un ingreso del arqueo de Betania\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT129%' or sqlerrm like '%HT130%'
+                   then E'  OK   Sion no cuelga un ingreso del arqueo de Betania\\n'
+                   else format(E'  FALLO error inesperado colgando el ingreso: %s\\n', sqlerrm) end;
+  end;
+
+  execute 'reset role';
+
+  -- Lola confirma.
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_L), true);
+  execute 'set local role hatril_app';
+
+  -- A nombre de otra persona, no.
+  begin
+    update public.arqueos set confirmado_por_miembro_id = MIE_O, confirmado_at = now()
+     where id = ARQ_A;
+    r := r || E'  FALLO Lola confirmo a nombre de Omar\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT130%'
+                   then E'  OK   HT130 no deja confirmar a nombre de otro\\n'
+                   else format(E'  FALLO error inesperado confirmando por otro: %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    update public.arqueos
+       set confirmado_por_miembro_id = MIE_L,
+           confirmado_at = now() - interval '3 days'
+     where id = ARQ_A;
+    r := r || E'  OK   otra persona de la iglesia confirma el arqueo\\n';
+  exception when others then
+    r := r || format(E'  FALLO no se pudo confirmar: %s\\n', sqlerrm);
+  end;
+
+  -- La hora la pone la base: "hace tres dias" no cuela.
+  select count(*) into n from public.arqueos
+   where id = ARQ_A and confirmado_at > now() - interval '1 minute';
+  r := r || format(E'  %s la hora de la confirmacion la pone la base (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  -- Y los ingresos los apunta la base, por lo contado y a nombre de quien
+  -- confirmo.
+  select count(*) into n from public.movimientos
+   where arqueo_id = ARQ_A
+     and registrado_por_miembro_id = MIE_L
+     and ((tipo_ingreso = 'diezmo' and importe = 300000)
+       or (tipo_ingreso = 'ofrenda' and importe = 125000));
+  r := r || format(E'  %s al confirmar se apuntan el diezmo y la ofrenda (%s de 2)\\n',
+                   case when n = 2 then 'OK  ' else 'FALLO' end, n);
+
+  select id into MOV_ARQ from public.movimientos
+   where arqueo_id = ARQ_A and tipo_ingreso = 'diezmo';
+
+  begin
+    update public.arqueos set fecha = current_date - 1 where id = ARQ_A;
+    r := r || E'  FALLO un arqueo confirmado se edito\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT130%'
+                   then E'  OK   HT130 no deja tocar un arqueo confirmado\\n'
+                   else format(E'  FALLO error inesperado editando el confirmado: %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    delete from public.arqueos where id = ARQ_A;
+    r := r || E'  FALLO un arqueo confirmado se borro\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT130%'
+                   then E'  OK   HT130 no deja borrar un arqueo confirmado\\n'
+                   else format(E'  FALLO error inesperado borrando el confirmado: %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    update public.movimientos set importe = 1 where id = MOV_ARQ;
+    r := r || E'  FALLO un ingreso de arqueo se edito\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT130%'
+                   then E'  OK   HT130 no deja editar un ingreso de arqueo\\n'
+                   else format(E'  FALLO error inesperado editando el ingreso: %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    delete from public.movimientos where id = MOV_ARQ;
+    r := r || E'  FALLO un ingreso de arqueo se borro\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT130%'
+                   then E'  OK   HT130 no deja borrar un ingreso de arqueo\\n'
+                   else format(E'  FALLO error inesperado borrando el ingreso: %s\\n', sqlerrm) end;
+  end;
+
+  -- Un ingreso "del arqueo" apuntado a mano, por otro importe.
+  begin
+    insert into public.movimientos
+      (iglesia_id, tipo, fecha, importe, concepto, fondo_id, caja_id, tipo_ingreso, arqueo_id)
+    values (IGL_A, 'ingreso', current_date, 5000, 'De mas', FON_A, CAJ_A, 'donacion', ARQ_A);
+    r := r || E'  FALLO se colgo a mano un ingreso de un arqueo\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT130%'
+                   then E'  OK   HT130 no deja colgar a mano un ingreso de un arqueo\\n'
+                   else format(E'  FALLO error inesperado colgando a mano: %s\\n', sqlerrm) end;
+  end;
+
+  select count(*) into n from public.arqueos
+   where id = ARQ_A and contado_por_auth_id = USR_V and confirmado_por_auth_id = USR_L;
+  r := r || format(E'  %s el arqueo guarda las dos cuentas, la que conto y la que confirmo (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- LA FICHA REAPUNTADA (0045). El agujero que vio la revision: cambiarse la
+  -- ficha propia para confirmar como otra persona. Primero, que HT101 ya no
+  -- deja hacerlo desde una sesion, ni al pastor.
+  perform set_config('request.jwt.claims', '', true);
+  insert into public.miembros (iglesia_id, nombre) values (IGL_A, 'Ficha prestada')
+  returning id into MIE_PRESTADA;
+  insert into public.miembros (iglesia_id, nombre) values (IGL_A, 'Ficha de la solicitud')
+  returning id into MIE_SOL;
+
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  begin
+    update public.iglesia_usuarios set miembro_id = MIE_PRESTADA
+     where iglesia_id = IGL_A and auth_user_id = USR_A;
+    r := r || E'  FALLO el pastor se cambio su propia ficha\\n';
+  exception when others then
+    r := r || case when sqlerrm like 'HT101%'
+                   then E'  OK   HT101 no deja a nadie cambiarse su propia ficha, ni al pastor\\n'
+                   else format(E'  FALLO error inesperado cambiando la ficha propia: %s\\n', sqlerrm) end;
+  end;
+
+  -- Y que aprobar una solicitud, que enlaza la ficha de OTRA persona, sigue
+  -- funcionando: es lo que hace aprobarSolicitud.
+  begin
+    update public.iglesia_usuarios
+       set estado = 'activo', miembro_id = MIE_SOL
+     where iglesia_id = IGL_A and auth_user_id = USR_C;
+    get diagnostics n = row_count;
+    r := r || format(E'  %s aprobar una solicitud enlaza la ficha de otra persona (%s)\\n',
+                     case when n = 1 then 'OK  ' else 'FALLO' end, n);
+  exception when others then
+    r := r || format(E'  FALLO aprobar una solicitud ya no enlaza la ficha: %s\\n', sqlerrm);
+  end;
+
+  execute 'reset role';
+
+  -- Y la segunda llave: aunque la ficha de Vero se reapuntara por otra via (aqui,
+  -- el sistema, que HT101 deja pasar), su CUENTA sigue siendo la que conto, y
+  -- HT131 no la deja confirmar. HT130 no lo ve: las fichas ya son distintas.
+  perform set_config('request.jwt.claims', '', true);
+  update public.iglesia_usuarios set miembro_id = MIE_PRESTADA
+   where iglesia_id = IGL_A and auth_user_id = USR_V;
+
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_V), true);
+  execute 'set local role hatril_app';
+
+  begin
+    update public.arqueos
+       set confirmado_por_miembro_id = MIE_PRESTADA, confirmado_at = now()
+     where id = ARQ_A3;
+    r := r || E'  FALLO la cuenta que conto confirmo con otra ficha\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT131%'
+                   then E'  OK   HT131 no deja confirmar a la misma cuenta aunque cambie de ficha\\n'
+                   else format(E'  FALLO error inesperado en HT131: %s\\n', sqlerrm) end;
+  end;
+
+  execute 'reset role';
+  perform set_config('request.jwt.claims', '', true);
+  update public.iglesia_usuarios set miembro_id = MIE_V
+   where iglesia_id = IGL_A and auth_user_id = USR_V;
+
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_L), true);
+  execute 'set local role hatril_app';
+
+  -- Descartar uno que espera si se puede: no ha movido dinero.
+  begin
+    insert into public.arqueos (iglesia_id, fecha, total_ofrendas,
+                                fondo_id, caja_id, contado_por_miembro_id)
+    values (IGL_A, current_date, 2000, FON_A, CAJ_A, MIE_L)
+    returning id into ARQ_A2;
+    delete from public.arqueos where id = ARQ_A2;
+    get diagnostics n = row_count;
+    r := r || format(E'  %s un arqueo que espera se puede descartar (%s)\\n',
+                     case when n = 1 then 'OK  ' else 'FALLO' end, n);
+  exception when others then
+    r := r || format(E'  FALLO no se pudo descartar: %s\\n', sqlerrm);
+  end;
+
+  execute 'reset role';
+
+  -- La segunda llave, sin atajo: ni un escritor de confianza confirma lo suyo.
+  perform set_config('request.jwt.claims', '', true);
+  begin
+    insert into public.arqueos (iglesia_id, fecha, total_ofrendas, fondo_id, caja_id,
+                                contado_por_miembro_id, confirmado_por_miembro_id,
+                                confirmado_at)
+    values (IGL_A, current_date, 1000, FON_A, CAJ_A, MIE_V, MIE_V, now());
+    r := r || E'  FALLO el sistema confirmo un arqueo con la misma persona\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%ck_arqueos_dos_personas%'
+                   then E'  OK   ck_arqueos_dos_personas aguanta tambien sin sesion\\n'
+                   else format(E'  FALLO error inesperado en la segunda llave: %s\\n', sqlerrm) end;
+  end;
+
+  -- HT129 sobre los ingresos, sin el atajo: desde una sesion lo para antes
+  -- HT130 (los triggers corren por orden alfabetico), asi que se prueba como
+  -- escritor de confianza, que es a quien HT130 deja pasar.
+  begin
+    insert into public.movimientos
+      (iglesia_id, tipo, fecha, importe, concepto, fondo_id, caja_id, tipo_ingreso, arqueo_id)
+    values (IGL_B, 'ingreso', current_date, 300000, 'Colado', FON_B, CAJ_B, 'diezmo', ARQ_A);
+    r := r || E'  FALLO el sistema colgo un ingreso de Sion del arqueo de Betania\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT129%'
+                   then E'  OK   HT129 no cuelga un ingreso del arqueo de otra iglesia\\n'
+                   else format(E'  FALLO error inesperado en HT129 de ingresos: %s\\n', sqlerrm) end;
+  end;
+
+  -- Nadie de fuera.
+  execute 'set local role anon';
+  begin
+    select count(*) into n from public.arqueos;
+    r := r || format(E'  FALLO anon lee los arqueos (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a los arqueos\\n';
+  end;
+  begin
+    select count(*) into n from (select modulos from public.iglesias) x;
+    r := r || E'  FALLO anon lee iglesias.modulos\\n';
+  exception when others then
+    r := r || E'  OK   anon no lee que herramientas tiene apagadas una iglesia\\n';
+  end;
+  execute 'reset role';
+
+  execute 'set local role authenticated';
+  begin
+    select count(*) into n from public.arqueos;
+    r := r || format(E'  FALLO authenticated lee los arqueos (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   authenticated no llega a los arqueos\\n';
+  end;
+  execute 'reset role';
+
+  execute 'set local role service_role';
+  begin
+    select count(*) into n from public.arqueos;
+    r := r || format(E'  FALLO service_role lee los arqueos (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   service_role no llega a los arqueos\\n';
+  end;
+  execute 'reset role';
+
+  -- Las funciones de la contabilidad, cerradas a todos (son de trigger), y
+  -- guard_iglesia_usuarios, que la 0045 reescribe.
+  select count(*) into n
+    from (values ('anon'), ('authenticated'), ('service_role')) as v(rol),
+         (values ('public.validar_ministerio_fondo()'),
+                 ('public.validar_iglesia_arqueo()'),
+                 ('public.validar_arqueo_movimiento()'),
+                 ('public.guard_arqueos()'),
+                 ('public.guard_movimientos_arqueo()'),
+                 ('public.arqueo_genera_ingresos()'),
+                 ('public.guard_arqueos_cuentas()'),
+                 ('public.guard_iglesia_usuarios()')) as f(fn)
+   where has_function_privilege(v.rol, f.fn, 'EXECUTE');
+  r := r || format(E'  %s las funciones de la contabilidad, cerradas a anon, authenticated y service_role (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
   -- Abortar a proposito: revierte los datos de prueba y devuelve el informe.
   raise exception '%', r;
 end $$;
@@ -2240,6 +2701,14 @@ async function comprobarWithUser(): Promise<string[]> {
     await withUser(USR_A, (tx) => tx.execute(`select 1 from reparto_entregas limit 1`));
     lineas.push('  OK   withUser() puede consultar el padron, los dias y las entregas del reparto');
 
+    // La contabilidad (0043 y 0044), por lo mismo, y las tres columnas nuevas:
+    // caza el «se me olvido aplicar la migracion» aqui y no al abrir Finanzas.
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from arqueos limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select modulos from iglesias limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select ministerio_id from fondos limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select arqueo_id from movimientos limit 1`));
+    lineas.push('  OK   withUser() puede consultar los arqueos y las columnas nuevas de la caja');
+
     // LA FUGA, CAZADA POR LA FUNCIÓN QUE USA LA APLICACIÓN.
     //
     // `USR_A` aquí no es el de la fase de arriba: aquella transacción se revirtió
@@ -2268,7 +2737,123 @@ async function comprobarWithUser(): Promise<string[]> {
     lineas.push(`  FALLO withUser(): ${(e.message ?? String(err)).slice(0, 90)}`);
   }
 
-  return lineas.concat(await comprobarRepartoConLaDemo());
+  return lineas
+    .concat(await comprobarRepartoConLaDemo())
+    .concat(await comprobarArqueoConLaDemo());
+}
+
+/**
+ * El arqueo a dos personas, por `withUser()` y con cuentas de verdad.
+ *
+ * HT130 depende de `miembro_actual()`, que sale de los claims que pone
+ * `withUser`. La fase SQL los pone a mano; si `withUser` dejara de ponerlos
+ * —o los pusiera con otra forma—, quien confirma dejaría de ser «quien tiene la
+ * sesión» y el control pasaría a fallar abierto o cerrado sin que la fase SQL
+ * lo notara. Así que aquí se cuenta con `pastor@`, se intenta confirmar con la
+ * misma sesión, y se confirma con la de `secretaria@`, todo en una transacción
+ * que se revierte al final: no queda nada en la demo.
+ *
+ * Caveat honesto, como los de arriba: sin la demo o sin un fondo y una caja en
+ * Betania, lo dice en vez de pasar en verde.
+ */
+async function comprobarArqueoConLaDemo(): Promise<string[]> {
+  const lineas: string[] = [];
+
+  type Fila = Record<string, string | null>;
+  const primera = (filas: unknown): Fila | undefined =>
+    (filas as { rows?: Fila[] }).rows?.[0] ?? (filas as Fila[])[0];
+  const REVERTIR = 'revertir-arqueo-de-prueba';
+
+  try {
+    const demo = primera(
+      await dbAdmin.execute(dsql`
+        select
+          (select u.id::text from auth.users u where u.email = 'pastor@hatril.test')     as pastor,
+          (select u.id::text from auth.users u where u.email = 'secretaria@hatril.test') as secretaria,
+          (select iu.miembro_id::text from public.iglesia_usuarios iu
+             join auth.users u on u.id = iu.auth_user_id
+            where u.email = 'pastor@hatril.test')                                        as ficha_pastor,
+          (select iu.miembro_id::text from public.iglesia_usuarios iu
+             join auth.users u on u.id = iu.auth_user_id
+            where u.email = 'secretaria@hatril.test')                                    as ficha_secretaria,
+          (select i.id::text from public.iglesias i where i.slug = 'betania')            as iglesia,
+          (select f.id::text from public.fondos f join public.iglesias i on i.id = f.iglesia_id
+            where i.slug = 'betania' and f.es_general)                                   as fondo,
+          (select c.id::text from public.cajas c join public.iglesias i on i.id = c.iglesia_id
+            where i.slug = 'betania' and c.activo order by c.created_at limit 1)         as caja
+      `),
+    );
+
+    if (
+      !demo?.pastor || !demo.secretaria || !demo.ficha_pastor ||
+      !demo.ficha_secretaria || !demo.iglesia || !demo.fondo || !demo.caja
+    ) {
+      lineas.push('  --   sin la demo de Betania con su caja: el arqueo solo lo prueba la fase SQL');
+      return lineas;
+    }
+    const d = demo as Record<string, string>;
+
+    let autoconfirmar = '(no se intento)';
+    let ingresos = -1;
+
+    await withUser(d.pastor, async (tx) => {
+      const arqueo = primera(
+        await tx.execute(dsql`
+          insert into arqueos (iglesia_id, fecha, total_diezmos, total_ofrendas,
+                               fondo_id, caja_id, contado_por_miembro_id)
+          values (${d.iglesia}, current_date, 70000, 30000, ${d.fondo}, ${d.caja}, ${d.ficha_pastor})
+          returning id::text as id
+        `),
+      )!.id!;
+
+      // En un savepoint: el error de HT130 abortaría la transacción entera.
+      try {
+        await tx.transaction((sp) =>
+          sp.execute(dsql`
+            update arqueos set confirmado_por_miembro_id = ${d.ficha_pastor}, confirmado_at = now()
+             where id = ${arqueo}
+          `),
+        );
+        autoconfirmar = 'paso';
+      } catch (err) {
+        const e = err as { message?: string; cause?: { message?: string } };
+        autoconfirmar = `${e.cause?.message ?? ''} ${e.message ?? ''}`;
+      }
+
+      // La segunda persona, con sus claims, en la misma transacción.
+      const claims = JSON.stringify({ sub: d.secretaria, role: 'authenticated' });
+      await tx.execute(dsql`select set_config('request.jwt.claims', ${claims}, true)`);
+      await tx.execute(dsql`
+        update arqueos set confirmado_por_miembro_id = ${d.ficha_secretaria}, confirmado_at = now()
+         where id = ${arqueo}
+      `);
+      ingresos = Number(
+        primera(
+          await tx.execute(
+            dsql`select count(*)::text as n from movimientos where arqueo_id = ${arqueo}`,
+          ),
+        )?.n ?? -1,
+      );
+
+      throw new Error(REVERTIR);
+    }).catch((err: Error) => {
+      if (err.message !== REVERTIR) throw err;
+    });
+
+    lineas.push(
+      `  ${autoconfirmar.includes('HT130') ? 'OK  ' : 'FALLO'} withUser() de pastor@ no confirma el arqueo que conto (${autoconfirmar.includes('HT130') ? 'HT130' : autoconfirmar.slice(0, 60)})`,
+    );
+    lineas.push(
+      `  ${ingresos === 2 ? 'OK  ' : 'FALLO'} withUser() de secretaria@ lo confirma y se apuntan los dos ingresos (${ingresos})`,
+    );
+  } catch (err) {
+    const e = err as { message?: string; cause?: { message?: string } };
+    lineas.push(
+      `  FALLO arqueo con la demo: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
+    );
+  }
+
+  return lineas;
 }
 
 /**

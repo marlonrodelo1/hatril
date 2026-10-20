@@ -15,20 +15,23 @@ import {
 import { sql } from 'drizzle-orm';
 
 import { iglesias } from './iglesias';
+import { ministerios } from './ministerios';
 
 /**
  * El libro de caja de la iglesia.
  *
- * TRES TABLAS Y NI UNA MÁS
+ * TRES TABLAS, Y EL ARQUEO
  * ------------------------
  * El tesorero de una congregación de 120 personas es un profesor o una
  * enfermera que apunta la ofrenda el domingo por la noche desde el móvil. Todo
  * lo que no sea «cuánto, de qué fondo y a qué caja» le sobra, y el producto que
  * le pide un plan de cuentas lo devuelve al cuaderno.
  *
- * Por eso aquí no hay categorías de gasto, ni arqueos, ni cierres de periodo, ni
- * asientos. Están diseñados y aplazados a conciencia; el porqué de cada uno está
- * en el plan de finanzas, no aquí.
+ * Por eso aquí no hay categorías de gasto, ni cierres de periodo, ni asientos.
+ * Están diseñados y aplazados a conciencia; el porqué de cada uno está en el
+ * plan de finanzas, no aquí. La cuarta tabla, `arqueos`, llegó con la tanda de
+ * contabilidad (20-oct) y no cambia nada de eso: es opcional, y lo que produce
+ * son ingresos normales del libro.
  *
  * LO QUE NO GUARDA, Y ES LO MÁS IMPORTANTE DE ESTE FICHERO
  * --------------------------------------------------------
@@ -151,6 +154,22 @@ export const fondos = pgTable(
 
     orden: integer('orden').notNull().default(0),
 
+    /**
+     * El ministerio cuyo dinero es este fondo: «Alimentos» para Acción social.
+     *
+     * Vincularlo es lo que le enseña el fondo a quien lleva ese ministerio, en
+     * su pestaña «Fondo», de solo lectura. NO es una casilla de
+     * `ministerios.modulos`: aquello lo enciende quien gobierna los ministerios,
+     * y la caja la gobierna el pastor. Lo vincula él, desde Fondos y cajas.
+     *
+     * `set null` y no `cascade`: un ministerio que se borra no se lleva el
+     * dinero, que sigue siendo de la iglesia. La coherencia de iglesia la pone
+     * HT128 (`0044`), como HT110 la de los movimientos.
+     */
+    ministerioId: uuid('ministerio_id').references(() => ministerios.id, {
+      onDelete: 'set null',
+    }),
+
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -159,6 +178,18 @@ export const fondos = pgTable(
       .defaultNow(),
   },
   (t) => [
+    // El general es el dinero de toda la iglesia. Vinculado a un ministerio, su
+    // líder vería cada gasto de la congregación.
+    check(
+      'ck_fondos_general_sin_ministerio',
+      sql`not (${t.esGeneral} and ${t.ministerioId} is not null)`,
+    ),
+    // Un fondo vivo por ministerio. Con dos, la pestaña tendría que elegir cuál
+    // enseñar, y el saldo «del ministerio» dejaría de ser un número. Los
+    // archivados no cuentan: cerrar «Campaña de Navidad» y abrir otra es normal.
+    uniqueIndex('uq_fondos_ministerio')
+      .on(t.ministerioId)
+      .where(sql`${t.ministerioId} is not null and ${t.activo}`),
     uniqueIndex('uq_fondos_general')
       .on(t.iglesiaId)
       .where(sql`${t.esGeneral}`),
@@ -205,6 +236,123 @@ export const cajas = pgTable(
   (t) => [
     uniqueIndex('uq_cajas_nombre').on(t.iglesiaId, sql`lower(${t.nombre})`),
     index('idx_cajas_iglesia').on(t.iglesiaId),
+  ],
+);
+
+/**
+ * El arqueo del culto: lo que se contó en efectivo al terminar, a dos personas.
+ *
+ * QUIEN CUENTA NO ES QUIEN CONFIRMA
+ * ---------------------------------
+ * Es la segregación de funciones que anunciaba `permisos.ts`: el tesorero cuenta
+ * los totales de diezmos y de ofrendas, y otra persona con `gestionar_finanzas`,
+ * o el pastor, lo confirma desde SU sesión. Hasta entonces no suma al saldo. Al
+ * confirmarse, la base crea los ingresos con un concepto automático
+ * (`arqueo_genera_ingresos`, `0044`), así que un arqueo confirmado tiene sus
+ * apuntes siempre, y siempre por lo contado.
+ *
+ * No lo garantiza la pantalla: HT130 (`0044`) exige que quien cuenta y quien
+ * confirma sean las fichas de las sesiones que escriben, que no coincidan, y
+ * que nada de esto cambie una vez confirmado. Lo que la base no mira es el
+ * permiso: como en toda la caja, eso es de la aplicación.
+ *
+ * Es opcional. El tesorero puede seguir apuntando la ofrenda directamente en el
+ * libro; el arqueo es para la iglesia que quiere el control de dos personas.
+ *
+ * LO QUE NO TIENE, A PROPÓSITO
+ * ----------------------------
+ * Ni desglose por billete ni campo de texto libre. Un «sobre de Fulano» o unas
+ * «observaciones» abrirían por el lado el diezmo nominativo que `movimientos`
+ * cierra (ver la cabecera de este fichero). Totales, fecha, a qué fondo y a qué
+ * caja, y las dos personas: nada más.
+ */
+export const arqueos = pgTable(
+  'arqueos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    iglesiaId: uuid('iglesia_id')
+      .notNull()
+      .references(() => iglesias.id, { onDelete: 'cascade' }),
+
+    /** El día del culto. `date` por lo mismo que `movimientos.fecha`. */
+    fecha: date('fecha', { mode: 'string' }).notNull(),
+
+    /** En efectivo, y solo los totales. Cero vale: un culto sin diezmos. */
+    totalDiezmos: numeric('total_diezmos', { precision: 14, scale: 2 })
+      .notNull()
+      .default('0'),
+    totalOfrendas: numeric('total_ofrendas', { precision: 14, scale: 2 })
+      .notNull()
+      .default('0'),
+
+    /** A dónde van los ingresos al confirmar. Por defecto, General y Efectivo. */
+    fondoId: uuid('fondo_id')
+      .notNull()
+      .references(() => fondos.id, { onDelete: 'restrict' }),
+    cajaId: uuid('caja_id')
+      .notNull()
+      .references(() => cajas.id, { onDelete: 'restrict' }),
+
+    /**
+     * Las dos personas. Uuid pelado sin FK, por lo mismo que
+     * `movimientos.registrado_por_miembro_id`: ejercer la supresión no puede
+     * borrar el arqueo ni fallar por él. La coherencia de iglesia la pone HT129.
+     */
+    contadoPorMiembroId: uuid('contado_por_miembro_id').notNull(),
+    confirmadoPorMiembroId: uuid('confirmado_por_miembro_id'),
+    /** La pone la base al confirmar (HT130), no quien confirma. */
+    confirmadoAt: timestamp('confirmado_at', { withTimezone: true }),
+
+    /**
+     * Las dos CUENTAS, además de las dos fichas. Las pone la base
+     * (`auth.uid()`, HT131 en la `0045`), nunca la aplicación.
+     *
+     * Hacen falta porque la ficha de una sesión es `iglesia_usuarios.miembro_id`,
+     * y esa columna se podía reapuntar: el pastor contaba con su ficha, se
+     * cambiaba a la de la secretaria y confirmaba «como ella». La `0045` cierra
+     * eso en HT101, y esto es la segunda llave: aunque alguien llegara a cambiar
+     * de ficha, sigue siendo la misma cuenta, y la misma cuenta no confirma lo
+     * que contó.
+     *
+     * Nulas en lo que escribe un proceso sin sesión, y en el arqueo de la demo
+     * anterior a la `0045`.
+     */
+    contadoPorAuthId: uuid('contado_por_auth_id'),
+    confirmadoPorAuthId: uuid('confirmado_por_auth_id'),
+
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    check(
+      'ck_arqueos_totales',
+      sql`${t.totalDiezmos} >= 0 and ${t.totalOfrendas} >= 0 and ${t.totalDiezmos} + ${t.totalOfrendas} > 0`,
+    ),
+    // Las dos columnas de la confirmación van juntas o no van.
+    check(
+      'ck_arqueos_confirmacion',
+      sql`(${t.confirmadoPorMiembroId} is null) = (${t.confirmadoAt} is null)`,
+    ),
+    // La segunda llave, además de HT130: esta no tiene atajo para nadie.
+    check(
+      'ck_arqueos_dos_personas',
+      sql`${t.confirmadoPorMiembroId} <> ${t.contadoPorMiembroId}`,
+    ),
+    // Y por cuenta, por lo que cuenta `contadoPorAuthId`.
+    check(
+      'ck_arqueos_dos_cuentas',
+      sql`${t.confirmadoPorAuthId} <> ${t.contadoPorAuthId}`,
+    ),
+    index('idx_arqueos_iglesia').on(t.iglesiaId, t.fecha.desc()),
+    // Los que esperan confirmación, que es lo que se busca al abrir la pantalla.
+    index('idx_arqueos_pendientes')
+      .on(t.iglesiaId)
+      .where(sql`${t.confirmadoAt} is null`),
   ],
 );
 
@@ -334,6 +482,22 @@ export const movimientos = pgTable(
      */
     registradoPorMiembroId: uuid('registrado_por_miembro_id'),
 
+    /**
+     * El arqueo del que sale este ingreso, si sale de uno.
+     *
+     * Lo escribe la base al confirmar el arqueo, nunca la aplicación. Un
+     * ingreso con arqueo no se edita ni se borra (HT130): corregirlo es apuntar
+     * un ajuste aparte, que es como se corrige un libro.
+     *
+     * `no action` y no `restrict`: los dos se comprueban al borrar el arqueo,
+     * pero `restrict` lo hace en el acto, y al borrar una iglesia la cascada
+     * podría llegar al arqueo antes que a sus ingresos. `no action` espera al
+     * final de la sentencia, cuando ya se han ido los dos.
+     */
+    arqueoId: uuid('arqueo_id').references(() => arqueos.id, {
+      onDelete: 'no action',
+    }),
+
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -343,6 +507,12 @@ export const movimientos = pgTable(
   },
   (t) => [
     check('ck_movimientos_importe_positivo', sql`${t.importe} > 0`),
+
+    // Un diezmo y una ofrenda por arqueo, como mucho. Con la comprobación de
+    // importes de HT130, es lo que impide colar un segundo ingreso a su nombre.
+    uniqueIndex('uq_movimientos_arqueo')
+      .on(t.arqueoId, t.tipoIngreso)
+      .where(sql`${t.arqueoId} is not null`),
 
     // Una equivalencia, no dos checks sueltos: prohíbe el gasto con
     // `tipo_ingreso` relleno Y el ingreso sin él. Escrito como dos condiciones

@@ -62,6 +62,21 @@ export function TarjetaModulo({ tarjeta }: { tarjeta: TarjetaDePortada }) {
         </p>
       ) : (
         <ul className="flex flex-col pb-1">
+          {/* Cifras para mirar, sin color: un saldo no pide nada, se lee. */}
+          {resumen.cifras && resumen.cifras.length > 0 && (
+            <li className="grid grid-cols-2 gap-x-3 gap-y-2.5 px-4 pb-2 pt-1.5 md:px-5">
+              {resumen.cifras.map((c, i) => (
+                <span
+                  key={c.rotulo}
+                  // La primera, a lo ancho: es la que se viene a ver.
+                  className={'flex min-w-0 flex-col gap-0.5 ' + (i === 0 ? 'col-span-2' : '')}
+                >
+                  <span className="t-micro truncate">{c.rotulo}</span>
+                  <span className="t-subtitulo truncate tabular-nums">{c.valor}</span>
+                </span>
+              ))}
+            </li>
+          )}
           {pendientes.map((p, i) => (
             <li key={i}>
               <FilaPendiente pendiente={p} />
@@ -91,7 +106,10 @@ export function TarjetaModulo({ tarjeta }: { tarjeta: TarjetaDePortada }) {
               </Link>
             </li>
           )}
-          {pendientes.length === 0 && !resumen.proximo && resumen.vacio && (
+          {pendientes.length === 0 &&
+            !resumen.proximo &&
+            !resumen.cifras?.length &&
+            resumen.vacio && (
             <li className="px-4 pb-2 pt-1 text-pretty text-label text-muted-foreground md:px-5">
               {resumen.vacio}
             </li>

@@ -302,6 +302,27 @@
       "when": 1792454548785,
       "tag": "0042_reparto_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792501492257,
+      "tag": "0043_finanzas_arqueo",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1792501502549,
+      "tag": "0044_finanzas_arqueo_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1792509772038,
+      "tag": "0045_arqueo_por_cuenta",
+      "breakpoints": true
     }
   ]
 }

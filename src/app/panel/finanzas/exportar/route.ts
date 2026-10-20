@@ -1,4 +1,5 @@
 import { requirePermisoApi } from '@/lib/auth/guard-api';
+import { finanzasEncendida } from '@/lib/iglesias/herramientas';
 import { libro } from '@/lib/finanzas/consultas';
 import { mesEnLaIglesia } from '@/lib/fecha/hoy';
 import { celda } from '@/lib/format/csv';
@@ -55,6 +56,17 @@ export async function GET(request: Request): Promise<Response> {
   if (!guard.ok) return guard.respuesta;
 
   const { ctx } = guard;
+
+  // Con Finanzas apagada la exportación no existe, como sus páginas. Después
+  // del permiso y no antes: a quien no lleva la caja, saber si la iglesia la
+  // tiene encendida no le corresponde.
+  if (!finanzasEncendida(ctx.iglesia)) {
+    return new Response('No existe.', {
+      status: 404,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+    });
+  }
+
   const url = new URL(request.url);
 
   const mes = mesEnLaIglesia(ctx.iglesia.timezone);

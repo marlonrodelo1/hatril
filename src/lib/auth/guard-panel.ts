@@ -14,11 +14,14 @@ import {
 import {
   esDelEquipo,
   esPastor,
+  inicioDe,
   puede,
   puedeGestionarDesdeDentro,
+  puedeGestionarFinanzas,
   puedeGestionarMinisterio,
   type Permiso,
 } from '@/lib/auth/permisos';
+import { finanzasEncendida } from '@/lib/iglesias/herramientas';
 import {
   obtenerMinisterio,
   type MinisterioDetalle,
@@ -231,6 +234,27 @@ export async function requirePermiso(permiso: Permiso): Promise<UserContext> {
 }
 
 /**
+ * La puerta de cada página de Finanzas.
+ *
+ * Dos cosas, y en este orden: que la herramienta esté encendida en la iglesia
+ * —apagada, la ruta no existe para nadie, pastor incluido: `notFound()`— y que
+ * esta persona lleve la caja. Lo segundo es `requirePermiso('gestionar_finanzas')`
+ * de siempre, con el mismo rebote.
+ *
+ * Un 404 y no un rebote con mensaje porque el menú ya no la enseña: quien llega
+ * aquí con la herramienta apagada viene de un enlace viejo, y la sección, para
+ * su iglesia, no existe.
+ */
+export async function requireFinanzas(): Promise<UserContext> {
+  const ctx = await requirePanel();
+  if (!finanzasEncendida(ctx.iglesia)) notFound();
+  if (!puedeGestionarFinanzas(ctx)) {
+    redirect('/panel/hoy?error=' + encodeURIComponent(MENSAJE_SIN_PERMISO));
+  }
+  return ctx;
+}
+
+/**
  * Para las dos guards de ministerio, la de página y la de action.
  *
  * `desdeDentro` estrecha la puerta a pastor y a quien lidera ESTE equipo, sin
@@ -427,6 +451,38 @@ export async function requirePermisoAccion(
     redirect(
       `${destinoError}?error=` +
         encodeURIComponent('No tienes permiso para hacer eso.'),
+    );
+  }
+  return ctx;
+}
+
+/**
+ * La puerta de cada action de Finanzas: el permiso, o ser pastor con
+ * `soloPastor` (fondos, cajas y vincular un fondo, que son gobierno), y la
+ * herramienta encendida.
+ *
+ * Un layout no corre en una server action, y apagar la caja tiene que apagarla
+ * también para un POST fabricado. No al destino de siempre, que con la
+ * herramienta apagada da 404, sino a donde empieza esa persona (`inicioDe`),
+ * con el aviso. Ni siquiera a `/panel/hoy`: el tesorero que solo lleva la caja
+ * ya no es del equipo con Finanzas apagada, el panel le saca a `/mi` y el
+ * mensaje se perdía por el camino —con el movimiento sin guardar—. Su sitio es
+ * el muro, que pinta `?error=`.
+ */
+export async function requireFinanzasAccion(
+  destinoError = '/panel/finanzas',
+  opciones?: OpcionesAccion & { soloPastor?: boolean },
+): Promise<UserContext> {
+  const ctx = opciones?.soloPastor
+    ? await requirePastorAccion(destinoError, opciones)
+    : await requirePermisoAccion('gestionar_finanzas', destinoError, opciones);
+  if (!finanzasEncendida(ctx.iglesia)) {
+    const inicio = inicioDe(ctx);
+    redirect(
+      `${inicio === '/mi' ? '/mi/comunidad' : inicio}?error=` +
+        encodeURIComponent(
+          'No se ha guardado: Finanzas está apagada en tu iglesia. La enciende el pastor desde Módulos.',
+        ),
     );
   }
   return ctx;

@@ -1,13 +1,25 @@
 import type { Metadata } from 'next';
 import { Archive } from 'lucide-react';
 
-import { requirePastor, requirePermiso } from '@/lib/auth/guard-panel';
-import { opciones } from '@/lib/finanzas/consultas';
+import { requireFinanzas, requirePastor } from '@/lib/auth/guard-panel';
+import { ministeriosParaVincular, opciones } from '@/lib/finanzas/consultas';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
 import { CabeceraPanel } from '../../_components/cabecera';
 import { Contenedor } from '../../_components/contenedor';
-import { archivarCaja, archivarFondo, crearCaja, crearFondo } from '../actions';
+import {
+  archivarCaja,
+  archivarFondo,
+  crearCaja,
+  crearFondo,
+  vincularFondo,
+} from '../actions';
+
+const CONFIRMACIONES: Record<string, string> = {
+  vinculado:
+    'Vinculado. Quien lleva ese ministerio ya ve el fondo en su pestaña «Fondo».',
+  desvinculado: 'Desvinculado. El fondo ya no sale en ningún ministerio.',
+};
 
 export const metadata: Metadata = { title: 'Fondos y cajas' };
 
@@ -21,15 +33,23 @@ export const metadata: Metadata = { title: 'Fondos y cajas' };
 export default async function AjustesFinanzasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
   // Las dos puertas de los dos layouts, también aquí: el layout no protege la
   // página (CLAUDE.md). Hoy el pastor pasa la de finanzas siempre; si eso
   // cambia, esta página no debe enterarse tarde.
-  await requirePermiso('gestionar_finanzas');
+  await requireFinanzas();
   const ctx = await requirePastor();
-  const { error } = await searchParams;
-  const { fondos, cajas } = await opciones(ctx);
+  const { error, guardado } = await searchParams;
+  const [{ fondos, cajas }, ministerios] = await Promise.all([
+    opciones(ctx),
+    ministeriosParaVincular(ctx),
+  ]);
+  // Qué ministerio tiene ya fondo, para no ofrecerlo en el desplegable de otro:
+  // `uq_fondos_ministerio` lo rechazaría, y mejor no ofrecerlo que rebotar.
+  const conFondo = new Map(
+    fondos.flatMap((f) => (f.ministerioId ? [[f.ministerioId, f.id] as const] : [])),
+  );
 
   return (
     <>
@@ -40,33 +60,75 @@ export default async function AjustesFinanzasPage({
 
       <Contenedor ancho="formulario">
         {error && <Aviso>{error}</Aviso>}
+        {guardado && Object.hasOwn(CONFIRMACIONES, guardado) && (
+          <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
+        )}
 
         <Seccion
           titulo="Fondos"
-          explicacion="De quién es el dinero. Lo que se da para misiones o para la obra no se puede gastar en otra cosa, y separarlo aquí es lo que permite decir en la asamblea cuánto hay de cada."
+          explicacion="De quién es el dinero. Lo que se da para misiones o para la obra no se puede gastar en otra cosa, y separarlo aquí es lo que permite decir en la asamblea cuánto hay de cada. Si un fondo es de un ministerio —Alimentos, de Acción social—, vincúlalo: quien lo lleva verá su saldo y sus gastos, sin poder tocarlos."
         >
           <ul className="flex flex-col">
             {fondos.map((f) => (
               <li
                 key={f.id}
-                className="flex items-center justify-between gap-3 border-b border-border py-2.5 last:border-b-0"
+                className="flex flex-col gap-2 border-b border-border py-2.5 last:border-b-0"
               >
-                <span className="truncate text-[14.5px] font-medium">
-                  {f.nombre}
-                  {f.esGeneral && (
-                    <span className="ml-2 text-[12px] font-normal text-muted-foreground">
-                      por defecto
-                    </span>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="truncate text-[14.5px] font-medium">
+                    {f.nombre}
+                    {f.esGeneral && (
+                      <span className="ml-2 text-[12px] font-normal text-muted-foreground">
+                        por defecto
+                      </span>
+                    )}
+                  </span>
+                  {/* El general no se archiva: sin él, un ingreso sin designar no
+                      tiene dónde caer y el formulario se queda sin defecto. */}
+                  {!f.esGeneral && (
+                    <form action={archivarFondo}>
+                      <input type="hidden" name="id" value={f.id} />
+                      <Button type="submit" variant="ghost" className="h-8 text-[13px]">
+                        <Archive className="size-[15px]" strokeWidth={1.7} />
+                        Archivar
+                      </Button>
+                    </form>
                   )}
-                </span>
-                {/* El general no se archiva: sin él, un ingreso sin designar no
-                    tiene dónde caer y el formulario se queda sin defecto. */}
+                </div>
+
+                {/* El general no: es el dinero de toda la iglesia, y vinculado
+                    su líder vería cada gasto de la congregación. */}
                 {!f.esGeneral && (
-                  <form action={archivarFondo}>
+                  <form
+                    action={vincularFondo}
+                    className="flex flex-wrap items-end gap-2"
+                  >
                     <input type="hidden" name="id" value={f.id} />
-                    <Button type="submit" variant="ghost" className="h-8 text-[13px]">
-                      <Archive className="size-[15px]" strokeWidth={1.7} />
-                      Archivar
+                    {/* Sin tamaño de letra en el `select`: la regla de 16 px
+                        del móvil de `globals.css` está en `@layer base`, y una
+                        utilidad la pisaría (Safari ampliaría la página). */}
+                    <label className="t-label flex min-w-[180px] flex-1 flex-col gap-1 text-muted-foreground">
+                      Es el fondo de
+                      <select
+                        name="ministerioId"
+                        defaultValue={f.ministerioId ?? ''}
+                        className="h-9 rounded-lg border border-border bg-surface-alt px-2.5 text-foreground"
+                      >
+                        <option value="">Ningún ministerio</option>
+                        {ministerios.map((m) => {
+                          const otro = conFondo.get(m.id);
+                          const ocupado = otro !== undefined && otro !== f.id;
+                          return (
+                            <option key={m.id} value={m.id} disabled={ocupado}>
+                              {m.nombre}
+                              {ocupado ? ' (ya tiene fondo)' : ''}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </label>
+                    <Button type="submit" variant="outline" size="sm">
+                      Guardar
                     </Button>
                   </form>
                 )}
