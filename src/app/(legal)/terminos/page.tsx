@@ -126,6 +126,8 @@ export default function TerminosPage() {
         <P>
           Quien se apunta a un evento abierto sí puede estar: te dio permiso él
           mismo al apuntarse. Esos datos valen para ese evento y para nada más.
+          Y quien recibe ayuda en tu reparto, si te dio su permiso en la puerta:
+          esos valen para organizar el reparto y para nada más.
         </P>
       </Seccion>
 
@@ -255,6 +257,34 @@ export default function TerminosPage() {
         </P>
 
         <P>
+          <strong className="font-semibold">
+            Del reparto de alimentos u otra ayuda.
+          </strong>{' '}
+          Si activas esa herramienta: de quien recibe, el nombre con que quiera
+          que le llamen, cuántas personas viven en su casa, su teléfono si lo da,
+          su número, qué días vino y si se le entregó, y cuándo y con qué texto
+          dio su permiso. Son personas que en su mayoría no son de tu
+          congregación y que están pasando necesidad. Las personas vulnerables
+          son uno de los criterios de la lista de la AEPD para la evaluación de
+          impacto del artículo 35, y aquí además dan sus datos a una entidad
+          religiosa; con dos criterios, esa lista dice que en la mayoría de los
+          casos la evaluación hace falta. Lo más probable es que tengas que
+          hacerla antes de usarla, y te ayudamos.
+        </P>
+
+        <P>
+          Al usarla te comprometes a tres cosas. A no condicionar la ayuda a que
+          la persona dé sus datos: la herramienta cuenta una entrega sin inscribir
+          a nadie. A leerle el aviso antes de apuntarla, y a no apuntarla si no
+          dice que sí. Y a borrar a quien lleve un año sin venir, que es el plazo
+          que ese aviso le promete. No hay ninguna tarea automática que lo haga:
+          hay un botón para hacerlo de una vez, y otro para borrar a una sola
+          persona si lo pide antes. Ese padrón no tiene ningún campo de texto
+          libre y no lo ve el resto de tu congregación, solo el pastor y quienes
+          sirven en ese ministerio.
+        </P>
+
+        <P>
           Hay campos de texto libre —la nota de una inscripción, el concepto de
           un movimiento, las notas pastorales, las notas de una reunión y el
           «qué toca ahora» de un contacto— donde puede acabar un dato de salud o
@@ -297,7 +327,9 @@ export default function TerminosPage() {
           <li>
             Aplicar las medidas del artículo 32. En concreto: cifrado en
             tránsito, control de acceso por persona y por permiso, aislamiento
-            entre congregaciones impuesto por la propia base de datos, y registro
+            entre congregaciones impuesto por la propia base de datos —y, en el
+            padrón del reparto, también entre los equipos de una misma
+            iglesia—, y registro
             de los cambios sobre las fichas de miembros y sobre los eventos, con
             quién los hizo y cuándo.
           </li>

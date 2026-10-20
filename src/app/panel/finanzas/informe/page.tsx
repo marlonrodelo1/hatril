@@ -5,7 +5,7 @@ import { libro, resumen, saldosPorFondo } from '@/lib/finanzas/consultas';
 import { mesEnLaIglesia } from '@/lib/fecha/hoy';
 import { formatearDinero } from '@/lib/format/dinero';
 import type { Moneda } from '@/lib/db/schema';
-import { BotonImprimir } from './_components/boton-imprimir';
+import { BotonImprimir } from '@/components/boton-imprimir';
 
 export const metadata: Metadata = {
   title: 'Informe del mes',

@@ -39,7 +39,9 @@ export function AvisoSuscripcion({ ctx }: { ctx: UserContext }) {
   if (!convieneAvisar(estado)) return null;
 
   return (
-    <div className="flex items-start gap-2.5 border-b border-primary/40 bg-primary/5 px-5 py-2.5 text-[13px] leading-snug sm:px-8">
+    // Fuera del papel: el aviso de la prueba o del pago no pinta nada encima
+    // del informe del mes que se lleva al banco de alimentos o a la asamblea.
+    <div className="flex items-start gap-2.5 border-b border-primary/40 bg-primary/5 px-5 py-2.5 text-[13px] leading-snug sm:px-8 print:hidden">
       <TriangleAlert
         className="mt-px size-4 flex-none text-primary"
         strokeWidth={1.9}

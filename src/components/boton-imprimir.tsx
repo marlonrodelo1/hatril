@@ -10,6 +10,9 @@ import { Button } from '@/components/ui/button';
  * Sale a su propio fichero en vez de marcar la página con `'use client'`: así la
  * página sigue siendo servidor y las consultas de la caja no cruzan al
  * navegador. Es la única línea de este informe que necesita JavaScript.
+ *
+ * Vive en `src/components` y no junto al informe de finanzas porque lo usan dos
+ * informes: el de la caja y el del reparto.
  */
 export function BotonImprimir() {
   return (

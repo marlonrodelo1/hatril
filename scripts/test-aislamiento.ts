@@ -25,7 +25,10 @@
 import postgres from 'postgres';
 
 // La aplicación de verdad. Ver `comprobarWithUser` más abajo.
+import { sql as dsql } from 'drizzle-orm';
 import { withUser } from '../src/lib/db/with-tenant';
+// Solo para buscar las cuentas de la demo; ver `comprobarRepartoConLaDemo`.
+import { dbAdmin } from '../src/lib/db/client';
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -88,6 +91,25 @@ declare
   CAN_A uuid;
   CAN_A2 uuid;
   CAN_B uuid;
+  -- Reparto (0042). Un equipo de reparto en cada iglesia y tres cuentas de
+  -- Betania con rol miembro: una voluntaria del reparto, un colider del reparto
+  -- y un voluntario de OTRO equipo, que es a quien la RLS nueva tiene que dejar
+  -- fuera aunque sea de la misma iglesia.
+  MIN_REP   constant uuid := 'e0000000-0000-4000-8000-0000000000a3';
+  MIN_REP_B constant uuid := 'e0000000-0000-4000-8000-0000000000b3';
+  USR_V     constant uuid := 'c1000000-0000-4000-8000-0000000000c1';
+  USR_L     constant uuid := 'c2000000-0000-4000-8000-0000000000c2';
+  USR_O     constant uuid := 'c3000000-0000-4000-8000-0000000000c3';
+  MIE_V uuid;
+  MIE_L uuid;
+  MIE_O uuid;
+  BEN_A uuid;
+  BEN_A2 uuid;
+  BEN_B uuid;
+  JOR_A uuid;
+  JOR_B uuid;
+  JOR_OTRO uuid;
+  ENT_A uuid;
   -- Lo que responde inscribir_en_evento. Un solo escalar a proposito: ver la
   -- cabecera de la 0024.
   v_res text;
@@ -1726,6 +1748,352 @@ begin
 
   execute 'reset role';
 
+  -- ==========================================================================
+  -- REPARTO (HT126, HT127) -- el padron de quien recibe, por equipo
+  --
+  -- La unica tabla del repo con RLS por MINISTERIO y no por iglesia: son
+  -- personas vulnerables que no son de la congregacion. Lo que se prueba aqui
+  -- que no se probaba en ningun otro modulo es que alguien de la MISMA iglesia,
+  -- con cuenta activa y sirviendo en otro equipo, no ve nada.
+  -- ==========================================================================
+
+  -- Sin claims: el montaje lo hace el sistema, no una persona.
+  perform set_config('request.jwt.claims', '', true);
+
+  insert into public.ministerios (id, iglesia_id, nombre, tipo)
+  values (MIN_REP,   IGL_A, 'Reparto test',      'accion_social'),
+         (MIN_REP_B, IGL_B, 'Reparto Sion test', 'accion_social');
+
+  insert into public.miembros (iglesia_id, nombre) values (IGL_A, 'Vero voluntaria')
+  returning id into MIE_V;
+  insert into public.miembros (iglesia_id, nombre) values (IGL_A, 'Lola colider')
+  returning id into MIE_L;
+  insert into public.miembros (iglesia_id, nombre) values (IGL_A, 'Omar de alabanza')
+  returning id into MIE_O;
+
+  insert into public.iglesia_usuarios (iglesia_id, auth_user_id, rol, estado, miembro_id)
+  values (IGL_A, USR_V, 'miembro', 'activo', MIE_V),
+         (IGL_A, USR_L, 'miembro', 'activo', MIE_L),
+         (IGL_A, USR_O, 'miembro', 'activo', MIE_O);
+
+  insert into public.ministerio_miembros (iglesia_id, ministerio_id, miembro_id, rol_equipo)
+  values (IGL_A, MIN_REP, MIE_V, 'voluntario'),
+         (IGL_A, MIN_REP, MIE_L, 'colider'),
+         (IGL_A, MIN_A,   MIE_O, 'voluntario');
+
+  -- HT126: el ministerio del padron es de su iglesia.
+  begin
+    insert into public.reparto_beneficiarios
+      (iglesia_id, ministerio_id, nombre, consentimiento_version)
+    values (IGL_A, MIN_REP_B, 'Cruzada', 'reparto-2026-10');
+    r := r || E'  FALLO el padron de Betania acepto el reparto de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT126%'
+                   then E'  OK   HT126 impide una persona con el reparto de otra iglesia\\n'
+                   else format(E'  FALLO error inesperado (HT126 padron): %s\\n', sqlerrm) end;
+  end;
+
+  insert into public.reparto_beneficiarios
+    (iglesia_id, ministerio_id, nombre, personas_hogar, consentimiento_version, numero)
+  values (IGL_A, MIN_REP, 'Familia uno', 4, 'reparto-2026-10', 77)
+  returning id, numero into BEN_A, n;
+  r := r || format(E'  %s el numero lo pone la base y empieza en 1 (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  insert into public.reparto_beneficiarios
+    (iglesia_id, ministerio_id, nombre, consentimiento_version)
+  values (IGL_A, MIN_REP, 'Familia dos', 'reparto-2026-10')
+  returning id, numero into BEN_A2, n;
+  r := r || format(E'  %s el numero es correlativo por equipo (%s)\\n',
+                   case when n = 2 then 'OK  ' else 'FALLO' end, n);
+
+  insert into public.reparto_beneficiarios
+    (iglesia_id, ministerio_id, nombre, consentimiento_version)
+  values (IGL_B, MIN_REP_B, 'Familia de Sion', 'reparto-2026-10')
+  returning id, numero into BEN_B, n;
+  r := r || format(E'  %s el numero reinicia en otro reparto (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  -- Sin el permiso de la puerta no se apunta a nadie: la version es obligatoria
+  -- y tiene que ser la del aviso del reparto, no la de la politica.
+  begin
+    insert into public.reparto_beneficiarios
+      (iglesia_id, ministerio_id, nombre, consentimiento_version)
+    values (IGL_A, MIN_REP, 'Sin aviso', 'privacidad-2026-09');
+    r := r || E'  FALLO el padron acepto una version de aviso que no es del reparto\\n';
+  exception when check_violation then
+    r := r || E'  OK   sin la version del aviso del reparto no se apunta a nadie\\n';
+  end;
+
+  begin
+    insert into public.reparto_beneficiarios
+      (iglesia_id, ministerio_id, nombre, personas_hogar, consentimiento_version)
+    values (IGL_A, MIN_REP, 'Hogar enorme', 25, 'reparto-2026-10');
+    r := r || E'  FALLO el padron acepto un hogar de 25 personas\\n';
+  exception when check_violation then
+    r := r || E'  OK   un hogar tiene entre 1 y 20 personas\\n';
+  end;
+
+  insert into public.reparto_jornadas (iglesia_id, ministerio_id, fecha)
+  values (IGL_A, MIN_REP, date '2026-10-18') returning id into JOR_A;
+  insert into public.reparto_jornadas (iglesia_id, ministerio_id, fecha)
+  values (IGL_B, MIN_REP_B, date '2026-10-18') returning id into JOR_B;
+  -- Un "reparto" del equipo de alabanza, para probar el cruce entre equipos.
+  insert into public.reparto_jornadas (iglesia_id, ministerio_id, fecha)
+  values (IGL_A, MIN_A, date '2026-10-18') returning id into JOR_OTRO;
+
+  begin
+    insert into public.reparto_jornadas (iglesia_id, ministerio_id, fecha)
+    values (IGL_A, MIN_REP, date '2026-10-18');
+    r := r || E'  FALLO se abrieron dos repartos el mismo dia\\n';
+  exception when unique_violation then
+    r := r || E'  OK   un solo reparto por equipo y dia\\n';
+  end;
+
+  -- HT126: ni el dia de otro equipo, ni una persona de otro padron.
+  begin
+    insert into public.reparto_entregas (iglesia_id, ministerio_id, jornada_id, beneficiario_id)
+    values (IGL_A, MIN_REP, JOR_OTRO, BEN_A);
+    r := r || E'  FALLO una entrega del reparto colgo de un dia de otro equipo\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT126%'
+                   then E'  OK   HT126 impide colgar una entrega de un dia de otro equipo\\n'
+                   else format(E'  FALLO error inesperado (HT126 dia): %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    insert into public.reparto_entregas (iglesia_id, ministerio_id, jornada_id, beneficiario_id)
+    values (IGL_A, MIN_A, JOR_OTRO, BEN_A);
+    r := r || E'  FALLO otro equipo apunto una entrega a alguien del padron del reparto\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT126%'
+                   then E'  OK   HT126 impide leer por la puerta lateral el padron de otro equipo\\n'
+                   else format(E'  FALLO error inesperado (HT126 persona): %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    insert into public.reparto_entregas (iglesia_id, ministerio_id, jornada_id, beneficiario_id)
+    values (IGL_A, MIN_REP, JOR_A, null);
+    r := r || E'  FALLO se apunto una entrega sin persona\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT126%'
+                   then E'  OK   una entrega sin persona va al contador, no a una fila\\n'
+                   else format(E'  FALLO error inesperado (HT126 sin persona): %s\\n', sqlerrm) end;
+  end;
+
+  -- La base copia las personas del hogar aunque se le mande otra cifra.
+  insert into public.reparto_entregas
+    (iglesia_id, ministerio_id, jornada_id, beneficiario_id, personas_hogar)
+  values (IGL_A, MIN_REP, JOR_A, BEN_A, 1)
+  returning id, personas_hogar into ENT_A, n;
+  r := r || format(E'  %s la entrega copia las personas del hogar del padron (%s)\\n',
+                   case when n = 4 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.reparto_entregas (iglesia_id, ministerio_id, jornada_id, beneficiario_id)
+    values (IGL_A, MIN_REP, JOR_A, BEN_A);
+    r := r || E'  FALLO la misma persona recibio dos veces el mismo dia\\n';
+  exception when unique_violation then
+    r := r || E'  OK   la misma persona no recibe dos veces el mismo dia\\n';
+  end;
+
+  begin
+    update public.reparto_entregas set entregado = true where id = ENT_A;
+    r := r || E'  FALLO una entrega quedo entregada sin hora\\n';
+  exception when check_violation then
+    r := r || E'  OK   entregado y su hora van siempre juntos\\n';
+  end;
+
+  -- --- La voluntaria del reparto ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_V), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.reparto_beneficiarios;
+  r := r || format(E'  %s quien sirve en el reparto ve su padron (%s)\\n',
+                   case when n = 2 then 'OK  ' else 'FALLO' end, n);
+
+  update public.reparto_entregas set entregado = true, entregado_at = now() where id = ENT_A;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s quien sirve en el reparto marca una entrega (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  delete from public.reparto_beneficiarios where id = BEN_A2;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s una voluntaria no borra a nadie del padron (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  -- HT127, desde una sesion.
+  begin
+    update public.reparto_beneficiarios set numero = 99 where id = BEN_A;
+    r := r || E'  FALLO cambio el numero de una persona del padron\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT127%'
+                   then E'  OK   HT127 impide cambiar el numero\\n'
+                   else format(E'  FALLO error inesperado (HT127 numero): %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    update public.reparto_beneficiarios set consentimiento_version = 'reparto-2099-01' where id = BEN_A;
+    r := r || E'  FALLO se reescribio el permiso de una persona\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT127%'
+                   then E'  OK   HT127 impide reescribir el permiso de la puerta\\n'
+                   else format(E'  FALLO error inesperado (HT127 permiso): %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    update public.reparto_entregas set beneficiario_id = BEN_A2 where id = ENT_A;
+    r := r || E'  FALLO una entrega cambio de persona\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT127%'
+                   then E'  OK   HT127 impide cambiar a quien se le entrego\\n'
+                   else format(E'  FALLO error inesperado (HT127 entrega): %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    update public.reparto_jornadas set fecha = date '2026-10-11' where id = JOR_A;
+    r := r || E'  FALLO un dia de reparto cambio de fecha\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT127%'
+                   then E'  OK   HT127 impide mover un reparto de dia\\n'
+                   else format(E'  FALLO error inesperado (HT127 fecha): %s\\n', sqlerrm) end;
+  end;
+
+  select count(*) into n from public.reparto_beneficiarios where iglesia_id = IGL_B;
+  r := r || format(E'  %s la voluntaria no ve el padron de Sion (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- --- Un voluntario de OTRO equipo de la misma iglesia ---
+  -- Cuenta activa en Betania, rol miembro, sirve en alabanza. Con la RLS por
+  -- iglesia de los demas modulos leeria el padron entero.
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_O), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.reparto_beneficiarios;
+  r := r || format(E'  %s un voluntario de otro equipo no ve el padron (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.reparto_entregas;
+  r := r || format(E'  %s ni a quien vino cada dia (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.reparto_jornadas where ministerio_id = MIN_REP;
+  r := r || format(E'  %s ni los dias de reparto (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.reparto_beneficiarios
+      (iglesia_id, ministerio_id, nombre, consentimiento_version)
+    values (IGL_A, MIN_REP, 'Colada', 'reparto-2026-10');
+    r := r || E'  FALLO un voluntario de otro equipo apunto a alguien en el padron\\n';
+  exception when others then
+    r := r || E'  OK   ni apunta a nadie en el padron de otro equipo\\n';
+  end;
+
+  execute 'reset role';
+
+  -- --- El colider del reparto borra, y borrar no cambia lo repartido ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_L), true);
+  execute 'set local role hatril_app';
+
+  delete from public.reparto_beneficiarios where id = BEN_A;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s el colider borra a una persona del padron (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.reparto_entregas
+   where id = ENT_A and beneficiario_id is null and personas_hogar = 4 and entregado;
+  r := r || format(E'  %s su entrega sigue contada, sin nadie detras (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- --- El pastor de Betania lo ve; el de Sion, no ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.reparto_beneficiarios where ministerio_id = MIN_REP;
+  r := r || format(E'  %s el pastor ve el padron de su iglesia (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.reparto_beneficiarios where iglesia_id = IGL_A;
+  r := r || format(E'  %s Sion no ve el padron de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.reparto_entregas where iglesia_id = IGL_A;
+  r := r || format(E'  %s ni sus entregas (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.reparto_entregas (iglesia_id, ministerio_id, jornada_id, beneficiario_id)
+    values (IGL_A, MIN_REP, JOR_A, BEN_A2);
+    r := r || E'  FALLO Sion apunto una entrega en el reparto de Betania\\n';
+  exception when others then
+    r := r || E'  OK   ni escribe en el reparto de Betania\\n';
+  end;
+
+  execute 'reset role';
+
+  -- --- anon, authenticated y service_role ---
+  execute 'set local role anon';
+  begin
+    select count(*) into n from public.reparto_beneficiarios;
+    r := r || format(E'  FALLO anon lee el padron del reparto (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega al padron del reparto\\n';
+  end;
+  begin
+    select count(*) into n from public.reparto_entregas;
+    r := r || format(E'  FALLO anon lee las entregas (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a las entregas\\n';
+  end;
+  execute 'reset role';
+
+  execute 'set local role authenticated';
+  begin
+    select count(*) into n from public.reparto_beneficiarios;
+    r := r || format(E'  FALLO authenticated lee el padron del reparto (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   authenticated no llega al padron del reparto\\n';
+  end;
+  execute 'reset role';
+
+  execute 'set local role service_role';
+  begin
+    select count(*) into n from public.reparto_beneficiarios;
+    r := r || format(E'  FALLO service_role lee el padron del reparto (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   service_role no llega al padron del reparto\\n';
+  end;
+  begin
+    select count(*) into n from public.reparto_jornadas;
+    r := r || format(E'  FALLO service_role lee los dias de reparto (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   service_role no llega a los dias de reparto\\n';
+  end;
+  execute 'reset role';
+
+  -- Las dos funciones de equipo, solo para hatril_app.
+  select count(*) into n
+    from (values ('anon'), ('authenticated'), ('service_role')) as v(rol)
+   where has_function_privilege(v.rol, 'public.sirve_en_ministerio(uuid)', 'EXECUTE')
+      or has_function_privilege(v.rol, 'public.lidera_ministerio(uuid)', 'EXECUTE');
+  r := r || format(E'  %s sirve_en_ministerio y lidera_ministerio cerradas a anon, authenticated y service_role (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
   -- Abortar a proposito: revierte los datos de prueba y devuelve el informe.
   raise exception '%', r;
 end $$;
@@ -1853,6 +2221,15 @@ async function comprobarWithUser(): Promise<string[]> {
     );
     lineas.push('  OK   withUser() puede consultar las listas de canciones');
 
+    // El reparto, por lo mismo: la fase SQL prueba que anon y service_role NO
+    // llegan, y eso deja sin probar que `hatril_app` SÍ.
+    await withUser(USR_A, (tx) =>
+      tx.execute(`select 1 from reparto_beneficiarios limit 1`),
+    );
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from reparto_jornadas limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from reparto_entregas limit 1`));
+    lineas.push('  OK   withUser() puede consultar el padron, los dias y las entregas del reparto');
+
     // LA FUGA, CAZADA POR LA FUNCIÓN QUE USA LA APLICACIÓN.
     //
     // `USR_A` aquí no es el de la fase de arriba: aquella transacción se revirtió
@@ -1879,6 +2256,88 @@ async function comprobarWithUser(): Promise<string[]> {
   } catch (err) {
     const e = err as { message?: string };
     lineas.push(`  FALLO withUser(): ${(e.message ?? String(err)).slice(0, 90)}`);
+  }
+
+  return lineas.concat(await comprobarRepartoConLaDemo());
+}
+
+/**
+ * El recorte POR EQUIPO, por `withUser()` y con cuentas de verdad.
+ *
+ * La fase SQL lo prueba con datos que se revierten; esto lo prueba con la
+ * función que usa la aplicación, que es lo que la fase SQL no puede hacer —sus
+ * datos ya no existen cuando llega aquí—. Usa la demo de Betania: `lider@` es
+ * responsable de Alabanza y NO está en Acción social, y `colider@` es colíder de
+ * Acción social. Con la RLS por iglesia de los otros módulos, `lider@` vería el
+ * padrón entero.
+ *
+ * Caveat honesto, como el de los ministerios de arriba: contra una base sin la
+ * demo, o con el padrón de Acción social vacío, esto no puede probar nada y lo
+ * dice en vez de pasar en verde. La autoritativa es la fase SQL.
+ */
+async function comprobarRepartoConLaDemo(): Promise<string[]> {
+  const lineas: string[] = [];
+
+  type Fila = Record<string, string | null>;
+  const primera = (filas: unknown): Fila | undefined =>
+    (filas as { rows?: Fila[] }).rows?.[0] ?? (filas as Fila[])[0];
+
+  try {
+    const demo = primera(
+      await dbAdmin.execute(dsql`
+        select
+          (select id::text from auth.users where email = 'lider@hatril.test')   as lider,
+          (select id::text from auth.users where email = 'colider@hatril.test') as colider,
+          (select m.id::text from public.ministerios m
+             join public.iglesias i on i.id = m.iglesia_id
+            where i.slug = 'betania' and lower(m.nombre) = lower('Acción social')) as ministerio
+      `),
+    );
+
+    if (!demo?.lider || !demo.colider || !demo.ministerio) {
+      lineas.push('  --   sin la demo de Betania: el recorte por equipo solo lo prueba la fase SQL');
+      return lineas;
+    }
+
+    const ministerio = demo.ministerio;
+    const contar = async (cuenta: string) =>
+      Number(
+        primera(
+          await withUser(cuenta, (tx) =>
+            tx.execute(
+              dsql`select count(*)::text as n from reparto_beneficiarios where ministerio_id = ${ministerio}`,
+            ),
+          ),
+        )?.n ?? -1,
+      );
+
+    const total = Number(
+      primera(
+        await dbAdmin.execute(
+          dsql`select count(*)::text as n from reparto_beneficiarios where ministerio_id = ${ministerio}`,
+        ),
+      )?.n ?? -1,
+    );
+
+    if (total <= 0) {
+      lineas.push('  --   el padron de Accion social de la demo esta vacio: no hay nada que esconder');
+      return lineas;
+    }
+
+    const loVeElLider = await contar(demo.lider);
+    lineas.push(
+      `  ${loVeElLider === 0 ? 'OK  ' : 'FALLO'} withUser() de lider@, de otro equipo, no ve el padron del reparto (${loVeElLider} de ${total})`,
+    );
+
+    const loVeElColider = await contar(demo.colider);
+    lineas.push(
+      `  ${loVeElColider === total ? 'OK  ' : 'FALLO'} withUser() de colider@ ve el padron de su reparto (${loVeElColider} de ${total})`,
+    );
+  } catch (err) {
+    const e = err as { message?: string; cause?: { message?: string } };
+    lineas.push(
+      `  FALLO reparto con la demo: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
+    );
   }
 
   return lineas;
