@@ -68,6 +68,17 @@
  * que estar en `rutas()`. Una página nueva sin añadir aquí es un fallo: es la
  * que se quedaría sin puerta sin que nada avisara.
  *
+ * FUERA DEL PANEL, SOLO LO QUE SE AÑADE A PROPÓSITO
+ * -------------------------------------------------
+ * `/mi/equipo/<id>/fondo` enseña los importes del fondo de un ministerio desde
+ * la app, así que entra aquí aunque no cuelgue de `/panel`. Ahí no se rebota con
+ * mensaje: quien no puede recibe un 404 de la PROPIA página (ver
+ * `src/lib/ministerios/en-la-app/guarda.ts`), y para eso está el caso
+ * `'oculta'`, que es el 404 de quien no puede y por eso, además, se mira que no
+ * traiga ningún testigo del pastor. La cobertura de `/mi` no se exige entera
+ * —todavía hay pantallas que no están aquí—: solo las de `FUERA_DEL_PANEL`, que
+ * tienen que existir en disco y estar en `rutas()`.
+ *
  * VARIABLES
  * ---------
  *   PUERTAS_URL       base del servidor (por defecto http://localhost:3000)
@@ -81,7 +92,7 @@
  *                     sabe ver una fuga, no solo de que hoy no la hay.
  */
 
-import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -127,6 +138,10 @@ const IMPRESCINDIBLES = [PASTOR, MIEMBRO];
 // La página a la que todas las cuentas del equipo llegan sin consultar nada de
 // nadie: lo que traiga es el marco del panel de esa cuenta.
 const RUTA_MARCO = '/panel/cuenta/contrasena';
+
+// Las páginas de fuera de `src/app/panel` que este test cubre a propósito, con
+// la misma exigencia que las del panel: existir y estar en `rutas()`.
+const FUERA_DEL_PANEL = ['mi/equipo/[id]/fondo/page.tsx'];
 
 // ============================================
 // 1. La base de demo, en solo lectura
@@ -419,6 +434,9 @@ function testigosEn(texto, testigos) {
  *   'hoy'          la página redirige a /panel/hoy?error=…  (falta permiso o no es pastor)
  *   'min'          la página redirige a /panel/ministerios?error=…  (no lleva ESTE equipo)
  *   '404'          la página da notFound() (herramienta apagada, o no existe)
+ *   'oculta'       la página da notFound() porque esta cuenta no puede verla
+ *                  (la app, `/mi/equipo`): el 404 de '404' y, además, ninguno
+ *                  de los testigos del pastor
  *   'csv' / 403    para los route.ts
  *
  * Por defecto: el pastor pinta, el miembro raso va a /mi y el pastor de Sion,
@@ -612,6 +630,26 @@ function rutas(ids) {
     [COLIDER]: 'min',
     [SECRETARIA]: 'min',
   });
+  // El mismo fondo desde la app. Las puertas son las de la pestaña, puestas a
+  // mano en la página: llevar Acción social desde dentro (el pastor, o Sara
+  // como colíder) y que haya fondo vinculado. Enlace es voluntario de Acción
+  // social: ve la portada del equipo, pero no los importes. A todos los demás
+  // la zona les da 404, no un rebote, y el pastor de Sion se queda en la
+  // suscripción antes de que nada se consulte (el caso por defecto).
+  pagina(
+    ids.fondoAccionSocial ? '/mi/equipo/<Acción social>/fondo' : '/mi/equipo/<Acción social>/fondo (sin fondo vinculado)',
+    `/mi/equipo/${ids.accionSocial}/fondo`,
+    'mi/equipo/[id]/fondo/page.tsx',
+    {
+      [PASTOR]: conFondo,
+      [COLIDER]: conFondo,
+      [MIEMBRO]: 'oculta',
+      [LIDER]: 'oculta',
+      [SECRETARIA]: 'oculta',
+      [CONSOLIDACION]: 'oculta',
+      [ENLACE]: 'oculta',
+    },
+  );
 
   // Turnos está APAGADO en Acción social: ni el pastor ni el colíder la tienen.
   pagina('…<Acción social>/turnos (apagado)', `${S}/turnos`, 'panel/ministerios/[id]/turnos/page.tsx', {
@@ -661,7 +699,11 @@ function sinCubrir(defs) {
     .map((f) => 'panel/' + String(f).replaceAll('\\', '/'))
     .filter((f) => /\/(page\.tsx|route\.ts)$/.test(f));
   const cubiertos = new Set(defs.map((d) => d.pagePath ?? d.fichero));
-  return enDisco.filter((f) => !cubiertos.has(f)).sort();
+  // Las de fuera del panel, también si alguien las mueve o las borra: una
+  // entrada de FUERA_DEL_PANEL que ya no está en disco es una ruta que este
+  // test cree cubrir y no cubre.
+  const fuera = FUERA_DEL_PANEL.filter((f) => !existsSync(join(raiz, f)) || !cubiertos.has(f));
+  return [...enDisco.filter((f) => !cubiertos.has(f)), ...fuera].sort();
 }
 
 function casaDestino(esperado, destino) {
@@ -677,6 +719,7 @@ const DESCRIPCION = {
   hoy: 'la página corta → /panel/hoy?error',
   min: 'la página corta → /panel/ministerios?error',
   404: 'la página da 404',
+  oculta: 'la página da 404 (no puede verla)',
   csv: '200 text/csv',
   403: '403',
 };
@@ -737,16 +780,28 @@ async function comprobarPagina(def, sesiones, testigos, marco) {
     const problemas = [];
     let resumenDatos = '';
 
-    if (esperado === 'pinta' || esperado === '404') {
+    if (esperado === 'pinta' || esperado === '404' || esperado === 'oculta') {
+      const estado = esperado === 'pinta' ? 'pinta' : '404';
       const statusEsperado = esperado === 'pinta' ? 200 : 404;
       if (normal.status !== statusEsperado) problemas.push(`HTML ${normal.status}${normal.location ? '→' + normal.location : ''}`);
       if (rsc.status !== 200) problemas.push(`RSC ${rsc.status}`);
-      if (segRsc.estado !== esperado) problemas.push(`RSC ${describirSegmento(segRsc)}`);
-      if (segHtml.estado !== esperado && segHtml.estado !== 'sin-metadatos') problemas.push(`HTML ${describirSegmento(segHtml)}`);
+      if (segRsc.estado !== estado) problemas.push(`RSC ${describirSegmento(segRsc)}`);
+      if (segHtml.estado !== estado && segHtml.estado !== 'sin-metadatos') problemas.push(`HTML ${describirSegmento(segHtml)}`);
       if (segRsc.pagina && segRsc.pagina !== def.pagePath) problemas.push(`pagePath ${segRsc.pagina}`);
       if (cuenta === PASTOR) {
         const propios = [...vistos].filter((v) => !marco[PASTOR].has(v));
         resumenDatos = ` · ${vistos.size} testigos (${propios.length} propios de la página)`;
+      }
+      // El 404 de quien no puede: cortar no basta, tampoco puede traer nada de
+      // lo que trae la del pastor y esta cuenta no vea ya en su marco.
+      if (esperado === 'oculta') {
+        const referencia = respuestas[PASTOR] ?? new Set();
+        const fugas = [...vistos].filter((v) => referencia.has(v) && !(marco[cuenta]?.has(v)));
+        if (fugas.length) {
+          const tipos = [...new Set(testigos.filter((t) => fugas.includes(t.valor)).map((t) => t.tipo))];
+          problemas.push(`FUGA de ${fugas.length} testigos (${tipos.join(', ')})`);
+        }
+        resumenDatos = ` · ${fugas.length}/${referencia.size} testigos del pastor`;
       }
     } else {
       // Quien NO puede: la página corta ella sola, al destino que toca, y no
