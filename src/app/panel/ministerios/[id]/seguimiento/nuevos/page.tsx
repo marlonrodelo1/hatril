@@ -1,9 +1,8 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { ChevronRight, CircleAlert, Info, Phone, UserPlus } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { esPastor, puede } from '@/lib/auth/permisos';
 import {
   DIAS_EN_NUEVOS,
@@ -14,7 +13,6 @@ import {
   type NuevosDelSeguimiento,
 } from '@/lib/seguimiento/consultas';
 import { RESULTADOS } from '@/lib/seguimiento/catalogos';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
 import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { ESTADOS } from '@/lib/miembros/estados';
 import { iniciales } from '@/lib/format/iniciales';
@@ -50,8 +48,9 @@ export const metadata: Metadata = { title: 'Nuevos' };
  * su consentimiento propio, que necesitan migración— eso sí será una pieza con
  * datos y ruta propios, y le tocará su interruptor. Esta vista se quedará aquí.
  *
- * Mismas tres llaves que los ausentes, porque las pone el `layout.tsx` de la
- * carpeta: `ver_seguimiento`, llevar este ministerio y el módulo encendido.
+ * Mismas tres llaves que los ausentes: `ver_seguimiento`, llevar este
+ * ministerio y el módulo encendido. Las pone esta página, no el `layout.tsx` de
+ * la carpeta, que solo las repite para la navegación (ver CLAUDE.md).
  */
 export default async function NuevosPage({
   params,
@@ -61,11 +60,11 @@ export default async function NuevosPage({
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
   const { id } = await params;
-  const ctx = await requireIglesia();
+  // Las tres puertas de su layout aquí, y no solo allí: ver CLAUDE.md.
+  const { ctx, ministerio } = await requireModuloMinisterio(id, 'seguimiento', {
+    permiso: 'ver_seguimiento',
+  });
   const { error, guardado } = await searchParams;
-
-  const ministerio = await obtenerMinisterio(ctx, id);
-  if (!ministerio) notFound();
 
   const { personas, hayListas, ausentes } = await nuevosDelSeguimiento(ctx, id);
 
@@ -103,7 +102,7 @@ export default async function NuevosPage({
         />
 
         {error && <Aviso>{error}</Aviso>}
-        {guardado && CONFIRMACIONES[guardado] && (
+        {guardado && Object.hasOwn(CONFIRMACIONES, guardado) && (
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
         )}
 

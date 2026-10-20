@@ -1,11 +1,9 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Info } from 'lucide-react';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { esPastor } from '@/lib/auth/permisos';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
 import { radioDeLaIglesia } from '@/lib/emisora/consultas';
 import {
   DIAS_PARRILLA,
@@ -53,11 +51,10 @@ export default async function EmisoraPage({
   searchParams: Promise<{ error?: string; guardado?: string }>;
 }) {
   const { id } = await params;
-  const ctx = await requireIglesia();
+  // Las dos puertas de su layout aquí, y no solo allí: ver CLAUDE.md. La ancha,
+  // sin `desdeDentro`, como el layout y `guardarEmisora`.
+  const { ctx, ministerio } = await requireModuloMinisterio(id, 'emisora');
   const { error, guardado } = await searchParams;
-
-  const ministerio = await obtenerMinisterio(ctx, id);
-  if (!ministerio) notFound();
 
   const emisora = emisoraDeModulos(ministerio.modulos);
   const pastor = esPastor(ctx);
@@ -87,7 +84,7 @@ export default async function EmisoraPage({
         <PestanasMinisterio ctx={ctx} ministerio={ministerio} activa="emisora" />
 
         {error && <Aviso>{error}</Aviso>}
-        {guardado && CONFIRMACIONES[guardado] && (
+        {guardado && Object.hasOwn(CONFIRMACIONES, guardado) && (
           <Aviso tipo="ok">
             {otraRadio && guardado === 'guardado'
               ? 'Guardado.'

@@ -1,8 +1,6 @@
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
-import { requireIglesia } from '@/lib/auth/guard-panel';
-import { obtenerMinisterio } from '@/lib/ministerios/consultas';
+import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { sumarDias } from '@/lib/agenda/horarios';
 import { DIAS_EN_NUEVOS } from '@/lib/seguimiento/consultas';
@@ -36,11 +34,11 @@ export default async function AltaVisitantePage({
   searchParams: Promise<{ error?: string; repetido?: string }>;
 }) {
   const { id } = await params;
-  const ctx = await requireIglesia();
+  // Las tres puertas de su layout aquí, y no solo allí: ver CLAUDE.md.
+  const { ctx } = await requireModuloMinisterio(id, 'seguimiento', {
+    permiso: 'ver_seguimiento',
+  });
   const { error, repetido } = await searchParams;
-
-  const ministerio = await obtenerMinisterio(ctx, id);
-  if (!ministerio) notFound();
 
   const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
 

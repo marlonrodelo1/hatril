@@ -33,10 +33,10 @@
  * QUÉ HACE
  * --------
  * 1. Lee de la base de demo, en una transacción `read only`, los ids reales de
- *    Betania (Alabanza, Consolidación, Acción social, una reunión, un turno,
- *    una canción, un beneficiario…) y los datos que sirven de testigo: nombres
- *    y teléfonos de personas, correos, direcciones, notas, beneficiarios,
- *    inscritos, canciones, conceptos e importes. No escribe nada.
+ *    Betania (Alabanza, Consolidación, Acción social, la Radio si está, una
+ *    reunión, un turno, una canción, un beneficiario…) y los datos que sirven
+ *    de testigo: nombres y teléfonos de personas, correos, direcciones, notas,
+ *    beneficiarios, inscritos, canciones, conceptos e importes. No escribe nada.
  * 2. Abre sesión sin contraseña para cada cuenta: `generateLink` con la clave
  *    de servicio y `verifyOtp` con la publicable, y monta la cookie de
  *    `@supabase/ssr` a mano. Al terminar revoca cada sesión.
@@ -154,6 +154,13 @@ async function leerDemo() {
         alabanza: min['Alabanza'],
         consolidacion: min['Consolidación'],
         accionSocial: min['Acción social'],
+        // De `seed-radio.sql`, que va aparte de la demo: si falta, la emisora
+        // queda cubierta solo con su caso de herramienta apagada.
+        radio: await uno(sql`
+          select id from ministerios
+           where iglesia_id = ${B} and tipo = 'radio'
+             and coalesce((modulos -> 'emisora' ->> 'activo')::boolean, false)
+           order by orden, nombre limit 1`),
         reunionAlabanza: await uno(sql`
           select id from reuniones where ministerio_id = ${min['Alabanza']}
            order by fecha desc limit 1`),
@@ -557,6 +564,9 @@ function rutas(ids) {
   if (ids.personaSeguimiento) {
     pagina('…<Consolidación>/seguimiento/<persona>', `${C}/seguimiento/${ids.personaSeguimiento}`, 'panel/ministerios/[id]/seguimiento/[miembroId]/page.tsx', SEGUIMIENTO);
   }
+  // Los nuevos son el seguimiento de quien acaba de llegar: las mismas tres llaves.
+  pagina('…<Consolidación>/seguimiento/nuevos', `${C}/seguimiento/nuevos`, 'panel/ministerios/[id]/seguimiento/nuevos/page.tsx', SEGUIMIENTO);
+  pagina('…<Consolidación>/seguimiento/nuevos/alta', `${C}/seguimiento/nuevos/alta`, 'panel/ministerios/[id]/seguimiento/nuevos/alta/page.tsx', SEGUIMIENTO);
 
   // --- Acción social: el reparto es de quien lleva el equipo desde dentro ---
   const ACCION = { [COLIDER]: 'pinta', [LIDER]: 'min', [SECRETARIA]: 'min', [ENLACE]: '/mi' };
@@ -576,6 +586,27 @@ function rutas(ids) {
     [LIDER]: 'min',
     [SECRETARIA]: 'min',
     [ENLACE]: '/mi',
+  });
+
+  // --- Radio: la emisora es de quien lleva el equipo, por la puerta ancha ---
+  // Sara (colider@) es colíder de la Radio; Alabanza y Consolidación son otros
+  // equipos, y llevarlos no abre este.
+  if (ids.radio) {
+    pagina('…<Radio>/emisora', `${M}/${ids.radio}/emisora`, 'panel/ministerios/[id]/emisora/page.tsx', {
+      [COLIDER]: 'pinta',
+      [LIDER]: 'min',
+      [CONSOLIDACION]: 'min',
+      [SECRETARIA]: 'min',
+      [ENLACE]: '/mi',
+    });
+  }
+  // La emisora está APAGADA en Alabanza: quien lleva el equipo llega al 404, y
+  // los demás se quedan antes, en la guarda. Este caso no depende de la Radio.
+  pagina('…<Alabanza>/emisora (apagado)', `${A}/emisora`, 'panel/ministerios/[id]/emisora/page.tsx', {
+    [PASTOR]: '404',
+    [LIDER]: '404',
+    [COLIDER]: 'min',
+    [SECRETARIA]: 'min',
   });
 
   return SOLO ? r.filter((x) => x.etiqueta.includes(SOLO)) : r;
@@ -797,6 +828,7 @@ async function main() {
   const { ids, testigos } = await leerDemo();
   console.log(`Base de demo leída en solo lectura: ${testigos.length} testigos.`);
   if (!ids.movimiento) console.log('  · Betania no tiene movimientos de caja: las páginas de finanzas no traen importes que comparar.');
+  if (!ids.radio) console.log('  · Betania no tiene Radio con la emisora encendida (scripts/seed-radio.sql): la emisora solo se prueba apagada.');
 
   const abiertas = {};
   for (const email of CUENTAS) {
