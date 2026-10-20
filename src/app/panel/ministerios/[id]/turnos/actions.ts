@@ -5,7 +5,10 @@ import { revalidatePath } from 'next/cache';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { requireGestionMinisterioAccion } from '@/lib/auth/guard-panel';
+import {
+  exigirModulo,
+  requireGestionMinisterioAccion,
+} from '@/lib/auth/guard-panel';
 import { withUser } from '@/lib/db';
 import {
   ministerioMiembros,
@@ -50,6 +53,17 @@ import type { UserContext } from '@/lib/auth/user-context';
 
 const turnosDe = (ministerioId: string) =>
   `/panel/ministerios/${ministerioId}/turnos`;
+
+/**
+ * Las dos puertas de cada action de este fichero: quién manda en ESTE equipo,
+ * y que la herramienta de turnos esté encendida. La segunda la cubría solo el
+ * `layout.tsx`, que no corre en una server action.
+ */
+async function guarda(ministerioId: string) {
+  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  await exigirModulo(ctx, ministerioId, 'turnos');
+  return ctx;
+}
 
 function volver(mensaje: string, destino: string): never {
   redirect(`${destino}?error=${encodeURIComponent(mensaje)}`);
@@ -174,7 +188,7 @@ export async function planificarTurnos(
   ministerioId: string,
   formData: FormData,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const base = turnosDe(ministerioId);
 
   const marcados = campos(formData, 'cultos');
@@ -224,7 +238,7 @@ export async function planificarTurnos(
 
 /** Un culto que no está en el horario: una vigilia, un culto especial. */
 export async function crearTurno(ministerioId: string, formData: FormData) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const base = turnosDe(ministerioId);
 
   const leido = EsquemaTurno.safeParse({
@@ -278,7 +292,7 @@ export async function editarTurno(
   turnoId: string,
   formData: FormData,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const destino = `${turnosDe(ministerioId)}/${turnoId}`;
 
   const leido = EsquemaTurno.safeParse({
@@ -321,7 +335,7 @@ export async function editarTurno(
 }
 
 export async function borrarTurno(ministerioId: string, turnoId: string) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const base = turnosDe(ministerioId);
 
   await withUser(ctx.user.id, (tx) =>
@@ -358,7 +372,7 @@ export async function asignarAlTurno(
   turnoId: string,
   formData: FormData,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const destino = `${turnosDe(ministerioId)}/${turnoId}`;
 
   const leido = EsquemaAsignar.safeParse({
@@ -426,7 +440,7 @@ export async function quitarDelTurno(
   turnoId: string,
   asignacionId: string,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const destino = `${turnosDe(ministerioId)}/${turnoId}`;
 
   const turno = await turnoDelMinisterio(ctx, ministerioId, turnoId);
@@ -470,7 +484,7 @@ export async function marcarRespuesta(
   miembroId: string,
   formData: FormData,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const destino = `${turnosDe(ministerioId)}/${turnoId}`;
 
   const leido = EsquemaRespuesta.safeParse(campoObligatorio(formData, 'respuesta'));
@@ -513,7 +527,7 @@ export async function copiarTurno(
   turnoId: string,
   desdeTurnoId: string,
 ) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const destino = `${turnosDe(ministerioId)}/${turnoId}`;
 
   const [turno, origen] = await Promise.all([
@@ -617,7 +631,7 @@ export async function copiarTurno(
  * perdería entre medias.
  */
 export async function guardarPuestos(ministerioId: string, formData: FormData) {
-  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  const ctx = await guarda(ministerioId);
   const base = turnosDe(ministerioId);
 
   const lista = limpiarPuestos((campo(formData, 'puestos') ?? '').split(/\r?\n/));

@@ -4,6 +4,7 @@ import { Users } from 'lucide-react';
 import {
   esPastor,
   puede,
+  puedeGestionarDesdeDentro,
   puedeGestionarMinisterio,
   type ContextoPermisos,
 } from '@/lib/auth/permisos';
@@ -54,11 +55,16 @@ export function PestanasMinisterio({
   // seguimiento: llevar el ministerio no basta para leer por qué alguien dejó
   // de venir.
   const veSeguimiento = esPastor(ctx) || puede(ctx, 'ver_seguimiento');
+  // `requireGestionMinisterio(id, { desdeDentro: true })`, la del reparto: el
+  // padrón solo lo ve el equipo, y `gestionar_ministerios` no es estar en él.
+  const dentro = puedeGestionarDesdeDentro(ctx, ministerio.id);
 
   const herramientas = gestiona
-    ? modulosActivos(ministerio.modulos).filter(
-        (m) => m.id !== 'seguimiento' || veSeguimiento,
-      )
+    ? modulosActivos(ministerio.modulos).filter((m) => {
+        if (m.id === 'seguimiento') return veSeguimiento;
+        if (m.id === 'reparto') return dentro;
+        return true;
+      })
     : [];
 
   const pestanas = [

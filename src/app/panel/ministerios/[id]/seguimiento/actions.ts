@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
+  exigirModulo,
   requireGestionMinisterioAccion,
   requirePermisoAccion,
 } from '@/lib/auth/guard-panel';
@@ -44,10 +45,16 @@ function volver(mensaje: string, destino: string): never {
   redirect(`${destino}?error=${encodeURIComponent(mensaje)}`);
 }
 
-/** Los dos guards, siempre juntos y siempre en este orden. */
+/**
+ * Los guards, siempre juntos y siempre en este orden. El tercero, que el
+ * seguimiento esté encendido en ESE ministerio, solo lo miraba el `layout.tsx`,
+ * que no corre en una server action.
+ */
 async function permiso(ministerioId: string) {
   await requirePermisoAccion('ver_seguimiento', DESTINO);
-  return requireGestionMinisterioAccion(ministerioId);
+  const ctx = await requireGestionMinisterioAccion(ministerioId);
+  await exigirModulo(ctx, ministerioId, 'seguimiento');
+  return ctx;
 }
 
 /**
