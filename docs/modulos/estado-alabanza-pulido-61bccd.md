@@ -21,9 +21,11 @@ migraciones y sin tocar `drizzle/` ni `src/lib/db/schema`.
    en la ficha del turno del panel («Ensayo: jueves 22, 19:30 · La sala de
    música», con enlace a la ficha del ensayo si la agenda está encendida) y en
    `/mi/agenda/turno/[id]`, con las notas recortadas a tres líneas (ver «Las
-   notas»). La etiqueta
-   es el título que le puso el responsable, no «Ensayo» fijo: la pantalla de
-   turnos es la misma para acción social. En el panel, a un equipo con
+   notas»). **Solo en equipos con el repertorio encendido**, que son los que
+   ensayan: en la radio, la reunión semanal del equipo saldría como ensayo de
+   cada programa, y en acción social, la de planificación como ensayo del
+   reparto. La etiqueta es el título que le puso el responsable, no «Ensayo»
+   fijo («Prueba de sonido» también vale). En el panel, a un equipo con
    repertorio y un turno de hoy en adelante sin ensayo, le dice «No hay ensayo
    apuntado en la semana de antes. Apuntarlo en la agenda».
 3. **El músico ve el ensayo.** Ficha nueva `/mi/agenda/reunion/[id]`, de solo
@@ -174,6 +176,19 @@ Probado tras arreglarlo, a 375 px y en `alabanza.localhost:3003`:
   Jóvenes (agenda apagada) con notas sale sin ellas.
 
 Las reuniones temporales de estas pruebas se borraron al acabar.
+
+Después, dos ajustes más del ensayo de fusión:
+
+- Los comentarios de `agenda/actions.ts` que hablaban de `exigirModulo()` en
+  futuro ya estaban reescritos en el commit anterior: la puerta la mira
+  `guarda()`, y la de dentro del cerrojo es la segunda mirada.
+- **El ensayo derivado, solo con repertorio.** La condición vive en
+  `ensayoAntesDelTurno` y vale igual en el panel y en `/mi`. Probado con un
+  turno y una reunión temporales de Radio (turnos y agenda encendidos,
+  repertorio apagado) como colider@, que es colíder de Radio: ni la ficha del
+  turno en `/mi` ni la del panel enseñan la reunión como ensayo, ni el aviso de
+  «sin ensayo». Alabanza lo sigue enseñando a lider@ y a miembro@. Borrados
+  después.
 
 ## Qué falta
 

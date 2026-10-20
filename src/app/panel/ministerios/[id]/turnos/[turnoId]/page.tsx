@@ -475,8 +475,9 @@ export default async function TurnoPage({
  * «Ensayo: jueves 16, 19:30 · La sala de música».
  *
  * Con el título que le puso el responsable delante, y no con «Ensayo» fijo: la
- * pantalla de turnos es la misma para alabanza que para acción social, y la
- * reunión del jueves de un equipo de reparto no es un ensayo.
+ * «Prueba de sonido» del domingo por la mañana también es lo que hay antes del
+ * culto, y llamarla de otra forma confundiría a quien la apuntó. Solo sale en
+ * los equipos con repertorio: lo decide `ensayoAntesDelTurno`.
  */
 function LineaEnsayo({
   ensayo,

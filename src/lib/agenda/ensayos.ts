@@ -27,6 +27,15 @@ import { sumarDias } from './horarios';
  * un solo ensayo enseñan los dos el mismo ensayo, que en realidad suele ser
  * verdad.
  *
+ * SOLO EN LOS EQUIPOS QUE ENSAYAN
+ * -------------------------------
+ * Es decir, con el repertorio encendido. La derivación coge cualquier reunión
+ * del equipo de la semana anterior, y en un equipo que no ensaya eso es otra
+ * cosa: en la radio, la reunión semanal del equipo saldría como ensayo de cada
+ * programa; en acción social, la de planificación, como ensayo del reparto.
+ * Llevar la lista del culto es lo que distingue al equipo que ensaya, y el
+ * aviso de «no hay ensayo apuntado» del panel ya iba atado a lo mismo.
+ *
  * QUIÉN PUEDE PEDIR QUÉ LO DECIDE QUIEN LLAMA
  * -------------------------------------------
  * Como en `turnos/consultas.ts`. `ensayoAntesDelTurno` la llaman la ficha del
@@ -146,7 +155,9 @@ export async function ensayoAntesDelTurno(
     );
 
   const ensayo = antes[0];
-  if (!ensayo) return null;
+  // Aquí y no en quien llama: la ficha del miembro no sabe qué módulos tiene el
+  // equipo, y la condición vale igual en el panel. Ver la cabecera.
+  if (!ensayo || !tieneModulo(ensayo.modulos, 'repertorio')) return null;
 
   const { modulos, ...resto } = ensayo;
   // El panel no pinta las notas y el músico solo las que le tocan: aplicar la
