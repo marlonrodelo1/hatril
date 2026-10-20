@@ -1,5 +1,6 @@
 import { getCurrentUserContext } from '@/lib/auth/user-context';
 import { radioDeLaIglesia } from '@/lib/emisora/consultas';
+import { RAIZ_APP } from '@/lib/ministerios/en-la-app/rutas';
 import { BarraInferior } from './_components/barra-inferior';
 import { MiniReproductor } from './_components/mini-reproductor';
 
@@ -50,6 +51,19 @@ export default async function MiLayout({
   // pinta nada: ni un hueco, ni un botón apagado.
   const radio = await radioDeLaIglesia(ctx);
 
+  // La pestaña «Equipo», para quien sirve en algún equipo, lo lleve o no: el
+  // líder encuentra ahí sus herramientas y el voluntario, lo de su equipo.
+  // Decidir AQUÍ si se pinta no protege nada —las pantallas de la zona ponen su
+  // propia guarda—; es para que al miembro que no sirve en nada la barra le
+  // quede igual. Con un equipo, directo a su portada; con varios, a la lista.
+  const sirvo = ctx.ministerioIds;
+  const equipo =
+    sirvo.length === 0
+      ? null
+      : sirvo.length === 1
+        ? `${RAIZ_APP}/${sirvo[0]}`
+        : RAIZ_APP;
+
   return (
     <>
       {children}
@@ -63,7 +77,7 @@ export default async function MiLayout({
           caratula={ctx.iglesia.logoUrl}
         />
       )}
-      <BarraInferior />
+      <BarraInferior equipo={equipo} />
       {/*
        * El hueco de la barra, que es `fixed` y flota sobre el contenido. Sin
        * esto la última publicación del muro queda debajo de las pestañas y no
