@@ -102,7 +102,48 @@ function cuandoEmpieza(p: Programa, ahora: number, falta: number): string {
 
   if (enDias === 0 && falta < 1440) return `a las ${p.hora}`;
   if (enDias === 1) return `mañana a las ${p.hora}`;
+  // Mismo día de la semana pero dentro de siete: «el lunes» dicho un lunes se
+  // lee como hoy.
+  if (enDias === 0) return `el próximo ${p.dia.toLowerCase()} a las ${p.hora}`;
   return `el ${p.dia.toLowerCase()} a las ${p.hora}`;
+}
+
+/**
+ * Dos programas que se pisan, dicho para quien los escribió. `null` si no hay.
+ *
+ * Una radio emite una cosa cada vez: si dos se pisan, «ahora suena» elige uno
+ * y el otro desaparece a media emisión sin que nadie sepa por qué. Y dos filas
+ * iguales salían dos veces en la programación. Se mira al guardar, con la
+ * misma cuenta en minutos de la semana que `ahoraYLuego()`, así que también
+ * cuenta el programa del domingo por la noche que entra en el lunes.
+ */
+export function choqueEnParrilla(parrilla: Programa[]): string | null {
+  for (let i = 0; i < parrilla.length; i++) {
+    for (let j = i + 1; j < parrilla.length; j++) {
+      const a = parrilla[i]!;
+      const b = parrilla[j]!;
+      const ia = inicioDe(a);
+      const ib = inicioDe(b);
+
+      if (ia === ib) {
+        return a.nombre === b.nombre
+          ? `«${a.nombre}» está dos veces el ${a.dia.toLowerCase()} a las ${a.hora}.`
+          : `«${a.nombre}» y «${b.nombre}» empiezan los dos el ${a.dia.toLowerCase()} a las ${a.hora}.`;
+      }
+
+      const [primero, segundo] =
+        (ib - ia + MINUTOS_SEMANA) % MINUTOS_SEMANA < a.duracion_min
+          ? [a, b]
+          : (ia - ib + MINUTOS_SEMANA) % MINUTOS_SEMANA < b.duracion_min
+            ? [b, a]
+            : [null, null];
+
+      if (primero && segundo) {
+        return `«${primero.nombre}» (${primero.dia.toLowerCase()}, ${franjaDe(primero)}) se pisa con «${segundo.nombre}», que empieza el ${segundo.dia.toLowerCase()} a las ${segundo.hora}.`;
+      }
+    }
+  }
+  return null;
 }
 
 /** Qué día de la parrilla es hoy en la iglesia. */

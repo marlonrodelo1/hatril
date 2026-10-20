@@ -14,7 +14,7 @@ locutores son turnos, que ya existían. Para integrar en `ESTADO.md` al fusionar
 - **Módulo `emisora`** («Radio en directo», `modulos.ts`), añadido al final del
   catálogo. Su config: `nombre` (≤60), `stream_url` (solo https, ≤500),
   `parrilla` (día, hora, programa ≤80, de qué va ≤140 opcional, minutos
-  15–480; hasta 40) y `en_web`.
+  15–480; hasta 60) y `en_web`.
   Esquema y lectura en `src/lib/emisora/config.ts`; «ahora / luego» en
   `parrilla.ts`, en la hora de la iglesia y en minutos de la semana, así que un
   programa que cruza la medianoche del domingo sigue «en antena» el lunes.
@@ -38,16 +38,28 @@ locutores son turnos, que ya existían. Para integrar en `ESTADO.md` al fusionar
 
 ### Decisiones tomadas por el camino
 
-- **Si alguien que no es el pastor cambia la señal, la radio sale de la web.**
-  El pastor publicó ESA señal; otra distinta en nombre de la iglesia la decide
-  él otra vez. Se le dice en la confirmación y en la propia pantalla.
+- **Si alguien que no es el pastor cambia lo que se ve en la web, la radio sale
+  de la web**: la señal, el nombre de la emisora, o cualquier programa con su
+  tema y su duración. El pastor publicó ESO; otra señal u otro texto en nombre
+  de la iglesia lo decide él otra vez. Se dice en la confirmación y en la
+  propia pantalla. Al principio solo miraba la señal; la revisión vio que el
+  tema, texto libre, podía publicar la fe o la salud de alguien sin que el
+  pastor lo viera.
 - **La señal se valida al guardar y al leer.** Sin CHECK en la base (no hay
   migraciones), `emisoraDeConfig()` vuelve a pasarla por el esquema antes de
   dársela a ningún `<audio>`.
 - **Mensajes con nombre para lo que se pega de verdad**: http (no suena dentro
   de una web https), listas `.pls/.m3u`, HLS `.m3u8`, la ficha de zeno.fm,
   usuario y contraseña en la URL y direcciones de la red de casa.
-- **Dos radios en una iglesia**: se usa la primera por orden. Sin selector.
+- **Dos radios en una iglesia**: se usa la primera por orden. Sin selector, pero
+  la pantalla de la que no suena lo dice, y su «Guardado» ya no promete que la
+  congregación la oye.
+- **Dos programas no se pueden pisar**, ni empezar a la vez: la action lo
+  rechaza nombrando los dos. Una radio emite una cosa cada vez, y con un solape
+  «ahora suena» quitaba uno a media emisión sin aviso.
+- **Tope de 60 programas** (era 40), con aviso al llegar. Cada día de un
+  programa diario gasta una fila; varios días por fila sería lo cómodo, y queda
+  para cuando haga falta.
 - **El tema es de cada programa, no de cada emisión.** «De qué va» es fijo
   semana a semana y viaja con la parrilla; el tema de UNA emisión por fecha
   necesita `turnos.tema` y sigue fuera. Una fila con solo el tema escrito no se
@@ -140,18 +152,64 @@ dice. El segundo plano de verdad llega con Capacitor en la v2.
   de otra sesión. La parrilla ya se guarda con la forma de `HorarioSemanal`
   (`dia` como «Lunes», `hora`, `nombre`) para que `cultosEntre()` la lea tal
   cual.
-- **`exigirModulo()`**: `guardarEmisora` comprueba `tieneModulo` a mano y lo
-  dice en un comentario; pasa a la guarda común al fusionar la tanda 1.
-- El comentario de cabecera de `modulos.ts` dice «Cuatro módulos»: ya son
-  cinco aquí, y más con las otras ramas. Corregirlo al fusionar todas, no en
-  cada una.
+- **`guardarPuestos` y `editarMinisterio`** leen y reescriben `modulos` sin
+  bloquear la fila, el hueco que la revisión vio aquí. `guardarEmisora` ya
+  bloquea (`for update`); esos dos son de otras sesiones.
+- **Los `select` nativos de otras pantallas** (Finanzas, Devocionales,
+  registro) siguen a 15 px en el móvil. Main arregló el `Input`; el de la radio
+  se ha igualado a mano.
+
+---
+
+## Revisión del 20-oct y merge de main
+
+Diez hallazgos, todos menores. Aplicados los diez:
+
+1. **Carrera al guardar**: la lectura de `modulos` va con `for update`. Sin el
+   bloqueo, un colíder guardando a la vez que el pastor sacaba la radio de la
+   web volvía a publicarla con el dato viejo.
+2. **Textos públicos de un no pastor**: ver «Decisiones». Se eligió sacar la
+   radio de la web y no una instantánea aprobada aparte: es la misma regla que
+   ya había para la señal y no hace falta otra copia de la config.
+3. **Radio apagada al guardar**: lo para `exigirModulo()` (de main), que vuelve
+   a la pantalla del equipo; y dentro de la transacción, con la fila
+   bloqueada, se vuelve a mirar y también vuelve allí, no a la de la radio, que
+   daría 404 y se tragaría el mensaje.
+4. **Mensajes de la parrilla**: nombran el programa y el día («Nuevo
+   (martes): revisa la hora»), o la fila del formulario si no tiene nombre. Antes
+   el número salía del array sin las filas en blanco.
+5. **Duplicados y solapes**: rechazados al guardar (`choqueEnParrilla`), y la
+   clave de la lista lleva el índice.
+6. **Tope**: 60 y aviso al llegar.
+7. **Dos radios**: aviso en la pantalla de la que no suena.
+8. **«Sale en la web» para quien no es pastor**: con las tres condiciones de
+   `radioPublica()` —casilla, web publicada y señal—, y dice cuál falta.
+9. **«El lunes» dicho un lunes**: ahora «el próximo lunes».
+10. **16 px en el móvil**: main ya lo arregló en `Input`; el `select` del día
+    llevaba `text-[15px]` a mano y se ha igualado (`text-[16px] md:text-[15px]`).
+
+Verificado después del merge, en `radio.localhost:3002`, a 375 px:
+
+- **colider@**: dos programas que se pisan dan «Alabanza de la tarde (lunes,
+  19:00 – 21:00) se pisa con Palabra para hoy, que empieza el lunes a las
+  20:00»; cambiar solo el tema de un programa guarda el tema y deja `en_web`
+  en false en la base, con su aviso; con la radio apagada en la base mientras
+  la pantalla estaba abierta, guardar lleva a la pantalla del equipo con «Esa
+  herramienta no está encendida en este ministerio».
+- **miembro@** en `/mi`: escucha FIP, Media Session en «playing», y al parar
+  `src` vacío y `networkState` 0.
+- **pastor@** en el panel: los cinco campos de cada fila miden 16 px en el
+  móvil (`getComputedStyle`), y «Probar» suena con su `Aviso`.
+
+Del merge: un solo conflicto, en `modulos.ts`, porque reparto y emisora se
+añadieron los dos al final. `guardarEmisora` llama ya a `exigirModulo()`.
 
 ---
 
 ## Datos de prueba
 
 `scripts/seed-radio.sql`, idempotente y con la limpieza al final: en Betania un
-ministerio Radio con la señal de SomaFM, tres programas (dos con tema y uno
+ministerio Radio con la señal de FIP (Radio France), tres programas (dos con tema y uno
 sin él), `en_web` marcado, y Sara (colider@) como colíder. El ministerio de esta prueba se creó desde
 `/panel/modulos`; el seed lo encuentra por tipo y no crea otro.
 
@@ -162,19 +220,25 @@ sin él), `en_web` marcado, y Sara (colider@) como colíder. El ministerio de es
 - **Las cookies de `localhost` se comparten entre sesiones.** El navegador
   integrado es el mismo para todas y las cookies no distinguen puerto: otra
   sesión entró como lider@ entre mi `navigate` como pastor@ y el clic, y la
-  action contestó «No tienes permiso». Se arregla sirviendo en `127.0.0.1`
-  (`-H 127.0.0.1`), que tiene su propio tarro. Ojo: `/auth/confirm` sigue
+  action contestó «No tienes permiso». Primero se pasó a `127.0.0.1`, que
+  tiene su propio tarro, hasta que otra sesión empezó a usarlo también y
+  volvió a pasar lo mismo. Lo que aguanta es un nombre propio:
+  `radio.localhost` (todo `*.localhost` resuelve a loopback y la herramienta
+  del navegador lo admite; `127.0.0.2` no). Ojo: `/auth/confirm` sigue
   redirigiendo a `localhost:<puerto>` porque Next arma `request.url` con
-  `localhost`, pero la cookie queda en `127.0.0.1`; hay que navegar a mano
-  después de canjear el enlace.
+  `localhost`, pero la cookie queda en el host del enlace; hay que navegar a
+  mano después de canjearlo. Y si el enlace dice «caducado», es que se canjeó
+  dos veces: se pide otro.
 - **El pooler de Supabase se satura** con cuatro o cinco servidores de
   desarrollo a la vez: `EMAXCONNSESSION … pool_size: 15`, que sale como un 500
   en cualquier pantalla. `client.ts` ya va con `prepare: false`, así que en el
   `.env.local` de este worktree se cambió el puerto a 6543 (modo transacción).
   No se commitea.
-- **SomaFM responde a cualquier ruta.** `ice1.somafm.com/loquesea` suena unos
-  treinta segundos y corta: no sirve para probar un fallo. `example.com/x.mp3`
-  sí.
+- **SomaFM corta a quien conecta mucho.** A los pocos días de pruebas empezó a
+  redirigir esta IP a `somafm.com/alert.mp3`, también la ruta buena. Es lo que
+  pasaba con «cualquier ruta suena treinta segundos»: era ese aviso. El seed
+  usa ahora FIP de Radio France (`icecast.radiofrance.fr/fip-midfi.mp3`). Para
+  probar un fallo de verdad, `example.com/x.mp3`.
 - **Dos fallos del reproductor que solo salieron así**: el tope de 20 s miraba
   `a.paused`, que vale `false` en cuanto se llama a `play()` aunque no suene
   nada, y no saltaba nunca; y cuando el servidor corta, Chrome manda `pause`
@@ -182,3 +246,8 @@ sin él), `en_web` marcado, y Sara (colider@) como colíder. El ministerio de es
   arreglados y comentados en `use-senal.ts`.
 - `tsc` en un worktree recién montado falla con `comunidad.avif`: falta
   `next-env.d.ts`, que crea `next dev`. No es del código.
+- **No lanzar `next build` ni `tsc` con el servidor de desarrollo arrancando
+  a la vez.** Comparten `.next`: el build dejó el servidor contestando 404 a
+  todo, también a `/panel`, y `tsc` leyó `.next/dev/types/routes.d.ts` a medio
+  escribir y dio decenas de errores que no eran del código. Primero las
+  comprobaciones, después el servidor.

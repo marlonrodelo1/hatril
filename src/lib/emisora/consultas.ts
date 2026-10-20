@@ -31,6 +31,8 @@ import { emisoraDeConfig, type Programa } from './config';
  */
 
 export type RadioDeLaIglesia = {
+  /** Para saber, desde el panel de otra radio, si es esta la que suena. */
+  ministerioId: string;
   nombre: string;
   streamUrl: string;
   parrilla: Programa[];
@@ -46,7 +48,7 @@ export async function radioDeLaIglesia(
 ): Promise<RadioDeLaIglesia | null> {
   const filas = await withUser(ctx.user.id, (tx) =>
     tx
-      .select({ nombre: ministerios.nombre, emisora: EMISORA })
+      .select({ id: ministerios.id, nombre: ministerios.nombre, emisora: EMISORA })
       .from(ministerios)
       .where(
         and(
@@ -77,7 +79,7 @@ export async function radioPublica(
   iglesiaId: string,
 ): Promise<RadioDeLaIglesia | null> {
   const filas = await dbAdmin
-    .select({ nombre: ministerios.nombre, emisora: EMISORA })
+    .select({ id: ministerios.id, nombre: ministerios.nombre, emisora: EMISORA })
     .from(ministerios)
     .where(
       and(
@@ -94,7 +96,7 @@ export async function radioPublica(
 }
 
 function primeraQueSuena(
-  filas: { nombre: string; emisora: unknown }[],
+  filas: { id: string; nombre: string; emisora: unknown }[],
   { soloEnWeb = false } = {},
 ): RadioDeLaIglesia | null {
   for (const fila of filas) {
@@ -102,6 +104,7 @@ function primeraQueSuena(
     if (!e.streamUrl) continue;
     if (soloEnWeb && !e.enWeb) continue;
     return {
+      ministerioId: fila.id,
       nombre: e.nombre ?? fila.nombre,
       streamUrl: e.streamUrl,
       parrilla: e.parrilla,

@@ -12,10 +12,13 @@
 --   Radio                 Ministerio de tipo `radio`, como lo crea «Activar»
 --                         en /panel/modulos: emisora, turnos y agenda
 --                         encendidos. Si ya hay uno de ese tipo no crea otro.
---   Radio Betania         La emisora: señal de SomaFM (Groove Salad, https,
+--   Radio Betania         La emisora: señal de FIP, de Radio France (https,
 --                         pública y sin registro, que es lo que hacía falta
---                         para probar sin depender de una iglesia de verdad),
---                         tres programas en la parrilla —dos con su tema y
+--                         para probar sin depender de una iglesia de verdad).
+--                         Era SomaFM, y la cambió a los pocos días de pruebas a
+--                         redirigir esta IP a un aviso: corta a quien conecta
+--                         muchas veces. Tres programas en la parrilla —dos con
+--                         su tema y
 --                         uno sin él, para ver los dos casos— y `en_web`
 --                         marcado.
 --   Sara Nieto            colider@hatril.test pasa a ser COLÍDER de la radio,
@@ -74,7 +77,7 @@ begin
        'emisora',
        coalesce(modulos -> 'emisora', '{"activo": true}'::jsonb) || '{
          "nombre": "Radio Betania",
-         "stream_url": "https://ice1.somafm.com/groovesalad-128-mp3",
+         "stream_url": "https://icecast.radiofrance.fr/fip-midfi.mp3",
          "parrilla": [
            {"dia": "Lunes", "hora": "19:00", "nombre": "Alabanza de la tarde", "tema": "Canciones de la congregación para cerrar el día", "duracion_min": 120},
            {"dia": "Lunes", "hora": "21:00", "nombre": "Palabra para hoy", "tema": "Un capítulo de los Salmos, leído y comentado", "duracion_min": 60},

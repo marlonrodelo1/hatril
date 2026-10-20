@@ -44,11 +44,15 @@ export function ProgramacionSemanal({
               )}
             </h3>
             <ul className="flex flex-col gap-2.5">
-              {programas.map((p) => {
+              {programas.map((p, i) => {
                 const suena = ahora === p;
                 return (
                   <li
-                    key={`${p.hora}-${p.nombre}`}
+                    // Con el índice: la base no impide dos filas iguales si
+                    // llegan por otro camino que la action, y una clave
+                    // repetida en una lista que se repinta cada medio minuto
+                    // acaba pintando la fila que no es.
+                    key={`${p.hora}-${p.nombre}-${i}`}
                     className="flex items-baseline gap-3 text-[14.5px] leading-snug"
                   >
                     <span className="w-[104px] flex-none tabular-nums text-muted-foreground">

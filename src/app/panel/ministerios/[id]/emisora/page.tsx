@@ -6,6 +6,7 @@ import { Info } from 'lucide-react';
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { esPastor } from '@/lib/auth/permisos';
 import { obtenerMinisterio } from '@/lib/ministerios/consultas';
+import { radioDeLaIglesia } from '@/lib/emisora/consultas';
 import {
   DIAS_PARRILLA,
   DURACION_MAX,
@@ -60,6 +61,15 @@ export default async function EmisoraPage({
 
   const emisora = emisoraDeModulos(ministerio.modulos);
   const pastor = esPastor(ctx);
+  // Si la iglesia tiene otra radio con señal que va antes, es esa la que suena
+  // en `/mi` y en la web: aquí hay que decirlo, o «tu congregación ya lo ve»
+  // sería mentira.
+  const queSuena = await radioDeLaIglesia(ctx);
+  const otraRadio =
+    emisora.streamUrl && queSuena && queSuena.ministerioId !== id ? queSuena : null;
+  const llena = emisora.parrilla.length >= MAX_PROGRAMAS;
+  // Las tres condiciones de `radioPublica()`, no solo la casilla.
+  const enLaWeb = emisora.enWeb && ctx.iglesia.webPublica && !!emisora.streamUrl;
   const filas = Math.min(
     Math.max(emisora.parrilla.length + FILAS_DE_MAS, 5),
     MAX_PROGRAMAS,
@@ -78,7 +88,17 @@ export default async function EmisoraPage({
 
         {error && <Aviso>{error}</Aviso>}
         {guardado && CONFIRMACIONES[guardado] && (
-          <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
+          <Aviso tipo="ok">
+            {otraRadio && guardado === 'guardado'
+              ? 'Guardado.'
+              : CONFIRMACIONES[guardado]}
+          </Aviso>
+        )}
+        {otraRadio && (
+          <NotaInfo>
+            En la aplicación suena «{otraRadio.nombre}», de otro ministerio que va
+            antes en la lista. Esta radio no se oye mientras aquella tenga señal.
+          </NotaInfo>
         )}
 
         <form
@@ -130,18 +150,11 @@ export default async function EmisoraPage({
 
             {/* Aplica aunque la casilla de la web esté apagada: el pastor
                 puede encenderla mañana. */}
-            <p className="flex items-start gap-2 rounded-lg border border-border bg-surface-alt px-3.5 py-3 text-[13.5px] leading-snug">
-              <Info
-                className="mt-px size-4 flex-none text-muted-foreground"
-                strokeWidth={1.9}
-                aria-hidden
-              />
-              <span>
-                No pongas quién presenta, ni en el nombre ni en el tema: si la
-                radio sale en la web, esta lista es pública. Quién presenta cada
-                día va en los turnos.
-              </span>
-            </p>
+            <NotaInfo>
+              No pongas quién presenta, ni en el nombre ni en el tema: si la radio
+              sale en la web, esta lista es pública. Quién presenta cada día va en
+              los turnos.
+            </NotaInfo>
 
             <input type="hidden" name="filas" value={filas} />
 
@@ -163,7 +176,7 @@ export default async function EmisoraPage({
                       name={`programa-${i}-dia`}
                       defaultValue={p?.dia ?? DIAS_PARRILLA[0]}
                       aria-label={`Día del programa ${n}`}
-                      className="h-[42px] w-full min-w-0 rounded-lg border border-input bg-surface-alt px-2.5 text-[15px] text-foreground outline-none focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/16"
+                      className="h-[42px] w-full min-w-0 rounded-lg border border-input bg-surface-alt px-2.5 text-[16px] text-foreground outline-none md:text-[15px] focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/16"
                     >
                       {DIAS_PARRILLA.map((d) => (
                         <option key={d} value={d}>
@@ -215,6 +228,14 @@ export default async function EmisoraPage({
                 );
               })}
             </ol>
+
+            {llena && (
+              <NotaInfo>
+                Has llegado a los {MAX_PROGRAMAS} programas, que es el máximo. Cada
+                día de un programa diario ocupa una fila: si te faltan, junta los
+                que puedas en uno más largo.
+              </NotaInfo>
+            )}
           </section>
 
           <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5">
@@ -237,22 +258,33 @@ export default async function EmisoraPage({
                 />
                 <span>
                   Mostrar la radio en la web de la iglesia
-                  {!ctx.iglesia.webPublica && (
+                  {!ctx.iglesia.webPublica ? (
                     <span className="block text-[13px] text-muted-foreground">
                       Tu web todavía no está publicada. Saldrá cuando la publiques
                       en <Link href="/panel/ajustes">Ajustes</Link>.
                     </span>
+                  ) : (
+                    !emisora.streamUrl && (
+                      <span className="block text-[13px] text-muted-foreground">
+                        Saldrá cuando la radio tenga la dirección de la señal.
+                      </span>
+                    )
                   )}
                 </span>
               </label>
             ) : (
               <p className="text-[14px] leading-relaxed">
-                {emisora.enWeb
+                {enLaWeb
                   ? 'Ahora mismo sale en la web.'
-                  : 'Ahora mismo no sale en la web.'}{' '}
+                  : !emisora.enWeb
+                    ? 'Ahora mismo no sale en la web.'
+                    : !ctx.iglesia.webPublica
+                      ? 'El pastor la ha marcado para la web, pero la web de la iglesia todavía no está publicada.'
+                      : 'El pastor la ha marcado para la web, pero no saldrá hasta que tenga señal.'}{' '}
                 <span className="text-muted-foreground">
-                  Lo decide el pastor. Si cambias la señal, la radio deja de
-                  salir hasta que la vuelva a activar.
+                  Lo decide el pastor. Si cambias la señal, el nombre o la
+                  programación, la radio deja de salir hasta que la vuelva a
+                  activar.
                 </span>
               </p>
             )}
@@ -264,5 +296,19 @@ export default async function EmisoraPage({
         </form>
       </Contenedor>
     </>
+  );
+}
+
+/** El recuadro de información de esta pantalla: borde, crema e icono. */
+function NotaInfo({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="flex items-start gap-2 rounded-lg border border-border bg-surface-alt px-3.5 py-3 text-[13.5px] leading-snug">
+      <Info
+        className="mt-px size-4 flex-none text-muted-foreground"
+        strokeWidth={1.9}
+        aria-hidden
+      />
+      <span>{children}</span>
+    </p>
   );
 }

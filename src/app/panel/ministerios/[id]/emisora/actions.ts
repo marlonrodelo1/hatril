@@ -4,7 +4,10 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { and, eq } from 'drizzle-orm';
 
-import { requireGestionMinisterioAccion } from '@/lib/auth/guard-panel';
+import {
+  exigirModulo,
+  requireGestionMinisterioAccion,
+} from '@/lib/auth/guard-panel';
 import { esPastor } from '@/lib/auth/permisos';
 import { withUser } from '@/lib/db';
 import { ministerios } from '@/lib/db/schema';
@@ -16,15 +19,21 @@ import {
   MAX_PROGRAMAS,
   emisoraDeModulos,
   ordenarParrilla,
+  type Emisora,
 } from '@/lib/emisora/config';
+import { choqueEnParrilla } from '@/lib/emisora/parrilla';
 import { FILAS_DE_MAS } from './constantes';
 
 /**
  * Guardar la radio: nombre, señal, parrilla y si sale en la web.
  *
- * Copia de `guardarPuestos` de los turnos, a propósito: leer la config y
- * escribirla en la MISMA transacción, para que dos personas guardando a la vez
- * no se pisen la mitad del jsonb que no estaban tocando.
+ * Lee la config y la escribe en la misma transacción, como `guardarPuestos`,
+ * pero además BLOQUEANDO la fila al leer (`for update`). Sin el bloqueo, estar
+ * en la misma transacción no protege de nada en READ COMMITTED: si el pastor
+ * saca la radio de la web mientras un colíder guarda, las dos leen
+ * `en_web=true`, y la del colíder escribe ese dato viejo encima de la decisión
+ * del pastor. Con el bloqueo, la segunda espera y relee lo ya confirmado.
+ * `guardarPuestos` y `editarMinisterio` tienen el mismo hueco.
  *
  * QUIÉN DECIDE QUÉ
  * ----------------
@@ -34,10 +43,14 @@ import { FILAS_DE_MAS } from './constantes';
  * las redes de `/panel/compartir`. La RLS no puede distinguirlo —vive en el
  * mismo jsonb que el resto—, así que lo hace esta action.
  *
- * Y una consecuencia que no es obvia: si alguien que no es el pastor cambia la
- * señal mientras la radio está en la web, la radio sale de la web. El pastor
- * decidió publicar ESA señal; otra distinta en nombre de la iglesia, en
- * internet, la tiene que decidir él otra vez.
+ * Y una consecuencia que no es obvia: si alguien que no es el pastor cambia lo
+ * que sale en la web —la señal, el nombre de la emisora o cualquier programa
+ * de la parrilla con su tema— mientras la radio está publicada, la radio sale
+ * de la web. El pastor decidió publicar ESO; otra señal, u otro texto en nombre
+ * de la iglesia en internet, lo tiene que decidir él otra vez. No es teórico:
+ * el tema de un programa es texto libre, y un «Testimonio de Marta R.: cómo
+ * salió del alcohol» escrito por un colíder sería la fe y la salud de una
+ * persona en la web de la iglesia sin que el pastor lo hubiera visto.
  */
 
 const emisoraDe = (ministerioId: string) =>
@@ -49,6 +62,7 @@ function volver(mensaje: string, destino: string): never {
 
 export async function guardarEmisora(ministerioId: string, formData: FormData) {
   const ctx = await requireGestionMinisterioAccion(ministerioId);
+  await exigirModulo(ctx, ministerioId, 'emisora');
   const base = emisoraDe(ministerioId);
 
   // Las filas de la parrilla llegan numeradas, como los horarios de Ajustes.
@@ -60,22 +74,28 @@ export async function guardarEmisora(ministerioId: string, formData: FormData) {
   );
 
   const parrilla: Record<string, unknown>[] = [];
+  // Para los mensajes: de qué fila del formulario sale cada programa. Sin esto
+  // el número salía del array ya sin las filas en blanco, y «Programa 3» podía
+  // señalar una fila que estaba bien.
+  const deDonde: { fila: number; nombre?: string; dia?: string }[] = [];
   for (let i = 0; i < total; i++) {
     const hora = campo(formData, `programa-${i}-hora`);
     const nombre = campo(formData, `programa-${i}-nombre`);
     const tema = campo(formData, `programa-${i}-tema`);
+    const dia = campo(formData, `programa-${i}-dia`);
     // Una fila sin hora, sin nombre y sin tema es una fila en blanco, aunque el
     // día y la duración vengan rellenos: esos dos tienen valor por defecto. Con
     // solo el tema escrito no se descarta: se le dice que falta lo demás.
     if (!hora && !nombre && !tema) continue;
 
     parrilla.push({
-      dia: campo(formData, `programa-${i}-dia`) ?? '',
+      dia: dia ?? '',
       hora: hora ?? '',
       nombre: nombre ?? '',
       tema,
       duracion_min: campo(formData, `programa-${i}-duracion`) ?? '60',
     });
+    deDonde.push({ fila: i + 1, nombre, dia });
   }
 
   const parsed = EsquemaEmisora.safeParse({
@@ -87,13 +107,22 @@ export async function guardarEmisora(ministerioId: string, formData: FormData) {
 
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
-    const [clave, fila] = issue?.path ?? [];
-    const prefijo =
-      clave === 'parrilla' && typeof fila === 'number'
-        ? `Programa ${fila + 1}: `
-        : '';
+    const [clave, indice] = issue?.path ?? [];
+    const origen =
+      clave === 'parrilla' && typeof indice === 'number' ? deDonde[indice] : null;
+    // Por su nombre y su día, que es como lo reconoce quien lo escribió: al
+    // volver con el error el formulario se pinta desde la base y lo tecleado
+    // ya no está, así que un número de fila apenas ayuda a encontrarlo.
+    const prefijo = !origen
+      ? ''
+      : origen.nombre
+        ? `«${origen.nombre}»${origen.dia ? ` (${origen.dia.toLowerCase()})` : ''}: `
+        : `La fila ${origen.fila}: `;
     volver(prefijo + (issue?.message ?? 'Revisa los datos.'), base);
   }
+
+  const choque = choqueEnParrilla(parsed.data.parrilla);
+  if (choque) volver(choque, base);
 
   const datos = parsed.data;
   const pastor = esPastor(ctx);
@@ -104,21 +133,28 @@ export async function guardarEmisora(ministerioId: string, formData: FormData) {
       eq(ministerios.iglesiaId, ctx.iglesia.id),
     );
 
+    // Bloqueada: ver la cabecera.
     const [actual] = await tx
       .select({ modulos: ministerios.modulos })
       .from(ministerios)
       .where(donde)
-      .limit(1);
+      .limit(1)
+      .for('update');
 
-    // La segunda puerta del layout, que una action no atraviesa. Pasará a ser
-    // `exigirModulo()` cuando se fusione la tanda 1, que la trae para todos.
+    // `exigirModulo()` ya lo miró antes de entrar, pero el pastor pudo apagar
+    // la radio entre aquella consulta y este bloqueo. Aquí, con la fila
+    // bloqueada, la respuesta ya no cambia hasta que se escriba.
     if (!actual || !tieneModulo(actual.modulos, 'emisora')) return 'apagado';
 
     const anterior = emisoraDeModulos(actual.modulos);
-    const senal = datos.stream_url ?? null;
+    const nueva = {
+      nombre: datos.nombre ?? null,
+      streamUrl: datos.stream_url ?? null,
+      parrilla: ordenarParrilla(datos.parrilla),
+    };
     const enWeb = pastor
       ? datos.en_web
-      : anterior.enWeb && senal === anterior.streamUrl;
+      : anterior.enWeb && loPublico(anterior) === loPublico(nueva);
 
     await tx
       .update(ministerios)
@@ -126,20 +162,25 @@ export async function guardarEmisora(ministerioId: string, formData: FormData) {
         modulos: conConfigDeModulo(actual.modulos, 'emisora', {
           // `null` y no ausente: `conConfigDeModulo` mezcla con lo anterior, y
           // un campo que no viaja dejaría el valor viejo en vez de borrarlo.
-          nombre: datos.nombre ?? null,
-          stream_url: senal,
-          parrilla: ordenarParrilla(datos.parrilla),
+          nombre: nueva.nombre,
+          stream_url: nueva.streamUrl,
+          parrilla: nueva.parrilla,
           en_web: enWeb,
         }),
       })
       .where(donde);
 
     if (anterior.enWeb && !enWeb && !pastor) return 'fuera-de-la-web';
-    return senal ? 'guardado' : 'guardado-sin-senal';
+    return nueva.streamUrl ? 'guardado' : 'guardado-sin-senal';
   });
 
+  // A la pantalla del equipo y no a la de la radio, que con el módulo apagado
+  // da 404 y se tragaría el mensaje.
   if (resultado === 'apagado') {
-    volver('La radio de este ministerio está apagada. La enciende el pastor.', base);
+    volver(
+      'La radio de este ministerio está apagada. La enciende el pastor.',
+      `/panel/ministerios/${ministerioId}`,
+    );
   }
 
   revalidatePath(base);
@@ -147,4 +188,25 @@ export async function guardarEmisora(ministerioId: string, formData: FormData) {
   revalidatePath('/mi', 'layout');
   revalidatePath(`/i/${ctx.iglesia.slug}`);
   redirect(`${base}?guardado=${resultado}`);
+}
+
+/**
+ * Lo que de la radio llega a la web, en una forma que se puede comparar: el
+ * nombre, la señal y cada programa con su tema y su duración. Si cambia y quien
+ * guarda no es el pastor, la radio sale de la web.
+ */
+function loPublico(
+  e: Pick<Emisora, 'nombre' | 'streamUrl' | 'parrilla'>,
+): string {
+  return JSON.stringify({
+    nombre: e.nombre,
+    senal: e.streamUrl,
+    parrilla: e.parrilla.map((p) => [
+      p.dia,
+      p.hora,
+      p.nombre,
+      p.tema ?? null,
+      p.duracion_min,
+    ]),
+  });
 }

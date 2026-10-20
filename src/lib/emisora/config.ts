@@ -36,7 +36,13 @@ export const DIAS_PARRILLA = [
 
 export type DiaParrilla = (typeof DIAS_PARRILLA)[number];
 
-export const MAX_PROGRAMAS = 40;
+/**
+ * 60 y no 40, que era el primer tope: no hay forma de marcar «de lunes a
+ * viernes» en una sola fila, así que un programa diario gasta siete, y una radio
+ * con seis programas al día ya pasaba de 40. Varios días por fila sería lo
+ * cómodo; hasta que haga falta, el tope alto y un aviso cuando se llega.
+ */
+export const MAX_PROGRAMAS = 60;
 export const MAX_LARGO_NOMBRE_EMISORA = 60;
 export const MAX_LARGO_PROGRAMA = 80;
 export const MAX_LARGO_TEMA = 140;
@@ -48,9 +54,11 @@ export const DURACION_MAX = 480;
  * Un programa de la parrilla.
  *
  * Con la forma de `HorarioSemanal` —`dia`, `hora`, `nombre`— más el tema y la
- * duración, a
- * propósito: así `cultosEntre()` la expande a fechas sin adaptador el día que
- * los turnos se planifiquen desde la parrilla y no desde los cultos.
+ * duración, a propósito: así `cultosEntre()` la expande a fechas sin adaptador
+ * el día que los turnos se planifiquen desde la parrilla y no desde los cultos.
+ *
+ * Que dos programas no se pisen no lo mira este esquema sino
+ * `choqueEnParrilla()`, porque necesita la parrilla entera y no una fila.
  */
 export const EsquemaPrograma = z.object({
   dia: z.enum(DIAS_PARRILLA, 'Elige el día.'),
