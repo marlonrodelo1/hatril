@@ -27,9 +27,16 @@
         <item name="android:windowLightStatusBar">true</item>
     </style>
 
-    <!-- El arranque: el icono sobre crema, también en modo oscuro. -->
+    <!--
+      El arranque: el icono sobre crema, también en modo oscuro.
+
+      windowLightStatusBar también aquí, y no solo en el tema de la app: este
+      es el que manda mientras se ve el arranque, y sin él la hora y la batería
+      salían en blanco sobre el crema, es decir, no salían.
+    -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
         <item name="windowSplashScreenBackground">@color/crema</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

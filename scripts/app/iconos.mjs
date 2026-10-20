@@ -11,7 +11,8 @@
  * QUÉ HACE
  * --------
  * 1. Pasa el SVG a los PNG que lee @capacitor/assets:
- *      icon-only.png             1024, el cuadrado entero (iOS y Android 7)
+ *      icon-only.png             1024, el cuadrado entero (Android 7; el de
+ *                                iOS se sobrescribe en el paso 4)
  *      splash.png, splash-dark   2732, crema con el icono en el centro
  *
  *    No hay `icon.png`: para @capacitor/assets eso es el «modo fácil», que
@@ -40,8 +41,9 @@
  *    Capacitor: @capacitor/assets escribe los suyos al lado y los viejos se
  *    quedan sueltos, sin nadie que los use, con Xcode avisando de ellos.
  *
- *    El icono de iOS sale sin canal alfa, que es lo que exige App Store
- *    Connect: lo aplana @capacitor/assets (comprobado con sharp: 3 canales).
+ *    Y escribe el icono de iOS con el atril más grande (ver `iconoIos`),
+ *    encima del que deja @capacitor/assets. Sin canal alfa, que es lo que
+ *    exige App Store Connect: se aplana aquí y se comprueba (3 canales).
  *
  * 5. Deja en Versiones/Android la vista previa y el icono de 512 que pide la
  *    ficha de Google Play.
@@ -53,7 +55,7 @@
  *                               a ciegas en /favicon.ico (y el buscador)
  *      src/app/icon1.png        16, el favicon dibujado a mano
  *      src/app/icon2.png        32, ídem
- *      src/app/apple-icon.png   180, cuadrado entero y sin alfa
+ *      src/app/apple-icon.png   180, el de iOS: cuadrado entero y sin alfa
  *
  *    Sin icon.svg, y a propósito: el navegador prefiere un SVG a cualquier
  *    PNG, y escalaría el dibujo grande a 16 px, donde el libro y el pupitre se
@@ -92,14 +94,73 @@ if (!DIBUJO || !NARANJA) {
   throw new Error('assets/icono.svg tiene que traer un <rect> de fondo con fill y un <path> con el dibujo.');
 }
 
+/*
+ * El atril de iOS, más grande que el de icono.svg.
+ *
+ * icono.svg está dibujado para Android: el atril cabe en el círculo del 66 %,
+ * que es lo único que un icono adaptable garantiza enseñar con cualquier
+ * máscara. iOS no recorta así: enseña el cuadrado entero con sus esquinas, y
+ * el mismo dibujo se quedaba en un tercio del ancho, perdido en el naranja.
+ *
+ * Aquí la caja del atril pasa a medir LADO_IOS del lado en su dimensión mayor,
+ * que es el alto (en icono.svg, el 57 %). Al 66 %, el tope del rango que se
+ * buscaba: es un símbolo estrecho, y por debajo de eso seguía pareciendo
+ * pequeño en la pantalla de inicio al lado de otros iconos.
+ *
+ * Se escala alrededor del centro del lienzo y no del de la caja, y eso es el
+ * centrado óptico: el dibujo ya trae la caja unos píxeles por debajo del
+ * centro (516,75 de 1024) porque el peso, libro y pupitre, está arriba (su
+ * centro de masas cae en 501,5). Centrar la caja a secas subiría el atril.
+ */
+const LADO_IOS = 0.66;
+
+/** La caja del atril en las unidades del SVG (1024), medida sobre el alfa. */
+async function cajaDelDibujo() {
+  const escala = 2;
+  const muestra = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="${1024 * escala}" height="${1024 * escala}"><path fill="#FFFFFF" d="${DIBUJO}"/></svg>`;
+  const { data, info } = await sharp(Buffer.from(muestra))
+    .ensureAlpha()
+    .extractChannel(3)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+  for (let y = 0; y < info.height; y++) {
+    for (let x = 0; x < info.width; x++) {
+      if (data[y * info.width + x] === 0) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  return { ancho: (x1 + 1 - x0) / escala, alto: (y1 + 1 - y0) / escala };
+}
+
+/** El icono de iOS a 1024, opaco. */
+async function iconoIos() {
+  const { ancho, alto } = await cajaDelDibujo();
+  const factor = (LADO_IOS * 1024) / Math.max(ancho, alto);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+    <rect width="1024" height="1024" fill="${NARANJA}"/>
+    <g transform="translate(512 512) scale(${factor.toFixed(4)}) translate(-512 -512)"><path fill="#FFFFFF" d="${DIBUJO}"/></g>
+  </svg>`;
+  const png = await sharp(Buffer.from(svg)).flatten({ background: NARANJA }).removeAlpha().png().toBuffer();
+  const { channels } = await sharp(png).metadata();
+  if (channels !== 3) throw new Error(`El icono de iOS sale con ${channels} canales; App Store Connect lo rechaza con alfa.`);
+  console.log(
+    `Icono de iOS: atril de ${Math.round(ancho * factor)} × ${Math.round(alto * factor)} sobre 1024 (×${factor.toFixed(3)}).`,
+  );
+  return png;
+}
+
 /** Un cuadrado con las esquinas de iOS (22,4 % del lado). */
 const esquinas = (lado) =>
   Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${lado}" height="${lado}"><rect width="${lado}" height="${lado}" rx="${lado * 0.2237}"/></svg>`,
   );
 
-async function redondeado(lado) {
-  const plano = await sharp(join(assets, 'icon-only.png')).resize(lado, lado).png().toBuffer();
+async function redondeado(lado, fuente = join(assets, 'icon-only.png')) {
+  const plano = await sharp(fuente).resize(lado, lado).png().toBuffer();
   return sharp(plano).composite([{ input: esquinas(lado), blend: 'dest-in' }]).png().toBuffer();
 }
 
@@ -180,6 +241,13 @@ function arranqueIos() {
   }
 }
 
+/** El nombre es el que deja @capacitor/assets en Contents.json: un solo 1024. */
+function escribirIconoIos(png) {
+  const carpeta = join(raiz, 'ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset');
+  if (!existsSync(carpeta)) return;
+  writeFileSync(join(carpeta, 'AppIcon-512@2x.png'), png);
+}
+
 /** El adaptable tal como lo pinta un lanzador: la zona visible, con su máscara. */
 async function adaptable(lado, mascara) {
   const forma =
@@ -207,18 +275,19 @@ async function telefono(ancho, alto) {
     .toBuffer();
 }
 
-async function vistaPrevia() {
+async function vistaPrevia(ios) {
   mkdirSync(versiones, { recursive: true });
 
   // Sobre un escalón más tostado que el crema, para que el teléfono se vea.
+  // Los dos redondeados (320 y 60) son el de iOS; los circulares, Android.
   const piezas = [
-    { input: await redondeado(320), left: 60, top: 80 },
+    { input: await redondeado(320, ios), left: 60, top: 80 },
     { input: await adaptable(200, 'circulo'), left: 440, top: 80 },
     { input: await adaptable(200, 'redondeado'), left: 440, top: 320 },
     { input: await adaptable(96, 'circulo'), left: 700, top: 80 },
     { input: await adaptable(64, 'circulo'), left: 716, top: 200 },
     { input: await adaptable(48, 'circulo'), left: 724, top: 290 },
-    { input: await redondeado(60), left: 718, top: 370 },
+    { input: await redondeado(60, ios), left: 718, top: 370 },
     { input: await telefono(260, 540), left: 860, top: 40 },
   ];
   await sharp({ create: { width: 1180, height: 620, channels: 4, background: '#F0EEE6' } })
@@ -252,7 +321,7 @@ function ico(imagenes) {
   return Buffer.concat([cabecera, ...entradas, ...imagenes.map((i) => i.png)]);
 }
 
-async function web() {
+async function web(ios) {
   const app = join(raiz, 'src', 'app');
   // A 72 ppp el SVG de 16 sale a 16 píxeles justos: cada cuadradito del
   // dibujo cae en un píxel, sin suavizado que lo emborrone.
@@ -273,7 +342,8 @@ async function web() {
   writeFileSync(join(app, 'icon1.png'), f16);
   writeFileSync(join(app, 'icon2.png'), f32);
   // iOS pone las esquinas y pinta de negro lo transparente: cuadrado entero.
-  await sharp(join(assets, 'icon-only.png'))
+  // Es el de la pantalla de inicio del iPhone, así que lleva el atril de iOS.
+  await sharp(ios)
     .resize(180, 180)
     .removeAlpha()
     .png()
@@ -291,8 +361,10 @@ if (generar.status !== 0) {
 
 adaptableAndroid();
 arranqueIos();
-await vistaPrevia();
-await web();
+const ios = await iconoIos();
+escribirIconoIos(ios);
+await vistaPrevia(ios);
+await web(ios);
 
 console.log(
   '\nIconos y arranque generados, también los de la web (src/app). Vista previa en Versiones/Android/icono-vista-previa.png',
