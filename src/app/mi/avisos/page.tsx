@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { Bell, Check } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/server';
+import { getCurrentUserContext } from '@/lib/auth/user-context';
+import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { listarNotificaciones } from '@/lib/notificaciones/consultas';
 import { textoNotificacion } from '@/lib/notificaciones/textos';
 import { haceCuanto } from '@/lib/fecha/relativo';
@@ -34,6 +36,14 @@ export default async function AvisosPage() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect('/acceso?next=/mi/avisos');
+
+  // El corte del consentimiento, solo para quien SÍ tiene iglesia: los avisos
+  // nombran a terceros («Fulano quiere unirse»), y una cuenta que todavía no
+  // ha aceptado no los lee aquí lo que no puede leer en el panel. Al rechazado,
+  // que no tiene contexto, no le toca, y sigue viendo el aviso que le explica
+  // por qué.
+  const ctx = await getCurrentUserContext();
+  if (ctx) await exigirConsentimientoAlDia(ctx);
 
   const avisos = await listarNotificaciones(user.id);
   const sinLeer = avisos.filter((a) => !a.leida).length;

@@ -64,13 +64,28 @@ export async function estadoConsentimiento(
       (f) => f.tipo === 'asistencia_y_seguimiento',
     );
 
+    // EL ALTA ASISTIDA
+    // ----------------
+    // Cuando la cuenta la crea Hatril y no la propia persona —una iglesia que
+    // se da de alta de la mano de Rogotech, sin pasar por `/registro`—, nadie
+    // ha marcado la casilla del art. 9 por ella, y apuntarla como aceptada
+    // sería inventarse un consentimiento. Esas cuentas nacen con
+    // `consentimiento_pendiente` en `app_metadata`, que solo escribe el
+    // service role: la persona no puede quitárselo, solo aceptar. Ver
+    // `scripts/alta-asistida.ts`.
+    const pendienteDeAlta =
+      ctx.user.app_metadata?.consentimiento_pendiente === true;
+
     return {
       // Quien NUNCA ha aceptado nada no se considera caducado: es el caso de
       // toda ficha tecleada por el pastor, y pararle el panel a media
       // congregación por un consentimiento que nunca se le pidió sería castigar
       // a la iglesia por una decisión de diseño anterior. Se le pide a quien SÍ
-      // aceptó, que es a quien la versión se le ha quedado vieja.
-      alDia: !religiosos || religiosos.version === VERSION_POLITICA_PRIVACIDAD,
+      // aceptó, que es a quien la versión se le ha quedado vieja, y a la cuenta
+      // del alta asistida, que entra en el panel y nunca dijo que sí.
+      alDia: religiosos
+        ? religiosos.version === VERSION_POLITICA_PRIVACIDAD
+        : !pendienteDeAlta,
       versionAceptada: religiosos?.version ?? null,
       asistenciaAceptada: Boolean(asistencia),
     };

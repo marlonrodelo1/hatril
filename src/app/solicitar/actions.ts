@@ -96,6 +96,7 @@ export async function solicitarIngreso(formData: FormData) {
       id: iglesias.id,
       nombre: iglesias.nombre,
       aceptaSolicitudes: iglesias.aceptaSolicitudes,
+      pais: iglesias.pais,
     })
     .from(iglesias)
     .where(and(eq(iglesias.slug, d.slug), eq(iglesias.activa, true)))
@@ -123,7 +124,10 @@ export async function solicitarIngreso(formData: FormData) {
           authUserId: user.id,
           nombre: d.nombre,
           email: user.email ?? null,
-          telefono: normalizarTelefono(d.telefono || null, 'CO'),
+          // Con el país de la iglesia, no 'CO' fijo: un «612 345 678» de
+          // Tenerife no encaja en la regla colombiana, se guardaba sin +34 y
+          // la ficha aprobada se quedaba sin botón de WhatsApp.
+          telefono: normalizarTelefono(d.telefono || null, iglesia.pais),
           mensaje: d.mensaje || null,
           // Las dos, siempre. NULL en cualquiera significa «no consta» y aprobar
           // lo trata como tal: ver las columnas en el schema.

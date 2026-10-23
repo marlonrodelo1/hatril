@@ -17,7 +17,8 @@
     "app:ios": "node scripts/app/ios.mjs",
     "app:version": "node scripts/app/version.mjs",
     "app:iconos": "node scripts/app/iconos.mjs",
-    "capacitor:copy:after": "node scripts/app/destino.mjs"
+    "capacitor:copy:after": "node scripts/app/destino.mjs",
+    "alta:asistida": "tsx --env-file-if-exists=.env.local scripts/alta-asistida.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
