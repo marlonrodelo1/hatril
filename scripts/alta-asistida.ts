@@ -43,6 +43,7 @@ import { componerModulos } from '../src/lib/ministerios/modulos';
 import { modulosDelTipo, TIPOS_MINISTERIO } from '../src/lib/ministerios/tipos';
 import { normalizarRed, REDES, type Red } from '../src/lib/iglesias/redes';
 import { normalizarTelefono } from '../src/lib/telefono/normalizar';
+import { validarPassword } from '../src/lib/auth/password';
 import type { HorarioSemanal } from '../src/lib/db/schema/iglesias';
 
 const BUCKET = 'iglesias-publico';
@@ -54,6 +55,12 @@ type Persona = {
   apellidos?: string;
   email?: string | null;
   rol: (typeof ROLES)[number];
+  /**
+   * La contraseña de primer acceso, si se ha acordado una con la iglesia. Sin
+   * ella se genera una al azar. Pasa por `validarPassword`, la misma regla que
+   * `/registro`: una cuenta del alta asistida no puede nacer más débil.
+   */
+  contrasena?: string;
 };
 
 type Alta = {
@@ -176,6 +183,10 @@ if (new Set(alta.ministerios.map((m) => m.nombre)).size !== alta.ministerios.len
 }
 for (const p of alta.personas) {
   if (!ROLES.includes(p.rol)) fallar(`${p.nombre}: el rol «${p.rol}» no existe.`);
+  if (p.contrasena !== undefined) {
+    const problema = validarPassword(p.contrasena);
+    if (problema) fallar(`${p.nombre}: ${problema}`);
+  }
   if (p.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) {
     fallar(`${p.nombre}: el correo «${p.email}» no parece válido.`);
   }
@@ -425,7 +436,7 @@ async function cuenta(e: Estado, p: Persona, f: { id: string; authUserId: string
     fallar(`${email} ya tiene cuenta en Hatril. No la engancho a esta iglesia sin que esa persona lo pida.`);
   }
 
-  const password = contrasenaInicial();
+  const password = p.contrasena ?? contrasenaInicial();
   const nombreCompleto = [p.nombre, p.apellidos].filter(Boolean).join(' ');
   const { data, error } = await supabase.auth.admin.createUser({
     email,

@@ -32,10 +32,13 @@ lee al arrancar.
   `https://hatril.com/i/cuerpo-de-cristo` (id `4b79f1b9-…-ecd40b943a23`). Datos,
   logo y fachada sacados de cuerpodecristoacentejo.com; zona `Atlantic/Canary`,
   no Madrid; prueba hasta el 31-dic; fuera del directorio. Cinco ministerios
-  (Alabanza, Escuela dominical, Acción social, Evangelización, Radio). Las
-  fichas de Israel Sanz de Diego y Silvia Martín, pastores, existen **sin
-  cuenta**: faltan sus correos. Las solicitudes de ingreso están cerradas hasta
-  que haya un pastor con cuenta. Las fotos de Remar de su web NO se subieron:
+  (Alabanza, Escuela dominical, Acción social, Evangelización, Radio). Israel
+  Sanz de Diego, pastor, tiene cuenta desde el 23-oct (los datos de acceso,
+  en `altas/`, fuera de git). Su dirección es de un dominio sin buzón, así que
+  no puede recuperar la contraseña él solo, y la contraseña es provisional y
+  débil: **hay que cambiarla antes de meter a ningún miembro**. Silvia Martín,
+  pastora, tiene ficha pero **no cuenta**: falta su correo. Con la cuenta de
+  Israel se abrieron las solicitudes de ingreso. Las fotos de Remar de su web NO se subieron:
   salen caras de niños y de personas vulnerables, y falta que la iglesia
   confirme que puede usarlas.
 - **Alta asistida** (`npm run alta:asistida -- altas/<carpeta>`): la iglesia la
