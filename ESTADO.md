@@ -1,6 +1,6 @@
 # Estado de Hatril
 
-Última actualización: 20 de octubre de 2026.
+Última actualización: 23 de octubre de 2026.
 
 Este fichero se actualiza al cerrar cada sesión de trabajo. Va **dentro del
 repo** a propósito: Pidoo guardaba su detalle en ficheros `memory/` fuera del
@@ -27,6 +27,27 @@ lee al arrancar.
 ---
 
 ## Qué funciona, verificado ejecutándolo
+
+- **La primera iglesia real: Cuerpo de Cristo** (23-oct), la de Marlon, en
+  `https://hatril.com/i/cuerpo-de-cristo` (id `4b79f1b9-…-ecd40b943a23`). Datos,
+  logo y fachada sacados de cuerpodecristoacentejo.com; zona `Atlantic/Canary`,
+  no Madrid; prueba hasta el 31-dic; fuera del directorio. Cinco ministerios
+  (Alabanza, Escuela dominical, Acción social, Evangelización, Radio). Las
+  fichas de Israel Sanz de Diego y Silvia Martín, pastores, existen **sin
+  cuenta**: faltan sus correos. Las solicitudes de ingreso están cerradas hasta
+  que haya un pastor con cuenta. Las fotos de Remar de su web NO se subieron:
+  salen caras de niños y de personas vulnerables, y falta que la iglesia
+  confirme que puede usarlas.
+- **Alta asistida** (`npm run alta:asistida -- altas/<carpeta>`): la iglesia la
+  da de alta Rogotech, no ella. La carpeta `altas/` está fuera de git y guarda
+  `alta.json`, `estado.json` (los ids de lo creado: las pasadas siguientes
+  buscan por id, nunca por slug ni por nombre) y `accesos.txt`. Las cuentas
+  nacen con `consentimiento_pendiente` en `app_metadata` y entran a `/acepta`
+  antes que a nada: probado en local con una cuenta de prueba, las seis puertas
+  (`/panel/*`, `/mi`, avisos, comunidad, equipo) la mandaban allí, y al aceptar
+  quedó la fila `datos_religiosos` y entró al panel. **No crear cuentas con el
+  script hasta que el commit `4a0ba46` esté desplegado**: el código anterior no
+  mira esa marca y las dejaría entrar sin aceptar.
 
 - **La paleta es la de Claude en claro, desde el 15-oct**: crema #FAF9F5,
   tarjetas blancas y naranja quemado #B15435. Sustituye al oscuro del 22-ago,
