@@ -101,10 +101,16 @@ export default async function HomePage() {
             pública de tu iglesia incluida.
           </p>
 
-          {/* El ÚNICO botón naranja de la pantalla. La regla del sistema de
-              diseño no es estética: si hay dos, ninguno es el importante. */}
+          {/* El ÚNICO botón relleno de color de la pantalla. La regla del
+              sistema de diseño no es estética: si hay dos, ninguno es el
+              importante. En dorado y no en naranja desde el 23-oct, a petición
+              de Marlon; el porqué de la letra oscura, en `--hatril-dorado`. */}
           <div className="flex flex-wrap items-center gap-3">
-            <Button size="lg" render={<Link href="/registro" />}>
+            <Button
+              size="lg"
+              render={<Link href="/registro" />}
+              className="bg-dorado text-dorado-foreground hover:bg-dorado-hover active:bg-dorado-active"
+            >
               Crea la de tu iglesia
             </Button>
             <Button variant="ghost" size="lg" render={<Link href="/iglesias" />}>

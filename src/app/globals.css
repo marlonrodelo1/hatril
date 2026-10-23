@@ -116,6 +116,22 @@
   --hatril-danger: #b53333;
 
   /*
+   * Dorado: el botón de «Crea la de tu iglesia» en la portada, que Marlon pidió
+   * en amarillo oscuro el 23-oct. Lleva LETRA OSCURA y no blanca: un amarillo
+   * con blanco encima no llega ni a 3:1 (#C99418 da 2.7), y para que el blanco
+   * pasara de 4.5 habría que oscurecerlo hasta el ámbar de aviso, que ya no se
+   * lee como amarillo. Con el texto casi negro: 6.8 en reposo, 5.7 al pasar
+   * por encima y 5.0 al pulsar.
+   *
+   * No es el ámbar de `warning` reutilizado: aquel significa «ojo», y un
+   * botón de alta pintado de aviso diría algo que no quiere decir.
+   */
+  --hatril-dorado: #c99418;
+  --hatril-dorado-hover: #b98715;
+  --hatril-dorado-active: #ab7d12;
+  --hatril-dorado-fg: #141413;
+
+  /*
    * El azul secundario de Claude (su accent-100 en claro). NO es un segundo
    * color de marca: no va en botones ni en fondos. Existe para distinguir
    * categorías al lado del naranja, como los puntos del calendario, donde el
@@ -238,6 +254,10 @@
   --color-support-active: var(--hatril-support-active);
   --color-warning: var(--hatril-warning);
   --color-danger: var(--hatril-danger);
+  --color-dorado: var(--hatril-dorado);
+  --color-dorado-hover: var(--hatril-dorado-hover);
+  --color-dorado-active: var(--hatril-dorado-active);
+  --color-dorado-foreground: var(--hatril-dorado-fg);
   --color-info: var(--hatril-info);
   --color-border-strong: var(--hatril-border-strong);
   --color-danger-border: var(--hatril-danger-border);
