@@ -387,14 +387,19 @@ function VentanaDonar({
           <DialogTitle className="text-[19px] font-extrabold tracking-[-0.02em]">
             Donar a {nombre}
           </DialogTitle>
+          {/* Sin «transferencia» ni «número de cuenta»: lo que pega la iglesia
+              puede ser un IBAN, un Nequi o un código de Bizum para ONG, y la
+              primera iglesia real puso justo el tercero. Un texto que da por
+              hecho el IBAN le decía al visitante que hiciera una transferencia
+              a algo que no es una cuenta. */}
           <DialogDescription className="text-[14px] leading-relaxed">
-            Se hace por transferencia directamente a la cuenta de la iglesia.
-            Hatril no cobra ni guarda datos de tarjetas.
+            Directamente a la iglesia, por el medio que indica aquí. Hatril no
+            cobra ni guarda datos de tarjetas.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface-alt p-4">
-          <span className="t-micro">Número de cuenta</span>
+          <span className="t-micro">Cómo donar</span>
           {/* `tabular-nums` para que los dígitos midan lo mismo: un número de
               cuenta con cifras que bailan es más fácil de copiar mal. */}
           <span className="text-[17px] font-bold tabular-nums tracking-[-0.01em] break-words">

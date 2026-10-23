@@ -20,6 +20,7 @@ commiteado y su migración está en `main`.
 | `arreglos-sueltos` | Libro de caja paginado, casilla de asistencia en `/registro`, nombres accesibles, confirmación de foto | `estado-arreglos-sueltos.md` |
 | `app-lider` | Pestaña Equipo en `/mi`, con vista de líder y de participante y un contrato por módulo | `estado-app-lider.md` |
 | `diseno-auditoria` | Guía visual e inventario de lo que falla (fase 1) | `docs/diseno/` |
+| `contabilidad` (21-oct, migraciones 0043-0045) | Finanzas activable por el pastor, fondo de ministerio con su pestaña para el líder, y arqueo a dos personas garantizado por la base | `estado-contabilidad.md` |
 
 Lo de cada rama ya está contado en `ESTADO.md`; los `estado-*.md` se quedan
 con el detalle. La próxima rama sigue igual: deja su estado en
@@ -28,14 +29,11 @@ fusionar.
 
 ## Cola con migración (de una en una)
 
-La siguiente migración es la **0043** y el siguiente código de trigger,
-**HT128**.
+La siguiente migración es la **0046** y el siguiente código de trigger,
+**HT132**. Células está en marcha (21-oct) y es la única sesión con migración.
 
-1. **Contabilidad completa** — la siguiente. Finanzas activable por el pastor
-   (`iglesias.modulos`), fondo vinculado a un ministerio con su pestaña de solo
-   lectura para el líder, y arqueo del culto a dos personas. El corte del libro
-   a 50 ya no entra: lo arreglaron los arreglos sueltos.
-2. **Células** con la pieza genérica de grupos (`grupos`, `grupo_miembros`):
+1. ~~Contabilidad completa~~: hecha y fusionada el 21-oct.
+2. **Células** — en marcha. Con la pieza genérica de grupos (`grupos`, `grupo_miembros`):
    reporte semanal en un toque, guía común de la semana para toda la red, aviso
    de célula sin reportar, invitación por enlace hacia `/solicitar`. Si el tema
    de cada semana va en `turnos.tema`, esa columna sirve también a la radio.

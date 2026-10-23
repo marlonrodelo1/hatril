@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { ShieldCheck } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
+import { estadoConsentimiento } from '@/lib/rgpd/consultas';
 import { TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS } from '@/lib/rgpd/consentimiento';
 import { CasillaAsistencia } from '@/components/casilla-asistencia';
 import { Logo } from '@/components/marca/logo';
@@ -10,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { salir } from '../(auth)/actions';
 import { aceptar } from './actions';
 
-export const metadata: Metadata = { title: 'La política ha cambiado' };
+export const metadata: Metadata = { title: 'Tu permiso' };
 
 /**
  * Volver a pedir el consentimiento cuando la política cambia de fondo.
@@ -31,6 +32,12 @@ export const metadata: Metadata = { title: 'La política ha cambiado' };
 export default async function AceptaPage() {
   const ctx = await requireIglesia();
 
+  // Sin versión aceptada, esta persona no viene de un texto viejo: es una
+  // cuenta del alta asistida que todavía no ha dicho nada. «Ha cambiado» y
+  // «qué es lo nuevo» le estarían hablando de algo que nunca leyó.
+  const primeraVez =
+    (await estadoConsentimiento(ctx)).versionAceptada === null;
+
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       {/* La marca, y sin enlace: fuera del panel y de /mi no hay otra cosa
@@ -47,20 +54,44 @@ export default async function AceptaPage() {
           <span className="flex size-11 items-center justify-center rounded-full bg-accent text-accent-foreground">
             <ShieldCheck className="size-5" strokeWidth={1.7} />
           </span>
-          <h1 className="t-titulo">Ha cambiado lo que guardamos de ti</h1>
-          <p className="text-pretty text-[15px] leading-relaxed text-muted-foreground">
-            Aceptaste una versión anterior de la política de{' '}
-            <strong className="font-semibold text-foreground">
-              {ctx.iglesia.nombre}
-            </strong>{' '}
-            en Hatril. Desde entonces el producto guarda cosas que aquel texto
-            no nombraba, así que hay que preguntártelo otra vez. Tarda un
-            minuto.
-          </p>
+          {primeraVez ? (
+            <>
+              <h1 className="t-titulo">Antes de empezar</h1>
+              {/* Dice lo que ya hay y lo que pasa si no acepta, no solo lo
+                  que se pide: la ficha existe antes de esta pantalla, y
+                  prometer «el permiso lo das tú» sin contarlo sería informar a
+                  medias (art. 7.2 y 13). */}
+              <p className="text-pretty text-[15px] leading-relaxed text-muted-foreground">
+                <strong className="font-semibold text-foreground">
+                  {ctx.iglesia.nombre}
+                </strong>{' '}
+                te ha dado de alta en Hatril con tu nombre y tu cargo. Antes de
+                entrar te pedimos permiso para guardar tu vínculo con ella:
+                nadie lo ha aceptado por ti. Si prefieres no hacerlo, cierra
+                sesión; tu ficha sigue en el fichero de tu iglesia como la de
+                cualquier miembro, y puedes pedirle que la borre.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="t-titulo">Ha cambiado lo que guardamos de ti</h1>
+              <p className="text-pretty text-[15px] leading-relaxed text-muted-foreground">
+                Aceptaste una versión anterior de la política de{' '}
+                <strong className="font-semibold text-foreground">
+                  {ctx.iglesia.nombre}
+                </strong>{' '}
+                en Hatril. Desde entonces el producto guarda cosas que aquel
+                texto no nombraba, así que hay que preguntártelo otra vez. Tarda
+                un minuto.
+              </p>
+            </>
+          )}
         </div>
 
         <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5">
-          <h2 className="t-subtitulo">Qué es lo nuevo</h2>
+          <h2 className="t-subtitulo">
+            {primeraVez ? 'Qué se guarda, además de tu ficha' : 'Qué es lo nuevo'}
+          </h2>
           <ul className="flex list-disc flex-col gap-2 pl-5 text-[14.5px] leading-relaxed">
             <li>
               <strong className="font-semibold">

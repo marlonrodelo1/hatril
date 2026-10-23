@@ -139,6 +139,12 @@ export function problemaDeLaSenal(valor: string): string | null {
   if (host === 'zeno.fm' || host === 'www.zeno.fm') {
     return 'Esa es la página de la emisora en Zeno, no el audio. La dirección de la señal empieza por https://stream.zeno.fm/';
   }
+  // Pasaba la validación y el reproductor se quedaba mudo: un canal de
+  // YouTube es una página, no un audio que un <audio> pueda abrir. La primera
+  // iglesia real tiene su radio justo así.
+  if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be'].includes(host)) {
+    return 'YouTube no es una señal de audio y aquí no sonaría. Pon el canal en Ajustes, en Redes, y aquí la dirección de la emisión en MP3 o AAC que da tu proveedor.';
+  }
   if (esDeRedLocal(host)) {
     return 'Esa dirección solo funciona dentro de tu red. Hace falta la que da tu proveedor para internet.';
   }
