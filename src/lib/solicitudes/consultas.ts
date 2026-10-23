@@ -22,6 +22,8 @@ export type SolicitudPendiente = {
    * hay que saberlo antes de elegir.
    */
   aceptaAsistencia: boolean | null;
+  /** El grupo de cuya invitación viene, si la trae: al aprobar, queda en él. */
+  grupoId: string | null;
   createdAt: Date;
 };
 
@@ -38,6 +40,7 @@ export async function listarSolicitudesPendientes(
         telefono: solicitudesIngreso.telefono,
         mensaje: solicitudesIngreso.mensaje,
         aceptaAsistencia: solicitudesIngreso.aceptaAsistencia,
+        grupoId: solicitudesIngreso.grupoId,
         createdAt: solicitudesIngreso.createdAt,
       })
       .from(solicitudesIngreso)

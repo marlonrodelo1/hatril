@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Check, Inbox, Phone } from 'lucide-react';
+import { Check, HouseHeart, Inbox, Phone } from 'lucide-react';
 
 import { requirePermiso } from '@/lib/auth/guard-panel';
 import { esPastor } from '@/lib/auth/permisos';
@@ -9,6 +9,7 @@ import {
   type FichaSugerida,
 } from '@/lib/solicitudes/consultas';
 import { iniciales } from '@/lib/format/iniciales';
+import { nombresDeGrupos } from '@/lib/grupos/consultas';
 import { formatearTelefono } from '@/lib/telefono/normalizar';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,13 @@ export default async function SolicitudesPage({
   const ctx = await requirePermiso('aprobar_solicitudes');
   const { error } = await searchParams;
   const solicitudes = await listarSolicitudesPendientes(ctx);
+  // De qué célula viene cada una, si viene con invitación. Solo el pastor lee
+  // los grupos de toda la iglesia (`0047`); a los demás les sale vacío, y es lo
+  // que toca: no pueden aprobar, y el grupo no es asunto suyo.
+  const grupos = await nombresDeGrupos(
+    ctx,
+    [...new Set(solicitudes.map((s) => s.grupoId).filter((g): g is string => g !== null))],
+  );
 
   // Hoy solo el pastor puede resolverlas: la base no deja a nadie más activar
   // ni borrar una membresía (ver la cabecera de `actions.ts`). Quien tiene
@@ -161,6 +169,20 @@ export default async function SolicitudesPage({
                         </span>
                       </div>
                     </div>
+
+                    {s.grupoId && grupos.get(s.grupoId) && (
+                      <p className="flex items-start gap-2 text-label">
+                        <HouseHeart className="mt-0.5 size-4 flex-none text-muted-foreground" strokeWidth={1.8} aria-hidden />
+                        <span>
+                          Viene con la invitación de{' '}
+                          <strong className="font-semibold">{grupos.get(s.grupoId)!.nombre}</strong>{' '}
+                          ({grupos.get(s.grupoId)!.ministerio}).{' '}
+                          {grupos.get(s.grupoId)!.activo
+                            ? 'Al aprobarla, quedará en ese grupo.'
+                            : 'Ese grupo ya se cerró: entrará en la iglesia sin grupo.'}
+                        </span>
+                      </p>
+                    )}
 
                     {s.mensaje && (
                       <p className="text-pretty rounded-lg border border-border bg-surface-alt px-4 py-3 text-[14.5px] leading-relaxed">

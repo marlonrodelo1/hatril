@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, HouseHeart } from 'lucide-react';
 
 import { iglesiaParaSolicitar } from '@/lib/iglesias/directorio';
 import { solicitudDeUsuario } from '@/lib/solicitudes/consultas';
@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS } from '@/lib/rgpd/consentimiento';
 import { CasillaAsistencia } from '@/components/casilla-asistencia';
+import { grupoDeLaInvitacion } from '@/lib/grupos/invitacion';
+import { leerCodigo } from '@/lib/grupos/codigo';
 
 export const metadata: Metadata = { title: 'Pedir unirme' };
 
@@ -23,13 +25,20 @@ export default async function SolicitarPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; grupo?: string }>;
 }) {
   const { slug } = await params;
-  const { error } = await searchParams;
+  const { error, grupo: codigo } = await searchParams;
 
   const iglesia = await iglesiaParaSolicitar(slug);
   if (!iglesia) notFound();
+
+  // El enlace de invitación de una célula trae su código. Si no vale —cerrada,
+  // de otra iglesia, tecleado mal— se sigue como una solicitud normal: lo que
+  // se viene a hacer es entrar en la iglesia, y eso no depende del grupo.
+  const grupo = await grupoDeLaInvitacion(iglesia.id, codigo);
+  // Para no perderlo al ir a crear la cuenta o a identificarse y volver.
+  const aqui = `/solicitar/${slug}${grupo ? `?grupo=${leerCodigo(codigo)}` : ''}`;
 
   const supabase = await createClient();
   const {
@@ -82,6 +91,17 @@ export default async function SolicitarPage({
 
         {error && <Aviso>{error}</Aviso>}
 
+        {grupo && iglesia.aceptaSolicitudes && (
+          <p className="flex items-start gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-[14px] leading-relaxed">
+            <HouseHeart className="mt-0.5 size-5 flex-none text-muted-foreground" strokeWidth={1.8} aria-hidden />
+            <span>
+              Vienes con la invitación de <strong className="font-semibold">{grupo.nombre}</strong>.
+              Cuando {iglesia.nombre} apruebe tu solicitud, quedarás en ese grupo y verás
+              lo de toda la iglesia.
+            </span>
+          </p>
+        )}
+
         {!iglesia.aceptaSolicitudes ? (
           <Aviso>
             Esta iglesia no está aceptando solicitudes ahora mismo. Ponte en
@@ -111,7 +131,7 @@ export default async function SolicitarPage({
               <Button
                 render={
                   <Link
-                    href={`/crear-cuenta?next=${encodeURIComponent(`/solicitar/${slug}`)}`}
+                    href={`/crear-cuenta?next=${encodeURIComponent(aqui)}`}
                   />
                 }
               >
@@ -121,7 +141,7 @@ export default async function SolicitarPage({
                 variant="outline"
                 render={
                   <Link
-                    href={`/acceso?next=${encodeURIComponent(`/solicitar/${slug}`)}`}
+                    href={`/acceso?next=${encodeURIComponent(aqui)}`}
                   />
                 }
               >
@@ -135,6 +155,7 @@ export default async function SolicitarPage({
             className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5"
           >
             <input type="hidden" name="slug" value={slug} />
+            {grupo && <input type="hidden" name="grupo" value={leerCodigo(codigo) ?? ''} />}
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="nombre">Cómo te llamas</Label>

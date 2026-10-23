@@ -77,6 +77,23 @@ export const TIPOS_MINISTERIO = [
     puestos: ['Bienvenida', 'Consolidación'],
   },
   {
+    /*
+     * Reuniones de oración en casas, cada una con su líder. Cada red —hombres,
+     * mujeres, jóvenes, parejas— es un ministerio de este tipo: su responsable
+     * es el líder de red y los colíderes hacen de supervisores. Una iglesia sin
+     * redes crea uno solo. No se impone ningún modelo (G12 u otro): el árbol
+     * de supervisión y de multiplicación queda para cuando alguien lo pida.
+     *
+     * La agenda es la reunión de líderes de la red, con su lista.
+     */
+    id: 'celulas',
+    nombre: 'Células',
+    descripcion:
+      'Reuniones de oración en casas, cada una con su líder. Cada red —hombres, mujeres, jóvenes— puede ser un ministerio de este tipo.',
+    modulos: ['grupos', 'agenda'],
+    puestos: ['Líder de célula', 'Auxiliar', 'Supervisión'],
+  },
+  {
     id: 'ninos',
     nombre: 'Niños',
     descripcion: 'Escuela dominical y actividades de los más pequeños.',

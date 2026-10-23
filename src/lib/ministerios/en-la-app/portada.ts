@@ -37,11 +37,12 @@ function herramientaDe(
   ministerioId: string,
   modulo: PiezaDeLaPortada,
   app: Adaptador | null,
+  abrir?: string,
 ): { texto: string; href: string } {
   return app?.pantalla === 'app'
-    ? { texto: app.abrir, href: `${RAIZ_APP}/${ministerioId}/${modulo.id}` }
+    ? { texto: abrir ?? app.abrir, href: `${RAIZ_APP}/${ministerioId}/${modulo.id}` }
     : {
-        texto: app?.abrir ?? 'Abrir en el panel',
+        texto: abrir ?? app?.abrir ?? 'Abrir en el panel',
         href: `/panel/ministerios/${ministerioId}/${modulo.id}`,
       };
 }
@@ -97,7 +98,7 @@ export async function tarjetasDeLaPortada(
         enlace:
           modo === 'participante'
             ? (resumen?.enlace ?? null)
-            : herramientaDe(ministerio.id, modulo, app),
+            : herramientaDe(ministerio.id, modulo, app, resumen?.abrir),
         resumen,
         sinAdaptador: app === null,
       };

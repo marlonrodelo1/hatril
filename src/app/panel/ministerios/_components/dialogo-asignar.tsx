@@ -29,11 +29,23 @@ export function DialogoAsignar({
   candidatos,
   accion,
   cerrar,
+  textos,
 }: {
   ministerioNombre: string;
   candidatos: { id: string; nombre: string; estado: EstadoMiembro }[];
   accion: (formData: FormData) => Promise<void>;
   cerrar: string;
+  /**
+   * Para usarlo fuera del equipo: sumar gente a una célula (`grupos/[grupoId]`).
+   * Cadenas y no funciones, porque cruzan de servidor a cliente.
+   */
+  textos?: {
+    titulo: string;
+    ayuda: string;
+    vacio: string;
+    vacioBusqueda: string;
+    sinMarcar: string;
+  };
 }) {
   const [busqueda, setBusqueda] = useState('');
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
@@ -79,10 +91,10 @@ export function DialogoAsignar({
                 id="titulo-asignar"
                 className="text-[19px] font-bold tracking-[-0.022em]"
               >
-                Sumar personas a {ministerioNombre}
+                {textos?.titulo ?? `Sumar personas a ${ministerioNombre}`}
               </h2>
               <p className="text-[13.5px] text-muted-foreground">
-                Marca a quien quieras sumar al equipo.
+                {textos?.ayuda ?? 'Marca a quien quieras sumar al equipo.'}
               </p>
             </div>
             <Link
@@ -117,9 +129,15 @@ export function DialogoAsignar({
 
             <div className="min-h-[180px] flex-1 overflow-y-auto px-5 pb-2">
               {candidatos.length === 0 ? (
-                <Vacio texto="Todas las personas del fichero ya están en este equipo." />
+                <Vacio
+                  texto={
+                    textos?.vacio ?? 'Todas las personas del fichero ya están en este equipo.'
+                  }
+                />
               ) : visibles.length === 0 ? (
-                <Vacio texto="Nadie con ese nombre está fuera del equipo." />
+                <Vacio
+                  texto={textos?.vacioBusqueda ?? 'Nadie con ese nombre está fuera del equipo.'}
+                />
               ) : (
                 visibles.map((c) => {
                   const marcado = marcados.has(c.id);
@@ -171,7 +189,7 @@ export function DialogoAsignar({
               </Button>
               <Button type="submit" size="sm" disabled={n === 0}>
                 {n === 0
-                  ? 'Sumar al equipo'
+                  ? (textos?.sinMarcar ?? 'Sumar al equipo')
                   : `Sumar a ${n} ${n === 1 ? 'persona' : 'personas'}`}
               </Button>
             </div>

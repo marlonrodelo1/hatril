@@ -11,6 +11,8 @@ import { withUser } from '@/lib/db';
 import {
   asistencias,
   consentimientos,
+  grupoMiembros,
+  grupos,
   iglesiaUsuarios,
   miembros,
   seguimientoAsignaciones,
@@ -18,6 +20,7 @@ import {
   solicitudesIngreso,
 } from '@/lib/db/schema';
 import { VERSION_POLITICA_PRIVACIDAD } from '@/lib/rgpd/consentimiento';
+import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { campo } from '@/lib/api/formulario';
 import {
   condicionFichaEnlazable,
@@ -148,6 +151,7 @@ export async function aprobarSolicitud(
           telefono: solicitudesIngreso.telefono,
           aceptaAsistencia: solicitudesIngreso.aceptaAsistencia,
           versionTexto: solicitudesIngreso.versionTexto,
+          grupoId: solicitudesIngreso.grupoId,
         })
         .from(solicitudesIngreso)
         .where(
@@ -388,6 +392,22 @@ export async function aprobarSolicitud(
         )
         .returning({ id: iglesiaUsuarios.id });
 
+      // EL GRUPO DE LA INVITACIÓN: QUEDA DENTRO
+      // --------------------------------------
+      // Es el puente de las células hacia la iglesia: quien llegó con el
+      // enlace de una entra, al aprobarle, en la iglesia entera Y en esa
+      // célula. Como participante, que es lo que es: llevarla pide estar en el
+      // equipo (HT132).
+      //
+      // Se salta, sin error, si el grupo ya se cerró o su red no está activa,
+      // si la ficha enlazada ya está dentro, o si ya va como participante a
+      // otra célula de esa red (`uq_grupo_participante_por_ministerio`): lo
+      // que se aprueba es la entrada en la iglesia, y no puede caerse por esto.
+      // La bandeja lo avisa antes de pulsar.
+      if (solicitud.grupoId) {
+        await meterEnElGrupo(tx, ctx.iglesia.id, solicitud.grupoId, fichaId, hoyEnLaIglesia(ctx.iglesia.timezone));
+      }
+
       // Si la membresía no se tocó, la persona se quedaría en «pendiente» con
       // la solicitud ya cerrada: fuera de la bandeja y sin poder entrar. Y al
       // enlazar sería peor, porque la ficha quedaría atada a una cuenta que no
@@ -441,6 +461,50 @@ export async function aprobarSolicitud(
   revalidatePath('/panel/solicitudes');
   revalidatePath('/panel/miembros');
   redirect('/panel/solicitudes');
+}
+
+type Tx = Parameters<Parameters<typeof withUser>[1]>[0];
+
+/**
+ * La persona aprobada, dentro del grupo de su invitación, si se puede. Ver el
+ * comentario donde se llama. Por `withUser` del pastor, que es quien aprueba:
+ * la RLS de la `0047` le deja escribir en cualquier grupo de su iglesia.
+ */
+async function meterEnElGrupo(
+  tx: Tx,
+  iglesiaId: string,
+  grupoId: string,
+  fichaId: string,
+  /** En la zona de la iglesia (`hoyEnLaIglesia`), no en UTC. */
+  hoy: string,
+): Promise<void> {
+  const [grupo] = await tx
+    .select({ ministerioId: grupos.ministerioId, activo: grupos.activo })
+    .from(grupos)
+    .where(and(eq(grupos.id, grupoId), eq(grupos.iglesiaId, iglesiaId)))
+    .limit(1);
+  if (!grupo?.activo) return;
+
+  const ya = await tx
+    .select({ grupoId: grupoMiembros.grupoId, rol: grupoMiembros.rolGrupo })
+    .from(grupoMiembros)
+    .where(
+      and(
+        eq(grupoMiembros.ministerioId, grupo.ministerioId),
+        eq(grupoMiembros.miembroId, fichaId),
+        eq(grupoMiembros.activo, true),
+      ),
+    );
+  if (ya.some((f) => f.grupoId === grupoId || f.rol === 'participante')) return;
+
+  await tx.insert(grupoMiembros).values({
+    iglesiaId,
+    ministerioId: grupo.ministerioId,
+    grupoId,
+    miembroId: fichaId,
+    rolGrupo: 'participante',
+    desde: hoy,
+  });
 }
 
 const EsquemaRechazo = z.object({

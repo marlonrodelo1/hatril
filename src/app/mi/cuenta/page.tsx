@@ -12,6 +12,9 @@ import { requireIglesia } from '@/lib/auth/guard-panel';
 import { puedeGestionarMinisterio } from '@/lib/auth/permisos';
 import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { misMinisterios } from '@/lib/ministerios/consultas';
+import { vistaDeMisGrupos } from '@/lib/grupos/vista';
+import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
+import { TarjetaMiGrupo } from '@/components/grupos/mi-grupo';
 import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
 import { donativosDeMiIglesia } from '@/lib/iglesias/donativos';
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
@@ -33,9 +36,11 @@ export default async function MiCuentaPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [ministerios, donativos] = await Promise.all([
+  const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
+  const [ministerios, donativos, grupos] = await Promise.all([
     misMinisterios(ctx),
     donativosDeMiIglesia(ctx),
+    vistaDeMisGrupos(ctx, hoy),
   ]);
 
   const nombre = nombreDeLaCuenta(user!);
@@ -63,6 +68,27 @@ export default async function MiCuentaPage() {
             </span>
           </div>
         </section>
+
+        {/*
+         * Su célula, antes que sus ministerios: es lo que más gente tiene, y
+         * para quien va a una sin servir en nada es lo único suyo de esta
+         * pantalla. Sin sección si no está en ninguna: no se le ofrece apuntarse,
+         * eso es cosa de su red o de un enlace de invitación.
+         */}
+        {grupos.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="t-subtitulo">
+              {grupos.length === 1
+                ? `Tu ${grupos[0]!.etiquetas.uno}`
+                : `Tus ${grupos[0]!.etiquetas.varios}`}
+            </h2>
+            <ul className="flex flex-col gap-2.5">
+              {grupos.map((g) => (
+                <TarjetaMiGrupo key={g.grupoId} grupo={g} hoy={hoy} />
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section className="flex flex-col gap-3">
           <h2 className="t-subtitulo">

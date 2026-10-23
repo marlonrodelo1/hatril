@@ -141,7 +141,14 @@ const RUTA_MARCO = '/panel/cuenta/contrasena';
 
 // Las páginas de fuera de `src/app/panel` que este test cubre a propósito, con
 // la misma exigencia que las del panel: existir y estar en `rutas()`.
-const FUERA_DEL_PANEL = ['mi/equipo/[id]/fondo/page.tsx'];
+const FUERA_DEL_PANEL = [
+  'mi/equipo/[id]/fondo/page.tsx',
+  // Las células desde la app: la red (de quien la lleva), la célula de su líder
+  // y sus próximos temas. Las tres con su 404 para quien no puede.
+  'mi/equipo/[id]/grupos/page.tsx',
+  'mi/equipo/[id]/grupos/[grupoId]/page.tsx',
+  'mi/equipo/[id]/grupos/[grupoId]/temas/page.tsx',
+];
 
 // ============================================
 // 1. La base de demo, en solo lectura
@@ -207,6 +214,18 @@ async function leerDemo() {
         fondoAccionSocial: await uno(sql`
           select id from fondos
            where ministerio_id = ${min['Acción social']} and activo limit 1`),
+        // De `seed-celulas.sql`: la red y sus dos células. Sin ellas, los casos
+        // de las células no se generan y el test lo dice al final.
+        celulas: await uno(sql`
+          select id from ministerios
+           where iglesia_id = ${B} and tipo = 'celulas' and activo
+           order by orden, nombre limit 1`),
+        pinos: await uno(sql`
+          select g.id from grupos g join ministerios m on m.id = g.ministerio_id
+           where g.iglesia_id = ${B} and m.tipo = 'celulas' and g.nombre = 'Los Pinos' and g.activo limit 1`),
+        prado: await uno(sql`
+          select g.id from grupos g join ministerios m on m.id = g.ministerio_id
+           where g.iglesia_id = ${B} and m.tipo = 'celulas' and g.nombre = 'El Prado' and g.activo limit 1`),
         evento: await uno(sql`
           select e.id from eventos e left join evento_inscripciones i on i.evento_id = e.id
            where e.iglesia_id = ${B}
@@ -284,6 +303,17 @@ async function leerDemo() {
         select nombre from fondos where iglesia_id = ${B}
         union select nombre from cajas where iglesia_id = ${B}`) {
         anadir(f.nombre, 'fondo o caja');
+      }
+      // Las células: dónde y cuándo se reúne cada una no es de toda la iglesia
+      // (0047), y lo que se habló en una reunión, tampoco. La guía de la red no
+      // entra: la lee la iglesia entera a propósito.
+      for (const g of await sql`select nombre, zona from grupos where iglesia_id = ${B}`) {
+        anadir(g.nombre, 'célula');
+        anadir(g.zona, 'zona de célula');
+      }
+      for (const t of await sql`
+        select tema from grupo_semanas where iglesia_id = ${B} and tema is not null`) {
+        anadir(t.tema, 'tema de célula');
       }
 
       // Sin repetidos: dos personas con los mismos apellidos son un testigo.
@@ -680,6 +710,55 @@ function rutas(ids) {
     [COLIDER]: 'min',
     [SECRETARIA]: 'min',
   });
+
+  // --- Células: la red la lleva quien está dentro; cada célula, también su líder ---
+  // Sara (colider@) es colíder de la red; Andrés (enlace@), voluntario de la red,
+  // lleva Los Pinos; Lucía (miembro@) va a Los Pinos sin estar en el equipo.
+  // `gestionar_ministerios` no entra (secretaría), como en el reparto: la RLS de
+  // la 0047 es por relación.
+  if (ids.celulas && ids.pinos && ids.prado) {
+    const R = `${M}/${ids.celulas}`;
+    const RED = {
+      [COLIDER]: 'pinta',
+      [LIDER]: 'min',
+      [SECRETARIA]: 'min',
+      [CONSOLIDACION]: 'min',
+      [ENLACE]: '/mi',
+    };
+    pagina('…<Células>/grupos', `${R}/grupos`, 'panel/ministerios/[id]/grupos/page.tsx', RED);
+    pagina('…<Células>/grupos/nuevo', `${R}/grupos/nuevo`, 'panel/ministerios/[id]/grupos/nuevo/page.tsx', RED);
+    pagina('…<Células>/grupos/<Los Pinos>', `${R}/grupos/${ids.pinos}`, 'panel/ministerios/[id]/grupos/[grupoId]/page.tsx', RED);
+
+    // En la app no se rebota: 404 de la propia página, y sin nada del pastor.
+    const FUERA = {
+      [MIEMBRO]: 'oculta',
+      [LIDER]: 'oculta',
+      [SECRETARIA]: 'oculta',
+      [CONSOLIDACION]: 'oculta',
+    };
+    const A = `/mi/equipo/${ids.celulas}/grupos`;
+    pagina('/mi/equipo/<Células>/grupos', A, 'mi/equipo/[id]/grupos/page.tsx', {
+      ...FUERA,
+      [COLIDER]: 'pinta',
+      [ENLACE]: 'oculta',
+    });
+    pagina('/mi/equipo/<Células>/grupos/<Los Pinos>', `${A}/${ids.pinos}`, 'mi/equipo/[id]/grupos/[grupoId]/page.tsx', {
+      ...FUERA,
+      [COLIDER]: 'pinta',
+      [ENLACE]: 'pinta',
+    });
+    pagina('/mi/equipo/<Células>/grupos/<Los Pinos>/temas', `${A}/${ids.pinos}/temas`, 'mi/equipo/[id]/grupos/[grupoId]/temas/page.tsx', {
+      ...FUERA,
+      [COLIDER]: 'pinta',
+      [ENLACE]: 'pinta',
+    });
+    // La otra célula: su líder de al lado no entra.
+    pagina('/mi/equipo/<Células>/grupos/<El Prado>', `${A}/${ids.prado}`, 'mi/equipo/[id]/grupos/[grupoId]/page.tsx', {
+      ...FUERA,
+      [COLIDER]: 'pinta',
+      [ENLACE]: 'oculta',
+    });
+  }
 
   return SOLO ? r.filter((x) => x.etiqueta.includes(SOLO)) : r;
 }

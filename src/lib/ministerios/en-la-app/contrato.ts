@@ -74,6 +74,16 @@ export type ResumenDeModulo = {
    * siempre es `/mi/agenda`. Sin él, la tarjeta del participante va sin pie.
    */
   enlace?: { texto: string; href: string } | null;
+  /**
+   * El título de la tarjeta, si no es el nombre del módulo en el catálogo.
+   *
+   * Para la pieza que cambia de nombre según el ministerio: los grupos son
+   * «Células» en una red y serán «Clases» en la escuela, y para quien va a uno,
+   * «Tu célula». Sin él, el nombre de `modulos.ts`.
+   */
+  titulo?: string;
+  /** El texto del enlace del líder, si no es `ModuloEnLaApp.abrir`. Por lo mismo. */
+  abrir?: string;
 };
 
 /**

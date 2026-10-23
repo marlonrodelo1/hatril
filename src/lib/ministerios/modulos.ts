@@ -2,6 +2,7 @@ import {
   CalendarCheck,
   CalendarClock,
   HeartHandshake,
+  HouseHeart,
   ListMusic,
   PackageOpen,
   type LucideIcon,
@@ -36,7 +37,7 @@ import { z } from 'zod';
  *
  * SOLO ESTÁ LO QUE FUNCIONA
  * -------------------------
- * Seis módulos, y son los seis que existen de verdad. Material del equipo,
+ * Siete módulos, y son los siete que existen de verdad. Material del equipo,
  * inventario, vínculo con las familias y peticiones de oración están decididos
  * y NO se declaran aquí hasta que se puedan pulsar. Un interruptor que enciende
  * una pestaña vacía hace parecer roto un producto que funciona — la misma regla
@@ -51,6 +52,27 @@ type ModuloDeclarado = {
 };
 
 export const MODULOS_MINISTERIO = [
+  {
+    /*
+     * El primero porque en el ministerio que lo enciende es lo que se abre cada
+     * semana: en una red de células, las células son el trabajo, y la agenda
+     * es la reunión de líderes.
+     *
+     * Una pieza genérica (`schema/grupos.ts`): hoy la encienden las redes de
+     * células y mañana la escuela dominical, para sus clases. Por eso el nombre
+     * es de los dos, y la pestaña y la tarjeta dicen «Células» o «Clases»
+     * según el tipo (`lib/grupos/etiquetas.ts`).
+     *
+     * Su RLS es por relación (`0047`): el líder de una célula ve la suya y no la
+     * de al lado. Lo lleva desde dentro la red —pastor, responsable y
+     * colíderes—, no `gestionar_ministerios`, como el reparto.
+     */
+    id: 'grupos',
+    nombre: 'Células y grupos',
+    descripcion:
+      'Grupos que se reúnen cada semana en casas o en la iglesia, cada uno con quien lo lleva: su gente, el tema de la semana, cuántos vinieron y quién no ha reportado.',
+    Icono: HouseHeart,
+  },
   {
     id: 'agenda',
     nombre: 'Agenda del equipo',

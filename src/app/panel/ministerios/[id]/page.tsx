@@ -7,13 +7,19 @@ import {
   ShieldPlus,
   Star,
   Trash2,
+  TriangleAlert,
   Upload,
   UserMinus,
   UserPlus,
 } from 'lucide-react';
 
 import { requirePanel } from '@/lib/auth/guard-panel';
-import { esPastor, puede, puedeGestionarMinisterio } from '@/lib/auth/permisos';
+import {
+  esPastor,
+  puede,
+  puedeGestionarDesdeDentro,
+  puedeGestionarMinisterio,
+} from '@/lib/auth/permisos';
 import {
   candidatosParaMinisterio,
   obtenerMinisterio,
@@ -21,6 +27,10 @@ import {
 } from '@/lib/ministerios/consultas';
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { tipoDeMinisterio } from '@/lib/ministerios/tipos';
+import { tieneModulo } from '@/lib/ministerios/modulos';
+import { contarLaRed, gruposDeLaRed } from '@/lib/grupos/consultas';
+import { etiquetasDeGrupos } from '@/lib/grupos/etiquetas';
+import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { iniciales } from '@/lib/format/iniciales';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
@@ -154,6 +164,18 @@ export default async function MinisterioPage({
 
   const asignarAqui = asignarAlMinisterio.bind(null, ministerio.id);
 
+  // El aviso de grupos sin reportar, en la portada del ministerio y no solo en
+  // su pestaña: es lo que el responsable de una red viene a mirar. Con la
+  // puerta de la pestaña (desde dentro), y solo con la herramienta encendida:
+  // a los demás ni se les pide.
+  const sinReportar =
+    tieneModulo(ministerio.modulos, 'grupos') && puedeGestionarDesdeDentro(ctx, id)
+      ? contarLaRed(
+          await gruposDeLaRed(ctx, id, hoyEnLaIglesia(ctx.iglesia.timezone)),
+        ).sinReportar
+      : 0;
+  const eg = etiquetasDeGrupos(ministerio.tipo);
+
   return (
     <>
       {/* El «volver» era doble: un botón con flecha en escritorio y un enlace de
@@ -185,6 +207,25 @@ export default async function MinisterioPage({
         {error && <Aviso>{error}</Aviso>}
         {guardado && Object.hasOwn(CONFIRMACIONES, guardado) && (
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
+        )}
+
+        {sinReportar > 0 && (
+          <Link
+            href={`/panel/ministerios/${ministerio.id}/grupos`}
+            className="flex items-center gap-3 rounded-xl border border-border bg-surface px-5 py-4 text-foreground no-underline hover:bg-surface-alt hover:no-underline"
+          >
+            <TriangleAlert className="size-5 flex-none text-warning" strokeWidth={1.8} aria-hidden />
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-body font-semibold">
+                {sinReportar === 1
+                  ? `1 ${eg.uno} sin reportar su última reunión`
+                  : `${sinReportar} ${eg.varios} sin reportar su última reunión`}
+              </span>
+              <span className="text-label text-muted-foreground">
+                Ver quién falta y cómo va el resto
+              </span>
+            </span>
+          </Link>
         )}
 
         <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5 md:flex-row md:items-center md:gap-6 md:px-6">

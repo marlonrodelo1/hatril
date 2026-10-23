@@ -156,7 +156,20 @@ export type GuardHatril =
    * otra ficha—, o se intentó reescribir la cuenta de quien contó o confirmó
    * (`0045`).
    */
-  | 'HT131';
+  | 'HT131'
+  /**
+   * El grupo, su ministerio, la persona, quien reporta o el grupo de una
+   * solicitud no son de esta iglesia o de esta red, o quien va a llevar un grupo
+   * no está en el equipo de su ministerio (`0047`).
+   */
+  | 'HT132'
+  /**
+   * Un grupo no cambia de iglesia ni de red, una fila de un grupo tampoco de
+   * grupo ni de persona, y una semana no cambia de semana (`0047`).
+   */
+  | 'HT133'
+  /** Alguien que no es el pastor intentó ponerse a sí mismo a llevar un grupo (`0047`). */
+  | 'HT134';
 
 /**
  * ¿Es este error uno de nuestros triggers guard?

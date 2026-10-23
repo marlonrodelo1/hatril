@@ -9,11 +9,15 @@ import {
   index,
   unique,
   uniqueIndex,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 import { estadoMiembroEnum, estadoSolicitudEnum } from './enums';
 import { iglesias } from './iglesias';
+// Ciclo a propósito: un grupo cuelga de fichas y una solicitud, de un grupo.
+// Las dos referencias son perezosas, así que el orden de carga no importa.
+import { grupos } from './grupos';
 
 /**
  * La ficha de una persona de la congregación.
@@ -164,6 +168,19 @@ export const solicitudesIngreso = pgTable(
      * `0040`: la migración cuenta por qué.
      */
     versionTexto: text('version_texto'),
+
+    /**
+     * El grupo de cuya invitación viene: el enlace de una célula lleva a
+     * `/solicitar` con su código, y al aprobar, la persona queda dentro.
+     *
+     * Es el puente que pidió Marlon: quien va a una célula entra así en la
+     * iglesia entera y se lleva la app, en vez de quedarse solo en la célula.
+     * SET NULL al borrar el grupo: la solicitud sigue valiendo sin él. Que el
+     * grupo sea de esta iglesia lo vigila HT132 (`0047`).
+     */
+    grupoId: uuid('grupo_id').references((): AnyPgColumn => grupos.id, {
+      onDelete: 'set null',
+    }),
 
     estado: estadoSolicitudEnum('estado').notNull().default('pendiente'),
     revisadoPor: uuid('revisado_por'),

@@ -20,6 +20,8 @@ import {
   cuentasQueAprueban,
   emitirNotificaciones,
 } from '@/lib/notificaciones/emitir';
+import { grupoDeLaInvitacion } from '@/lib/grupos/invitacion';
+import { leerCodigo } from '@/lib/grupos/codigo';
 
 /**
  * Crear cuenta personal y pedir entrar en una iglesia.
@@ -75,9 +77,14 @@ export async function solicitarIngreso(formData: FormData) {
   });
 
   const slug = String(formData.get('slug') ?? '');
+  // El código de la célula que invita, si lo hay. Se vuelve a resolver aquí y
+  // no se fía del formulario: un id de grupo en un campo oculto se cambia a
+  // mano, un código que no casa con esta iglesia no encuentra nada.
+  const codigo = leerCodigo(campo(formData, 'grupo'));
+  const volverA = `/solicitar/${slug}${codigo ? `?grupo=${codigo}` : ''}`;
 
   if (!parsed.success) {
-    volverCon(`/solicitar/${slug}`, parsed.error.issues[0]!.message);
+    volverCon(volverA, parsed.error.issues[0]!.message);
   }
 
   const d = parsed.data;
@@ -88,7 +95,7 @@ export async function solicitarIngreso(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/acceso?next=${encodeURIComponent(`/solicitar/${d.slug}`)}`);
+    redirect(`/acceso?next=${encodeURIComponent(volverA)}`);
   }
 
   const [iglesia] = await dbAdmin
@@ -107,10 +114,12 @@ export async function solicitarIngreso(formData: FormData) {
 
   if (!iglesia.aceptaSolicitudes) {
     volverCon(
-      `/solicitar/${d.slug}`,
+      volverA,
       'Esta iglesia no está aceptando solicitudes ahora mismo. Ponte en contacto con ellos directamente.',
     );
   }
+
+  const grupo = await grupoDeLaInvitacion(iglesia.id, codigo);
 
   let solicitudId: string | null = null;
 
@@ -129,6 +138,7 @@ export async function solicitarIngreso(formData: FormData) {
           // lo trata como tal: ver las columnas en el schema.
           aceptaAsistencia: d.asistencia,
           versionTexto: VERSION_POLITICA_PRIVACIDAD,
+          grupoId: grupo?.id ?? null,
         })
         .returning({ id: solicitudesIngreso.id });
 

@@ -66,8 +66,13 @@ export function exigirUuid(...ids: string[]): void {
   if (!ids.every((v) => z.string().uuid().safeParse(v).success)) notFound();
 }
 
-/** Las puertas 1 y 2, comunes a todas las pantallas de la zona. */
-async function requireAppAbierta(): Promise<UserContext> {
+/**
+ * Las puertas 1 y 2, comunes a todas las pantallas de la zona.
+ *
+ * Exportada para las guardas de pantallas que cuelgan de un ministerio sin ser
+ * de quien lo lleva entero: la célula de su líder (`lib/grupos/guarda.ts`).
+ */
+export async function requireAppAbierta(): Promise<UserContext> {
   const ctx = await requireIglesia();
   await exigirConsentimientoAlDia(ctx);
   if (leerEstadoSuscripcion(ctx.iglesia).situacion === 'bloqueada') {

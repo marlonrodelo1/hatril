@@ -270,6 +270,23 @@ export default function TerminosPage() {
 
         <P>
           <strong className="font-semibold">
+            De las células y otros grupos pequeños.
+          </strong>{' '}
+          Si activas esa herramienta: quién está en cada grupo y con qué papel, el
+          nombre del grupo, su barrio o zona, el día y la hora, y de cada semana el
+          tema, si hubo reunión y cuántas personas y visitas vinieron, sin nombres.
+          Que alguien vaya cada martes a una reunión en una casa de un barrio
+          concreto junta su práctica religiosa con su entorno, así que no hay
+          campo para la dirección ni para notas, la asistencia se cuenta y no se
+          apunta por persona, y la lista de cada grupo solo la ven el pastor,
+          quienes llevan esa red y quienes llevan ese grupo: lo impone la base de
+          datos. Te comprometes a no escribir direcciones, teléfonos ni
+          peticiones de oración en el nombre, la zona o el tema, igual que con
+          los demás campos libres.
+        </P>
+
+        <P>
+          <strong className="font-semibold">
             Del reparto de alimentos u otra ayuda.
           </strong>{' '}
           Si activas esa herramienta: de quien recibe, el nombre con que quiera

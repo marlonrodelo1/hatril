@@ -8,6 +8,7 @@ import {
 } from '@/lib/ministerios/modulos';
 import { agendaEnLaApp } from '@/lib/agenda/en-la-app';
 import { fondoEnLaApp } from '@/lib/finanzas/en-la-app';
+import { gruposEnLaApp } from '@/lib/grupos/en-la-app';
 import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
 import { repartoEnLaApp } from '@/lib/reparto/en-la-app';
 import { repertorioEnLaApp } from '@/lib/repertorio/en-la-app';
@@ -42,6 +43,7 @@ import type {
  * panel rebota.
  */
 const ADAPTADORES: Partial<Record<ModuloId, ModuloEnLaApp>> = {
+  grupos: gruposEnLaApp,
   agenda: agendaEnLaApp,
   turnos: turnosEnLaApp,
   repertorio: repertorioEnLaApp,

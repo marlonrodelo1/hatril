@@ -10,6 +10,7 @@ import {
   type ContextoPermisos,
 } from '@/lib/auth/permisos';
 import { modulosActivos } from '@/lib/ministerios/modulos';
+import { etiquetasDeGrupos, mayuscula } from '@/lib/grupos/etiquetas';
 import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
 
 /**
@@ -56,17 +57,22 @@ export function PestanasMinisterio({
   // seguimiento: llevar el ministerio no basta para leer por qué alguien dejó
   // de venir.
   const veSeguimiento = esPastor(ctx) || puede(ctx, 'ver_seguimiento');
-  // `requireGestionMinisterio(id, { desdeDentro: true })`, la del reparto: el
-  // padrón solo lo ve el equipo, y `gestionar_ministerios` no es estar en él.
+  // `requireGestionMinisterio(id, { desdeDentro: true })`, la del reparto y la
+  // de los grupos: el padrón y las células solo los ve quien está dentro, y
+  // `gestionar_ministerios` no es estar en él.
   const dentro = puedeGestionarDesdeDentro(ctx, ministerio.id);
 
   const herramientas = gestiona
     ? modulosActivos(ministerio.modulos).filter((m) => {
         if (m.id === 'seguimiento') return veSeguimiento;
-        if (m.id === 'reparto') return dentro;
+        if (m.id === 'reparto' || m.id === 'grupos') return dentro;
         return true;
       })
     : [];
+
+  // Los grupos se llaman como los llame el tipo: «Células» en una red.
+  const etiquetaDe = (id: string, nombre: string) =>
+    id === 'grupos' ? mayuscula(etiquetasDeGrupos(ministerio.tipo).varios) : nombre;
 
   // El fondo no es un módulo del ministerio: sale si el pastor le vinculó uno
   // desde Finanzas. La puerta, la de `fondo/guarda.ts`: quien lo lleva desde
@@ -77,7 +83,7 @@ export function PestanasMinisterio({
     { id: 'equipo', etiqueta: 'El equipo', href: base, Icono: Users },
     ...herramientas.map((m) => ({
       id: m.id,
-      etiqueta: m.nombre,
+      etiqueta: etiquetaDe(m.id, m.nombre),
       href: `${base}/${m.id}`,
       Icono: m.Icono,
     })),

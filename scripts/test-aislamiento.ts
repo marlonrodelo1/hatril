@@ -120,6 +120,18 @@ declare
   ARQ_A3 uuid;
   MIE_PRESTADA uuid;
   MIE_SOL uuid;
+  -- Grupos (0047). Una red de celulas en cada iglesia; en Betania, dos
+  -- celulas: la de Vero (con Paula y Pepe) y la de Omar (con Quique). Lola es
+  -- la colider de la red. Paula tiene cuenta: es la participante.
+  MIN_CEL   constant uuid := 'e0000000-0000-4000-8000-0000000000a4';
+  MIN_CEL_B constant uuid := 'e0000000-0000-4000-8000-0000000000b4';
+  USR_P     constant uuid := 'c4000000-0000-4000-8000-0000000000c4';
+  MIE_P uuid;
+  MIE_P2 uuid;
+  MIE_Q uuid;
+  GRU_1 uuid;
+  GRU_2 uuid;
+  GRU_B uuid;
   -- Lo que responde inscribir_en_evento. Un solo escalar a proposito: ver la
   -- cabecera de la 0024.
   v_res text;
@@ -2565,6 +2577,413 @@ begin
   r := r || format(E'  %s las funciones de la contabilidad, cerradas a anon, authenticated y service_role (%s)\\n',
                    case when n = 0 then 'OK  ' else 'FALLO' end, n);
 
+  -- ==========================================================================
+  -- GRUPOS (HT132, HT133, HT134) -- las celulas de una red
+  --
+  -- La segunda tabla del repo con RLS por RELACION: lo que se prueba aqui es
+  -- que el lider de una celula ve a su gente y no la de la celula de al lado,
+  -- aunque los dos esten en el mismo equipo de la misma iglesia; que quien va a
+  -- una celula ve a quien la lleva y no a los demas; y que llevar una pide
+  -- seguir en el equipo.
+  -- ==========================================================================
+
+  perform set_config('request.jwt.claims', '', true);
+
+  insert into public.ministerios (id, iglesia_id, nombre, tipo)
+  values (MIN_CEL,   IGL_A, 'Celulas test',      'celulas'),
+         (MIN_CEL_B, IGL_B, 'Celulas Sion test', 'celulas');
+
+  insert into public.miembros (iglesia_id, nombre) values (IGL_A, 'Paula participante')
+  returning id into MIE_P;
+  insert into public.miembros (iglesia_id, nombre) values (IGL_A, 'Pepe participante')
+  returning id into MIE_P2;
+  insert into public.miembros (iglesia_id, nombre) values (IGL_A, 'Quique de la otra')
+  returning id into MIE_Q;
+
+  insert into public.iglesia_usuarios (iglesia_id, auth_user_id, rol, estado, miembro_id)
+  values (IGL_A, USR_P, 'miembro', 'activo', MIE_P);
+
+  insert into public.ministerio_miembros (iglesia_id, ministerio_id, miembro_id, rol_equipo)
+  values (IGL_A, MIN_CEL, MIE_V, 'voluntario'),
+         (IGL_A, MIN_CEL, MIE_O, 'voluntario'),
+         (IGL_A, MIN_CEL, MIE_L, 'colider');
+
+  -- HT132: el ministerio del grupo es de su iglesia.
+  begin
+    insert into public.grupos (iglesia_id, ministerio_id, nombre, dia_semana, codigo)
+    values (IGL_A, MIN_CEL_B, 'Cruzada', 2, 'CRUZADA2');
+    r := r || E'  FALLO un grupo de Betania colgo de la red de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT132%'
+                   then E'  OK   HT132 impide un grupo con la red de otra iglesia\\n'
+                   else format(E'  FALLO error inesperado (HT132 grupo): %s\\n', sqlerrm) end;
+  end;
+
+  insert into public.grupos (iglesia_id, ministerio_id, nombre, dia_semana, codigo)
+  values (IGL_A, MIN_CEL, 'Celula uno', 2, 'GRUPUNA2') returning id into GRU_1;
+  insert into public.grupos (iglesia_id, ministerio_id, nombre, dia_semana, codigo)
+  values (IGL_A, MIN_CEL, 'Celula dos', 4, 'GRUPDSA3') returning id into GRU_2;
+  insert into public.grupos (iglesia_id, ministerio_id, nombre, dia_semana, codigo)
+  values (IGL_B, MIN_CEL_B, 'Celula Sion', 3, 'GRUPSNA4') returning id into GRU_B;
+
+  insert into public.grupo_miembros (iglesia_id, ministerio_id, grupo_id, miembro_id, rol_grupo)
+  values (IGL_A, MIN_CEL, GRU_1, MIE_V,  'lider'),
+         (IGL_A, MIN_CEL, GRU_1, MIE_P,  'participante'),
+         (IGL_A, MIN_CEL, GRU_1, MIE_P2, 'participante'),
+         (IGL_A, MIN_CEL, GRU_2, MIE_O,  'lider'),
+         (IGL_A, MIN_CEL, GRU_2, MIE_Q,  'participante');
+
+  -- HT132: quien lleva un grupo esta en el equipo de la red. Ruben no lo esta.
+  begin
+    insert into public.grupo_miembros (iglesia_id, ministerio_id, grupo_id, miembro_id, rol_grupo)
+    values (IGL_A, MIN_CEL, GRU_2, MIE_A2, 'auxiliar');
+    r := r || E'  FALLO alguien de fuera del equipo quedo llevando una celula\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT132%'
+                   then E'  OK   HT132 exige estar en el equipo para llevar un grupo\\n'
+                   else format(E'  FALLO error inesperado (HT132 equipo): %s\\n', sqlerrm) end;
+  end;
+
+  -- HT132: la fila dice ser de una red y cuelga de un grupo de otra.
+  begin
+    insert into public.grupo_miembros (iglesia_id, ministerio_id, grupo_id, miembro_id)
+    values (IGL_A, MIN_A, GRU_1, MIE_A2);
+    r := r || E'  FALLO una fila de una celula dijo ser de otro ministerio\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT132%'
+                   then E'  OK   HT132 impide una fila con el ministerio cambiado\\n'
+                   else format(E'  FALLO error inesperado (HT132 ministerio): %s\\n', sqlerrm) end;
+  end;
+
+  -- HT132: una persona de Sion en una celula de Betania.
+  begin
+    insert into public.grupo_miembros (iglesia_id, ministerio_id, grupo_id, miembro_id)
+    values (IGL_A, MIN_CEL, GRU_2, MIE_B1);
+    r := r || E'  FALLO una persona de Sion entro en una celula de Betania\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT132%'
+                   then E'  OK   HT132 impide una persona de otra iglesia en una celula\\n'
+                   else format(E'  FALLO error inesperado (HT132 persona): %s\\n', sqlerrm) end;
+  end;
+
+  -- HT132: la invitacion de una celula de Sion en una solicitud de Betania.
+  begin
+    insert into public.solicitudes_ingreso (iglesia_id, auth_user_id, nombre, grupo_id)
+    values (IGL_A, USR_D, 'Invitada cruzada', GRU_B);
+    r := r || E'  FALLO una solicitud de Betania trajo una celula de Sion\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT132%'
+                   then E'  OK   HT132 impide una solicitud con un grupo de otra iglesia\\n'
+                   else format(E'  FALLO error inesperado (HT132 solicitud): %s\\n', sqlerrm) end;
+  end;
+
+  -- Un lider por grupo, y una celula como participante por red.
+  begin
+    insert into public.grupo_miembros (iglesia_id, ministerio_id, grupo_id, miembro_id, rol_grupo)
+    values (IGL_A, MIN_CEL, GRU_1, MIE_O, 'lider');
+    r := r || E'  FALLO una celula quedo con dos lideres\\n';
+  exception when unique_violation then
+    r := r || E'  OK   un solo lider por grupo\\n';
+  end;
+
+  begin
+    insert into public.grupo_miembros (iglesia_id, ministerio_id, grupo_id, miembro_id)
+    values (IGL_A, MIN_CEL, GRU_2, MIE_P);
+    r := r || E'  FALLO la misma persona fue participante de dos celulas de la red\\n';
+  exception when unique_violation then
+    r := r || E'  OK   participante de una sola celula por red\\n';
+  end;
+
+  -- Lo que exigen los CHECK: la semana es un lunes, y lo reportado lleva cifras.
+  begin
+    insert into public.grupo_semanas (iglesia_id, ministerio_id, grupo_id, semana)
+    values (IGL_A, MIN_CEL, GRU_1, date '2026-10-21');
+    r := r || E'  FALLO una semana se guardo con un miercoles\\n';
+  exception when check_violation then
+    r := r || E'  OK   la semana de un grupo es siempre un lunes\\n';
+  end;
+
+  begin
+    insert into public.grupo_semanas (iglesia_id, ministerio_id, grupo_id, semana, estado, reportado_at)
+    values (IGL_A, MIN_CEL, GRU_1, date '2026-10-19', 'celebrada', now());
+    r := r || E'  FALLO una reunion se reporto sin cifras\\n';
+  exception when check_violation then
+    r := r || E'  OK   una reunion celebrada lleva cuantos vinieron\\n';
+  end;
+
+  -- HT132: la semana de un grupo, con el ministerio de otro.
+  begin
+    insert into public.grupo_semanas (iglesia_id, ministerio_id, grupo_id, semana)
+    values (IGL_A, MIN_A, GRU_1, date '2026-10-19');
+    r := r || E'  FALLO una semana de una celula dijo ser de otro ministerio\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT132%'
+                   then E'  OK   HT132 impide una semana con el ministerio cambiado\\n'
+                   else format(E'  FALLO error inesperado (HT132 semana): %s\\n', sqlerrm) end;
+  end;
+
+  -- --- La lider de una celula: Vero, rol miembro, voluntaria de la red ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_V), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.grupo_miembros where grupo_id = GRU_1;
+  r := r || format(E'  %s la lider de una celula ve a toda su gente (%s)\\n',
+                   case when n = 3 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.grupo_miembros where grupo_id = GRU_2;
+  r := r || format(E'  %s y no a la de la celula de al lado (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  insert into public.grupo_semanas
+    (iglesia_id, ministerio_id, grupo_id, semana, estado, asistentes, visitas, tema, reportado_at, reportado_por_miembro_id)
+  values (IGL_A, MIN_CEL, GRU_1, date '2026-10-19', 'celebrada', 3, 1, 'El perdon', now(), MIE_V);
+  get diagnostics n = row_count;
+  r := r || format(E'  %s la lider reporta la semana de su celula (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.grupo_semanas
+      (iglesia_id, ministerio_id, grupo_id, semana, estado, reportado_at)
+    values (IGL_A, MIN_CEL, GRU_2, date '2026-10-19', 'no_hubo', now());
+    r := r || E'  FALLO la lider reporto la semana de otra celula\\n';
+  exception when others then
+    r := r || E'  OK   ni reporta la semana de otra celula\\n';
+  end;
+
+  begin
+    insert into public.grupo_miembros (iglesia_id, ministerio_id, grupo_id, miembro_id)
+    values (IGL_A, MIN_CEL, GRU_1, MIE_A2);
+    r := r || E'  FALLO la lider de una celula dio de alta a alguien\\n';
+  exception when others then
+    r := r || E'  OK   la lider de una celula no da de alta a nadie\\n';
+  end;
+
+  execute 'reset role';
+
+  -- Sale del equipo: la llave deja de abrir sin tocar su fila de lider.
+  perform set_config('request.jwt.claims', '', true);
+  update public.ministerio_miembros set activo = false
+   where ministerio_id = MIN_CEL and miembro_id = MIE_V;
+
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_V), true);
+  execute 'set local role hatril_app';
+  select count(*) into n from public.grupo_miembros
+   where grupo_id = GRU_1 and rol_grupo = 'participante';
+  r := r || format(E'  %s fuera del equipo, ya no ve a la gente de la celula (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+  execute 'reset role';
+
+  perform set_config('request.jwt.claims', '', true);
+  update public.ministerio_miembros set activo = true
+   where ministerio_id = MIN_CEL and miembro_id = MIE_V;
+
+  -- --- La participante: Paula, sin equipo, va a la celula de Vero ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_P), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.grupo_miembros where grupo_id = GRU_1;
+  r := r || format(E'  %s la participante ve su fila y a quien lleva su celula (%s)\\n',
+                   case when n = 2 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.grupo_miembros where miembro_id = MIE_P2;
+  r := r || format(E'  %s y no a los demas que van (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.grupos where ministerio_id = MIN_CEL;
+  r := r || format(E'  %s ve su celula y no las demas de la red (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.grupo_semanas where grupo_id = GRU_1;
+  r := r || format(E'  %s ve las semanas de su celula, para el proximo tema (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  update public.grupo_semanas set asistentes = 30 where grupo_id = GRU_1;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s la participante no toca el reporte (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- --- El lider de la OTRA celula: Omar ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_O), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.grupo_miembros where grupo_id = GRU_1;
+  r := r || format(E'  %s el lider de una celula no ve la gente de otra (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.grupo_semanas where grupo_id = GRU_1;
+  r := r || format(E'  %s ni como le fue la semana (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- --- La colider de la red: Lola ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_L), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.grupo_miembros where ministerio_id = MIN_CEL;
+  r := r || format(E'  %s quien lidera la red ve todas sus celulas (%s)\\n',
+                   case when n = 5 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.grupo_miembros (iglesia_id, ministerio_id, grupo_id, miembro_id, rol_grupo)
+    values (IGL_A, MIN_CEL, GRU_2, MIE_L, 'auxiliar');
+    r := r || E'  FALLO la colider se puso a si misma a llevar una celula\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT134%'
+                   then E'  OK   HT134 impide ponerse a si mismo a llevar un grupo\\n'
+                   else format(E'  FALLO error inesperado (HT134): %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    update public.grupo_miembros set grupo_id = GRU_2 where miembro_id = MIE_P2;
+    r := r || E'  FALLO una persona cambio de celula reescribiendo su fila\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT133%'
+                   then E'  OK   HT133 impide mover a alguien de celula reescribiendo su fila\\n'
+                   else format(E'  FALLO error inesperado (HT133 fila): %s\\n', sqlerrm) end;
+  end;
+
+  begin
+    update public.grupo_semanas set semana = date '2026-10-12' where grupo_id = GRU_1;
+    r := r || E'  FALLO un reporte cambio de semana\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT133%'
+                   then E'  OK   HT133 impide mover un reporte de semana\\n'
+                   else format(E'  FALLO error inesperado (HT133 semana): %s\\n', sqlerrm) end;
+  end;
+
+  insert into public.grupo_guias (iglesia_id, ministerio_id, semana, tema, publicado_por_miembro_id)
+  values (IGL_A, MIN_CEL, date '2026-10-19', 'Guia de la red', MIE_L);
+  get diagnostics n = row_count;
+  r := r || format(E'  %s quien lidera la red publica la guia de la semana (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- La guia no es de nadie: la lee la iglesia entera, tambien la participante.
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_P), true);
+  execute 'set local role hatril_app';
+  select count(*) into n from public.grupo_guias where ministerio_id = MIN_CEL;
+  r := r || format(E'  %s la guia de la red la lee quien va a una celula (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+  execute 'reset role';
+
+  -- --- El pastor de Betania: HT133 en lo que la RLS si le deja tocar ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  begin
+    update public.grupos set ministerio_id = MIN_A where id = GRU_1;
+    r := r || E'  FALLO una celula cambio de red\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT133%'
+                   then E'  OK   HT133 impide mover una celula de red\\n'
+                   else format(E'  FALLO error inesperado (HT133 grupo): %s\\n', sqlerrm) end;
+  end;
+
+  select count(*) into n from public.grupo_miembros where ministerio_id = MIN_CEL;
+  r := r || format(E'  %s el pastor ve las celulas de su iglesia (%s)\\n',
+                   case when n = 5 then 'OK  ' else 'FALLO' end, n);
+
+  execute 'reset role';
+
+  -- --- Sion no ve las celulas de Betania ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.grupos where iglesia_id = IGL_A;
+  r := r || format(E'  %s Sion no ve las celulas de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+  select count(*) into n from public.grupo_miembros where iglesia_id = IGL_A;
+  r := r || format(E'  %s ni quien va a ellas (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+  select count(*) into n from public.grupo_semanas where iglesia_id = IGL_A;
+  r := r || format(E'  %s ni sus reportes (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+  select count(*) into n from public.grupo_guias where iglesia_id = IGL_A;
+  r := r || format(E'  %s ni su guia (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.grupos (iglesia_id, ministerio_id, nombre, dia_semana, codigo)
+    values (IGL_A, MIN_CEL, 'Colada', 1, 'CALADA22');
+    r := r || E'  FALLO Sion creo una celula en Betania\\n';
+  exception when others then
+    r := r || E'  OK   ni crea celulas en Betania\\n';
+  end;
+
+  execute 'reset role';
+
+  -- --- anon, authenticated y service_role ---
+  execute 'set local role anon';
+  begin
+    select count(*) into n from public.grupo_miembros;
+    r := r || format(E'  FALLO anon lee quien va a cada celula (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a las celulas\\n';
+  end;
+  execute 'reset role';
+
+  execute 'set local role authenticated';
+  begin
+    select count(*) into n from public.grupos;
+    r := r || format(E'  FALLO authenticated lee las celulas (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   authenticated no llega a las celulas\\n';
+  end;
+  execute 'reset role';
+
+  execute 'set local role service_role';
+  begin
+    select count(*) into n from public.grupo_semanas;
+    r := r || format(E'  FALLO service_role lee los reportes de las celulas (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   service_role no llega a los reportes de las celulas\\n';
+  end;
+  begin
+    select count(*) into n from public.grupo_guias;
+    r := r || format(E'  FALLO service_role lee la guia (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   service_role no llega a la guia\\n';
+  end;
+  execute 'reset role';
+
+  -- Las funciones de los grupos: las de relacion, solo para hatril_app; las de
+  -- trigger, para nadie.
+  select count(*) into n
+    from (values ('anon'), ('authenticated'), ('service_role')) as v(rol),
+         (values ('public.lleva_grupo(uuid)'),
+                 ('public.esta_en_grupo(uuid)'),
+                 ('public.validar_grupo()'),
+                 ('public.validar_grupo_miembro()'),
+                 ('public.validar_grupo_semana()'),
+                 ('public.validar_grupo_guia()'),
+                 ('public.validar_solicitud_grupo()'),
+                 ('public.guard_grupos()'),
+                 ('public.guard_grupo_miembros()'),
+                 ('public.guard_grupo_semanas()'),
+                 ('public.guard_grupo_guias()'),
+                 ('public.guard_grupo_miembros_ascenso()')) as f(fn)
+   where has_function_privilege(v.rol, f.fn, 'EXECUTE');
+  r := r || format(E'  %s las funciones de los grupos, cerradas a anon, authenticated y service_role (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n
+   where has_function_privilege('hatril_app', 'public.lleva_grupo(uuid)', 'EXECUTE')
+     and has_function_privilege('hatril_app', 'public.esta_en_grupo(uuid)', 'EXECUTE');
+  r := r || format(E'  %s y las de relacion, abiertas a hatril_app (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
   -- Abortar a proposito: revierte los datos de prueba y devuelve el informe.
   raise exception '%', r;
 end $$;
@@ -2709,6 +3128,16 @@ async function comprobarWithUser(): Promise<string[]> {
     await withUser(USR_A, (tx) => tx.execute(`select arqueo_id from movimientos limit 1`));
     lineas.push('  OK   withUser() puede consultar los arqueos y las columnas nuevas de la caja');
 
+    // Los grupos (0046 y 0047), por lo mismo: la fase SQL prueba que anon y
+    // service_role NO llegan; que `hatril_app` SÍ, y la columna nueva de las
+    // solicitudes, solo se ve aquí.
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from grupos limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from grupo_miembros limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from grupo_semanas limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from grupo_guias limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select grupo_id from solicitudes_ingreso limit 1`));
+    lineas.push('  OK   withUser() puede consultar los grupos, su gente, sus semanas y la guia');
+
     // LA FUGA, CAZADA POR LA FUNCIÓN QUE USA LA APLICACIÓN.
     //
     // `USR_A` aquí no es el de la fase de arriba: aquella transacción se revirtió
@@ -2739,7 +3168,8 @@ async function comprobarWithUser(): Promise<string[]> {
 
   return lineas
     .concat(await comprobarRepartoConLaDemo())
-    .concat(await comprobarArqueoConLaDemo());
+    .concat(await comprobarArqueoConLaDemo())
+    .concat(await comprobarCelulasConLaDemo());
 }
 
 /**
@@ -2932,6 +3362,92 @@ async function comprobarRepartoConLaDemo(): Promise<string[]> {
     const e = err as { message?: string; cause?: { message?: string } };
     lineas.push(
       `  FALLO reparto con la demo: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
+    );
+  }
+
+  return lineas;
+}
+
+/**
+ * Las células de la demo, por `withUser()` y con cuentas de verdad.
+ *
+ * La fase SQL prueba las policies con claims puestos a mano; esto prueba que la
+ * función que usa la aplicación llega al mismo sitio con las sesiones de la
+ * demo (`scripts/seed-celulas.sql`): Andrés (`enlace@`), que lleva Los Pinos,
+ * ve a su gente y no a la de El Prado; Lucía (`miembro@`), que va a Los Pinos,
+ * ve a quien la lleva y no a los demás; y Sara (`colider@`), colíder de la red,
+ * las ve todas.
+ *
+ * Caveat honesto, como los de arriba: sin la demo de células, lo dice en vez
+ * de pasar en verde.
+ */
+async function comprobarCelulasConLaDemo(): Promise<string[]> {
+  const lineas: string[] = [];
+
+  type Fila = Record<string, string | null>;
+  const primera = (filas: unknown): Fila | undefined =>
+    (filas as { rows?: Fila[] }).rows?.[0] ?? (filas as Fila[])[0];
+
+  try {
+    const demo = primera(
+      await dbAdmin.execute(dsql`
+        select
+          (select id::text from auth.users where email = 'enlace@hatril.test')  as lider,
+          (select id::text from auth.users where email = 'miembro@hatril.test') as participante,
+          (select id::text from auth.users where email = 'colider@hatril.test') as red,
+          (select g.id::text from public.grupos g join public.iglesias i on i.id = g.iglesia_id
+            where i.slug = 'betania' and g.nombre = 'Los Pinos' and g.activo) as pinos,
+          (select g.id::text from public.grupos g join public.iglesias i on i.id = g.iglesia_id
+            where i.slug = 'betania' and g.nombre = 'El Prado' and g.activo) as prado
+      `),
+    );
+
+    if (!demo?.lider || !demo.participante || !demo.red || !demo.pinos || !demo.prado) {
+      lineas.push('  --   sin la demo de celulas: el recorte entre celulas solo lo prueba la fase SQL');
+      return lineas;
+    }
+
+    const contar = async (cuenta: string, grupo: string) =>
+      Number(
+        primera(
+          await withUser(cuenta, (tx) =>
+            tx.execute(
+              dsql`select count(*)::text as n from grupo_miembros where grupo_id = ${grupo} and activo`,
+            ),
+          ),
+        )?.n ?? -1,
+      );
+    const total = async (grupo: string) =>
+      Number(
+        primera(
+          await dbAdmin.execute(
+            dsql`select count(*)::text as n from grupo_miembros where grupo_id = ${grupo} and activo`,
+          ),
+        )?.n ?? -1,
+      );
+
+    const [enPinos, enPrado] = await Promise.all([total(demo.pinos), total(demo.prado)]);
+
+    const liderPinos = await contar(demo.lider, demo.pinos);
+    lineas.push(
+      `  ${liderPinos === enPinos ? 'OK  ' : 'FALLO'} withUser() de enlace@ ve a toda la gente de Los Pinos (${liderPinos} de ${enPinos})`,
+    );
+    const liderPrado = await contar(demo.lider, demo.prado);
+    lineas.push(
+      `  ${liderPrado === 0 ? 'OK  ' : 'FALLO'} withUser() de enlace@ no ve a la gente de El Prado (${liderPrado} de ${enPrado})`,
+    );
+    const participante = await contar(demo.participante, demo.pinos);
+    lineas.push(
+      `  ${participante === 2 ? 'OK  ' : 'FALLO'} withUser() de miembro@ ve su fila y a quien lleva Los Pinos, no a los demas (${participante} de ${enPinos})`,
+    );
+    const red = (await contar(demo.red, demo.pinos)) + (await contar(demo.red, demo.prado));
+    lineas.push(
+      `  ${red === enPinos + enPrado ? 'OK  ' : 'FALLO'} withUser() de colider@, colider de la red, ve las dos celulas (${red} de ${enPinos + enPrado})`,
+    );
+  } catch (err) {
+    const e = err as { message?: string; cause?: { message?: string } };
+    lineas.push(
+      `  FALLO celulas con la demo: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
     );
   }
 

@@ -177,8 +177,33 @@ export default function PrivacidadPage() {
           todo lo demás sigue igual.
         </P>
         <P>
+          <strong className="font-semibold">
+            Si vas a una célula u otro grupo de tu iglesia
+          </strong>{' '}
+          que se reúne cada semana, en una casa o en la iglesia: en cuál estás y
+          con qué papel —quien lo lleva, quien le ayuda o quien va—, desde cuándo
+          y, si sales, hasta cuándo. Del grupo, su nombre, el barrio o la zona, el
+          día y la hora; no hay ningún campo para la dirección. De cada semana,
+          quien lo lleva apunta el tema, si hubo reunión y cuántas personas
+          vinieron y cuántas eran visitas.{' '}
+          <strong className="font-semibold">
+            Solo los números: no se apunta quién vino ni quién faltó
+          </strong>
+          , así que eso no depende del permiso de asistencia, y ir a tu grupo no
+          cuenta como venir a los cultos. Tampoco hay sitio para notas ni
+          peticiones de oración. Quién está en cada grupo lo ven el pastor,
+          quienes llevan esa red —su responsable y sus colíderes— y quienes llevan
+          ese grupo; los demás que van contigo ven a quien lo lleva, no la lista,
+          y quien no está en la red ni en el grupo no ve ni la lista ni dónde ni
+          cuándo se reúne. Eso lo impone la base de datos, no solo la pantalla. En
+          la pantalla de su grupo, quien lo lleva ve los nombres, no los
+          teléfonos.
+        </P>
+        <P>
           De quien solo pide entrar desde el directorio: nombre, correo,
-          teléfono si lo das, y el mensaje que escribas.
+          teléfono si lo das, y el mensaje que escribas. Si llegas con el enlace
+          de invitación de un grupo, la solicitud guarda también de qué grupo, y
+          al aprobarla entras en él si sigue abierto y no vas ya a otro de su red.
         </P>
         <P>
           De quien visita una iglesia por primera vez y le apunta alguien del
@@ -445,6 +470,12 @@ export default function PrivacidadPage() {
               momento
             </strong>
             .
+          </li>
+          <li>
+            Tu sitio en un grupo se guarda mientras vayas. Si sales, o el grupo se
+            cierra, queda como historial —desde cuándo y hasta cuándo—, y se va con
+            el resto de tu ficha cuando pides el borrado. Las cifras de cada
+            semana no llevan a nadie detrás y se quedan como historia del grupo.
           </li>
           <li>
             Si te apuntaron en un reparto, tus datos se guardan mientras sigas

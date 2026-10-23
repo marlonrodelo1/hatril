@@ -43,7 +43,7 @@ export function TarjetaModulo({ tarjeta }: { tarjeta: TarjetaDePortada }) {
         />
         {/* Sin `truncate`: «Seguimiento de personas» con su insignia al lado
             se quedaba en «Seguimiento de perso…» a 375 px. */}
-        <h2 className="t-subtitulo min-w-0 flex-1">{modulo.nombre}</h2>
+        <h2 className="t-subtitulo min-w-0 flex-1">{resumen?.titulo ?? modulo.nombre}</h2>
         {total > 0 && (
           <Insignia tono="aviso">
             {total === 1 ? '1 pendiente' : `${total} pendientes`}
