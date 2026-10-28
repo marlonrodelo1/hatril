@@ -5,6 +5,7 @@ import { Clock, Search } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUserContext } from '@/lib/auth/user-context';
+import { getCurrentSuperAdmin } from '@/lib/auth/super-admin';
 import { esDelEquipo, inicioDe } from '@/lib/auth/permisos';
 import { solicitudDeUsuario } from '@/lib/solicitudes/consultas';
 import { Aviso } from '@/components/aviso';
@@ -83,6 +84,11 @@ export default async function MiPage({
   // El corte del consentimiento lo pone `/mi/comunidad`, igual que las otras
   // tres pestañas: aquí no hace falta duplicarlo para redirigir.
   if (ctx) redirect('/mi/comunidad');
+
+  // El super admin sin iglesia no está «esperando a que le acepten»: su sitio
+  // es `/admin`. Aquí llega por los caminos que no pasan por el formulario de
+  // acceso —el enlace de `/auth/confirm`, la app nativa que arranca en `/mi`—.
+  if (await getCurrentSuperAdmin()) redirect('/admin');
 
   const solicitud = await solicitudDeUsuario(user.id);
 

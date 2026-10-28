@@ -7,7 +7,8 @@
 --
 --   psql "$DATABASE_URL" -f scripts/seed-demo.sql
 --
--- Contraseña de todas las cuentas: Hatril2026
+-- Contraseña de todas las cuentas: Hatril2026. Menos admin@, que no tiene
+-- ninguna conocida (ver su línea, más abajo).
 --
 --   pastor@hatril.test        Pastor de Betania. Lo ve y lo toca todo.
 --   secretaria@hatril.test    Secretaría. Ficha de miembros y solicitudes,
@@ -92,7 +93,13 @@ select public._seed_usuario('11111111-1111-4111-8111-000000000002','secretaria@h
 select public._seed_usuario('11111111-1111-4111-8111-000000000003','lider@hatril.test','Hatril2026','David Quiroga');
 select public._seed_usuario('11111111-1111-4111-8111-000000000004','miembro@hatril.test','Hatril2026','Lucía Ferrer');
 select public._seed_usuario('11111111-1111-4111-8111-000000000005','visita@hatril.test','Hatril2026','Nuria Cabrera');
-select public._seed_usuario('11111111-1111-4111-8111-000000000006','admin@hatril.test','Hatril2026','Marlon Rodelo');
+-- El super admin, SIN contraseña conocida: una aleatoria que no se guarda en
+-- ningún sitio. Este fichero está en un repo público y la base de desarrollo
+-- ha sido la de producción; desde que existe `/admin` (28-oct-2026), una
+-- contraseña escrita aquí abría la puerta a cambiar la de cualquier cuenta
+-- real. Se entra por enlace mágico, como hacen `test-puertas-admin.mjs` y la
+-- receta de `generateLink` de ESTADO.md.
+select public._seed_usuario('11111111-1111-4111-8111-000000000006','admin@hatril.test',encode(gen_random_bytes(24),'base64'),'Marlon Rodelo');
 select public._seed_usuario('22222222-2222-4222-8222-000000000001','pastor.sion@hatril.test','Hatril2026','Sergio Peñas');
 
 insert into public.admin_users (auth_user_id, notas)

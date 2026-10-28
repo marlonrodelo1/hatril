@@ -1,6 +1,6 @@
 # Estado de Hatril
 
-Última actualización: 23 de octubre de 2026.
+Última actualización: 28 de octubre de 2026.
 
 Este fichero se actualiza al cerrar cada sesión de trabajo. Va **dentro del
 repo** a propósito: Pidoo guardaba su detalle en ficheros `memory/` fuera del
@@ -51,6 +51,28 @@ lee al arrancar.
   quedó la fila `datos_religiosos` y entró al panel. **No crear cuentas con el
   script hasta que el commit `4a0ba46` esté desplegado**: el código anterior no
   mira esa marca y las dejaría entrar sin aceptar.
+
+- **Super admin, `/admin`** (28-oct). A la manera del de Pidoo, en pequeño:
+  **Inicio** (iglesias por situación, personas, cuentas y solicitudes; las
+  pruebas que acaban esta semana y las vencidas; las últimas altas),
+  **Iglesias** (filtro por situación y buscador; la ficha con sus recuentos,
+  sus pastores con correo, la suscripción y los datos) y **Cuentas** (a qué
+  iglesia pertenece cada una y cuándo entró por última vez). Las palancas:
+  **ampliar la prueba** (solo en `trial`: con `cancelado` esa fecha es periodo
+  pagado; hasta las 23:59 de la zona de la iglesia; un año como mucho),
+  **suspender y reactivar** (`activa`: fuera del panel, de `/mi`, de la web y
+  del directorio; pide casilla), **sacar del directorio** (solo hacia fuera) y
+  **poner una contraseña provisional**, que es lo que necesita el pastor de
+  Cuerpo de Cristo. Todo por `dbAdmin` y **sin una sola ficha de miembro**:
+  solo recuentos, porque somos encargados y nadie nos ha pedido mirar el
+  fichero. `requireSuperAdmin()` va en cada página y cada action; mandaba a
+  `/login`, que aquí no existe. El super admin sin iglesia aterriza en
+  `/admin` al entrar y desde `/mi`. **`npm run test:puertas:admin`**: cinco
+  rutas, cuatro cuentas que no pueden más la anónima, normal y con `RSC: 1`,
+  30 de 30; con `PUERTAS_CONTROL=1` detecta las 20 fugas simuladas. Probado
+  en el navegador como `admin@` sobre Betania, a 1024 y a 375 px, y Betania
+  devuelta a como estaba. **Sin probar**: cambiar de verdad una contraseña
+  (sí el rechazo de una que no cumple la regla).
 
 - **La paleta es la de Claude en claro, desde el 15-oct**: crema #FAF9F5,
   tarjetas blancas y naranja quemado #B15435. Sustituye al oscuro del 22-ago,
@@ -940,6 +962,8 @@ lee al arrancar.
 
 | Pieza | Estado |
 |---|---|
+| **Super admin: falta la cuenta de Marlon** | **Cerrado el 28-oct**: `admin@hatril.test` tenía `Hatril2026`, escrita aquí y en `seed-demo.sql`, en un repo público, y la base de local es la de hatril.com; desplegado `/admin`, cualquiera habría podido ponerle contraseña a la cuenta del pastor de Cuerpo de Cristo. Ahora tiene una aleatoria que nadie conoce (comprobado en la base: `Hatril2026` ya no casa con el hash) y el seed la crea igual; se entra por enlace mágico y `test:puertas:admin` sigue 30 de 30. **Lo que falta**: la única cuenta en `admin_users` sigue siendo `admin@`, así que Marlon no puede entrar a `/admin` con la suya. Hay que crearle una cuenta (o usar una que ya tenga) e insertar su fila |
+| **Super admin, lo que queda** | **No queda rastro de quién amplió o suspendió**: `auditoria` la escriben triggers y por iglesia, y una traza del super admin pide su propia tabla. Sin modo soporte (entrar como el pastor): con datos del art. 9 es una decisión, no un botón. Sin ingresos: los precios viven en Stripe y no hay claves todavía. Cuentas lee mil como mucho y lo avisa |
 | Proveedor de alojamiento en los legales | Relleno (Hostinger). Falta confirmar en hPanel el país del centro de datos: pone Alemania y la IP geolocaliza en Francia |
 | Módulos de ministerio | **Hechas, y fusionadas el 20-oct, la base común, el reparto v1, alabanza sin migración, consolidación v1 y la radio v1, más los equipos en la app.** Sigue, con migración y de una en una, la **contabilidad completa**; la cola está en `docs/modulos/cola.md` y el plan en `plan.md`. Peticiones de oración y la ficha de los niños esperan una decisión legal: salud y menores |
 | **Subir `VERSION_POLITICA_PRIVACIDAD`** | Decisión de Marlon. `/privacidad` ya trae redactado lo de consolidación (§3, §4 y §5: lo que guarda el alta que teclea el equipo, que también se llama a quien acaba de llegar, y que con WhatsApp el número pasa por Meta) y lo de la radio (§5), y sigue en `privacidad-2026-09`: el texto publicado ya no es exactamente el que aceptó la gente. **Antes de subirla, guardar la negativa de asistencia como fila**, o dejar de exigir la versión actual para leerla (ver «Trampas»): si no, quien negó vuelve a salir en todas las listas. En la misma subida, ampliar el texto de la casilla de asistencia, que solo habla de contactar a quien lleva tiempo sin aparecer |
@@ -1637,6 +1661,13 @@ otra iglesia, para probar el aislamiento), `colider@` (Sara Nieto, rol
 `scripts/seed-consolidacion.sql`) y `enlace@` (Andrés, voluntario de Acción
 social; su ficha nació sin cuenta para probar el enlace al aprobar). Son las
 ocho con las que corre `npm run test:puertas`, más `visita@` y `admin@`.
+
+**`admin@` es la excepción: no tiene contraseña conocida** desde el 28-oct.
+Es super admin, y con `/admin` una contraseña pública en un repo público
+abriría todas las iglesias de producción. Se entra por enlace mágico: la receta
+de `generateLink` con `next=%2Fadmin`, o `npm run test:puertas:admin`, que ya
+lo hace. Si alguna vez vuelve a tener `Hatril2026`, es un agujero, no una
+comodidad.
 
 `lider@` es responsable de Alabanza: es la cuenta con la que se comprueba que el
 permiso acotado deja gestionar un ministerio y ninguno más. Alabanza tiene

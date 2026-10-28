@@ -11,6 +11,7 @@ import { checkRateLimit, getClientIp } from '@/lib/api/rate-limit';
 import { validarPassword, traducirErrorAuth } from '@/lib/auth/password';
 import { getOrigin } from '@/lib/auth/get-origin';
 import { getCurrentUserContext } from '@/lib/auth/user-context';
+import { getCurrentSuperAdmin } from '@/lib/auth/super-admin';
 import { inicioDe } from '@/lib/auth/permisos';
 import { campo, campoObligatorio, casilla } from '@/lib/api/formulario';
 import { destinoSeguro } from '@/lib/url/destino-seguro';
@@ -81,10 +82,20 @@ export async function acceder(formData: FormData) {
   // en la iglesia y `/mi` del resto. Mandarlos a todos al panel funcionaba —el
   // layout devuelve al miembro— pero le enseñaba una pantalla en blanco por el
   // camino.
-  const destino =
-    destinoSeguro(next) ?? inicioDe(await getCurrentUserContext());
+  //
+  // El super admin sin iglesia va a `/admin`: con `inicioDe` caía en `/mi`, en
+  // la pantalla de quien todavía no pertenece a ninguna congregación. Si además
+  // es de una iglesia, manda la iglesia — el admin queda a un `/admin` de
+  // distancia y el domingo lo que se abre es el panel.
+  const destino = destinoSeguro(next) ?? (await inicioTrasAcceder());
 
   redirect(destino);
+}
+
+async function inicioTrasAcceder(): Promise<string> {
+  const ctx = await getCurrentUserContext();
+  if (!ctx && (await getCurrentSuperAdmin())) return '/admin';
+  return inicioDe(ctx);
 }
 
 // ============================================================================
