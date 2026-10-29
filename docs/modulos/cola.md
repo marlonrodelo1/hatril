@@ -29,8 +29,16 @@ fusionar.
 
 ## Cola con migración (de una en una)
 
-La siguiente migración es la **0046** y el siguiente código de trigger,
-**HT132**. Células está en marcha (21-oct) y es la única sesión con migración.
+La siguiente migración es la **0053** y el siguiente código de trigger,
+**HT136**. Células está en marcha (21-oct) y se llevó las **0046-0051** y los
+códigos hasta **HT134**, ya aplicadas en la base aunque solo estén en su rama.
+
+**Una se coló fuera de la cola**: el registro del super admin (29-oct) tomó la
+**0052** y **HT135** en `main`, detrás de células y en el orden en que la base
+las recibió, porque esperar a que células se fusionara dejaba `/admin`
+cambiando contraseñas sin rastro. Quien fusione células tiene que coser el
+journal y el snapshot de la `0052`; los pasos están en la cabecera de esa
+migración.
 
 1. ~~Contabilidad completa~~: hecha y fusionada el 21-oct.
 2. **Células** — en marcha. Con la pieza genérica de grupos (`grupos`, `grupo_miembros`):

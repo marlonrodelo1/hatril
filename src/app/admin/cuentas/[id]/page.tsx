@@ -8,6 +8,7 @@ import { requireSuperAdmin } from '@/lib/auth/super-admin';
 import { ETIQUETAS_ROLES } from '@/lib/auth/permisos';
 import { PASSWORD_PISTA } from '@/lib/auth/password';
 import { fichaCuenta } from '@/lib/admin/consultas';
+import { leerRegistro } from '@/lib/admin/registro';
 import { haceCuanto } from '@/lib/format/hace-cuanto';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Contenedor } from '@/app/panel/_components/contenedor';
 import { CabeceraAdmin } from '../../_components/cabecera';
 import { Dato, Insignia, fecha } from '../../_components/piezas';
+import { ListaRegistro } from '../../_components/registro';
 import { ponerContrasena } from '../actions';
 
 export const metadata: Metadata = { title: 'Cuenta' };
@@ -51,7 +53,10 @@ export default async function AdminCuentaPage({
     redirect('/admin/cuentas?error=' + encodeURIComponent('Esa cuenta no existe.'));
   }
 
-  const cuenta = await fichaCuenta(id.data);
+  const [cuenta, historial] = await Promise.all([
+    fichaCuenta(id.data),
+    leerRegistro({ cuentaAuthUserId: id.data }, 20),
+  ]);
   if (!cuenta) {
     redirect('/admin/cuentas?error=' + encodeURIComponent('Esa cuenta no existe.'));
   }
@@ -152,6 +157,14 @@ export default async function AdminCuentaPage({
             </form>
           </section>
         </div>
+
+        <section className="flex flex-col gap-2.5">
+          <h2 className="t-micro px-1">Lo que se ha hecho con esta cuenta</h2>
+          <ListaRegistro
+            apuntes={historial}
+            vacio="Nadie ha tocado esta cuenta desde la administración."
+          />
+        </section>
       </Contenedor>
     </>
   );

@@ -202,6 +202,9 @@ function rutas(ids) {
     { url: `/admin/iglesias/${ids.betania}`, pagePath: 'admin/iglesias/[id]/page.tsx' },
     { url: '/admin/cuentas', pagePath: 'admin/cuentas/page.tsx' },
     { url: `/admin/cuentas/${ids.pastor}`, pagePath: 'admin/cuentas/[id]/page.tsx' },
+    // Con el registro vacío no trae testigos; en cuanto haya un apunte trae
+    // correos y nombres de iglesia, y la comprobación del super admin lo pide.
+    { url: '/admin/registro', pagePath: 'admin/registro/page.tsx', puedeEstarVacia: true },
   ];
 }
 
@@ -231,9 +234,9 @@ async function comprobar(def, sesiones, testigos) {
     const vistos = testigosEn(normal.cuerpo, testigos);
     ok(
       ADMIN,
-      '200 con testigos',
+      def.puedeEstarVacia ? '200' : '200 con testigos',
       `${normal.status}, ${vistos.length} testigos`,
-      normal.status === 200 && vistos.length > 0,
+      normal.status === 200 && (def.puedeEstarVacia || vistos.length > 0),
     );
   }
 

@@ -176,3 +176,21 @@ export const accionAuditoriaEnum = pgEnum('accion_auditoria_enum', [
   'baja',
   'lectura_sensible',
 ]);
+
+/**
+ * Lo que puede hacer el super admin desde `/admin`, una por palanca.
+ *
+ * Enum y no texto: el registro se lee para responder «¿quién le cambió la
+ * contraseña a esta cuenta?», y esa pregunta no se puede contestar si la misma
+ * acción está apuntada con tres nombres. Una palanca nueva en `/admin` es un
+ * valor nuevo aquí, con su `alter type … add value`.
+ */
+export const accionAdminEnum = pgEnum('accion_admin_enum', [
+  'ampliar_prueba',
+  'suspender_iglesia',
+  'reactivar_iglesia',
+  'sacar_del_directorio',
+  'poner_contrasena',
+]);
+
+export type AccionAdmin = (typeof accionAdminEnum.enumValues)[number];

@@ -5,6 +5,8 @@ import { z } from 'zod';
 
 import { requireSuperAdmin } from '@/lib/auth/super-admin';
 import { campo } from '@/lib/api/formulario';
+import { apuntar } from '@/lib/admin/registro';
+import { dbAdmin } from '@/lib/db';
 import { traducirErrorAuth, validarPassword } from '@/lib/auth/password';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -25,7 +27,7 @@ const Id = z.uuid('Cuenta no válida.');
  * vuelta: si se olvida al dictarla, se pone otra.
  */
 export async function ponerContrasena(formData: FormData) {
-  await requireSuperAdmin();
+  const admin = await requireSuperAdmin();
 
   const r = Id.safeParse(campo(formData, 'id'));
   if (!r.success) {
@@ -43,9 +45,35 @@ export async function ponerContrasena(formData: FormData) {
   const fallo = validarPassword(password);
   if (fallo) volver('error', fallo);
 
+  /*
+   * El apunte va PRIMERO, dentro de una transacción que sigue abierta mientras
+   * Supabase cambia la contraseña. Si Supabase falla, se lanza y el apunte se
+   * deshace; si el apunte falla, la contraseña ni se toca. Al revés —cambiar y
+   * luego apuntar— un fallo entre los dos pasos dejaría una contraseña cambiada
+   * sin rastro, que es el único caso que este registro no puede permitirse.
+   * Queda el hueco de que falle el COMMIT después de que Supabase acepte: es el
+   * mismo que tiene cualquier escritura en dos sistemas, y el más improbable.
+   */
   const supabase = createAdminClient();
-  const { error } = await supabase.auth.admin.updateUserById(id, { password });
-  if (error) volver('error', traducirErrorAuth(error.message));
+  let rechazo: string | null = null;
+  try {
+    await dbAdmin.transaction(async (tx) => {
+      await apuntar(tx, {
+        actorAuthUserId: admin.authUserId,
+        accion: 'poner_contrasena',
+        cuentaAuthUserId: id,
+      });
+      const { error } = await supabase.auth.admin.updateUserById(id, { password });
+      if (error) throw new ErrorDeAuth(error.message);
+    });
+  } catch (e) {
+    if (!(e instanceof ErrorDeAuth)) throw e;
+    rechazo = traducirErrorAuth(e.message);
+  }
+  if (rechazo) volver('error', rechazo);
 
   volver('ok', 'contrasena');
 }
+
+/** Para distinguir «Supabase dijo que no» de un fallo de la base. */
+class ErrorDeAuth extends Error {}

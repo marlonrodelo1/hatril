@@ -7,9 +7,10 @@ import { z } from 'zod';
 
 import { requireSuperAdmin } from '@/lib/auth/super-admin';
 import { campo, casilla } from '@/lib/api/formulario';
+import { apuntar } from '@/lib/admin/registro';
 import { dbAdmin } from '@/lib/db';
 import { iglesias } from '@/lib/db/schema';
-import { fechaLocalATimestamp } from '@/lib/fecha/zona';
+import { fechaLocalATimestamp, timestampAFechaHoraLocal } from '@/lib/fecha/zona';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 
 /**
@@ -19,6 +20,9 @@ import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
  * `dbAdmin` en las tres. El trigger `guard_facturacion_iglesia` (`0021`) deja
  * pasar `trial_until` porque `dbAdmin` no lleva claims: es exactamente lo que
  * `_escritor_confiable()` reconoce como sistema. Con `withUser` daría HT112.
+ *
+ * Cada cambio va en una transacción con su apunte en `registro_admin`: o
+ * quedan los dos o ninguno.
  */
 
 const Id = z.uuid('Iglesia no válida.');
@@ -44,6 +48,8 @@ async function leer(id: string) {
       plan: iglesias.plan,
       timezone: iglesias.timezone,
       activa: iglesias.activa,
+      trialUntil: iglesias.trialUntil,
+      visibleEnDirectorio: iglesias.visibleEnDirectorio,
     })
     .from(iglesias)
     .where(eq(iglesias.id, id))
@@ -81,7 +87,7 @@ const EsquemaAmpliar = z.object({
  * contenedor corre en Europa y media congregación está en Bogotá.
  */
 export async function ampliarPrueba(formData: FormData) {
-  await requireSuperAdmin();
+  const admin = await requireSuperAdmin();
   const id = idDe(formData);
 
   const parsed = EsquemaAmpliar.safeParse({ hasta: campo(formData, 'hasta') });
@@ -111,10 +117,26 @@ export async function ampliarPrueba(formData: FormData) {
     volver(id, 'error', 'Como mucho, un año desde hoy.');
   }
 
-  await dbAdmin
-    .update(iglesias)
-    .set({ trialUntil })
-    .where(eq(iglesias.id, id));
+  await dbAdmin.transaction(async (tx) => {
+    await tx.update(iglesias).set({ trialUntil }).where(eq(iglesias.id, id));
+    await apuntar(tx, {
+      actorAuthUserId: admin.authUserId,
+      accion: 'ampliar_prueba',
+      iglesiaId: id,
+      // El instante y, además, el DÍA en la zona de la iglesia: las 23:59 de
+      // Bogotá son ya el día siguiente en Canarias, y pintado desde el
+      // instante el registro diría «hasta el 1 de diciembre» de una prueba
+      // ampliada hasta el 30 de noviembre.
+      detalle: {
+        antes: iglesia.trialUntil?.toISOString() ?? null,
+        despues: trialUntil.toISOString(),
+        antesDia: iglesia.trialUntil
+          ? timestampAFechaHoraLocal(iglesia.trialUntil, iglesia.timezone).fecha
+          : null,
+        despuesDia: hasta,
+      },
+    });
+  });
 
   revalidatePath('/admin', 'layout');
   volver(id, 'ok', 'prueba');
@@ -133,32 +155,46 @@ export async function ampliarPrueba(formData: FormData) {
  * fichero, y un clic suelto en la ficha equivocada no puede bastar.
  */
 export async function suspenderIglesia(formData: FormData) {
-  await requireSuperAdmin();
+  const admin = await requireSuperAdmin();
   const id = idDe(formData);
 
   if (!casilla(formData, 'confirmar')) {
     volver(id, 'error', 'Marca la casilla para confirmar que quieres suspenderla.');
   }
 
-  await leer(id);
-  await dbAdmin
-    .update(iglesias)
-    .set({ activa: false })
-    .where(eq(iglesias.id, id));
+  // Ya suspendida no se apunta otra vez: un doble envío dejaría dos
+  // suspensiones seguidas en el registro, y la segunda no cambió nada.
+  const iglesia = await leer(id);
+  if (iglesia.activa) {
+    await dbAdmin.transaction(async (tx) => {
+      await tx.update(iglesias).set({ activa: false }).where(eq(iglesias.id, id));
+      await apuntar(tx, {
+        actorAuthUserId: admin.authUserId,
+        accion: 'suspender_iglesia',
+        iglesiaId: id,
+      });
+    });
+  }
 
   revalidatePath('/admin', 'layout');
   volver(id, 'ok', 'suspendida');
 }
 
 export async function reactivarIglesia(formData: FormData) {
-  await requireSuperAdmin();
+  const admin = await requireSuperAdmin();
   const id = idDe(formData);
 
-  await leer(id);
-  await dbAdmin
-    .update(iglesias)
-    .set({ activa: true })
-    .where(eq(iglesias.id, id));
+  const iglesia = await leer(id);
+  if (!iglesia.activa) {
+    await dbAdmin.transaction(async (tx) => {
+      await tx.update(iglesias).set({ activa: true }).where(eq(iglesias.id, id));
+      await apuntar(tx, {
+        actorAuthUserId: admin.authUserId,
+        accion: 'reactivar_iglesia',
+        iglesiaId: id,
+      });
+    });
+  }
 
   revalidatePath('/admin', 'layout');
   volver(id, 'ok', 'reactivada');
@@ -175,14 +211,23 @@ export async function reactivarIglesia(formData: FormData) {
  * Ajustes.
  */
 export async function sacarDelDirectorio(formData: FormData) {
-  await requireSuperAdmin();
+  const admin = await requireSuperAdmin();
   const id = idDe(formData);
 
-  await leer(id);
-  await dbAdmin
-    .update(iglesias)
-    .set({ visibleEnDirectorio: false })
-    .where(eq(iglesias.id, id));
+  const iglesia = await leer(id);
+  if (iglesia.visibleEnDirectorio) {
+    await dbAdmin.transaction(async (tx) => {
+      await tx
+        .update(iglesias)
+        .set({ visibleEnDirectorio: false })
+        .where(eq(iglesias.id, id));
+      await apuntar(tx, {
+        actorAuthUserId: admin.authUserId,
+        accion: 'sacar_del_directorio',
+        iglesiaId: id,
+      });
+    });
+  }
 
   revalidatePath('/admin', 'layout');
   volver(id, 'ok', 'directorio');

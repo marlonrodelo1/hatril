@@ -74,6 +74,20 @@ lee al arrancar.
   devuelta a como estaba. **Sin probar**: cambiar de verdad una contraseña
   (sí el rechazo de una que no cumple la regla).
 
+  **Y el registro** (29-oct, migración `0052`, `HT135`): cada palanca apunta
+  en `registro_admin` quién, qué, sobre qué iglesia o cuenta, desde qué IP y,
+  al ampliar, la fecha de antes y la nueva, en la MISMA transacción que el
+  cambio. La contraseña se apunta antes de pedírsela a Supabase y se deshace
+  si Supabase dice que no; nunca se guarda. Se ve en **Registro** y al pie de
+  cada ficha. La tabla es de plataforma (RLS sin policies, sin grants, ni
+  siquiera a `hatril_app`) y **solo se añade**: UPDATE, DELETE y TRUNCATE dan
+  HT135, también como `postgres`; probado en una transacción deshecha. Sin
+  claves ajenas y sin copiar correos: los ids se resuelven al pintar. Probado en
+  el navegador sobre Betania: **esos tres apuntes de prueba (ampliar, suspender
+  y reactivar, 29-oct, de `admin@hatril.test`) se quedan para siempre**, que
+  es justo lo que tiene que pasar. `test:puertas:admin`, 36 de 36 y 24 de 24
+  en el control negativo.
+
 - **La paleta es la de Claude en claro, desde el 15-oct**: crema #FAF9F5,
   tarjetas blancas y naranja quemado #B15435. Sustituye al oscuro del 22-ago,
   que a su vez sustituyó al naranja y verde de Claude Design. Marlon descartó
@@ -962,8 +976,9 @@ lee al arrancar.
 
 | Pieza | Estado |
 |---|---|
-| **Super admin: falta la cuenta de Marlon** | **Cerrado el 28-oct**: `admin@hatril.test` tenía `Hatril2026`, escrita aquí y en `seed-demo.sql`, en un repo público, y la base de local es la de hatril.com; desplegado `/admin`, cualquiera habría podido ponerle contraseña a la cuenta del pastor de Cuerpo de Cristo. Ahora tiene una aleatoria que nadie conoce (comprobado en la base: `Hatril2026` ya no casa con el hash) y el seed la crea igual; se entra por enlace mágico y `test:puertas:admin` sigue 30 de 30. **Lo que falta**: la única cuenta en `admin_users` sigue siendo `admin@`, así que Marlon no puede entrar a `/admin` con la suya. Hay que crearle una cuenta (o usar una que ya tenga) e insertar su fila |
-| **Super admin, lo que queda** | **No queda rastro de quién amplió o suspendió**: `auditoria` la escriben triggers y por iglesia, y una traza del super admin pide su propia tabla. Sin modo soporte (entrar como el pastor): con datos del art. 9 es una decisión, no un botón. Sin ingresos: los precios viven en Stripe y no hay claves todavía. Cuentas lee mil como mucho y lo avisa |
+| **Super admin: falta la cuenta de Marlon** | **Cerrado el 28-oct**: `admin@hatril.test` tenía `Hatril2026`, escrita aquí y en `seed-demo.sql`, en un repo público, y la base de local es la de hatril.com; desplegado `/admin`, cualquiera habría podido ponerle contraseña a la cuenta del pastor de Cuerpo de Cristo. Ahora tiene una aleatoria que nadie conoce (comprobado en la base: `Hatril2026` ya no casa con el hash) y el seed la crea igual; se entra por enlace mágico y `test:puertas:admin` sigue 30 de 30. **Lo que falta**: Marlon ya tiene cuenta (29-oct), pero todavía no está en `admin_users`: su contraseña no servía para un super admin. Va en ese orden: insertar su fila desde el SQL Editor de Supabase, entrar y cambiar la contraseña al momento en `/admin/cuentas`, y comprobar en la base que ya no es una de las conocidas. **Nunca escribir aquí, en un repo público, el correo de una cuenta real junto a su contraseña** |
+| **Las migraciones de células van por delante** | La `0052` (registro) está en `main` y aplicada; las `0046`-`0051` de células están aplicadas pero solo en su rama. Al fusionar células, el journal choca y los snapshots `0046` y `0052` salen los dos del `0045`. Qué hacer, en la cabecera de la `0052` |
+| **Super admin, lo que queda** | Sin modo soporte (entrar como el pastor): con datos del art. 9 es una decisión, no un botón. Sin ingresos: los precios viven en Stripe y no hay claves todavía. Cuentas lee mil como mucho y lo avisa |
 | Proveedor de alojamiento en los legales | Relleno (Hostinger). Falta confirmar en hPanel el país del centro de datos: pone Alemania y la IP geolocaliza en Francia |
 | Módulos de ministerio | **Hechas, y fusionadas el 20-oct, la base común, el reparto v1, alabanza sin migración, consolidación v1 y la radio v1, más los equipos en la app.** Sigue, con migración y de una en una, la **contabilidad completa**; la cola está en `docs/modulos/cola.md` y el plan en `plan.md`. Peticiones de oración y la ficha de los niños esperan una decisión legal: salud y menores |
 | **Subir `VERSION_POLITICA_PRIVACIDAD`** | Decisión de Marlon. `/privacidad` ya trae redactado lo de consolidación (§3, §4 y §5: lo que guarda el alta que teclea el equipo, que también se llama a quien acaba de llegar, y que con WhatsApp el número pasa por Meta) y lo de la radio (§5), y sigue en `privacidad-2026-09`: el texto publicado ya no es exactamente el que aceptó la gente. **Antes de subirla, guardar la negativa de asistencia como fila**, o dejar de exigir la versión actual para leerla (ver «Trampas»): si no, quien negó vuelve a salir en todas las listas. En la misma subida, ampliar el texto de la casilla de asistencia, que solo habla de contactar a quien lleva tiempo sin aparecer |

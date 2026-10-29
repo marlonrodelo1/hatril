@@ -323,6 +323,13 @@
       "when": 1792509772038,
       "tag": "0045_arqueo_por_cuenta",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1793275844820,
+      "tag": "0052_registro_admin",
+      "breakpoints": true
     }
   ]
 }

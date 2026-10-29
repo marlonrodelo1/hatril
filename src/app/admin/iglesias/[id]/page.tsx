@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { requireSuperAdmin } from '@/lib/auth/super-admin';
 import { fichaIglesia } from '@/lib/admin/consultas';
+import { leerRegistro } from '@/lib/admin/registro';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { timestampAFechaHoraLocal } from '@/lib/fecha/zona';
 import { Aviso } from '@/components/aviso';
@@ -15,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Contenedor } from '@/app/panel/_components/contenedor';
 import { CabeceraAdmin } from '../../_components/cabecera';
 import { Cifra, Dato, Insignia, fecha } from '../../_components/piezas';
+import { ListaRegistro } from '../../_components/registro';
 import {
   ampliarPrueba,
   reactivarIglesia,
@@ -57,7 +59,10 @@ export default async function AdminIglesiaPage({
     redirect('/admin/iglesias?error=' + encodeURIComponent('Esa iglesia no existe.'));
   }
 
-  const ficha = await fichaIglesia(id.data);
+  const [ficha, historial] = await Promise.all([
+    fichaIglesia(id.data),
+    leerRegistro({ iglesiaId: id.data }, 20),
+  ]);
   if (!ficha) {
     redirect('/admin/iglesias?error=' + encodeURIComponent('Esa iglesia no existe.'));
   }
@@ -296,6 +301,15 @@ export default async function AdminIglesiaPage({
             </form>
           </section>
         )}
+
+        {/* ---------- Historial ---------- */}
+        <section className="flex flex-col gap-2.5">
+          <h2 className="t-micro px-1">Lo que se ha hecho con esta iglesia</h2>
+          <ListaRegistro
+            apuntes={historial}
+            vacio="Nadie ha tocado esta iglesia desde la administración."
+          />
+        </section>
       </Contenedor>
     </>
   );

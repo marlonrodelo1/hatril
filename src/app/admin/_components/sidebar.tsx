@@ -17,7 +17,7 @@ import { SECCIONES, seccionActiva } from './secciones';
  * una congregación, y debajo «Administración», que es lo que dice en qué lado
  * de la plataforma estás.
  *
- * Sin encoger ni bloques plegables: con tres entradas no hay nada que ganar.
+ * Sin encoger ni bloques plegables: con cuatro entradas no hay nada que ganar.
  */
 export function AdminSidebar() {
   const pathname = usePathname();
