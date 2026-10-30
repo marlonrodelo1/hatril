@@ -7,6 +7,7 @@ import { dbAdmin } from '@/lib/db';
 import { devocionales, iglesias, miembros } from '@/lib/db/schema';
 import type { UserContext } from '@/lib/auth/user-context';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
+import { fotoParaPintar } from '@/lib/miembros/foto';
 
 /**
  * Consultas de devocionales.
@@ -411,7 +412,7 @@ export async function devocionalParaLeer(
 } | null> {
   const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
 
-  return withUser(ctx.user.id, async (tx) => {
+  const devocional = await withUser(ctx.user.id, async (tx) => {
     const filas = await tx
       .select({
         fecha: devocionales.fecha,
@@ -460,6 +461,11 @@ export async function devocionalParaLeer(
       esDeHoy: d.fecha === hoy,
     };
   });
+
+  // La cara del autor, firmada como todas las de perfil (`miembros/foto.ts`).
+  return devocional
+    ? { ...devocional, autorFoto: await fotoParaPintar(devocional.autorFoto) }
+    : null;
 }
 
 /**

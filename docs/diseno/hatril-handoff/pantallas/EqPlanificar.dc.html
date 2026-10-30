@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Equipo · Planificar turnos</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.c{display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:10px 16px;border:0;border-top:1px solid #E0DFDB;background:#FFFFFF;font-family:inherit;text-align:left;cursor:pointer;color:#141413}
+.box{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex:none}
+.date{width:40px;display:flex;flex-direction:column;align-items:center;font-size:11px;font-weight:700;color:#67665F}
+.date b{font-size:18px;font-weight:800;color:#141413;line-height:1.1}
+</style>
+</helmet>
+<div style="width: 375px; height: 900px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; padding: 47px 0 34px; display: flex; flex-direction: column">
+  <div style="height: 56px; display: flex; align-items: center; padding: 0 6px">
+    <a href="EqTurnos.dc.html" aria-label="Volver a turnos" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #141413"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></a>
+    <h1 style="font-size: 18px; font-weight: 800; letter-spacing: -0.02em">Planificar</h1>
+  </div>
+  <p style="padding: 4px 20px 16px; font-size: 15px; line-height: 1.5; color: #67665F">Elige en qué cultos de las próximas semanas sirve Alabanza. Después pones a la gente en cada uno.</p>
+
+  <div role="group" aria-label="Cultos de las próximas semanas" style="border-bottom: 1px solid #E0DFDB">
+    <div class="c" style="background: #F5F4ED; cursor: default">
+      <span class="box" style="background: #E0DFDB; color: #5E5D58"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span>
+      <span class="date">DOM<b>1·8</b></span>
+      <span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 700; color: #67665F">Domingos 1 y 8</span><span style="font-size: 13px; color: #67665F">Ya planificados</span></span>
+    </div>
+    <sc-for list="{{ cultos }}" as="c" hint-placeholder-count="6">
+      <button class="c" role="checkbox" aria-checked="{{ c.aria }}" onClick="{{ c.toggle }}">
+        <span class="box" style="{{ c.boxStyle }}"><sc-if value="{{ c.on }}" hint-placeholder-val="{{ true }}"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></sc-if></span>
+        <span class="date">{{ c.dia }}<b>{{ c.n }}</b></span>
+        <span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 15px; font-weight: 700">{{ c.t }}</span><span style="font-size: 13px; color: #67665F">{{ c.s }}</span></span>
+      </button>
+    </sc-for>
+  </div>
+
+  <div style="flex: 1"></div>
+  <div style="padding: 16px 16px 0">
+    <a href="EqTurnos.dc.html" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 8px; background: #B15435; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none">{{ boton }}</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: { a: false, b: true, c: false, d: true, e: false, f: true } }; }
+  renderVals() {
+    const L = [
+      ['a', 'SÁB', 14, 'Concierto de jóvenes', '14 de noviembre · 19:00'],
+      ['b', 'DOM', 15, 'Culto', '15 de noviembre · 11:00'],
+      ['c', 'MIÉ', 18, 'Oración', '18 de noviembre · 19:30'],
+      ['d', 'DOM', 22, 'Culto', '22 de noviembre · 11:00'],
+      ['e', 'DOM', 29, 'Culto', '29 de noviembre · 11:00'],
+      ['f', 'DOM', 6, 'Culto de Navidad en familia', '6 de diciembre · 11:00']
+    ];
+    const s = this.state.sel;
+    const cultos = L.map((x) => {
+      const on = !!s[x[0]];
+      return {
+        dia: x[1], n: x[2], t: x[3], s: x[4], on, aria: on ? 'true' : 'false',
+        boxStyle: on ? { background: '#3D3D3A', color: '#FFFFFF' } : { border: '1.5px solid #67665F' },
+        toggle: () => this.setState({ sel: Object.assign({}, s, { [x[0]]: !on }) })
+      };
+    });
+    const n = cultos.filter((c) => c.on).length;
+    return { cultos, boton: n === 0 ? 'Elige al menos un culto' : 'Planificar ' + n + (n === 1 ? ' culto' : ' cultos') };
+  }
+}
+</script>
+</body>
+</html>

@@ -132,6 +132,8 @@ export const solicitudesIngreso = pgTable(
     nombre: text('nombre').notNull(),
     email: text('email'),
     telefono: text('telefono'),
+    /** Opcional. Pasa a la ficha al aprobar, como el teléfono. */
+    direccion: text('direccion'),
     mensaje: text('mensaje'),
 
     /**

@@ -330,6 +330,20 @@
       "when": 1793275844820,
       "tag": "0052_registro_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1793364618900,
+      "tag": "0053_denuncias_bloqueos_bajas",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1793368034490,
+      "tag": "0054_ubicacion_iglesias",
+      "breakpoints": true
     }
   ]
 }

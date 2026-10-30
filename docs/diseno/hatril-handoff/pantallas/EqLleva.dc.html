@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Equipo · Alabanza (lo llevas)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.av{border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+.sec{font-size:12px;font-weight:700;color:#67665F;text-transform:uppercase;letter-spacing:.06em;padding:22px 20px 8px}
+.urg{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #E0DFDB;color:#141413;text-decoration:none}
+.urg:first-child{border-top:0}
+.urg .d{width:10px;height:10px;border-radius:999px;flex:none}
+.urg .t{flex:1;font-size:15px;font-weight:600;line-height:1.35}
+.tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0 16px}
+.tool{display:flex;flex-direction:column;gap:10px;padding:14px;background:#FFFFFF;border:1px solid #E0DFDB;border-radius:12px;color:#141413;text-decoration:none;min-height:132px}
+.tool .k{width:36px;height:36px;border-radius:8px;background:#F0EEE6;color:#3D3D3A;display:flex;align-items:center;justify-content:center}
+.tool b{font-size:15px;font-weight:800}
+.tool span.s{font-size:13px;color:#67665F;line-height:1.35}
+.ins{align-self:flex-start;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px}
+.p{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid #E0DFDB}
+.p:first-child{border-top:0}
+.chip{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px}
+.bar{position:absolute;left:0;right:0;bottom:0;padding:6px 8px 30px;background:rgba(250,249,245,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #E0DFDB;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:12px;font-size:11px;font-weight:600;color:#67665F;text-decoration:none}
+.tab.on{background:#F5E7DF;color:#92442A}
+</style>
+</helmet>
+<div style="width: 375px; height: 1300px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; padding-top: 47px">
+  <div style="height: 56px; display: flex; align-items: center; padding: 0 6px">
+    <a href="EqLista.dc.html" aria-label="Volver a tus equipos" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #141413"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></a>
+  </div>
+  <div style="display: flex; align-items: center; gap: 14px; padding: 0 20px">
+    <span style="width: 52px; height: 52px; border-radius: 12px; background: #E6ECDE; color: #245C0E; display: flex; align-items: center; justify-content: center"><svg class="ic" width="24" height="24" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
+    <span style="display: flex; flex-direction: column"><h1 style="font-size: 26px; font-weight: 800; letter-spacing: -0.025em">Alabanza</h1><span style="font-size: 13px; color: #67665F">Lo llevas como colíder · 12 personas</span></span>
+  </div>
+
+  <h2 class="sec">Esto pide tu atención</h2>
+  <div style="margin: 0 16px; background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; overflow: hidden">
+    <a href="EqCuadrante.dc.html" class="urg"><span class="d" style="background: #B53333"></span><span class="t">Domingo 1: faltan voz y bajo</span><span style="font-size: 12px; font-weight: 700; color: #8A2424; background: #F3E5E2; border-radius: 999px; padding: 2px 8px">2 huecos</span><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></a>
+    <a href="EqCuadrante.dc.html" class="urg"><span class="d" style="background: #B15435"></span><span class="t">Falta cerrar la lista de canciones del domingo</span><span style="font-size: 12px; font-weight: 700; color: #92442A; background: #F5E7DF; border-radius: 999px; padding: 2px 8px">en 2 días</span><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></a>
+    <a href="EqTurnos.dc.html" class="urg"><span class="d" style="background: #734500"></span><span class="t">3 personas sin contestar a su turno</span><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></a>
+  </div>
+
+  <h2 class="sec">Herramientas</h2>
+  <div class="tools">
+    <a href="EqTurnos.dc.html" class="tool"><span class="k"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></svg></span><b>Turnos</b><span class="s">Próximo: domingo 1</span><span class="ins" style="background: #F3E5E2; color: #8A2424">2 huecos</span></a>
+    <a href="EqAgenda.dc.html" class="tool"><span class="k"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></span><b>Agenda</b><span class="s">Ensayo hoy, 20:00</span><span class="ins" style="background: #F0EEE6; color: #5E5D58">Pasar lista</span></a>
+    <a href="EqRepertorio.dc.html" class="tool"><span class="k"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><b>Repertorio</b><span class="s">48 canciones</span></a>
+    <a href="EqSeguimiento.dc.html" class="tool"><span class="k"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></span><b>Seguimiento</b><span class="s">2 personas se están perdiendo ensayos</span></a>
+    <a href="EqFondo.dc.html" class="tool" style="grid-column: span 2; min-height: 0; flex-direction: row; align-items: center"><span class="k"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></span><span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><b>Fondo del ministerio</b><span class="s">Saldo: 340,00 €</span></span><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></a>
+  </div>
+
+  <h2 class="sec">El equipo</h2>
+  <div style="margin: 0 16px; background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; overflow: hidden">
+    <div class="p"><span class="av" style="width: 36px; height: 36px; background: #E6ECDE; color: #245C0E; font-size: 12px">SG</span><span style="flex: 1; font-size: 15px; font-weight: 700">Sara Gil</span><span class="chip" style="background: #F5E7DF; color: #92442A">Responsable</span></div>
+    <div class="p"><span class="av" style="width: 36px; height: 36px; background: #E3E8EC; color: #2F4A5C; font-size: 12px">LH</span><span style="flex: 1; font-size: 15px; font-weight: 700">Lucía Hernández (tú)</span><span class="chip" style="background: #F0EEE6; color: #5E5D58">Colíder</span></div>
+    <div class="p"><span class="av" style="width: 36px; height: 36px; background: #F3E9D3; color: #734500; font-size: 12px">JM</span><span style="flex: 1; font-size: 15px; font-weight: 700">Juan Mora</span><span style="font-size: 13px; color: #67665F">Guitarra</span></div>
+    <a href="#" style="display: flex; align-items: center; justify-content: space-between; padding: 14px; border-top: 1px solid #E0DFDB; font-size: 15px; font-weight: 700; color: #141413; text-decoration: none">Ver las 12 personas<svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></a>
+  </div>
+
+  <nav class="bar" aria-label="Principal">
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Comunidad</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Devocional</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Agenda</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>Biblia</a>
+    <a href="#" class="tab on" aria-current="page"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>Equipo</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { COOKIE_BIENVENIDA } from '@/lib/bienvenida';
+
 /**
  * Refresco de la sesión de Supabase en cada petición, y redirección de las
  * rutas privadas.
@@ -63,6 +65,22 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && esPrivada) {
     const url = request.nextUrl.clone();
+
+    // La app arranca en `/mi`. Sin sesión, quien la abre acaba de descargarla:
+    // a la bienvenida, con la presentación solo la primera vez. Lo repite
+    // `mi/page.tsx` por si esto se salta; aquí ahorra el viaje a `/acceso`.
+    if (
+      pathname === '/mi' &&
+      (request.headers.get('user-agent') ?? '').includes('HatrilApp/')
+    ) {
+      url.pathname =
+        request.cookies.get(COOKIE_BIENVENIDA)?.value === '1'
+          ? '/empezar'
+          : '/bienvenida';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
+
     url.pathname = '/acceso';
     // Para devolver a la persona donde iba después de identificarse. Solo se
     // guarda la ruta, nunca la URL entera: con el origen dentro, esto sería un

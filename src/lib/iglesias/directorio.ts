@@ -1,9 +1,9 @@
 import 'server-only';
 
-import { and, asc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, asc, eq, ilike, isNotNull, or, sql } from 'drizzle-orm';
 
 import { withAnon, dbAdmin } from '@/lib/db';
-import { iglesias } from '@/lib/db/schema';
+import { iglesias, type HorarioSemanal } from '@/lib/db/schema';
 
 /**
  * El directorio público de iglesias.
@@ -36,6 +36,25 @@ export type IglesiaEnDirectorio = {
   pais: string;
   logoUrl: string | null;
   aceptaSolicitudes: boolean;
+  /** Para «Culto principal: domingo 11:00» en la lista de la app. */
+  horarios: HorarioSemanal[];
+  latitud: number | null;
+  longitud: number | null;
+};
+
+const COLUMNAS_DIRECTORIO = {
+  id: iglesias.id,
+  slug: iglesias.slug,
+  nombre: iglesias.nombre,
+  denominacion: iglesias.denominacion,
+  descripcion: iglesias.descripcion,
+  ciudad: iglesias.ciudad,
+  pais: iglesias.pais,
+  logoUrl: iglesias.logoUrl,
+  aceptaSolicitudes: iglesias.aceptaSolicitudes,
+  horarios: iglesias.horarios,
+  latitud: iglesias.latitud,
+  longitud: iglesias.longitud,
 };
 
 export async function buscarIglesias(
@@ -43,17 +62,7 @@ export async function buscarIglesias(
 ): Promise<IglesiaEnDirectorio[]> {
   return withAnon((tx) =>
     tx
-      .select({
-        id: iglesias.id,
-        slug: iglesias.slug,
-        nombre: iglesias.nombre,
-        denominacion: iglesias.denominacion,
-        descripcion: iglesias.descripcion,
-        ciudad: iglesias.ciudad,
-        pais: iglesias.pais,
-        logoUrl: iglesias.logoUrl,
-        aceptaSolicitudes: iglesias.aceptaSolicitudes,
-      })
+      .select(COLUMNAS_DIRECTORIO)
       .from(iglesias)
       .where(
         busqueda
@@ -88,6 +97,8 @@ export async function iglesiaParaSolicitar(slug: string) {
       slug: iglesias.slug,
       nombre: iglesias.nombre,
       ciudad: iglesias.ciudad,
+      // Para el prefijo del teléfono que sale elegido de entrada.
+      pais: iglesias.pais,
       denominacion: iglesias.denominacion,
       logoUrl: iglesias.logoUrl,
       aceptaSolicitudes: iglesias.aceptaSolicitudes,
@@ -106,4 +117,103 @@ export async function totalEnDirectorio(): Promise<number> {
   );
 
   return Number(fila?.total ?? 0);
+}
+
+/**
+ * Las del directorio que han puesto dónde están, para «cerca de mí».
+ *
+ * Se mandan todas al navegador y la distancia se calcula allí: así la
+ * ubicación de quien busca no sale de su teléfono. Con cientos de iglesias
+ * habrá que acotar por país o por una caja de coordenadas; con las de hoy, una
+ * lista entera pesa menos que una foto.
+ */
+export async function iglesiasConUbicacion(): Promise<IglesiaEnDirectorio[]> {
+  return withAnon((tx) =>
+    tx
+      .select(COLUMNAS_DIRECTORIO)
+      .from(iglesias)
+      .where(and(isNotNull(iglesias.latitud), isNotNull(iglesias.longitud)))
+      .orderBy(asc(iglesias.nombre))
+      .limit(500),
+  );
+}
+
+/** Las de una ciudad, para «Buscar por ciudad». */
+export async function iglesiasDeCiudad(
+  ciudad: string,
+): Promise<IglesiaEnDirectorio[]> {
+  return withAnon((tx) =>
+    tx
+      .select(COLUMNAS_DIRECTORIO)
+      .from(iglesias)
+      .where(ilike(iglesias.ciudad, `%${ciudad}%`))
+      .orderBy(asc(iglesias.nombre))
+      .limit(60),
+  );
+}
+
+/**
+ * Las ciudades donde hay alguna iglesia del directorio, para sugerir mientras
+ * se escribe. Solo esas: sugerir una ciudad sin iglesias sería llevar a alguien
+ * a una lista vacía a propósito.
+ */
+export async function ciudadesDelDirectorio(): Promise<
+  { ciudad: string; pais: string; iglesias: number }[]
+> {
+  const filas = await withAnon((tx) =>
+    tx
+      .select({
+        ciudad: iglesias.ciudad,
+        pais: iglesias.pais,
+        iglesias: sql<number>`count(*)::int`,
+      })
+      .from(iglesias)
+      .where(isNotNull(iglesias.ciudad))
+      .groupBy(iglesias.ciudad, iglesias.pais)
+      .orderBy(asc(iglesias.ciudad)),
+  );
+  return filas.map((f) => ({ ciudad: f.ciudad!, pais: f.pais, iglesias: f.iglesias }));
+}
+
+/**
+ * La ficha de una iglesia en la app, antes de pedir entrar.
+ *
+ * Por `dbAdmin` y no por `withAnon`, como `iglesiaParaSolicitar`: a la ficha se
+ * llega también desde una invitación a una iglesia que no sale en el
+ * directorio, y quien llega puede tener ya sesión (`hatril_app` no ve iglesias
+ * ajenas). Solo columnas que la iglesia publica, las mismas que `anon` puede
+ * leer.
+ */
+export async function fichaDeIglesia(slug: string) {
+  const [fila] = await dbAdmin
+    .select({
+      id: iglesias.id,
+      slug: iglesias.slug,
+      nombre: iglesias.nombre,
+      denominacion: iglesias.denominacion,
+      descripcion: iglesias.descripcion,
+      ciudad: iglesias.ciudad,
+      pais: iglesias.pais,
+      direccion: iglesias.direccion,
+      telefono: iglesias.telefono,
+      email: iglesias.email,
+      logoUrl: iglesias.logoUrl,
+      bannerUrl: iglesias.bannerUrl,
+      horarios: iglesias.horarios,
+      timezone: iglesias.timezone,
+      latitud: iglesias.latitud,
+      longitud: iglesias.longitud,
+      aceptaSolicitudes: iglesias.aceptaSolicitudes,
+      webPublica: iglesias.webPublica,
+    })
+    .from(iglesias)
+    .where(and(eq(iglesias.slug, slug), eq(iglesias.activa, true)))
+    .limit(1);
+
+  return fila ?? null;
+}
+
+/** El horario que se enseña en una línea: el destacado, o el primero. */
+export function cultoPrincipal(horarios: HorarioSemanal[]): HorarioSemanal | null {
+  return horarios.find((h) => h.destacado) ?? horarios[0] ?? null;
 }

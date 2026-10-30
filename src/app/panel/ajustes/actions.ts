@@ -43,6 +43,29 @@ const EsquemaDatos = z.object({
     .union([z.string().trim().url('La dirección web debe empezar por https://'), z.literal('')])
     .optional(),
   descripcion: z.string().trim().max(400).optional().or(z.literal('')),
+  /**
+   * «28.4853, -16.3201», tal como lo copia cualquier mapa. Vacío quita la
+   * ubicación. Los rangos los vuelve a comprobar `ck_iglesias_coordenadas`.
+   */
+  coordenadas: z
+    .string()
+    .trim()
+    .max(60)
+    .optional()
+    .transform((v, ctx) => {
+      if (!v) return { latitud: null, longitud: null };
+      const m = v.match(/^(-?\d{1,2}(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:[.,]\d+)?)$/);
+      const lat = m ? Number(m[1]!.replace(',', '.')) : NaN;
+      const lng = m ? Number(m[2]!.replace(',', '.')) : NaN;
+      if (!m || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'La ubicación va como dos números separados por una coma: 28.4853, -16.3201.',
+        });
+        return z.NEVER;
+      }
+      return { latitud: lat, longitud: lng };
+    }),
 });
 
 export async function guardarDatosIglesia(formData: FormData) {
@@ -57,6 +80,7 @@ export async function guardarDatosIglesia(formData: FormData) {
     email: campo(formData, 'email'),
     web: campo(formData, 'web'),
     descripcion: campo(formData, 'descripcion'),
+    coordenadas: campo(formData, 'coordenadas'),
   });
 
   if (!parsed.success) {
@@ -80,6 +104,8 @@ export async function guardarDatosIglesia(formData: FormData) {
         email: d.email || null,
         web: d.web || null,
         descripcion: d.descripcion || null,
+        latitud: d.coordenadas.latitud,
+        longitud: d.coordenadas.longitud,
       })
       .where(eq(iglesias.id, ctx.iglesia.id)),
   );

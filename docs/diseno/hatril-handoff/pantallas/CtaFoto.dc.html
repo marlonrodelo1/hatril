@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mi cuenta · Tu foto de perfil</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.opt{display:flex;align-items:center;gap:14px;min-height:56px;padding:0 20px;border-top:1px solid #E0DFDB;color:#141413;text-decoration:none;font-size:16px;font-weight:600;background:transparent;border-left:0;border-right:0;border-bottom:0;width:100%;font-family:inherit;cursor:pointer}
+.opt .i{width:40px;height:40px;border-radius:999px;background:#F5F4ED;color:#3D3D3A;display:flex;align-items:center;justify-content:center;flex:none}
+.sheet{animation:up 300ms cubic-bezier(.2,.8,.2,1) both}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.sheet{animation:none}}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413">
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(20,20,19,0.42)"></div>
+  <section class="sheet" role="dialog" aria-label="Tu foto de perfil" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 16px 16px 0 0; padding-bottom: 34px">
+    <div style="display: flex; justify-content: center; padding-top: 8px"><span style="width: 36px; height: 4px; border-radius: 999px; background: #E0DFDB"></span></div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 20px 20px 18px; text-align: center">
+      <svg width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="Tu foto actual" style="border-radius: 999px; display: block"><rect width="120" height="120" fill="#D6CCBC"/><circle cx="60" cy="48" r="22" fill="#8C7556"/><path d="M18 120 C22 90 42 78 60 78 C78 78 98 90 102 120 Z" fill="#8C7556"/></svg>
+      <h2 style="font-size: 18px; font-weight: 800; letter-spacing: -0.015em">Tu foto de perfil</h2>
+      <p style="font-size: 14px; line-height: 1.45; color: #67665F">Solo la ve la gente de tu iglesia. Ayuda a que te reconozcan el domingo.</p>
+    </div>
+    <button class="opt"><span class="i"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></span>Hacer una foto</button>
+    <button class="opt"><span class="i"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></span>Elegir de la galería</button>
+    <button class="opt" style="color: #B53333"><span class="i" style="background: #F3E5E2; color: #B53333"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></span>Quitar la foto</button>
+    <p style="padding: 12px 20px 0; border-top: 1px solid #E0DFDB; font-size: 12px; line-height: 1.45; color: #67665F">Sin foto, se verán tus iniciales. Máximo 5 MB.</p>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

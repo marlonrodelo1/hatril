@@ -2,7 +2,8 @@
 
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
+import type { User } from '@supabase/supabase-js';
 import { z } from 'zod';
 
 import { createClient } from '@/lib/supabase/server';
@@ -38,6 +39,13 @@ import {
  * de `hatril_app` no le dejan ver ni la iglesia a la que quiere entrar. La
  * comprobación de que la iglesia acepta solicitudes se hace aquí a mano,
  * duplicando la que ya está en la policy de INSERT.
+ *
+ * LA CUENTA SE PIDE AL FINAL, Y EN EL MISMO FORMULARIO
+ * ---------------------------------------------------
+ * Desde la bienvenida de la app (30-oct), quien no tiene cuenta la crea en la
+ * propia solicitud: `crearCuentaYSolicitar`. Antes eran dos pantallas —crear la
+ * cuenta y volver a la solicitud—, y en la segunda se perdía gente. La de
+ * `crearCuentaPersonal` sigue para `/crear-cuenta`.
  */
 
 /**
@@ -51,10 +59,19 @@ function volverCon(ruta: string, error: string, next?: string): never {
   redirect(`${ruta}?error=${encodeURIComponent(error)}${extra}`);
 }
 
-const EsquemaSolicitud = z.object({
+const CamposSolicitud = {
   slug: z.string().trim().min(1),
   nombre: z.string().trim().min(2, 'Escribe tu nombre.').max(120),
-  telefono: z.string().trim().max(40).optional().or(z.literal('')),
+  // Obligatorio desde el 30-oct, decidido por Marlon: es como la iglesia
+  // contacta a quien acaba de llegar, y una ficha sin teléfono no se puede
+  // acompañar.
+  telefono: z
+    .string()
+    .trim()
+    .min(6, 'Escribe tu teléfono: es como la iglesia podrá contactarte.')
+    .max(40),
+  prefijo: z.enum(['ES', 'CO']).optional(),
+  direccion: z.string().trim().max(240).optional().or(z.literal('')),
   mensaje: z.string().trim().max(600).optional().or(z.literal('')),
   consentimiento: z.literal(true, {
     message: 'Tienes que aceptar para poder enviar la solicitud.',
@@ -62,25 +79,32 @@ const EsquemaSolicitud = z.object({
   // Opcional de verdad: sin marcar también se puede entrar. Por eso es un
   // booleano y no un `literal(true)` como la de arriba.
   asistencia: z.boolean(),
-});
+};
 
-export async function solicitarIngreso(formData: FormData) {
-  const parsed = EsquemaSolicitud.safeParse({
+const EsquemaSolicitud = z.object(CamposSolicitud);
+
+type DatosSolicitud = z.infer<typeof EsquemaSolicitud>;
+
+function leerSolicitud(formData: FormData) {
+  return {
     slug: campoObligatorio(formData, 'slug'),
     nombre: campoObligatorio(formData, 'nombre'),
-    telefono: campo(formData, 'telefono'),
+    telefono: campoObligatorio(formData, 'telefono'),
+    prefijo: campo(formData, 'prefijo'),
+    direccion: campo(formData, 'direccion'),
     mensaje: campo(formData, 'mensaje'),
     consentimiento: casilla(formData, 'consentimiento'),
     asistencia: casilla(formData, 'asistencia'),
-  });
+  };
+}
 
+export async function solicitarIngreso(formData: FormData) {
+  const parsed = EsquemaSolicitud.safeParse(leerSolicitud(formData));
   const slug = String(formData.get('slug') ?? '');
 
   if (!parsed.success) {
     volverCon(`/solicitar/${slug}`, parsed.error.issues[0]!.message);
   }
-
-  const d = parsed.data;
 
   const supabase = await createClient();
   const {
@@ -88,9 +112,85 @@ export async function solicitarIngreso(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/acceso?next=${encodeURIComponent(`/solicitar/${d.slug}`)}`);
+    redirect(`/acceso?next=${encodeURIComponent(`/solicitar/${parsed.data.slug}`)}`);
   }
 
+  await registrarSolicitud(user, parsed.data);
+}
+
+const EsquemaCuentaYSolicitud = z.object({
+  ...CamposSolicitud,
+  email: z.string().trim().toLowerCase().email('Ese correo no parece válido.'),
+  password: z.string(),
+});
+
+/**
+ * Crear la cuenta y pedir entrar, de una vez.
+ *
+ * El orden importa: primero se valida TODO —también lo de la solicitud—, y solo
+ * entonces se crea la cuenta. Al revés, un teléfono vacío dejaría creada una
+ * cuenta sin solicitud, y la persona volvería al formulario con un correo que
+ * ya «tiene cuenta» sin haber terminado nada.
+ */
+export async function crearCuentaYSolicitar(formData: FormData) {
+  const slug = String(formData.get('slug') ?? '');
+  // Con el tipo escrito delante: sin él, TypeScript no entiende que tras
+  // `volver()` no se sigue, y no estrecha lo que viene después.
+  const volver: (error: string) => never = (error) =>
+    volverCon(`/solicitar/${slug}`, error);
+
+  const parsed = EsquemaCuentaYSolicitud.safeParse({
+    ...leerSolicitud(formData),
+    email: campoObligatorio(formData, 'email'),
+    // Sin `campo()`: recorta espacios, y en una contraseña un espacio es un
+    // carácter más.
+    password: String(formData.get('password') ?? ''),
+  });
+  if (!parsed.success) volver(parsed.error.issues[0]!.message);
+
+  const { email, password, ...solicitud } = parsed.data;
+
+  const errorPassword = validarPassword(password);
+  if (errorPassword) volver(errorPassword);
+
+  const cabeceras = await headers();
+  const ip = getClientIp(new Request('https://hatril', { headers: cabeceras }));
+  const limite = await checkRateLimit('ip', `cuenta:${ip}`, 10);
+  if (!limite.ok) {
+    volver('Se han creado demasiadas cuentas desde esta conexión hoy. Inténtalo mañana.');
+  }
+
+  const admin = createAdminClient();
+  const { data: creado, error: errorAuth } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { nombre: solicitud.nombre },
+  });
+
+  if (errorAuth || !creado.user) {
+    const m = errorAuth?.message ?? '';
+    volver(
+      /already|registered|exists/i.test(m)
+        ? 'Este correo ya tiene cuenta. Entra con él y vuelves aquí con la solicitud.'
+        : traducirErrorAuth(m),
+    );
+  }
+
+  const supabase = await createClient();
+  const { error: errorSesion } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (errorSesion) {
+    volverCon('/acceso', 'Tu cuenta ya está creada. Entra con tu correo.', `/solicitar/${slug}`);
+  }
+
+  await registrarSolicitud(creado.user, solicitud);
+}
+
+/** La solicitud y la membresía pendiente, comunes a las dos entradas. */
+async function registrarSolicitud(user: User, d: DatosSolicitud): Promise<never> {
   const [iglesia] = await dbAdmin
     .select({
       id: iglesias.id,
@@ -103,7 +203,7 @@ export async function solicitarIngreso(formData: FormData) {
     .limit(1);
 
   if (!iglesia) {
-    volverCon('/iglesias', 'No encontramos esa iglesia.');
+    volverCon('/buscar', 'No encontramos esa iglesia.');
   }
 
   if (!iglesia.aceptaSolicitudes) {
@@ -112,6 +212,23 @@ export async function solicitarIngreso(formData: FormData) {
       'Esta iglesia no está aceptando solicitudes ahora mismo. Ponte en contacto con ellos directamente.',
     );
   }
+
+  // Una sola iglesia por persona (decidido el 30-oct). La base admitiría dos —
+  // el unique es por pareja—, así que lo dice la aplicación: con una membresía
+  // activa o pendiente en otra, no se pide entrar en esta.
+  const [otra] = await dbAdmin
+    .select({ id: iglesiaUsuarios.id })
+    .from(iglesiaUsuarios)
+    .where(
+      and(
+        eq(iglesiaUsuarios.authUserId, user.id),
+        // Una baja no cuenta: a quien su iglesia dio de baja no se le cierra
+        // la puerta de otra.
+        inArray(iglesiaUsuarios.estado, ['activo', 'pendiente']),
+      ),
+    )
+    .limit(1);
+  if (otra) redirect('/mi');
 
   let solicitudId: string | null = null;
 
@@ -124,10 +241,11 @@ export async function solicitarIngreso(formData: FormData) {
           authUserId: user.id,
           nombre: d.nombre,
           email: user.email ?? null,
-          // Con el país de la iglesia, no 'CO' fijo: un «612 345 678» de
-          // Tenerife no encaja en la regla colombiana, se guardaba sin +34 y
-          // la ficha aprobada se quedaba sin botón de WhatsApp.
-          telefono: normalizarTelefono(d.telefono || null, iglesia.pais),
+          // Con el prefijo elegido y, si no, con el país de la iglesia: un «612
+          // 345 678» de Tenerife no encaja en la regla colombiana, se guardaba
+          // sin +34 y la ficha aprobada se quedaba sin botón de WhatsApp.
+          telefono: normalizarTelefono(d.telefono, d.prefijo ?? iglesia.pais),
+          direccion: d.direccion || null,
           mensaje: d.mensaje || null,
           // Las dos, siempre. NULL en cualquiera significa «no consta» y aprobar
           // lo trata como tal: ver las columnas en el schema.
@@ -194,6 +312,43 @@ export async function solicitarIngreso(formData: FormData) {
   );
 
   redirect('/mi?enviada=1');
+}
+
+/**
+ * Cancelar la solicitud propia mientras está pendiente.
+ *
+ * Se borran la solicitud y la membresía pendiente, las dos o ninguna. Por
+ * `dbAdmin` como el resto del fichero: quien la cancela no pertenece a la
+ * iglesia. Solo lo suyo y solo lo pendiente: el `where` lleva la cuenta de la
+ * sesión, no un id que llegue del formulario.
+ */
+export async function cancelarSolicitud() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/acceso');
+
+  await dbAdmin.transaction(async (tx) => {
+    await tx
+      .delete(solicitudesIngreso)
+      .where(
+        and(
+          eq(solicitudesIngreso.authUserId, user.id),
+          eq(solicitudesIngreso.estado, 'pendiente'),
+        ),
+      );
+    await tx
+      .delete(iglesiaUsuarios)
+      .where(
+        and(
+          eq(iglesiaUsuarios.authUserId, user.id),
+          eq(iglesiaUsuarios.estado, 'pendiente'),
+        ),
+      );
+  });
+
+  redirect('/mi?cancelada=1');
 }
 
 // ============================================================================

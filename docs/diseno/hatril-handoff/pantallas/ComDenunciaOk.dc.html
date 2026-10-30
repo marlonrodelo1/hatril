@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Comunidad · Denuncia recibida</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border-radius:8px;font-size:16px;font-weight:600;text-decoration:none;border:1px solid transparent}
+.chk path{stroke-dasharray:1;stroke-dashoffset:0;animation:draw 380ms ease-out 200ms both}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion: reduce){.chk path{animation:none}}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413">
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(20,20,19,0.42)"></div>
+
+  <section role="dialog" aria-label="Denuncia enviada" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 16px 16px 0 0; padding: 0 20px 34px; display: flex; flex-direction: column; align-items: center; text-align: center">
+    <div style="padding: 8px 0 0"><span style="display: block; width: 36px; height: 4px; border-radius: 999px; background: #E0DFDB"></span></div>
+    <span style="margin-top: 28px; width: 64px; height: 64px; border-radius: 999px; background: #E6ECDE; color: #245C0E; display: flex; align-items: center; justify-content: center">
+      <svg class="ic chk" width="30" height="30" viewBox="0 0 24 24" stroke-width="2.4"><path pathLength="1" d="M20 6 9 17l-5-5"/></svg>
+    </span>
+    <h2 style="margin-top: 18px; font-size: 22px; line-height: 1.25; font-weight: 800; letter-spacing: -0.02em">El pastor ya tiene tu denuncia</h2>
+    <p style="margin-top: 8px; font-size: 15px; line-height: 1.5; color: #67665F">Andrés la revisará. Mientras, hemos ocultado esa publicación para ti. Gracias por cuidar la comunidad.</p>
+
+    <div style="width: 100%; margin-top: 24px; padding: 14px; border: 1px solid #E0DFDB; border-radius: 12px; display: flex; gap: 12px; align-items: center; text-align: left">
+      <svg class="ic" width="20" height="20" viewBox="0 0 24 24" style="color: #3D3D3A"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" x2="22" y1="8" y2="13"/><line x1="22" x2="17" y1="8" y2="13"/></svg>
+      <span style="flex: 1; font-size: 14px; line-height: 1.4">¿Prefieres no ver nada más de David?</span>
+      <a href="ComBloquear.dc.html" style="font-size: 14px; font-weight: 700; color: #141413; text-decoration: none; padding: 10px 0 10px 4px">Bloquear</a>
+    </div>
+
+    <a href="ComMuro.dc.html" class="btn" style="width: 100%; margin-top: 16px; background: #3D3D3A; color: #FFFFFF">Volver a la comunidad</a>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

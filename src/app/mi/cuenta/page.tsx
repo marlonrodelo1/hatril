@@ -1,30 +1,51 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import {
+  ChevronRight,
   ExternalLink,
   HandCoins,
   LayoutDashboard,
   LogOut,
+  ShieldCheck,
+  Trash2,
+  UserX,
   Users,
 } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { puedeGestionarMinisterio } from '@/lib/auth/permisos';
-import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
+import { estadoConsentimiento, exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
+import { TEXTO_CONSENTIMIENTO_ASISTENCIA_Y_SEGUIMIENTO } from '@/lib/rgpd/consentimiento';
+import { miFotoDePerfil } from '@/lib/miembros/foto';
+import { Aviso } from '@/components/aviso';
 import { misMinisterios } from '@/lib/ministerios/consultas';
 import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
 import { donativosDeMiIglesia } from '@/lib/iglesias/donativos';
+import { misBloqueos } from '@/lib/comunidad/moderacion';
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { nombreDeLaCuenta } from '@/lib/auth/nombre';
-import { iniciales } from '@/lib/format/iniciales';
 import { createClient } from '@/lib/supabase/server';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { salir } from '../../(auth)/actions';
 import { CabeceraMiembro } from '../_components/cabecera-miembro';
+import { FotoPerfil } from './_components/foto-perfil';
+import { cambiarPermisoAsistencia } from './actions';
 
 export const metadata: Metadata = { title: 'Mi cuenta' };
 
-export default async function MiCuentaPage() {
+const CONFIRMACIONES: Record<string, string> = {
+  foto: 'Foto guardada.',
+  'sin-foto': 'Foto quitada.',
+  'asistencia-si': 'Gracias. La iglesia podrá apuntar cuándo vienes.',
+  'asistencia-no': 'Permiso retirado. Ya no sales en las listas, y lo que había apuntado de ti se ha borrado.',
+};
+
+export default async function MiCuentaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; guardado?: string }>;
+}) {
+  const { error, guardado } = await searchParams;
   const ctx = await requireIglesia();
   await exigirConsentimientoAlDia(ctx);
 
@@ -33,9 +54,12 @@ export default async function MiCuentaPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [ministerios, donativos] = await Promise.all([
+  const [ministerios, donativos, bloqueos, miFoto, consentimiento] = await Promise.all([
     misMinisterios(ctx),
     donativosDeMiIglesia(ctx),
+    misBloqueos(ctx),
+    miFotoDePerfil(ctx),
+    estadoConsentimiento(ctx),
   ]);
 
   const nombre = nombreDeLaCuenta(user!);
@@ -50,19 +74,12 @@ export default async function MiCuentaPage() {
       />
 
       <main className="mx-auto flex w-full max-w-[620px] flex-col gap-6 px-4 py-6 sm:px-5">
-        <section className="flex items-center gap-4 rounded-xl border border-border bg-surface p-5">
-          <span className="flex size-12 flex-none items-center justify-center rounded-full bg-muted text-[14px] font-bold text-muted-foreground">
-            {iniciales(nombre)}
-          </span>
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="truncate text-[16px] font-bold tracking-[-0.018em]">
-              {nombre}
-            </span>
-            <span className="truncate text-[13.5px] text-muted-foreground">
-              {user!.email}
-            </span>
-          </div>
-        </section>
+        {error && <Aviso>{error}</Aviso>}
+        {guardado && Object.hasOwn(CONFIRMACIONES, guardado) && (
+          <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
+        )}
+
+        <FotoPerfil nombre={nombre} correo={user!.email ?? ''} foto={miFoto} />
 
         <section className="flex flex-col gap-3">
           <h2 className="t-subtitulo">
@@ -212,7 +229,122 @@ export default async function MiCuentaPage() {
             </form>
           </div>
         </section>
+
+        {/*
+         * Privacidad a mano dentro de la app (Apple 5.1.1(i)), y las personas
+         * bloqueadas, que la hoja de bloquear promete que se deshacen aquí.
+         */}
+        <section className="flex flex-col gap-3">
+          <h2 className="t-subtitulo">Privacidad</h2>
+          {/*
+           * El permiso de asistencia, que el texto de la casilla promete poder
+           * retirar «cuando quiera». Sin ficha no hay a qué colgarlo, y la
+           * sección no sale.
+           */}
+          {ctx.miembroId && (
+            <form
+              action={cambiarPermisoAsistencia}
+              className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4"
+            >
+              <div className="flex flex-col gap-1">
+                <span className="text-[15px] font-semibold">Registrar mi asistencia</span>
+                <span className="text-pretty text-[13.5px] leading-relaxed text-muted-foreground">
+                  {TEXTO_CONSENTIMIENTO_ASISTENCIA_Y_SEGUIMIENTO}
+                </span>
+              </div>
+              {consentimiento.asistenciaAceptada ? (
+                <>
+                  <p className="text-[13.5px] font-semibold text-badge-success-fg">
+                    Lo tienes dado.
+                  </p>
+                  <Button type="submit" variant="outline" className="self-start">
+                    Retirar el permiso
+                  </Button>
+                  <p className="text-[12.5px] leading-snug text-muted-foreground">
+                    Al retirarlo se borra lo que la iglesia tenía apuntado de tu
+                    asistencia y de las veces que te contactaron.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <input type="hidden" name="asistencia" value="on" />
+                  <p className="text-[13.5px] text-muted-foreground">No lo has dado.</p>
+                  <Button type="submit" variant="outline" className="self-start">
+                    Dar el permiso
+                  </Button>
+                </>
+              )}
+            </form>
+          )}
+
+          <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
+            <FilaEnlace
+              href="/mi/cuenta/bloqueados"
+              icono={<UserX strokeWidth={1.8} />}
+              titulo="Personas bloqueadas"
+              detalle={
+                bloqueos.length === 0
+                  ? 'Nadie'
+                  : bloqueos.length === 1
+                    ? '1 persona'
+                    : `${bloqueos.length} personas`
+              }
+            />
+            <FilaEnlace
+              href="/privacidad"
+              icono={<ShieldCheck strokeWidth={1.8} />}
+              titulo="Política de privacidad"
+              detalle="Qué datos se guardan y para qué"
+            />
+          </div>
+        </section>
+
+        {/*
+         * Al final y en su zona, como pide el diseño: es lo único de la pantalla
+         * que no se deshace con otro toque.
+         */}
+        <section className="flex flex-col gap-3 rounded-xl border border-danger-border bg-surface p-5">
+          <h2 className="t-subtitulo text-danger">Borrar mi cuenta</h2>
+          <p className="text-pretty text-[14px] leading-relaxed text-muted-foreground">
+            Se desactiva al momento y se borra a los 30 días, con lo que hayas
+            publicado. Tu ficha en {ctx.iglesia.nombre} la sigue llevando la
+            iglesia.
+          </p>
+          <Link
+            href="/mi/cuenta/borrar"
+            className={buttonVariants({ variant: 'destructive', className: 'self-start' })}
+          >
+            <Trash2 strokeWidth={1.8} />
+            Quiero borrar mi cuenta
+          </Link>
+        </section>
       </main>
     </div>
+  );
+}
+
+function FilaEnlace({
+  href,
+  icono,
+  titulo,
+  detalle,
+}: {
+  href: string;
+  icono: React.ReactNode;
+  titulo: string;
+  detalle: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 border-b border-border px-4 py-3.5 text-foreground no-underline outline-none last:border-b-0 hover:bg-surface-active focus-visible:ring-3 focus-visible:ring-ring/20 [&>svg:first-child]:size-5 [&>svg:first-child]:flex-none [&>svg:first-child]:text-muted-foreground"
+    >
+      {icono}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-[15px] font-semibold">{titulo}</span>
+        <span className="text-[13px] text-muted-foreground">{detalle}</span>
+      </span>
+      <ChevronRight className="size-[18px] flex-none text-muted-foreground" strokeWidth={1.8} />
+    </Link>
   );
 }

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Busca tu iglesia · Sin resultados</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:16px;text-decoration:none;border:1px solid transparent}
+.btn-p:active{background:#92442A}
+input{font-family:'Plus Jakarta Sans',sans-serif}
+input:focus{outline:2px solid #B15435;outline-offset:1px}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; display: flex; flex-direction: column; padding: 47px 24px 34px">
+  <div style="height: 56px; display: flex; align-items: center; margin-left: -10px">
+    <a href="Buscar.dc.html" aria-label="Volver" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #141413">
+      <svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+    </a>
+  </div>
+
+  <div style="padding-top: 8px; display: flex; flex-direction: column; gap: 16px">
+    <h1 style="font-size: 28px; line-height: 1.15; font-weight: 800; letter-spacing: -0.025em">Busca tu iglesia</h1>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="q2" style="font-size: 14px; font-weight: 600">Nombre de la iglesia</label>
+      <div style="position: relative">
+        <svg class="ic" width="18" height="18" viewBox="0 0 24 24" style="position: absolute; left: 14px; top: 15px; color: #67665F"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="q2" type="search" value="Monte Sion Tacoronte" style="width: 100%; height: 48px; padding: 0 44px; font-size: 16px; color: #141413; background: #F5F4ED; border: 1px solid #E0DFDB; border-radius: 8px">
+        <button aria-label="Borrar" style="position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; border: 0; background: transparent; color: #67665F; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding-top: 48px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px">
+    <span style="width: 56px; height: 56px; border-radius: 999px; background: #F5F4ED; color: #3D3D3A; display: flex; align-items: center; justify-content: center">
+      <svg class="ic" width="26" height="26" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    </span>
+    <h2 style="font-size: 20px; line-height: 1.25; font-weight: 800; letter-spacing: -0.02em; padding-top: 6px">No encontramos «Monte Sion Tacoronte»</h2>
+    <p style="font-size: 15px; line-height: 1.5; color: #67665F">Puede que tu iglesia aún no esté en Hatril o que aparezca con otro nombre. Prueba con una sola palabra.</p>
+  </div>
+
+  <div style="flex: 1"></div>
+  <div style="display: flex; flex-direction: column; gap: 10px">
+    <a href="#" class="btn btn-p" style="background: #B15435; color: #FFFFFF">
+      <svg class="ic" width="18" height="18" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+      Invita a tu iglesia
+    </a>
+    <a href="Ubicacion.dc.html" class="btn" style="background: #FFFFFF; color: #141413; border-color: #E0DFDB">
+      <svg class="ic" width="18" height="18" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+      Buscar cerca de mí
+    </a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

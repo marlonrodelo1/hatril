@@ -476,6 +476,13 @@ export default function PrivacidadPage() {
           un mes como máximo. No cobramos por ello.
         </P>
         <P>
+          Para borrar tu cuenta no hace falta escribir: está en Mi cuenta, al
+          final, y se explica paso a paso en{' '}
+          <a href="/borrar-cuenta">hatril.com/borrar-cuenta</a>. Se desactiva al
+          momento y se borra a los 30 días. Tu ficha en la iglesia la lleva la
+          iglesia: para salir de su fichero, pídeselo a ella.
+        </P>
+        <P>
           Si crees que lo hemos hecho mal puedes reclamar ante la Agencia
           Española de Protección de Datos (
           <a href="https://www.aepd.es" target="_blank" rel="noopener noreferrer">

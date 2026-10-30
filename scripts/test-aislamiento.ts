@@ -548,6 +548,138 @@ begin
     r := r || E'  OK   Sion no da me gusta a un comentario de Betania\\n';
   end;
 
+  -- --- DENUNCIAS Y BLOQUEOS (migracion 0053) ---
+  --
+  -- Quien denuncia solo ve sus denuncias; quien modera, las de su iglesia; el
+  -- autor de lo denunciado, ninguna. Un bloqueo solo lo ve quien lo hizo.
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_C), true);
+  execute 'set local role hatril_app';
+
+  insert into public.denuncias_comunidad
+    (iglesia_id, denunciante_miembro_id, publicacion_id, motivo)
+  values (IGL_A, MIE_A2, PUB_A, 'spam');
+  get diagnostics n = row_count;
+  r := r || format(E'  %s un miembro SI puede denunciar (%s fila)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.denuncias_comunidad
+      (iglesia_id, denunciante_miembro_id, publicacion_id, motivo)
+    values (IGL_A, MIE_A2, PUB_A, 'otro');
+    r := r || E'  FALLO la misma persona denuncia dos veces lo mismo\\n';
+  exception when unique_violation then
+    r := r || E'  OK   la misma persona no denuncia dos veces lo mismo\\n';
+  end;
+
+  begin
+    insert into public.denuncias_comunidad
+      (iglesia_id, denunciante_miembro_id, publicacion_id, motivo)
+    values (IGL_A, MIE_A1, PUB_A, 'spam');
+    r := r || E'  FALLO se denuncia en nombre de otra persona\\n';
+  exception when others then
+    r := r || E'  OK   no se denuncia en nombre de otra persona\\n';
+  end;
+
+  begin
+    insert into public.denuncias_comunidad
+      (iglesia_id, denunciante_miembro_id, publicacion_id, motivo, estado)
+    values (IGL_A, MIE_A2, PUB_A, 'ofensivo', 'descartada');
+    r := r || E'  FALLO una denuncia nace ya descartada\\n';
+  exception when others then
+    r := r || E'  OK   una denuncia no nace descartada\\n';
+  end;
+
+  begin
+    insert into public.denuncias_comunidad
+      (iglesia_id, denunciante_miembro_id, publicacion_id, motivo)
+    values (IGL_B, MIE_A2, PUB_A, 'spam');
+    r := r || E'  FALLO una denuncia cruza dos iglesias\\n';
+  exception when others then
+    r := r || format(E'  %s HT136 o la RLS paran la denuncia cruzada (%s)\\n',
+                     case when sqlerrm like 'HT136%' or sqlerrm like '%row-level%'
+                          then 'OK  ' else 'FALLO' end,
+                     left(sqlerrm, 30));
+  end;
+
+  update public.denuncias_comunidad set estado = 'descartada';
+  get diagnostics n = row_count;
+  r := r || format(E'  %s quien no modera no cierra denuncias (%s filas)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  insert into public.bloqueos_comunidad
+    (iglesia_id, bloqueador_miembro_id, bloqueado_miembro_id)
+  values (IGL_A, MIE_A2, MIE_A1);
+  get diagnostics n = row_count;
+  r := r || format(E'  %s un miembro SI puede bloquear (%s fila)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.bloqueos_comunidad
+      (iglesia_id, bloqueador_miembro_id, bloqueado_miembro_id)
+    values (IGL_A, MIE_A2, MIE_B1);
+    r := r || E'  FALLO se bloquea a alguien de otra iglesia\\n';
+  exception when others then
+    r := r || format(E'  %s HT137 para el bloqueo a otra iglesia (%s)\\n',
+                     case when sqlerrm like 'HT137%' then 'OK  ' else 'FALLO' end,
+                     left(sqlerrm, 30));
+  end;
+
+  begin
+    insert into public.bloqueos_comunidad
+      (iglesia_id, bloqueador_miembro_id, bloqueado_miembro_id)
+    values (IGL_A, MIE_A1, MIE_A2);
+    r := r || E'  FALLO se bloquea en nombre de otra persona\\n';
+  exception when others then
+    r := r || E'  OK   no se bloquea en nombre de otra persona\\n';
+  end;
+
+  -- El pastor modera: ve la denuncia y la cierra, pero no la reescribe. Y el
+  -- bloqueo de otro no lo ve.
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.denuncias_comunidad;
+  r := r || format(E'  %s el pastor ve las denuncias de su iglesia (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  update public.denuncias_comunidad
+     set estado = 'descartada', revisada_at = now(), revisada_por_auth_user_id = USR_A;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s el pastor SI cierra una denuncia (%s fila)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    update public.denuncias_comunidad set motivo = 'otro';
+    r := r || E'  FALLO quien modera reescribe el motivo de una denuncia\\n';
+  exception when insufficient_privilege then
+    r := r || E'  OK   quien modera no reescribe el motivo de una denuncia\\n';
+  end;
+
+  select count(*) into n from public.bloqueos_comunidad;
+  r := r || format(E'  %s el pastor no ve los bloqueos de otros (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  -- Y Sion, nada de nada.
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.denuncias_comunidad;
+  r := r || format(E'  %s Sion no ve las denuncias de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    select count(*) into n from public.bajas_cuenta;
+    r := r || format(E'  FALLO hatril_app lee las bajas de cuenta (%s)\\n', n);
+  exception when others then
+    r := r || E'  OK   hatril_app no llega a las bajas de cuenta\\n';
+  end;
+
   -- El pastor modera: borra lo que no es suyo dentro de SU iglesia.
   execute 'reset role';
   perform set_config('request.jwt.claims',
@@ -637,6 +769,20 @@ begin
     r := r || format(E'  FALLO anon lee el muro de la comunidad (%s)\\n', n);
   exception when others then
     r := r || E'  OK   anon no llega al muro de la comunidad\\n';
+  end;
+
+  begin
+    select count(*) into n from public.denuncias_comunidad;
+    r := r || format(E'  FALLO anon lee las denuncias (%s)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a las denuncias\\n';
+  end;
+
+  begin
+    select count(*) into n from public.bloqueos_comunidad;
+    r := r || format(E'  FALLO anon lee los bloqueos (%s)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a los bloqueos\\n';
   end;
 
   begin

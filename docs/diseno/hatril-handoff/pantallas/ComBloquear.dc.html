@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Comunidad · Bloquear a una persona</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border-radius:8px;font-size:16px;font-weight:600;text-decoration:none;border:1px solid transparent}
+.li{display:flex;gap:12px;align-items:flex-start;font-size:15px;line-height:1.45}
+.li svg{margin-top:2px;color:#3D3D3A}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413">
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(20,20,19,0.42)"></div>
+
+  <section role="dialog" aria-label="Bloquear a David León" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 16px 16px 0 0; padding: 0 20px 34px; display: flex; flex-direction: column">
+    <div style="display: flex; justify-content: center; padding: 8px 0 0"><span style="width: 36px; height: 4px; border-radius: 999px; background: #E0DFDB"></span></div>
+    <div style="display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 24px; gap: 12px">
+      <span style="width: 64px; height: 64px; border-radius: 999px; background: #F3E9D3; color: #734500; font-size: 20px; font-weight: 800; display: flex; align-items: center; justify-content: center">DL</span>
+      <h2 style="font-size: 22px; line-height: 1.25; font-weight: 800; letter-spacing: -0.02em">¿Bloquear a David León?</h2>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 14px; padding: 22px 4px 0">
+      <p class="li"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg><span>Dejarás de ver lo que publica y comenta en la comunidad.</span></p>
+      <p class="li"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><line x1="2" x2="22" y1="2" y2="22"/></svg><span>David no se entera: no le avisamos.</span></p>
+      <p class="li"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M10 9h4"/><path d="M12 7v5"/><path d="M14 22v-4a2 2 0 0 0-4 0v4"/><path d="M18 22V5.618a1 1 0 0 0-.553-.894l-4.553-2.277a2 2 0 0 0-1.788 0L6.553 4.724A1 1 0 0 0 6 5.618V22"/><path d="m18 7 3.447 1.724a1 1 0 0 1 .553.894V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.618a1 1 0 0 1 .553-.894L6 7"/></svg><span>Fuera del muro todo sigue igual: si coincides con él en un equipo, le seguirás viendo en los turnos.</span></p>
+      <p class="li"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg><span>Puedes desbloquearle cuando quieras desde Mi cuenta.</span></p>
+    </div>
+
+    <p style="margin-top: 20px; padding: 12px 14px; border-radius: 8px; background: #F5F4ED; font-size: 13px; line-height: 1.45; color: #3D3D3A">Si te ha hecho daño o te preocupa algo, mejor <a href="ComDenunciar.dc.html" style="color: #141413; font-weight: 700">denúncialo al pastor</a>: bloquear solo lo quita de tu vista.</p>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 20px">
+      <a href="ComMuro.dc.html" class="btn" style="background: #3D3D3A; color: #FFFFFF">Bloquear a David</a>
+      <a href="ComMenu.dc.html" class="btn" style="background: #FFFFFF; color: #141413; border-color: #E0DFDB">Cancelar</a>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -148,3 +148,40 @@ export const rateLimits = pgTable(
     index('idx_rate_limits_dia').on(t.dia),
   ],
 );
+
+/**
+ * Cuentas que han pedido que se las borre, y cuándo toca hacerlo.
+ *
+ * TREINTA DÍAS Y NO AL MOMENTO
+ * ----------------------------
+ * Al pedirlo, la cuenta deja de entrar en su iglesia —sus membresías pasan a
+ * `baja`, así que la RLS ya no le abre nada— y se borra de verdad a los treinta
+ * días, desde `/api/cron/bajas`. Si entra antes, la recupera tal cual. Apple y
+ * Google admiten el plazo siempre que se diga, y un «borrar mi cuenta» pulsado
+ * por error un domingo en el banco de la iglesia no tiene otro arreglo.
+ *
+ * `membresias` guarda qué filas de `iglesia_usuarios` estaban activas, para
+ * devolver justo esas al recuperarla y no reactivar una que el pastor ya había
+ * dado de baja por su cuenta.
+ *
+ * QUÉ SE BORRA Y QUÉ NO
+ * ---------------------
+ * Se borran la cuenta, la foto, lo que publicó y comentó en el muro, sus «me
+ * gusta», sus bloqueos y denuncias, y sus avisos. La FICHA no: es de la iglesia,
+ * que la llevaba antes de que existiera la cuenta y la seguirá llevando. Se
+ * queda sin cuenta enlazada. Salir del fichero se le pide al pastor.
+ *
+ * Tabla de la plataforma: RLS sin policies y solo `dbAdmin`. La fila se queda al
+ * acabar, con `completada_at`, y sin un dato personal: el id de una cuenta que
+ * ya no existe.
+ */
+export const bajasCuenta = pgTable('bajas_cuenta', {
+  authUserId: uuid('auth_user_id').primaryKey(),
+  pedidaAt: timestamp('pedida_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  borrarDesde: timestamp('borrar_desde', { withTimezone: true }).notNull(),
+  /** Ids de `iglesia_usuarios` que estaban activos al pedirla. */
+  membresias: jsonb('membresias').$type<string[]>().notNull().default([]),
+  completadaAt: timestamp('completada_at', { withTimezone: true }),
+});

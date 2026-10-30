@@ -4,6 +4,7 @@ import { and, eq, isNull, ne, sql } from 'drizzle-orm';
 
 import { dbAdmin } from '@/lib/db';
 import {
+  bloqueosComunidad,
   iglesiaUsuarios,
   ministerioMiembros,
   notificaciones,
@@ -152,6 +153,64 @@ export async function cuentasQueAprueban(
   return filas
     .filter((f) => resolverPermisos(f.rol, f.permisos).aprobar_solicitudes)
     .map((f) => f.authUserId);
+}
+
+/**
+ * Quién tiene que enterarse de una denuncia: quien modera la comunidad.
+ *
+ * Por `resolverPermisos` y no con un `where` sobre el jsonb, por lo mismo que
+ * `cuentasQueAprueban`: el pastor modera por su rol, sin que el permiso esté
+ * escrito en ninguna parte.
+ */
+export async function cuentasQueModeran(iglesiaId: string): Promise<string[]> {
+  const filas = await dbAdmin
+    .select({
+      authUserId: iglesiaUsuarios.authUserId,
+      rol: iglesiaUsuarios.rol,
+      permisos: iglesiaUsuarios.permisos,
+    })
+    .from(iglesiaUsuarios)
+    .where(
+      and(
+        eq(iglesiaUsuarios.iglesiaId, iglesiaId),
+        eq(iglesiaUsuarios.estado, 'activo'),
+      ),
+    );
+
+  return filas
+    .filter(
+      (f) =>
+        f.rol === 'pastor' ||
+        resolverPermisos(f.rol, f.permisos).moderar_comunidad,
+    )
+    .map((f) => f.authUserId);
+}
+
+/**
+ * ¿Ha bloqueado esta persona a la otra?
+ *
+ * Bloquear promete que dejas de ver lo que publica y comenta. Un aviso de
+ * «David ha comentado tu publicación» es verlo, y por la campana. Así que antes
+ * de avisar se pregunta, y por `dbAdmin` porque quien pregunta es justo el
+ * bloqueado, que no puede leer ese bloqueo —y no debe: es lo que la policy
+ * protege—.
+ */
+export async function tieneBloqueado(
+  bloqueadorMiembroId: string,
+  bloqueadoMiembroId: string,
+): Promise<boolean> {
+  const [fila] = await dbAdmin
+    .select({ uno: sql<number>`1` })
+    .from(bloqueosComunidad)
+    .where(
+      and(
+        eq(bloqueosComunidad.bloqueadorMiembroId, bloqueadorMiembroId),
+        eq(bloqueosComunidad.bloqueadoMiembroId, bloqueadoMiembroId),
+      ),
+    )
+    .limit(1);
+
+  return Boolean(fila);
 }
 
 /**

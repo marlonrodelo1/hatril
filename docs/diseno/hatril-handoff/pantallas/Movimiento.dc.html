@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Movimiento de la presentación</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,p{margin:0}
+</style>
+</helmet>
+<div style="width: 760px; height: 812px; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; padding: 40px; display: flex; flex-direction: column; gap: 24px">
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <h1 style="font-size: 28px; font-weight: 800; letter-spacing: -0.025em">Movimiento</h1>
+    <p style="font-size: 14px; color: #67665F; line-height: 1.5">Solo CSS y SVG. El atril del splash es el mismo elemento que abre la presentación: no hay corte.</p>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; flex: 1">
+    <div style="background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+      <h2 style="font-size: 15px; font-weight: 700">Del splash a la primera pantalla</h2>
+      <div style="display: flex; flex-direction: column; gap: 0">
+        <div style="display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; padding: 10px 0; border-top: 1px solid #E0DFDB">
+          <span style="font-size: 12px; font-weight: 700; color: #92442A">0 ms</span>
+          <span style="font-size: 13px; line-height: 1.45">Splash. Atril de 112 px centrado; se dibuja trazo a trazo (900 ms) y queda quieto.</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; padding: 10px 0; border-top: 1px solid #E0DFDB">
+          <span style="font-size: 12px; font-weight: 700; color: #92442A">2.500</span>
+          <span style="font-size: 13px; line-height: 1.45">El atril sube y se reduce a 52 px hasta su sitio en la pantalla 1 (450 ms, salida suave).</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; padding: 10px 0; border-top: 1px solid #E0DFDB">
+          <span style="font-size: 12px; font-weight: 700; color: #92442A">+420</span>
+          <span style="font-size: 13px; line-height: 1.45">Las tarjetas del muro salen «del libro»: suben 18 px y aparecen, escalonadas cada 120 ms (460 ms cada una).</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; padding: 10px 0; border-top: 1px solid #E0DFDB">
+          <span style="font-size: 12px; font-weight: 700; color: #92442A">+200</span>
+          <span style="font-size: 13px; line-height: 1.45">Título y texto, solo opacidad (400 ms). «Saltar» y el botón están desde el principio.</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; padding: 10px 0; border-top: 1px solid #E0DFDB">
+          <span style="font-size: 12px; font-weight: 700; color: #92442A">Paso</span>
+          <span style="font-size: 13px; line-height: 1.45">Entre pantallas: el texto sigue al dedo; al soltar, 360 ms. La ilustración saliente se funde (200 ms) y la nueva entra escalonada.</span>
+        </div>
+      </div>
+      <div style="background: #F5F4ED; border-radius: 8px; padding: 12px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; line-height: 1.6; color: #3D3D3A; white-space: pre-line">--dur-corta: 200ms;  --dur-media: 360ms;
+--dur-larga: 460ms;  --escalon: 120ms;
+--ease-salida: cubic-bezier(.2,.8,.2,1);
+--ease-trazo: cubic-bezier(.4,0,.2,1);</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px">
+      <div style="background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+        <h2 style="font-size: 15px; font-weight: 700">Con «reducir movimiento»</h2>
+        <p style="font-size: 13px; color: #67665F; line-height: 1.45">Mismo contenido y mismo orden. Nada se desplaza ni se dibuja: todo aparece ya en su sitio.</p>
+        <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 1fr); gap: 0; font-size: 12px">
+          <span style="padding: 8px 0; font-weight: 700; color: #67665F; border-bottom: 1px solid #E0DFDB"></span>
+          <span style="padding: 8px 0; font-weight: 700; color: #67665F; border-bottom: 1px solid #E0DFDB">Normal</span>
+          <span style="padding: 8px 0; font-weight: 700; color: #67665F; border-bottom: 1px solid #E0DFDB">Reducido</span>
+          <span style="padding: 8px 0; font-weight: 600; border-bottom: 1px solid #E0DFDB">Atril</span>
+          <span style="padding: 8px 6px 8px 0; border-bottom: 1px solid #E0DFDB">Trazo a trazo</span>
+          <span style="padding: 8px 0; border-bottom: 1px solid #E0DFDB">Completo</span>
+          <span style="padding: 8px 0; font-weight: 600; border-bottom: 1px solid #E0DFDB">Splash → 1</span>
+          <span style="padding: 8px 6px 8px 0; border-bottom: 1px solid #E0DFDB">El atril viaja</span>
+          <span style="padding: 8px 0; border-bottom: 1px solid #E0DFDB">Fundido 200 ms</span>
+          <span style="padding: 8px 0; font-weight: 600; border-bottom: 1px solid #E0DFDB">Tarjetas</span>
+          <span style="padding: 8px 6px 8px 0; border-bottom: 1px solid #E0DFDB">Suben escalonadas</span>
+          <span style="padding: 8px 0; border-bottom: 1px solid #E0DFDB">Ya colocadas</span>
+          <span style="padding: 8px 0; font-weight: 600">Cambio de página</span>
+          <span style="padding: 8px 6px 8px 0">Deslizamiento</span>
+          <span style="padding: 8px 0">Fundido 150 ms</span>
+        </div>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 10px">
+        <h2 style="font-size: 15px; font-weight: 700">Cómo se implementa</h2>
+        <p style="font-size: 13px; color: #67665F; line-height: 1.45">Los keyframes solo definen el estado inicial («from»). Sin animación, cada elemento ya está en su estado final.</p>
+        <div style="background: #F5F4ED; border-radius: 8px; padding: 12px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; line-height: 1.6; color: #3D3D3A; white-space: pre-line">path { stroke-dasharray: 1; }  /* pathLength="1" */
+@keyframes trazo { from { stroke-dashoffset: 1 } }
+@keyframes subir { from { opacity: 0; translate: 0 18px } }
+@media (prefers-reduced-motion: reduce) {
+  .anim { animation: none }
+  .pagina { transition: opacity 150ms }
+}</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":760,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

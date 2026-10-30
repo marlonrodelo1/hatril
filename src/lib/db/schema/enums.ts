@@ -194,3 +194,32 @@ export const accionAdminEnum = pgEnum('accion_admin_enum', [
 ]);
 
 export type AccionAdmin = (typeof accionAdminEnum.enumValues)[number];
+
+/**
+ * Por qué se denuncia algo del muro.
+ *
+ * Cinco y no un campo libre: el pastor tiene que poder ver de un vistazo si son
+ * tres personas diciendo lo mismo o tres cosas distintas, y con texto libre cada
+ * una lo escribe a su manera. Lo que no encaje va en `otro`, con el detalle.
+ */
+export const motivoDenunciaEnum = pgEnum('motivo_denuncia_enum', [
+  'ofensivo',
+  'spam',
+  'sin_permiso',
+  'privado',
+  'otro',
+]);
+
+export type MotivoDenuncia = (typeof motivoDenunciaEnum.enumValues)[number];
+
+/**
+ * En qué punto está una denuncia.
+ *
+ * No hay estado «retirada»: si quien modera borra lo denunciado, la denuncia se
+ * va con ello por la clave ajena. Lo único que queda por decidir de una que
+ * sigue viva es si ya se miró y se dejó estar.
+ */
+export const estadoDenunciaEnum = pgEnum('estado_denuncia_enum', [
+  'pendiente',
+  'descartada',
+]);

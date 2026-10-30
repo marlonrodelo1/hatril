@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Ficha · Ya eres de otra iglesia</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,p{margin:0}
+a{color:#92442A}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:15px;text-decoration:none;border:1px solid transparent}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; display: flex; flex-direction: column">
+  <div style="height: 150px; background: #F5E7DF; position: relative; flex: none">
+    <div style="position: absolute; left: 16px; top: 53px">
+      <span role="img" aria-label="Volver" style="width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E0DFDB; display: flex; align-items: center; justify-content: center; color: #141413">
+        <svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+      </span>
+    </div>
+  </div>
+
+  <div style="padding: 0 24px; margin-top: -36px; position: relative; z-index: 1; display: flex; flex-direction: column; gap: 12px">
+    <span style="width: 72px; height: 72px; border-radius: 16px; background: #FFFFFF; border: 1px solid #E0DFDB; color: #92442A; font-weight: 800; font-size: 24px; display: flex; align-items: center; justify-content: center">IB</span>
+    <h1 style="font-size: 26px; line-height: 1.15; font-weight: 800; letter-spacing: -0.025em">Iglesia Betania</h1>
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
+      <span style="font-size: 13px; font-weight: 600; color: #3D3D3A; border: 1px solid #E0DFDB; border-radius: 999px; padding: 3px 10px">Evangélica</span>
+      <span style="font-size: 14px; color: #67665F">La Laguna · a 1,2 km</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 15px">
+      <svg class="ic" width="18" height="18" viewBox="0 0 24 24" style="color: #92442A"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span><b>Domingo 11:00</b> · culto principal</span>
+    </div>
+  </div>
+
+  <div style="flex: 1"></div>
+
+  <sc-if value="{{ esOtra }}" hint-placeholder-val="{{ true }}">
+    <section style="margin: 0 16px 34px; background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; gap: 12px; align-items: flex-start">
+        <span style="width: 40px; height: 40px; border-radius: 999px; background: #F5F4ED; color: #3D3D3A; display: flex; align-items: center; justify-content: center; flex: none">
+          <svg class="ic" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        </span>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <h2 style="font-size: 17px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em">Ya eres de Bautista El Sembrador</h2>
+          <p style="font-size: 14px; line-height: 1.5; color: #67665F">En Hatril se es de una sola iglesia. Si quieres cambiarte, primero sal de la tuya en Perfil › Mi iglesia; después podrás pedir entrar aquí.</p>
+        </div>
+      </div>
+      <a href="#" class="btn" style="background: #FFFFFF; color: #141413; border-color: #E0DFDB">Ir a Mi iglesia</a>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{ esPendiente }}" hint-placeholder-val="{{ false }}">
+    <section style="margin: 0 16px 34px; background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; gap: 12px; align-items: flex-start">
+        <span style="width: 40px; height: 40px; border-radius: 999px; background: #F5E7DF; color: #92442A; display: flex; align-items: center; justify-content: center; flex: none">
+          <svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>
+        </span>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <h2 style="font-size: 17px; line-height: 1.3; font-weight: 700; letter-spacing: -0.01em">Tienes una solicitud pendiente en Vida Nueva</h2>
+          <p style="font-size: 14px; line-height: 1.5; color: #67665F">Solo se puede ser de una iglesia. Para pedir entrar aquí, cancela antes esa solicitud.</p>
+        </div>
+      </div>
+      <a href="Enviada.dc.html" class="btn" style="background: #FFFFFF; color: #141413; border-color: #E0DFDB">Ver mi solicitud</a>
+    </section>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"estado":{"editor":"enum","options":["otra","pendiente"],"default":"otra"},"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const e = this.props.estado ?? 'otra';
+    return { esOtra: e === 'otra', esPendiente: e === 'pendiente' };
+  }
+}
+</script>
+</body>
+</html>

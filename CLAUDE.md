@@ -41,8 +41,10 @@ No existe un `db` a secas. Hay que elegir, y elegir mal se ve en la revisión.
 `src/lib/db/client.ts` y `src/lib/db/with-tenant.ts`.
 
 `dbAdmin` solo vale para: crons, webhooks, super admin, el alta de iglesia (que
-ocurre antes de que exista membresía) y `getCurrentUserContext` (que resuelve la
-tabla que las policies consultan). Nada más.
+ocurre antes de que exista membresía), la baja de una cuenta (`lib/cuenta/baja.ts`:
+la cuenta puede ser de varias iglesias y el borrado final lo hace un cron) y
+`getCurrentUserContext` (que resuelve la tabla que las policies consultan). Nada
+más.
 
 ### Antes de dar por bueno cualquier cambio
 

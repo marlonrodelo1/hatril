@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Biblia · Índice</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ib{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:#3D3D3A;border-radius:999px;position:relative}
+.av{border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+.seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:4px;background:#F0EEE6;border-radius:999px}
+.seg button{height:36px;border-radius:999px;border:1px solid transparent;background:transparent;font-family:inherit;font-size:14px;font-weight:600;color:#5E5D58;cursor:pointer}
+.libros{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:8px}
+.libro{display:flex;align-items:center;justify-content:space-between;min-height:46px;padding:0 4px;border-bottom:1px solid #E0DFDB;font-size:15px;font-weight:600;color:#141413;text-decoration:none}
+.libro span{font-size:12px;font-weight:600;color:#67665F}
+.bar{position:absolute;left:0;right:0;bottom:0;padding:6px 8px 30px;background:rgba(250,249,245,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #E0DFDB;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:12px;font-size:11px;font-weight:600;color:#67665F;text-decoration:none}
+.tab.on{background:#F5E7DF;color:#92442A}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; padding-top: 47px; display: flex; flex-direction: column">
+  <header style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px">
+    <span style="width: 36px; height: 36px; border-radius: 8px; background: #F5E7DF; color: #92442A; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center">IB</span>
+    <div style="flex: 1; display: flex; flex-direction: column"><h1 style="font-size: 18px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2">Biblia</h1><span style="font-size: 12px; color: #67665F">Iglesia Betania</span></div>
+    <span class="ib" role="img" aria-label="Avisos"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+    <span class="ib" role="img" aria-label="Tu cuenta"><span class="av" style="width: 32px; height: 32px; background: #E3E8EC; color: #2F4A5C; font-size: 12px">LH</span></span>
+  </header>
+
+  <div style="padding: 8px 16px 0; display: flex; flex-direction: column; gap: 12px">
+    <div style="position: relative">
+      <label for="bq" style="position: absolute; left: -9999px">Buscar un libro o una cita</label>
+      <svg class="ic" width="18" height="18" viewBox="0 0 24 24" style="position: absolute; left: 14px; top: 15px; color: #67665F"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="bq" type="search" placeholder="Un libro o una cita, p. ej. Juan 3:16" style="width: 100%; height: 48px; padding: 0 14px 0 42px; font-family: inherit; font-size: 16px; background: #F5F4ED; border: 1px solid #E0DFDB; border-radius: 8px; color: #141413">
+    </div>
+
+    <a href="BibCapitulo.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; color: #141413; text-decoration: none">
+      <span style="width: 36px; height: 36px; border-radius: 8px; background: #F5E7DF; color: #92442A; display: flex; align-items: center; justify-content: center"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
+      <span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: 12px; color: #67665F">Seguir leyendo</span><span style="font-size: 15px; font-weight: 700">Salmo 23</span></span>
+      <svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+    </a>
+
+    <div class="seg" role="tablist" aria-label="Testamento">
+      <button role="tab" aria-selected="{{ selAT }}" onClick="{{ verAT }}" style="{{ estAT }}">Antiguo · 39</button>
+      <button role="tab" aria-selected="{{ selNT }}" onClick="{{ verNT }}" style="{{ estNT }}">Nuevo · 27</button>
+    </div>
+  </div>
+
+  <div class="libros" style="padding: 6px 16px 120px">
+    <sc-for list="{{ libros }}" as="l" hint-placeholder-count="20">
+      <a href="BibCapitulo.dc.html" class="libro">{{ l.n }}<span>{{ l.c }}</span></a>
+    </sc-for>
+  </div>
+
+  <nav class="bar" aria-label="Principal">
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Comunidad</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Devocional</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Agenda</a>
+    <a href="#" class="tab on" aria-current="page"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>Biblia</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>Equipo</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { t: 'AT' }; }
+  renderVals() {
+    const AT = [['Génesis',50],['Éxodo',40],['Levítico',27],['Números',36],['Deuteronomio',34],['Josué',24],['Jueces',21],['Rut',4],['1 Samuel',31],['2 Samuel',24],['1 Reyes',22],['2 Reyes',25],['1 Crónicas',29],['2 Crónicas',36],['Esdras',10],['Nehemías',13],['Ester',10],['Job',42],['Salmos',150],['Proverbios',31],['Eclesiastés',12],['Cantares',8],['Isaías',66],['Jeremías',52],['Lamentaciones',5],['Ezequiel',48],['Daniel',12],['Oseas',14],['Joel',3],['Amós',9],['Abdías',1],['Jonás',4],['Miqueas',7],['Nahúm',3],['Habacuc',3],['Sofonías',3],['Hageo',2],['Zacarías',14],['Malaquías',4]];
+    const NT = [['Mateo',28],['Marcos',16],['Lucas',24],['Juan',21],['Hechos',28],['Romanos',16],['1 Corintios',16],['2 Corintios',13],['Gálatas',6],['Efesios',6],['Filipenses',4],['Colosenses',4],['1 Tesalonicenses',5],['2 Tesalonicenses',3],['1 Timoteo',6],['2 Timoteo',4],['Tito',3],['Filemón',1],['Hebreos',13],['Santiago',5],['1 Pedro',5],['2 Pedro',3],['1 Juan',5],['2 Juan',1],['3 Juan',1],['Judas',1],['Apocalipsis',22]];
+    const at = this.state.t === 'AT';
+    const on = { background: '#FFFFFF', color: '#141413', borderColor: '#E0DFDB' };
+    return {
+      libros: (at ? AT : NT).map((b) => ({ n: b[0], c: b[1] })),
+      selAT: at ? 'true' : 'false', selNT: at ? 'false' : 'true',
+      estAT: at ? on : {}, estNT: at ? {} : on,
+      verAT: () => this.setState({ t: 'AT' }), verNT: () => this.setState({ t: 'NT' })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -44,6 +44,14 @@ export const tipoNotificacionEnum = pgEnum('tipo_notificacion_enum', [
   'turno_asignado',
   /** Alguien del equipo ha dicho que no puede. Va a quien lleva el equipo. */
   'turno_no_puede',
+  /** Han denunciado algo del muro. Va a quien modera la comunidad. */
+  'denuncia_en_comunidad',
+  /**
+   * Quien modera ha quitado una publicación o un comentario tuyo. Sin decir
+   * quién: la denuncia es anónima, y nombrar al moderador invita a discutirlo
+   * con él en vez de con la congregación.
+   */
+  'contenido_retirado',
 ]);
 
 export const notificaciones = pgTable(

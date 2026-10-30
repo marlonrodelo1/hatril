@@ -23,6 +23,7 @@ import {
 import type { Ranura } from '@/lib/iglesias/imagenes';
 import { FILAS_HORARIO, MAX_FOTOS } from './constantes';
 import { CabeceraPanel } from '../_components/cabecera';
+import { CampoUbicacion } from './_components/campo-ubicacion';
 import { Contenedor } from '../_components/contenedor';
 
 export const metadata: Metadata = { title: 'Ajustes' };
@@ -127,6 +128,14 @@ export default async function AjustesPage({
                     <Input id="email" name="email" type="email" defaultValue={iglesia.email ?? ''} />
                   </Campo>
                 </div>
+
+                <CampoUbicacion
+                  inicial={
+                    iglesia.latitud !== null && iglesia.longitud !== null
+                      ? `${iglesia.latitud}, ${iglesia.longitud}`
+                      : ''
+                  }
+                />
 
                 <Campo
                   etiqueta="En una frase"

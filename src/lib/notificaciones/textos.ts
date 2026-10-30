@@ -70,5 +70,25 @@ export function textoNotificacion(
         titulo: `${quien} no puede servir en ${datos.ministerio ?? 'el equipo'}`,
         detalle: datos.fecha ? `Hay que cubrir el ${datos.fecha}.` : null,
       };
+
+    // Sin nombre de quien denuncia, ni aquí ni en la pantalla de revisión: la
+    // campana de un moderador la puede ver cualquiera que mire su móvil.
+    case 'denuncia_en_comunidad':
+      return {
+        titulo:
+          datos.que === 'comentario'
+            ? 'Han denunciado un comentario del muro'
+            : 'Han denunciado una publicación del muro',
+        detalle: datos.extracto ?? null,
+      };
+
+    case 'contenido_retirado':
+      return {
+        titulo:
+          datos.que === 'comentario'
+            ? 'Han quitado un comentario tuyo del muro'
+            : 'Han quitado una publicación tuya del muro',
+        detalle: datos.extracto ?? null,
+      };
   }
 }

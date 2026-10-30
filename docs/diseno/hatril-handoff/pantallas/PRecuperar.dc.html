@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Recuperar la contraseña</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.fld{width:100%;height:48px;padding:0 14px;font-family:inherit;font-size:16px;color:#141413;background:#F5F4ED;border:1px solid #E0DFDB;border-radius:8px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border-radius:8px;font-family:inherit;font-weight:600;font-size:16px;text-decoration:none;border:1px solid transparent;cursor:pointer;width:100%}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; padding: 47px 24px 34px; display: flex; flex-direction: column">
+  <div style="height: 56px; display: flex; align-items: center; margin-left: -10px">
+    <a href="PEntrar.dc.html" aria-label="Volver" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #141413"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></a>
+  </div>
+
+  <sc-if value="{{ antes }}" hint-placeholder-val="{{ true }}">
+    <h1 style="padding-top: 12px; font-size: 28px; line-height: 1.15; font-weight: 800; letter-spacing: -0.025em">¿Has olvidado la contraseña?</h1>
+    <p style="padding-top: 10px; font-size: 16px; line-height: 1.5; color: #67665F">Te mandamos un enlace a tu correo para que pongas una nueva.</p>
+    <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 24px">
+      <label for="re" style="font-size: 14px; font-weight: 600">Correo electrónico</label>
+      <input id="re" class="fld" type="email" autocomplete="email" value="lucia.hm@correo.com">
+    </div>
+    <div style="flex: 1"></div>
+    <button class="btn" onClick="{{ enviar }}" style="background: #B15435; color: #FFFFFF">Enviarme el enlace</button>
+  </sc-if>
+
+  <sc-if value="{{ despues }}" hint-placeholder-val="{{ false }}">
+    <span style="margin-top: 24px; width: 64px; height: 64px; border-radius: 999px; background: #E6ECDE; color: #245C0E; display: flex; align-items: center; justify-content: center"><svg class="ic" width="28" height="28" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>
+    <h1 style="padding-top: 20px; font-size: 28px; line-height: 1.15; font-weight: 800; letter-spacing: -0.025em">Mira tu correo</h1>
+    <p style="padding-top: 10px; font-size: 16px; line-height: 1.5; color: #67665F">Si <b style="color: #141413">lucia.hm@correo.com</b> tiene cuenta en Hatril, te llegará un enlace en unos minutos. Caduca en una hora.</p>
+    <p style="padding-top: 14px; font-size: 14px; line-height: 1.5; color: #67665F">¿No aparece? Mira en la carpeta de spam.</p>
+    <div style="flex: 1"></div>
+    <button class="btn" onClick="{{ volver }}" style="background: #FFFFFF; color: #141413; border-color: #E0DFDB">Volver a enviarlo</button>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"enviado":{"editor":"boolean","default":false},"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { e: null }; }
+  renderVals() {
+    const enviado = this.state.e ?? this.props.enviado ?? false;
+    return {
+      antes: !enviado, despues: enviado,
+      enviar: () => this.setState({ e: true }),
+      volver: () => this.setState({ e: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,11 +1,12 @@
-import { Heart, Trash2 } from 'lucide-react';
+import { Heart } from 'lucide-react';
 
 import { AvatarPersona } from '@/components/avatar-persona';
 import { haceCuanto } from '@/lib/format/hace-cuanto';
 import { Button } from '@/components/ui/button';
 import type { PublicacionMuro } from '@/lib/comunidad/consultas';
-import { alternarMeGusta, borrarPublicacion } from '../actions';
+import { alternarMeGusta } from '../actions';
 import { Comentarios, type ComentarioPintado } from './comentarios';
+import { MenuContenido } from './menu-contenido';
 
 /**
  * Una publicación del muro.
@@ -54,6 +55,7 @@ export function Publicacion({
     id: c.id,
     texto: c.texto,
     cuando: haceCuanto(c.createdAt),
+    autorId: c.autorId,
     autorNombre: c.autorNombre,
     autorFoto: c.autorFoto,
     esMio: c.esMio,
@@ -63,6 +65,7 @@ export function Publicacion({
       id: r.id,
       texto: r.texto,
       cuando: haceCuanto(r.createdAt),
+      autorId: r.autorId,
       autorNombre: r.autorNombre,
       autorFoto: r.autorFoto,
       esMio: r.esMio,
@@ -88,19 +91,18 @@ export function Publicacion({
 
         <span className="flex-1" />
 
-        {(p.esMia || puedeModerar) && (
-          <form action={borrarPublicacion.bind(null, p.id)}>
-            <Button
-              type="submit"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Borrar la publicación"
-              className="text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <Trash2 className="size-[17px]" strokeWidth={1.7} />
-            </Button>
-          </form>
-        )}
+        {/* Siempre: a lo de otro también se le puede hacer algo —denunciarlo o
+            bloquear a quien lo escribió—, que es lo que pide Apple. */}
+        <MenuContenido
+          tipo="publicacion"
+          id={p.id}
+          autorId={p.autorId}
+          autorNombre={p.autorNombre}
+          autorFoto={p.autorFoto}
+          esMio={p.esMia}
+          puedeModerar={puedeModerar}
+          queSeBorra={queSeBorra(p.imagenes.length, p.totalComentarios)}
+        />
       </header>
 
       {p.texto && (
@@ -186,4 +188,19 @@ export function Publicacion({
 
     </article>
   );
+}
+
+/** «Se borran también sus 2 fotos y los 5 comentarios.», o lo que toque. */
+function queSeBorra(fotos: number, comentarios: number): string | undefined {
+  const partes = [
+    fotos === 1 ? 'su foto' : fotos > 1 ? `sus ${fotos} fotos` : null,
+    comentarios === 1
+      ? 'su comentario'
+      : comentarios > 1
+        ? `los ${comentarios} comentarios`
+        : null,
+  ].filter(Boolean);
+  return partes.length > 0
+    ? `Se borran también ${partes.join(' y ')}.`
+    : undefined;
 }

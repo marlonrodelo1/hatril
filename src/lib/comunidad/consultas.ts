@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 
 import { withUser } from '@/lib/db';
 import {
@@ -12,6 +12,8 @@ import {
 } from '@/lib/db/schema';
 import type { UserContext } from '@/lib/auth/user-context';
 import { firmarImagenes } from './imagenes';
+import { filtroDelMuro } from './moderacion';
+import { fotosParaPintar } from '@/lib/miembros/foto';
 
 /**
  * El muro de la congregación, tal y como se pinta.
@@ -78,6 +80,14 @@ const LIMITE = 30;
 export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
   const yo = ctx.miembroId;
 
+  /*
+   * Lo que esta persona ha bloqueado o denunciado se queda fuera EN LA
+   * CONSULTA, no después: filtrándolo al pintar, las treinta del `limit`
+   * podrían ser casi todas de quien tiene bloqueado y el muro saldría medio
+   * vacío.
+   */
+  const filtro = await filtroDelMuro(ctx);
+
   const filas = await withUser(ctx.user.id, (tx) =>
     tx
       .select({
@@ -92,7 +102,19 @@ export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
       })
       .from(publicaciones)
       .innerJoin(miembros, eq(miembros.id, publicaciones.autorMiembroId))
-      .where(eq(publicaciones.iglesiaId, ctx.iglesia.id))
+      .where(
+        and(
+          eq(publicaciones.iglesiaId, ctx.iglesia.id),
+          // `notInArray` con una lista vacía escribe `not in ()`, que Postgres
+          // no acepta: por eso el `undefined`, que `and()` descarta.
+          filtro.bloqueados.length > 0
+            ? notInArray(publicaciones.autorMiembroId, filtro.bloqueados)
+            : undefined,
+          filtro.publicacionesDenunciadas.length > 0
+            ? notInArray(publicaciones.id, filtro.publicacionesDenunciadas)
+            : undefined,
+        ),
+      )
       .orderBy(desc(publicaciones.createdAt))
       .limit(LIMITE),
   );
@@ -129,7 +151,17 @@ export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
           miembros,
           eq(miembros.id, publicacionesComentarios.autorMiembroId),
         )
-        .where(inArray(publicacionesComentarios.publicacionId, ids))
+        .where(
+          and(
+            inArray(publicacionesComentarios.publicacionId, ids),
+            filtro.bloqueados.length > 0
+              ? notInArray(publicacionesComentarios.autorMiembroId, filtro.bloqueados)
+              : undefined,
+            filtro.comentariosDenunciados.length > 0
+              ? notInArray(publicacionesComentarios.id, filtro.comentariosDenunciados)
+              : undefined,
+          ),
+        )
         .orderBy(asc(publicacionesComentarios.createdAt)),
     ),
   ]);
@@ -164,8 +196,16 @@ export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
             ),
         );
 
-  // Una sola llamada a Storage para todas las fotos de la pantalla.
-  const firmas = await firmarImagenes(filas.flatMap((f) => f.imagenes ?? []));
+  // Una sola llamada a Storage para todas las fotos de la pantalla, y otra para
+  // las caras: las de perfil también van firmadas (`miembros/foto.ts`).
+  const [firmas, caras] = await Promise.all([
+    firmarImagenes(filas.flatMap((f) => f.imagenes ?? [])),
+    fotosParaPintar([
+      ...filas.map((f) => f.autorFoto),
+      ...comentarios.map((c) => c.autorFoto),
+    ]),
+  ]);
+  const cara = (v: string | null) => (v ? (caras.get(v) ?? null) : null);
 
   const nombreCompleto = (n: string, a: string | null) =>
     [n, a].filter(Boolean).join(' ');
@@ -177,7 +217,7 @@ export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
     createdAt: c.createdAt,
     autorId: c.autorId,
     autorNombre: nombreCompleto(c.autorNombre, c.autorApellidos),
-    autorFoto: c.autorFoto,
+    autorFoto: cara(c.autorFoto),
     esMio: yo !== null && c.autorId === yo,
     meGusta: gustosComentarios.filter((g) => g.comentarioId === c.id).length,
     leHeDado:
@@ -197,7 +237,7 @@ export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
     createdAt: f.createdAt,
     autorId: f.autorId,
     autorNombre: nombreCompleto(f.autorNombre, f.autorApellidos),
-    autorFoto: f.autorFoto,
+    autorFoto: cara(f.autorFoto),
     esMia: yo !== null && f.autorId === yo,
     meGusta: gustos.filter((g) => g.publicacionId === f.id).length,
     leHeDado:
@@ -224,8 +264,21 @@ export async function listarMuro(ctx: UserContext): Promise<PublicacionMuro[]> {
           .map(aComentario),
       }));
     })(),
-    totalComentarios: comentarios.filter((c) => c.publicacionId === f.id)
-      .length,
+    totalComentarios: (() => {
+      /*
+       * Lo que se va a ver, no lo que hay. Una respuesta cuyo comentario de
+       * arriba está escondido —porque es de alguien bloqueado o se denunció—
+       * no se pinta, así que tampoco se cuenta: el número del icono tiene que
+       * coincidir con lo que aparece al abrirlo.
+       */
+      const suyos = comentarios.filter((c) => c.publicacionId === f.id);
+      const visibles = new Set(
+        suyos.filter((c) => c.respuestaAId === null).map((c) => c.id),
+      );
+      return suyos.filter(
+        (c) => c.respuestaAId === null || visibles.has(c.respuestaAId),
+      ).length;
+    })(),
   }));
 }
 
@@ -256,16 +309,17 @@ export async function pulsoDelMuro(
   };
 }
 
-/** ¿De quién es esta publicación? Para decidir si se puede borrar. */
+/** ¿De quién es esta publicación? Para decidir si se puede borrar, y para avisar. */
 export async function autorDePublicacion(
   ctx: UserContext,
   publicacionId: string,
-): Promise<{ autorMiembroId: string; imagenes: string[] } | null> {
+): Promise<{ autorMiembroId: string; imagenes: string[]; texto: string | null } | null> {
   const [fila] = await withUser(ctx.user.id, (tx) =>
     tx
       .select({
         autorMiembroId: publicaciones.autorMiembroId,
         imagenes: publicaciones.imagenes,
+        texto: publicaciones.texto,
       })
       .from(publicaciones)
       .where(
@@ -277,5 +331,31 @@ export async function autorDePublicacion(
       .limit(1),
   );
 
-  return fila ? { autorMiembroId: fila.autorMiembroId, imagenes: fila.imagenes ?? [] } : null;
+  return fila
+    ? { autorMiembroId: fila.autorMiembroId, imagenes: fila.imagenes ?? [], texto: fila.texto }
+    : null;
+}
+
+/** ¿De quién es este comentario, y de qué publicación? Para borrar y denunciar. */
+export async function autorDeComentario(
+  ctx: UserContext,
+  comentarioId: string,
+): Promise<{ autorMiembroId: string; texto: string } | null> {
+  const [fila] = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({
+        autorMiembroId: publicacionesComentarios.autorMiembroId,
+        texto: publicacionesComentarios.texto,
+      })
+      .from(publicacionesComentarios)
+      .where(
+        and(
+          eq(publicacionesComentarios.id, comentarioId),
+          eq(publicacionesComentarios.iglesiaId, ctx.iglesia.id),
+        ),
+      )
+      .limit(1),
+  );
+
+  return fila ?? null;
 }

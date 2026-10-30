@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { BookOpen, ChevronRight, Search, TriangleAlert } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, Search, TriangleAlert } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { LIBROS, buscarLibros, libroPorSlug } from '@/lib/biblia/libros';
 import { cargarCapitulo } from '@/lib/biblia/texto';
 import { CabeceraMiembro } from '../_components/cabecera-miembro';
+import { buttonVariants } from '@/components/ui/button';
+import { Capitulo } from './_components/capitulo';
 
 export const metadata: Metadata = { title: 'Biblia' };
 
@@ -50,6 +52,25 @@ export default async function BibliaPage({
       ? await cargarCapitulo(libro, numero)
       : null;
 
+  // El capítulo de antes y el de después, cruzando de libro en los bordes.
+  const posicion = libro ? LIBROS.findIndex((l) => l.slug === libro.slug) : -1;
+  const anterior =
+    libro && capitulo
+      ? numero > 1
+        ? { slug: libro.slug, nombre: libro.nombre, cap: numero - 1 }
+        : posicion > 0
+          ? { slug: LIBROS[posicion - 1]!.slug, nombre: LIBROS[posicion - 1]!.nombre, cap: LIBROS[posicion - 1]!.capitulos }
+          : null
+      : null;
+  const siguiente =
+    libro && capitulo
+      ? numero < libro.capitulos
+        ? { slug: libro.slug, nombre: libro.nombre, cap: numero + 1 }
+        : posicion < LIBROS.length - 1
+          ? { slug: LIBROS[posicion + 1]!.slug, nombre: LIBROS[posicion + 1]!.nombre, cap: 1 }
+          : null
+      : null;
+
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <CabeceraMiembro
@@ -73,16 +94,44 @@ export default async function BibliaPage({
         {libro && cap && (
           <>
             {capitulo ? (
-              <article className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5">
-                {capitulo.versiculos.map((texto, i) => (
-                  <p key={i} className="text-pretty text-[16px] leading-relaxed">
-                    <span className="mr-1.5 align-baseline text-[12px] font-bold text-accent-brand">
-                      {i + 1}
-                    </span>
-                    {texto}
-                  </p>
-                ))}
-              </article>
+              <>
+                <Capitulo
+                  versiculos={capitulo.versiculos}
+                  libro={libro.nombre}
+                  capitulo={numero}
+                />
+
+                {/* Anterior y siguiente sin volver al índice. Al cruzar de
+                    libro se sigue: del último de Génesis, al primero de Éxodo. */}
+                <nav aria-label="Capítulos" className="grid grid-cols-2 gap-2">
+                  {anterior ? (
+                    <Link
+                      href={`/mi/biblia?libro=${anterior.slug}&cap=${anterior.cap}`}
+                      className={buttonVariants({ variant: 'outline' }) + ' w-full justify-start'}
+                    >
+                      <ChevronLeft strokeWidth={1.8} />
+                      <span className="truncate">{anterior.nombre} {anterior.cap}</span>
+                    </Link>
+                  ) : (
+                    <span />
+                  )}
+                  {siguiente && (
+                    <Link
+                      href={`/mi/biblia?libro=${siguiente.slug}&cap=${siguiente.cap}`}
+                      className={buttonVariants({ variant: 'outline' }) + ' w-full justify-end'}
+                    >
+                      <span className="truncate">{siguiente.nombre} {siguiente.cap}</span>
+                      <ChevronRight strokeWidth={1.8} />
+                    </Link>
+                  )}
+                </nav>
+                <Link
+                  href={`/mi/biblia?libro=${libro.slug}`}
+                  className="self-center text-[14px] font-semibold text-foreground underline underline-offset-2"
+                >
+                  Elegir otro capítulo de {libro.nombre}
+                </Link>
+              </>
             ) : (
               <SinTexto />
             )}

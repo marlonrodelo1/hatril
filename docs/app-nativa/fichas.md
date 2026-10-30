@@ -15,7 +15,7 @@ Cómo compilar y subir: [`android.md`](android.md) e [`ios.md`](ios.md).
 Por orden de lo que pesa. El 1 lo pide también Google, y el 3 afecta a las
 dos tiendas.
 
-1. **Borrar la cuenta desde la app.** Apple lo exige a toda app en la que se
+1. **Borrar la cuenta desde la app.** *Hecho el 30-oct: `/mi/cuenta/borrar` y `/borrar-cuenta`; la ficha se queda en la iglesia (ver ESTADO.md).* Apple lo exige a toda app en la que se
    pueda crear una cuenta (norma 5.1.1(v)), y Google pide un camino dentro de
    la app **y** una dirección web para pedirlo (sale en el formulario de
    seguridad de datos). Hoy no existe: `/privacidad` dice que se pide por
@@ -25,7 +25,7 @@ dos tiendas.
    según `/privacidad` §6). Qué pasa con la ficha del miembro —que es de la
    iglesia— al borrar la cuenta es una decisión de producto.
 
-2. **La Biblia vacía.** `/mi/biblia` enseña «El texto todavía no está cargado»
+2. **La Biblia vacía.** *Hecho el 30-oct: la RV1909 entera.* `/mi/biblia` enseña «El texto todavía no está cargado»
    y unas instrucciones para quien lo esté montando. Apple rechaza contenido de
    relleno (norma 2.1). O se carga la Reina-Valera 1909 en
    `public/biblia/rv1909/`, o la pestaña no sale en la app hasta entonces.
@@ -44,7 +44,7 @@ dos tiendas.
    empresa como esta tiene excepción allí, pero con el mismo arreglo no hace
    falta.
 
-4. **«Denunciar» y «Bloquear» en el muro (Apple 1.2).** El muro es contenido
+4. **«Denunciar» y «Bloquear» en el muro (Apple 1.2).** *Hecho el 30-oct, con la cola del moderador en `/mi/comunidad/denuncias`.* El muro es contenido
    de usuarios, y Apple pide tres cosas: poder **denunciar** una publicación o
    un comentario, poder **bloquear** a quien molesta, y que se actúe sobre lo
    denunciado. Hoy se puede borrar lo propio y quien modera borra lo de otros,

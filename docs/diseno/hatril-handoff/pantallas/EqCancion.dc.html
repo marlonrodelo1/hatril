@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Equipo · Ficha de una canción</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.sec{font-size:12px;font-weight:700;color:#67665F;text-transform:uppercase;letter-spacing:.06em;padding:22px 20px 8px}
+.st{flex:1;display:flex;flex-direction:column;gap:2px;padding:14px;background:#FFFFFF;border:1px solid #E0DFDB;border-radius:12px}
+.st b{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.st span{font-size:12px;color:#67665F}
+.ch{font-family:ui-monospace,Menlo,monospace;font-size:13px;font-weight:700;color:#92442A;white-space:pre;line-height:1.3}
+.ly{font-size:16px;line-height:1.3;white-space:pre}
+</style>
+</helmet>
+<div style="width: 375px; height: 1000px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; padding: 47px 0 34px; display: flex; flex-direction: column">
+  <div style="height: 56px; display: flex; align-items: center; padding: 0 6px">
+    <a href="EqRepertorio.dc.html" aria-label="Volver al repertorio" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #141413"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></a>
+    <span style="flex: 1"></span>
+    <a href="EqNuevaCancion.dc.html" style="height: 44px; padding: 0 12px; display: flex; align-items: center; font-size: 15px; font-weight: 700; color: #141413; text-decoration: none">Editar</a>
+  </div>
+  <h1 style="padding: 0 20px; font-size: 28px; line-height: 1.15; font-weight: 800; letter-spacing: -0.025em">Santo, Santo, Santo</h1>
+  <p style="padding: 6px 20px 0; font-size: 14px; color: #67665F">Himno tradicional · dominio público</p>
+
+  <div style="display: flex; gap: 10px; padding: 18px 16px 0">
+    <div class="st"><b>Re</b><span>Tono del equipo</span></div>
+    <div class="st"><b>9</b><span>Veces que ha sonado</span></div>
+    <div class="st"><b>13 sep</b><span>Última vez</span></div>
+  </div>
+
+  <a href="#" style="margin: 12px 16px 0; display: flex; align-items: center; gap: 12px; padding: 14px; background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; color: #141413; text-decoration: none">
+    <svg class="ic" width="20" height="20" viewBox="0 0 24 24" style="color: #3D3D3A"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+    <span style="flex: 1; font-size: 15px; font-weight: 700">Escucharla</span>
+    <span style="font-size: 12px; color: #67665F">YouTube</span>
+    <svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+  </a>
+
+  <h2 class="sec">Letra y acordes</h2>
+  <div style="margin: 0 16px; padding: 16px; background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; overflow: hidden">
+    <div><p class="ch">D          A       D</p><p class="ly">¡Santo! ¡Santo! ¡Santo!</p></div>
+    <div><p class="ch">Bm        G       D   A</p><p class="ly">Señor omnipotente,</p></div>
+    <div><p class="ch">D        G      D</p><p class="ly">siempre el labio mío</p></div>
+    <div><p class="ch">A        D</p><p class="ly">loores te dará…</p></div>
+    <a href="#" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; padding: 6px 0 0; font-size: 14px; font-weight: 700; color: #141413; text-decoration: none">Ver entera<svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></a>
+  </div>
+
+  <div style="flex: 1"></div>
+  <div style="padding: 16px 16px 0">
+    <a href="EqCuadrante.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 8px; height: 52px; border-radius: 8px; background: #B15435; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Añadir al domingo 1</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

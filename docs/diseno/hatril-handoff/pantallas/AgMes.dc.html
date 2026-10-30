@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Agenda · Mes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,h3,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ib{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:#3D3D3A;border-radius:999px;position:relative;text-decoration:none}
+.av{border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;background:#F0EEE6;border-radius:999px}
+.seg a{height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#5E5D58;text-decoration:none}
+.seg a.on{background:#FFFFFF;color:#141413;border:1px solid #E0DFDB}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));row-gap:2px}
+.wd{font-size:11px;font-weight:700;color:#67665F;text-align:center;padding:6px 0}
+.cell{height:46px;border:0;background:transparent;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:0}
+.num{width:32px;height:32px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600}
+.dots{display:flex;gap:2px;height:5px}
+.dots i{width:5px;height:5px;border-radius:999px;display:block}
+.ev{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid #E0DFDB;color:#141413;text-decoration:none}
+.ev .h{width:44px;font-size:14px;font-weight:700}
+.ev .t{font-size:15px;font-weight:700}
+.ev .s{font-size:13px;color:#67665F}
+.sheet{animation:up 300ms cubic-bezier(.2,.8,.2,1) both}
+@keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.sheet{animation:none}}
+.bar{position:absolute;left:0;right:0;bottom:0;padding:6px 8px 30px;background:rgba(250,249,245,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #E0DFDB;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;z-index:2}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:12px;font-size:11px;font-weight:600;color:#67665F;text-decoration:none}
+.tab.on{background:#F5E7DF;color:#92442A}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; padding-top: 47px; display: flex; flex-direction: column">
+  <header style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px">
+    <span style="width: 36px; height: 36px; border-radius: 8px; background: #F5E7DF; color: #92442A; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center">IB</span>
+    <div style="flex: 1; display: flex; flex-direction: column"><h1 style="font-size: 18px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2">Agenda</h1><span style="font-size: 12px; color: #67665F">Iglesia Betania</span></div>
+    <span class="ib" role="img" aria-label="Avisos"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+    <span class="ib" role="img" aria-label="Tu cuenta"><span class="av" style="width: 32px; height: 32px; background: #E3E8EC; color: #2F4A5C; font-size: 12px">LH</span></span>
+  </header>
+
+  <div style="padding: 8px 16px 0">
+    <nav class="seg" aria-label="Vista"><a href="#">Día</a><a href="AgSemana.dc.html">Semana</a><a href="#" class="on" aria-current="page">Mes</a></nav>
+  </div>
+
+  <div style="display: flex; align-items: center; padding: 14px 6px 0 16px">
+    <h2 style="flex: 1; font-size: 18px; font-weight: 800; letter-spacing: -0.015em">Noviembre 2026</h2>
+    <span class="ib" role="img" aria-label="Mes anterior"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></span>
+    <span class="ib" role="img" aria-label="Mes siguiente"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span>
+  </div>
+
+  <div style="padding: 0 10px">
+    <div class="grid" aria-hidden="true"><span class="wd">L</span><span class="wd">M</span><span class="wd">X</span><span class="wd">J</span><span class="wd">V</span><span class="wd">S</span><span class="wd">D</span></div>
+    <div class="grid">
+      <sc-for list="{{ dias }}" as="d" hint-placeholder-count="42">
+        <button class="cell" onClick="{{ d.pick }}" aria-label="{{ d.label }}" aria-pressed="{{ d.sel }}">
+          <span class="num" style="{{ d.numStyle }}">{{ d.n }}</span>
+          <span class="dots"><sc-for list="{{ d.dots }}" as="c" hint-placeholder-count="1"><i style="{{ c.s }}"></i></sc-for></span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <section class="sheet" aria-label="{{ hojaTitulo }}" style="position: absolute; left: 0; right: 0; bottom: 86px; background: #FFFFFF; border-top: 1px solid #E0DFDB; border-radius: 16px 16px 0 0; padding-bottom: 6px; z-index: 1">
+    <div style="display: flex; justify-content: center; padding: 8px 0 2px"><span style="width: 36px; height: 4px; border-radius: 999px; background: #E0DFDB"></span></div>
+    <h3 style="padding: 6px 16px 10px; font-size: 16px; font-weight: 800">{{ hojaTitulo }}</h3>
+    <sc-for list="{{ eventos }}" as="e" hint-placeholder-count="2">
+      <a href="{{ e.href }}" class="ev" style="{{ e.rowStyle }}">
+        <span class="h" style="{{ e.txtStyle }}">{{ e.h }}</span>
+        <span style="{{ e.dot }}"></span>
+        <span style="flex: 1; display: flex; flex-direction: column"><span class="t" style="{{ e.txtStyle }}">{{ e.t }}</span><span class="s">{{ e.s }}</span></span>
+        <svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </a>
+    </sc-for>
+    <sc-if value="{{ sinNada }}" hint-placeholder-val="{{ false }}">
+      <p style="padding: 4px 16px 14px; font-size: 14px; color: #67665F">Este día no hay nada en la agenda.</p>
+    </sc-if>
+  </section>
+
+  <nav class="bar" aria-label="Principal">
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Comunidad</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Devocional</a>
+    <a href="#" class="tab on" aria-current="page"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Agenda</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>Biblia</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>Equipo</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: 'n1' }; }
+  renderVals() {
+    const C = { turno: '#B15435', equipo: '#245C0E', evento: '#734500', culto: '#5E5D58' };
+    const ev = {
+      o30: [['20:00', 'Ensayo de alabanza', 'Sala de música · tu equipo', 'equipo', 'AgEnsayo.dc.html']],
+      o31: [['10:00', 'Limpieza de la playa', 'Bajamar · evento', 'evento', '#'], ['18:00', 'Reunión de jóvenes', 'Templo', 'culto', '#']],
+      n1: [['10:00', 'Tu turno: teclado', 'Sin contestar', 'turno', 'AgTurno.dc.html'], ['11:00', 'Culto con Santa Cena', 'Templo · culto principal', 'culto', '#']],
+      n4: [['19:30', 'Oración', 'Templo', 'culto', '#']],
+      n6: [['20:00', 'Ensayo de alabanza', 'Sala de música · tu equipo', 'equipo', 'AgEnsayo.dc.html']],
+      n8: [['11:00', 'Culto', 'Templo', 'culto', '#']],
+      n11: [['19:30', 'Oración', 'Templo', 'culto', '#']],
+      n14: [['09:00', 'Desayuno de familias', 'Salón · evento', 'evento', '#']],
+      n15: [['10:00', 'Tu turno: teclado', 'Confirmado', 'turno', 'AgTurno.dc.html'], ['11:00', 'Culto', 'Templo', 'culto', '#']],
+      n18: [['19:30', 'Oración', 'Templo', 'culto', '#']],
+      n20: [['20:00', 'Ensayo de alabanza', 'Sala de música · tu equipo', 'equipo', 'AgEnsayo.dc.html']],
+      n22: [['11:00', 'Culto', 'Templo', 'culto', '#']],
+      n25: [['19:30', 'Oración', 'Templo', 'culto', '#']],
+      n29: [['10:00', 'Tu turno: voz', 'Sin contestar', 'turno', 'AgTurno.dc.html'], ['11:00', 'Culto', 'Templo', 'culto', '#'], ['17:00', 'Concierto de Navidad', 'Templo · evento', 'evento', '#']]
+    };
+    const dias = [];
+    const push = (key, n, muted) => {
+      const list = ev[key] || [];
+      const sel = this.state.sel === key;
+      const today = key === 'o30';
+      const numStyle = sel
+        ? { background: '#3D3D3A', color: '#FFFFFF' }
+        : today ? { border: '1.5px solid #B15435', color: '#92442A', fontWeight: 800 }
+        : { color: muted ? '#A3A29B' : '#141413' };
+      const types = [];
+      list.forEach((e) => { if (types.indexOf(e[3]) < 0) types.push(e[3]); });
+      dias.push({
+        n, sel: sel ? 'true' : 'false', numStyle,
+        label: n + (list.length ? ', ' + list.length + ' cosas' : ''),
+        dots: types.slice(0, 3).map((t) => ({ s: { background: C[t] } })),
+        pick: () => this.setState({ sel: key })
+      });
+    };
+    [26, 27, 28, 29, 30, 31].forEach((d) => push('o' + d, d, true));
+    for (let d = 1; d <= 30; d++) push('n' + d, d, false);
+    [1, 2, 3, 4, 5, 6].forEach((d) => push('d' + d, d, true));
+    const meses = { o: 'octubre', n: 'noviembre', d: 'diciembre' };
+    const k = this.state.sel;
+    const num = k.slice(1);
+    const fecha = new Date(2026, k[0] === 'o' ? 9 : k[0] === 'n' ? 10 : 11, Number(num));
+    const dn = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][fecha.getDay()];
+    const eventos = (ev[k] || []).map((e) => ({
+      h: e[0], t: e[1], s: e[2], href: e[4],
+      dot: { width: '10px', height: '10px', borderRadius: '3px', flex: 'none', background: C[e[3]] },
+      rowStyle: e[3] === 'turno' ? { background: '#F5E7DF', borderTopColor: '#F5E7DF' } : {},
+      txtStyle: e[3] === 'turno' ? { color: '#92442A' } : {}
+    }));
+    return { dias, eventos, sinNada: eventos.length === 0, hojaTitulo: dn + ' ' + num + ' de ' + meses[k[0]] };
+  }
+}
+</script>
+</body>
+</html>

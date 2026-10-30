@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Buscar por ciudad</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+input{font-family:'Plus Jakarta Sans',sans-serif}
+input:focus{outline:2px solid #B15435;outline-offset:1px}
+.row:active{background:#F5F4ED}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; display: flex; flex-direction: column; padding: 47px 0 34px">
+  <div style="height: 56px; display: flex; align-items: center; padding: 0 14px">
+    <a href="Ubicacion.dc.html" aria-label="Volver" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #141413">
+      <svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+    </a>
+  </div>
+
+  <div style="padding: 8px 24px 0; display: flex; flex-direction: column; gap: 16px">
+    <h1 style="font-size: 28px; line-height: 1.15; font-weight: 800; letter-spacing: -0.025em">¿En qué ciudad buscas?</h1>
+
+    <div style="display: flex; gap: 10px; align-items: flex-start; background: #F5F4ED; border-radius: 8px; padding: 12px 14px">
+      <svg class="ic" width="18" height="18" viewBox="0 0 24 24" style="color: #3D3D3A; margin-top: 1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      <p style="font-size: 14px; line-height: 1.45; color: #3D3D3A">Sin tu ubicación también funciona. Si un día quieres activarla, está en Ajustes.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="ciudad" style="font-size: 14px; font-weight: 600">Ciudad o municipio</label>
+      <div style="position: relative">
+        <svg class="ic" width="18" height="18" viewBox="0 0 24 24" style="position: absolute; left: 14px; top: 15px; color: #67665F"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="ciudad" type="search" value="Santa" autocomplete="address-level2" style="width: 100%; height: 48px; padding: 0 44px; font-size: 16px; color: #141413; background: #F5F4ED; border: 1px solid #E0DFDB; border-radius: 8px">
+        <button aria-label="Borrar" style="position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; border: 0; background: transparent; color: #67665F; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <ul style="list-style: none; margin: 12px 0 0; padding: 0">
+    <li><a href="Mapa.dc.html" class="row" style="display: flex; align-items: center; gap: 14px; padding: 14px 24px; color: #141413; text-decoration: none; border-bottom: 1px solid #E0DFDB">
+      <svg class="ic" width="20" height="20" viewBox="0 0 24 24" style="color: #67665F"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+      <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px"><b>Santa</b> Cruz de Tenerife</span><span style="font-size: 13px; color: #67665F">Canarias, España</span></span>
+    </a></li>
+    <li><a href="Mapa.dc.html" class="row" style="display: flex; align-items: center; gap: 14px; padding: 14px 24px; color: #141413; text-decoration: none; border-bottom: 1px solid #E0DFDB">
+      <svg class="ic" width="20" height="20" viewBox="0 0 24 24" style="color: #67665F"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+      <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px"><b>Santa</b> Marta</span><span style="font-size: 13px; color: #67665F">Magdalena, Colombia</span></span>
+    </a></li>
+    <li><a href="Mapa.dc.html" class="row" style="display: flex; align-items: center; gap: 14px; padding: 14px 24px; color: #141413; text-decoration: none; border-bottom: 1px solid #E0DFDB">
+      <svg class="ic" width="20" height="20" viewBox="0 0 24 24" style="color: #67665F"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+      <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px"><b>Santa</b> Úrsula</span><span style="font-size: 13px; color: #67665F">Canarias, España</span></span>
+    </a></li>
+    <li><a href="Mapa.dc.html" class="row" style="display: flex; align-items: center; gap: 14px; padding: 14px 24px; color: #141413; text-decoration: none; border-bottom: 1px solid #E0DFDB">
+      <svg class="ic" width="20" height="20" viewBox="0 0 24 24" style="color: #67665F"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+      <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px"><b>Santa</b> Rosa de Cabal</span><span style="font-size: 13px; color: #67665F">Risaralda, Colombia</span></span>
+    </a></li>
+  </ul>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

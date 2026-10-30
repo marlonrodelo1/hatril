@@ -9,17 +9,26 @@ import { requireIglesiaAccion } from '@/lib/auth/guard-panel';
 import { puedeModerarComunidad } from '@/lib/auth/permisos';
 import { withUser } from '@/lib/db';
 import {
+  bloqueosComunidad,
+  denunciasComunidad,
   publicaciones,
   publicacionesComentarios,
   publicacionesComentariosMeGusta,
   publicacionesMeGusta,
 } from '@/lib/db/schema';
+import { motivoDenunciaEnum } from '@/lib/db/schema/enums';
 import { campo } from '@/lib/api/formulario';
 import { esGuardHatril } from '@/lib/db/error';
-import { autorDePublicacion } from '@/lib/comunidad/consultas';
+import {
+  autorDeComentario,
+  autorDePublicacion,
+} from '@/lib/comunidad/consultas';
 import {
   cuentaDeMiembro,
+  cuentasQueModeran,
   emitirNotificacion,
+  emitirNotificaciones,
+  tieneBloqueado,
 } from '@/lib/notificaciones/emitir';
 import {
   borrarImagenes,
@@ -269,6 +278,15 @@ async function avisarAlAutor(
   const publicacion = await autorDePublicacion(ctx, publicacionId);
   if (!publicacion) return;
 
+  // Si el autor tiene bloqueado a quien comenta o da me gusta, no se le avisa:
+  // el aviso sería ver lo que bloquear prometió dejar de enseñarle.
+  if (
+    ctx.miembroId &&
+    (await tieneBloqueado(publicacion.autorMiembroId, ctx.miembroId))
+  ) {
+    return;
+  }
+
   const destinatario = await cuentaDeMiembro(
     ctx.iglesia.id,
     publicacion.autorMiembroId,
@@ -442,6 +460,10 @@ export async function borrarPublicacion(publicacionId: string) {
   // fotos siguen donde estaban y la publicación sigue entera.
   await borrarImagenes(fila.imagenes);
 
+  if (!esMia) {
+    await avisarDeLoRetirado(ctx, fila.autorMiembroId, 'publicacion', fila.texto);
+  }
+
   revalidatePath(DESTINO);
 }
 
@@ -449,19 +471,7 @@ export async function borrarPublicacion(publicacionId: string) {
 export async function borrarComentario(comentarioId: string) {
   const ctx = await requireIglesiaAccion();
 
-  const [fila] = await withUser(ctx.user.id, (tx) =>
-    tx
-      .select({ autorMiembroId: publicacionesComentarios.autorMiembroId })
-      .from(publicacionesComentarios)
-      .where(
-        and(
-          eq(publicacionesComentarios.id, comentarioId),
-          eq(publicacionesComentarios.iglesiaId, ctx.iglesia.id),
-        ),
-      )
-      .limit(1),
-  );
-
+  const fila = await autorDeComentario(ctx, comentarioId);
   if (!fila) volver('Ese comentario ya no existe.');
 
   const esMio = ctx.miembroId !== null && fila.autorMiembroId === ctx.miembroId;
@@ -475,5 +485,282 @@ export async function borrarComentario(comentarioId: string) {
       .where(eq(publicacionesComentarios.id, comentarioId)),
   );
 
+  if (!esMio) {
+    await avisarDeLoRetirado(ctx, fila.autorMiembroId, 'comentario', fila.texto);
+  }
+
   revalidatePath(DESTINO);
+}
+
+/**
+ * A quien le han quitado algo, se le dice. Sin decir quién: ver el comentario
+ * de `contenido_retirado` en el enum de avisos.
+ *
+ * Quitarle algo a alguien sin avisar le deja buscando su publicación y
+ * pensando que ha fallado la aplicación; avisándole, al menos sabe que fue una
+ * decisión y puede preguntar.
+ */
+async function avisarDeLoRetirado(
+  ctx: UserContext,
+  autorMiembroId: string,
+  que: 'publicacion' | 'comentario',
+  texto: string | null,
+) {
+  await emitirNotificacion({
+    iglesiaId: ctx.iglesia.id,
+    destinatarioAuthUserId: await cuentaDeMiembro(ctx.iglesia.id, autorMiembroId),
+    provocadoPor: ctx.user.id,
+    tipo: 'contenido_retirado',
+    datos: { que, ...(texto ? { extracto: texto.slice(0, 120) } : {}) },
+    enlace: DESTINO,
+  });
+}
+
+// ===========================================================================
+// DENUNCIAR Y BLOQUEAR
+//
+// Las tres van con `sinMuro`. El muro de suscripción corta lo que se escribe
+// cuando la iglesia ya no puede escribir, pero durante la gracia el muro se
+// sigue leyendo, y lo que se lee se tiene que poder denunciar y bloquear: son
+// las dos herramientas con las que una persona se protege, y dejarla sin ellas
+// porque su iglesia devolvió un recibo no tiene defensa.
+// ===========================================================================
+
+const EsquemaDenuncia = z.object({
+  tipo: z.enum(['publicacion', 'comentario'], {
+    error: 'Eso no se puede denunciar.',
+  }),
+  id: z.uuid({ error: 'Eso no se puede denunciar.' }),
+  motivo: z.enum(motivoDenunciaEnum.enumValues, {
+    error: 'Elige qué pasa con lo que denuncias.',
+  }),
+  detalle: z
+    .string()
+    .trim()
+    .max(1000, 'Cuéntalo en menos de 1000 letras.')
+    .optional(),
+});
+
+export async function denunciar(formData: FormData) {
+  const ctx = await requireIglesiaAccion({ sinMuro: true });
+  const miembroId = requiereFicha(ctx);
+
+  const parsed = EsquemaDenuncia.safeParse({
+    tipo: campo(formData, 'tipo'),
+    id: campo(formData, 'id'),
+    motivo: campo(formData, 'motivo'),
+    detalle: campo(formData, 'detalle'),
+  });
+  if (!parsed.success) volver(parsed.error.issues[0]!.message);
+  const { tipo, id, motivo } = parsed.data;
+  const detalle = parsed.data.detalle || null;
+
+  const objeto =
+    tipo === 'publicacion'
+      ? await autorDePublicacion(ctx, id)
+      : await autorDeComentario(ctx, id);
+  if (!objeto) volver('Eso ya no está en el muro.');
+
+  if (objeto.autorMiembroId === miembroId) {
+    volver('Esto es tuyo: si no quieres que esté, bórralo.');
+  }
+
+  let nueva = false;
+  try {
+    const filas = await withUser(ctx.user.id, (tx) =>
+      tx
+        .insert(denunciasComunidad)
+        .values({
+          iglesiaId: ctx.iglesia.id,
+          denuncianteMiembroId: miembroId,
+          publicacionId: tipo === 'publicacion' ? id : null,
+          comentarioId: tipo === 'comentario' ? id : null,
+          motivo,
+          detalle,
+        })
+        // La misma persona dos veces sobre lo mismo: los índices únicos de la
+        // `0053` la paran, y a quien denuncia se le cuenta igual que ha llegado.
+        .onConflictDoNothing()
+        .returning({ id: denunciasComunidad.id }),
+    );
+    nueva = filas.length > 0;
+  } catch (err) {
+    if (esGuardHatril(err, 'HT136')) volver('Eso ya no está en el muro.');
+    throw err;
+  }
+
+  if (nueva) {
+    const cuentas = await cuentasQueModeran(ctx.iglesia.id);
+    await emitirNotificaciones(
+      cuentas.map((cuenta) => ({
+        iglesiaId: ctx.iglesia.id,
+        destinatarioAuthUserId: cuenta,
+        provocadoPor: ctx.user.id,
+        tipo: 'denuncia_en_comunidad' as const,
+        datos: {
+          que: tipo,
+          ...(objeto.texto ? { extracto: objeto.texto.slice(0, 120) } : {}),
+        },
+        enlace: COLA,
+      })),
+    );
+  }
+
+  revalidatePath(DESTINO);
+  redirect(`${DESTINO}/denuncia-enviada?autor=${objeto.autorMiembroId}`);
+}
+
+export async function bloquear(miembroBloqueado: string) {
+  const ctx = await requireIglesiaAccion({ sinMuro: true });
+  const miembroId = requiereFicha(ctx);
+
+  if (!z.uuid().safeParse(miembroBloqueado).success) {
+    volver('No encontramos a esa persona.');
+  }
+  if (miembroBloqueado === miembroId) volver('No puedes bloquearte a ti.');
+
+  try {
+    await withUser(ctx.user.id, (tx) =>
+      tx
+        .insert(bloqueosComunidad)
+        .values({
+          iglesiaId: ctx.iglesia.id,
+          bloqueadorMiembroId: miembroId,
+          bloqueadoMiembroId: miembroBloqueado,
+        })
+        .onConflictDoNothing(),
+    );
+  } catch (err) {
+    if (esGuardHatril(err, 'HT137')) volver('No encontramos a esa persona.');
+    throw err;
+  }
+
+  revalidatePath(DESTINO);
+  redirect(`${DESTINO}?bloqueado=1`);
+}
+
+export async function desbloquear(miembroBloqueado: string) {
+  const ctx = await requireIglesiaAccion({ sinMuro: true });
+  const miembroId = requiereFicha(ctx);
+
+  await withUser(ctx.user.id, (tx) =>
+    tx
+      .delete(bloqueosComunidad)
+      .where(
+        and(
+          eq(bloqueosComunidad.iglesiaId, ctx.iglesia.id),
+          eq(bloqueosComunidad.bloqueadorMiembroId, miembroId),
+          eq(bloqueosComunidad.bloqueadoMiembroId, miembroBloqueado),
+        ),
+      ),
+  );
+
+  revalidatePath(DESTINO);
+  revalidatePath('/mi/cuenta/bloqueados');
+  redirect('/mi/cuenta/bloqueados?desbloqueado=1');
+}
+
+// ===========================================================================
+// LA COLA DE QUIEN MODERA
+// ===========================================================================
+
+const COLA = `${DESTINO}/denuncias`;
+
+function exigirModerar(ctx: UserContext) {
+  if (!puedeModerarComunidad(ctx)) {
+    redirect(
+      `${COLA}?error=` +
+        encodeURIComponent('Solo quien modera la comunidad puede hacer esto.'),
+    );
+  }
+}
+
+/**
+ * Quitar del muro lo denunciado. Es el mismo borrado que el «…» del muro —con
+ * su aviso al autor—, pero vuelve a la cola y no al muro.
+ *
+ * Las denuncias se van con lo denunciado por la clave ajena: no hay nada más
+ * que cerrar.
+ */
+export async function quitarDenunciado(
+  tipo: 'publicacion' | 'comentario',
+  id: string,
+) {
+  const ctx = await requireIglesiaAccion();
+  exigirModerar(ctx);
+
+  if (tipo === 'publicacion') {
+    const fila = await autorDePublicacion(ctx, id);
+    if (fila) {
+      await withUser(ctx.user.id, (tx) =>
+        tx
+          .delete(publicaciones)
+          .where(
+            and(
+              eq(publicaciones.id, id),
+              eq(publicaciones.iglesiaId, ctx.iglesia.id),
+            ),
+          ),
+      );
+      await borrarImagenes(fila.imagenes);
+      if (fila.autorMiembroId !== ctx.miembroId) {
+        await avisarDeLoRetirado(ctx, fila.autorMiembroId, 'publicacion', fila.texto);
+      }
+    }
+  } else {
+    const fila = await autorDeComentario(ctx, id);
+    if (fila) {
+      await withUser(ctx.user.id, (tx) =>
+        tx
+          .delete(publicacionesComentarios)
+          .where(
+            and(
+              eq(publicacionesComentarios.id, id),
+              eq(publicacionesComentarios.iglesiaId, ctx.iglesia.id),
+            ),
+          ),
+      );
+      if (fila.autorMiembroId !== ctx.miembroId) {
+        await avisarDeLoRetirado(ctx, fila.autorMiembroId, 'comentario', fila.texto);
+      }
+    }
+  }
+
+  revalidatePath(DESTINO);
+  revalidatePath(COLA);
+  redirect(`${COLA}?hecho=quitado`);
+}
+
+/**
+ * Dejarlo estar. Las denuncias se cierran como descartadas y lo denunciado
+ * sigue en el muro, salvo para quien lo denunció, que lo sigue sin ver.
+ */
+export async function dejarDenunciado(
+  tipo: 'publicacion' | 'comentario',
+  id: string,
+) {
+  const ctx = await requireIglesiaAccion();
+  exigirModerar(ctx);
+
+  await withUser(ctx.user.id, (tx) =>
+    tx
+      .update(denunciasComunidad)
+      .set({
+        estado: 'descartada',
+        revisadaAt: new Date(),
+        revisadaPorAuthUserId: ctx.user.id,
+      })
+      .where(
+        and(
+          eq(denunciasComunidad.iglesiaId, ctx.iglesia.id),
+          eq(denunciasComunidad.estado, 'pendiente'),
+          tipo === 'publicacion'
+            ? eq(denunciasComunidad.publicacionId, id)
+            : eq(denunciasComunidad.comentarioId, id),
+        ),
+      ),
+  );
+
+  revalidatePath(COLA);
+  redirect(`${COLA}?hecho=dejado`);
 }

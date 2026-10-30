@@ -156,7 +156,13 @@ export type GuardHatril =
    * otra ficha—, o se intentó reescribir la cuenta de quien contó o confirmó
    * (`0045`).
    */
-  | 'HT131';
+  | 'HT131'
+  // HT132-HT134 son de células y HT135 del registro del super admin, que no se
+  // atrapa: es un trigger de solo añadir sobre una tabla que la app no toca.
+  /** Quien denuncia, o lo denunciado, no son de esta iglesia (`0053`). */
+  | 'HT136'
+  /** Una de las dos personas de un bloqueo no es de esta iglesia (`0053`). */
+  | 'HT137';
 
 /**
  * ¿Es este error uno de nuestros triggers guard?

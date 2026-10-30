@@ -9,6 +9,8 @@ import {
   index,
   uniqueIndex,
   unique,
+  doublePrecision,
+  check,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -67,6 +69,21 @@ export const iglesias = pgTable(
     pais: text('pais').notNull().default('CO'),
     ciudad: text('ciudad'),
     direccion: text('direccion'),
+
+    /**
+     * Dónde está, para «iglesias cerca de mí» (`/buscar/cerca`).
+     *
+     * La pone el pastor en Ajustes, con su propio móvil o pegando las
+     * coordenadas de un mapa: no se geocodifica la dirección contra un servicio
+     * de fuera. Sin ellas la iglesia no sale por cercanía, pero sí por nombre y
+     * por ciudad.
+     *
+     * Es un dato público —el sitio donde se reúne una congregación— y por eso
+     * `anon` lo puede leer (grant por columna en la `0054`). La distancia la
+     * calcula el navegador de quien busca: su ubicación no viaja a ninguna parte.
+     */
+    latitud: doublePrecision('latitud'),
+    longitud: doublePrecision('longitud'),
 
     /**
      * Zona horaria IANA. Por defecto Bogotá porque es el mercado inicial.
@@ -272,6 +289,14 @@ export const iglesias = pgTable(
     uniqueIndex('idx_iglesias_stripe_customer')
       .on(t.stripeCustomerId)
       .where(sql`${t.stripeCustomerId} is not null`),
+    // Las dos o ninguna, y dentro del planeta. Una latitud sin longitud no
+    // sitúa nada, y un 4000 tecleado de más pondría la iglesia fuera del mapa.
+    // Los `is not null` de la segunda mitad no sobran: sin ellos, una sola
+    // nula hace la comparación NULL, y un CHECK que da NULL deja pasar la fila.
+    check(
+      'ck_iglesias_coordenadas',
+      sql`(${t.latitud} is null and ${t.longitud} is null) or (${t.latitud} is not null and ${t.longitud} is not null and ${t.latitud} between -90 and 90 and ${t.longitud} between -180 and 180)`,
+    ),
   ],
 );
 

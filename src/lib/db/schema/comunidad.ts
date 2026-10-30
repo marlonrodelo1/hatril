@@ -8,11 +8,13 @@ import {
   index,
   primaryKey,
   check,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 import { iglesias } from './iglesias';
 import { miembros } from './miembros';
+import { estadoDenunciaEnum, motivoDenunciaEnum } from './enums';
 
 /**
  * El muro de la congregación.
@@ -215,5 +217,129 @@ export const publicacionesComentariosMeGusta = pgTable(
   (t) => [
     primaryKey({ columns: [t.comentarioId, t.miembroId] }),
     index('idx_comentarios_me_gusta_miembro').on(t.miembroId),
+  ],
+);
+
+/**
+ * Una denuncia de algo del muro: una publicación o un comentario.
+ *
+ * LA PIDE APPLE, PERO SE QUEDA PORQUE HACE FALTA
+ * ----------------------------------------------
+ * La norma 1.2 exige poder denunciar el contenido de otros usuarios y que
+ * alguien actúe sobre lo denunciado. Hasta aquí quien modera solo se enteraba
+ * de algo feo si pasaba por el muro y lo veía.
+ *
+ * QUIÉN LA VE
+ * -----------
+ * Quien la hizo —para que el muro le esconda lo que denunció— y quien modera la
+ * comunidad. Nadie más, y menos que nadie el autor de lo denunciado: si supiera
+ * quién fue, denunciar en una congregación de ochenta personas sería señalarse.
+ * La pantalla de revisión ni siquiera pinta el nombre de quien denuncia.
+ *
+ * Dos columnas nulables en vez de una referencia polimórfica, por lo mismo que
+ * `publicaciones_comentarios_me_gusta` tiene tabla propia: así las dos claves
+ * ajenas existen, y borrar lo denunciado se lleva su denuncia con él.
+ */
+export const denunciasComunidad = pgTable(
+  'denuncias_comunidad',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    iglesiaId: uuid('iglesia_id')
+      .notNull()
+      .references(() => iglesias.id, { onDelete: 'cascade' }),
+
+    denuncianteMiembroId: uuid('denunciante_miembro_id')
+      .notNull()
+      .references(() => miembros.id, { onDelete: 'cascade' }),
+
+    publicacionId: uuid('publicacion_id').references(() => publicaciones.id, {
+      onDelete: 'cascade',
+    }),
+
+    comentarioId: uuid('comentario_id').references(
+      () => publicacionesComentarios.id,
+      { onDelete: 'cascade' },
+    ),
+
+    motivo: motivoDenunciaEnum('motivo').notNull(),
+
+    /** Lo que quiera contarle al pastor. Opcional. */
+    detalle: text('detalle'),
+
+    estado: estadoDenunciaEnum('estado').notNull().default('pendiente'),
+
+    revisadaAt: timestamp('revisada_at', { withTimezone: true }),
+
+    /** La cuenta de quien la revisó. Sin FK, como el resto de `auth.users`. */
+    revisadaPorAuthUserId: uuid('revisada_por_auth_user_id'),
+
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    // Exactamente una de las dos: una denuncia es SOBRE algo, y sobre una sola
+    // cosa.
+    check(
+      'ck_denuncias_un_objeto',
+      sql`(${t.publicacionId} is null) <> (${t.comentarioId} is null)`,
+    ),
+    // La misma persona denunciando dos veces lo mismo no es más grave: es un
+    // doble toque. Lo para la base, no una consulta previa.
+    uniqueIndex('uq_denuncias_publicacion')
+      .on(t.denuncianteMiembroId, t.publicacionId)
+      .where(sql`${t.publicacionId} is not null`),
+    uniqueIndex('uq_denuncias_comentario')
+      .on(t.denuncianteMiembroId, t.comentarioId)
+      .where(sql`${t.comentarioId} is not null`),
+    // La cola de quien modera: esta iglesia, lo pendiente, lo más antiguo arriba.
+    index('idx_denuncias_iglesia_estado').on(
+      t.iglesiaId,
+      t.estado,
+      t.createdAt,
+    ),
+  ],
+);
+
+/**
+ * Una persona que ha dejado de ver a otra en el muro.
+ *
+ * Solo en el muro. Si coinciden en un equipo se siguen viendo en los turnos y
+ * en el cuadrante: quitar a alguien de ahí sería tocar el trabajo de un tercero
+ * —quien lleva el equipo— sin que lo sepa.
+ *
+ * El bloqueado no se entera: no puede leer esta tabla, ni siquiera sus propias
+ * filas como bloqueado. Las policies solo enseñan a cada cual los bloqueos que
+ * ha hecho él.
+ */
+export const bloqueosComunidad = pgTable(
+  'bloqueos_comunidad',
+  {
+    iglesiaId: uuid('iglesia_id')
+      .notNull()
+      .references(() => iglesias.id, { onDelete: 'cascade' }),
+
+    bloqueadorMiembroId: uuid('bloqueador_miembro_id')
+      .notNull()
+      .references(() => miembros.id, { onDelete: 'cascade' }),
+
+    bloqueadoMiembroId: uuid('bloqueado_miembro_id')
+      .notNull()
+      .references(() => miembros.id, { onDelete: 'cascade' }),
+
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.bloqueadorMiembroId, t.bloqueadoMiembroId] }),
+    check(
+      'ck_bloqueos_no_a_uno_mismo',
+      sql`${t.bloqueadorMiembroId} <> ${t.bloqueadoMiembroId}`,
+    ),
+    // Para avisar: antes de mandarle a alguien «X ha comentado lo tuyo», mirar
+    // si esa persona tiene bloqueado a X.
+    index('idx_bloqueos_bloqueado').on(t.bloqueadoMiembroId),
   ],
 );

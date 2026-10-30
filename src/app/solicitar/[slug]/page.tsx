@@ -8,16 +8,25 @@ import { solicitudDeUsuario } from '@/lib/solicitudes/consultas';
 import { getCurrentUserContext } from '@/lib/auth/user-context';
 import { createClient } from '@/lib/supabase/server';
 import { iniciales } from '@/lib/format/iniciales';
-import { solicitarIngreso } from '../actions';
+import { crearCuentaYSolicitar, solicitarIngreso } from '../actions';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS } from '@/lib/rgpd/consentimiento';
 import { CasillaAsistencia } from '@/components/casilla-asistencia';
+import { ReglaPassword } from './_components/regla-password';
 
-export const metadata: Metadata = { title: 'Pedir unirme' };
+export const metadata: Metadata = { title: 'Pedir entrar' };
 
+/**
+ * Pedir entrar en una iglesia.
+ *
+ * Sin sesión, el formulario lleva también la cuenta —correo y contraseña— y se
+ * envía todo de una vez (`crearCuentaYSolicitar`). Con sesión, solo lo de la
+ * solicitud. Es la pantalla «Cuenta» del diseño de la bienvenida: la cuenta se
+ * pide aquí, al final, y no antes de dejar mirar.
+ *
+ * Lo obligatorio no lleva asterisco; lo opcional dice «(opcional)».
+ */
 export default async function SolicitarPage({
   params,
   searchParams,
@@ -37,205 +46,246 @@ export default async function SolicitarPage({
   } = await supabase.auth.getUser();
 
   // Con sesión y con iglesia activa no hay nada que solicitar: esta persona ya
-  // está dentro de alguna congregación.
+  // está dentro de alguna congregación. Y con una solicitud pendiente, a verla.
   if (user) {
     const ctx = await getCurrentUserContext();
-    if (ctx) redirect('/panel/hoy');
+    if (ctx) redirect('/mi');
 
     const solicitud = await solicitudDeUsuario(user.id);
-    if (solicitud) redirect('/mi');
+    if (solicitud?.estado === 'pendiente') redirect('/mi');
   }
 
-  const nombreSugerido =
-    (user?.user_metadata?.nombre as string | undefined) ?? '';
+  // La ficha cuenta por qué no se puede: aquí no se repite.
+  if (!iglesia.aceptaSolicitudes) redirect(`/iglesia/${slug}`);
+
+  const nombreSugerido = (user?.user_metadata?.nombre as string | undefined) ?? '';
+  const campoClase =
+    'h-12 w-full rounded-lg border border-input bg-surface px-3.5 text-base outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16';
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-[560px] items-center gap-4 px-5 py-3.5">
-          <Link
-            href="/iglesias"
-            className="inline-flex items-center gap-1 text-[13.5px] font-medium text-muted-foreground no-underline hover:text-foreground hover:no-underline"
-          >
-            <ChevronLeft className="size-4" strokeWidth={1.8} />
-            Directorio
-          </Link>
-        </div>
+    <div className="flex min-h-dvh flex-col bg-background pt-[env(safe-area-inset-top)] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+      <header className="mx-auto flex w-full max-w-[560px] items-center px-2 pt-2">
+        <Link
+          href={`/iglesia/${slug}`}
+          aria-label="Volver a la ficha de la iglesia"
+          className="flex size-11 items-center justify-center rounded-full text-foreground no-underline outline-none hover:bg-surface-active focus-visible:ring-3 focus-visible:ring-ring/20"
+        >
+          <ChevronLeft className="size-5" strokeWidth={1.9} />
+        </Link>
       </header>
 
-      <main className="mx-auto flex w-full max-w-[560px] flex-col gap-7 px-5 py-10">
-        <div className="flex items-center gap-4">
-          <span className="flex size-14 flex-none items-center justify-center rounded-xl bg-accent text-[17px] font-bold text-accent-foreground">
-            {iniciales(iglesia.nombre)}
+      <main className="mx-auto flex w-full max-w-[560px] flex-col gap-6 px-5 pt-2">
+        {/* A qué iglesia se pide entrar, siempre a la vista. */}
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3">
+          {iglesia.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={iglesia.logoUrl} alt="" className="size-10 flex-none rounded-lg object-cover" />
+          ) : (
+            <span className="flex size-10 flex-none items-center justify-center rounded-lg bg-accent text-[13px] font-bold text-accent-foreground">
+              {iniciales(iglesia.nombre)}
+            </span>
+          )}
+          <span className="flex min-w-0 flex-col">
+            <span className="text-[12px] text-muted-foreground">Pides entrar en</span>
+            <span className="truncate text-[15px] font-bold">
+              {[iglesia.nombre, iglesia.ciudad].filter(Boolean).join(' · ')}
+            </span>
           </span>
-          <div className="flex min-w-0 flex-col gap-1">
-            <h1 className="text-[24px] font-bold leading-tight tracking-[-0.025em]">
-              {iglesia.nombre}
-            </h1>
-            {iglesia.ciudad && (
-              <span className="text-[14px] text-muted-foreground">
-                {iglesia.ciudad}
-              </span>
-            )}
-          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-[26px] leading-tight font-extrabold tracking-[-0.025em]">
+            {user ? 'Tu solicitud' : 'Crea tu cuenta'}
+          </h1>
+          <p className="text-pretty text-[15px] leading-relaxed text-muted-foreground">
+            {user
+              ? 'El pastor verá lo que escribas aquí y te avisaremos cuando responda.'
+              : 'Con ella el pastor sabrá quién eres y podrás entrar cuando te acepte.'}
+          </p>
         </div>
 
         {error && <Aviso>{error}</Aviso>}
 
-        {!iglesia.aceptaSolicitudes ? (
-          <Aviso>
-            Esta iglesia no está aceptando solicitudes ahora mismo. Ponte en
-            contacto con ellos directamente y te dirán cómo unirte.
-          </Aviso>
-        ) : !user ? (
-          /*
-           * Sin sesión no se puede solicitar. Es lo que impide que lluevan
-           * solicitudes falsas y lo que da a la iglesia una persona real a la
-           * que aprobar.
-           *
-           * Se ofrecen las dos puertas por separado, y con la advertencia de
-           * cuál NO es la suya: `/registro` crea una iglesia entera, y quien
-           * quiere unirse a la suya acabaría fundando una vacía sin darse
-           * cuenta.
-           */
-          <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5">
-            <div className="flex flex-col gap-1.5">
-              <h2 className="t-subtitulo">Necesitas una cuenta</h2>
-              <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
-                Es gratis y solo sirve para que {iglesia.nombre} sepa quién eres
-                al aprobar tu solicitud.
-              </p>
-            </div>
+        <form action={user ? solicitarIngreso : crearCuentaYSolicitar} className="flex flex-col gap-4">
+          <input type="hidden" name="slug" value={slug} />
 
-            <div className="flex flex-wrap gap-2.5">
-              <Button
-                render={
-                  <Link
-                    href={`/crear-cuenta?next=${encodeURIComponent(`/solicitar/${slug}`)}`}
-                  />
-                }
-              >
-                Crear mi cuenta
-              </Button>
-              <Button
-                variant="outline"
-                render={
-                  <Link
-                    href={`/acceso?next=${encodeURIComponent(`/solicitar/${slug}`)}`}
-                  />
-                }
-              >
-                Ya tengo cuenta
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form
-            action={solicitarIngreso}
-            className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5"
-          >
-            <input type="hidden" name="slug" value={slug} />
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="nombre">Cómo te llamas</Label>
-              <Input
-                id="nombre"
-                name="nombre"
-                required
-                autoFocus
-                maxLength={120}
-                defaultValue={nombreSugerido}
-                placeholder="Nombre y apellidos"
-              />
-              <p className="t-label text-muted-foreground">
-                Como te conocen en la iglesia, para que sepan quién eres.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="telefono">
-                Teléfono
-                <span className="ml-1.5 font-normal text-muted-foreground">
-                  (opcional)
-                </span>
-              </Label>
-              <Input id="telefono" name="telefono" type="tel" maxLength={40} />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="mensaje">
-                Cuéntales algo
-                <span className="ml-1.5 font-normal text-muted-foreground">
-                  (opcional)
-                </span>
-              </Label>
-              <textarea
-                id="mensaje"
-                name="mensaje"
-                rows={3}
-                maxLength={600}
-                placeholder="Vengo los domingos desde marzo, me presentó Marta."
-                className="rounded-lg border border-input bg-surface-alt px-3 py-2.5 text-[15px] leading-relaxed outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
-              />
-            </div>
-
-            {/* El mismo consentimiento del art. 9 que en el alta de iglesia:
-                vincularse a una congregación es lo que revela la confesión
-                religiosa, y da igual por qué puerta se entre. Con los estados
-                de la de asistencia y el enlace oscuro al marcarla, por el
-                contraste: ver `/registro`. */}
-            <label className="group/consentimiento flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5 hover:bg-surface-active has-checked:border-primary has-checked:bg-accent">
-              {/* `aria-label` con el texto exacto: sin él se anunciaba «on».
-                  Ver la misma casilla en `/registro`. */}
-              <input
-                type="checkbox"
-                name="consentimiento"
-                required
-                aria-label={TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS}
-                className="mt-0.5"
-              />
-              <span className="text-[13.5px] leading-snug text-muted-foreground">
-                {TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS}{' '}
-                <Link href="/privacidad" target="_blank" className="font-semibold group-hover/consentimiento:text-accent-foreground group-has-checked/consentimiento:text-accent-foreground">
-                  Leer la política de privacidad
-                </Link>
-                .
-              </span>
-            </label>
-
-            {/*
-             * La casilla de `/acepta`, y NO otra parecida: la versión que se
-             * guarda con la solicitud es la de ese texto. Hace falta aquí
-             * porque sin ella aprobar dejaba a la persona con la política
-             * vigente aceptada y sin esta casilla, que es justo lo que
-             * `miembrosSinPermisoDeAsistencia` lee como «dijo que no».
-             *
-             * La consecuencia es la de `/acepta`, dicha para quien todavía no
-             * está dentro: la iglesia puede tenerle ya en su fichero con
-             * asistencias apuntadas, y al unir la solicitud con esa ficha se
-             * borran si esto queda sin marcar.
-             */}
-            <CasillaAsistencia
-              consecuencia={
-                <>
-                  Puedes unirte igual sin marcarla. Entonces no sales en las
-                  listas de asistencia ni de seguimiento de la iglesia, y si ya
-                  tenían algo apuntado de ti en ellas, se borra.
-                </>
-              }
+          <Campo etiqueta="Nombre completo" id="nombre">
+            <input
+              id="nombre"
+              name="nombre"
+              required
+              maxLength={120}
+              autoComplete="name"
+              defaultValue={nombreSugerido}
+              className={campoClase}
             />
+          </Campo>
 
-            <Button type="submit" className="mt-1 w-fit">
-              Enviar la solicitud
-            </Button>
+          {!user && (
+            <Campo etiqueta="Correo electrónico" id="email">
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                className={campoClase}
+              />
+            </Campo>
+          )}
 
-            <p className="text-[13px] leading-snug text-muted-foreground">
-              Hasta que alguien de la iglesia lo apruebe no verás nada de la
-              congregación, y ellos solo verán lo que has escrito aquí.
-            </p>
-          </form>
+          <Campo
+            etiqueta="Teléfono"
+            id="telefono"
+            ayuda="Solo para que tu iglesia pueda contactarte."
+          >
+            <div className="flex gap-2">
+              <select
+                name="prefijo"
+                aria-label="Prefijo del país"
+                defaultValue={iglesia.pais === 'ES' ? 'ES' : 'CO'}
+                className="h-12 flex-none rounded-lg border border-input bg-surface px-3 text-base outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
+              >
+                <option value="ES">ES +34</option>
+                <option value="CO">CO +57</option>
+              </select>
+              <input
+                id="telefono"
+                name="telefono"
+                type="tel"
+                required
+                maxLength={40}
+                autoComplete="tel-national"
+                className={campoClase}
+              />
+            </div>
+          </Campo>
+
+          {!user && (
+            <Campo etiqueta="Contraseña" id="password">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                aria-describedby="regla-password"
+                className={campoClase}
+              />
+              <ReglaPassword idCampo="password" />
+            </Campo>
+          )}
+
+          <Campo etiqueta="Dirección" id="direccion" opcional>
+            <input
+              id="direccion"
+              name="direccion"
+              maxLength={240}
+              autoComplete="street-address"
+              className={campoClase}
+            />
+          </Campo>
+
+          <Campo etiqueta="Mensaje para el pastor" id="mensaje" opcional>
+            <textarea
+              id="mensaje"
+              name="mensaje"
+              rows={3}
+              maxLength={600}
+              placeholder="Vengo los domingos desde marzo, me presentó Marta."
+              className="w-full rounded-lg border border-input bg-surface px-3.5 py-2.5 text-base leading-relaxed outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
+            />
+          </Campo>
+
+          {/* El mismo consentimiento del art. 9 que en el alta de iglesia:
+              vincularse a una congregación es lo que revela la confesión
+              religiosa, y da igual por qué puerta se entre. */}
+          <label className="group/consentimiento flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface p-3.5 hover:bg-surface-active has-checked:border-primary has-checked:bg-accent">
+            <input
+              type="checkbox"
+              name="consentimiento"
+              required
+              aria-label={TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS}
+              className="mt-0.5 size-[18px] flex-none accent-primary"
+            />
+            <span className="text-[13.5px] leading-snug text-muted-foreground">
+              {TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS}{' '}
+              <Link
+                href="/privacidad"
+                target="_blank"
+                className="font-semibold group-hover/consentimiento:text-accent-foreground group-has-checked/consentimiento:text-accent-foreground"
+              >
+                Política de privacidad
+              </Link>
+              .
+            </span>
+          </label>
+
+          {/*
+           * La casilla de `/acepta`, y NO otra parecida: la versión que se
+           * guarda con la solicitud es la de ese texto. Sin ella, aprobar dejaba
+           * a la persona con la política vigente aceptada y sin esta casilla,
+           * que es justo lo que `miembrosSinPermisoDeAsistencia` lee como «dijo
+           * que no».
+           */}
+          <CasillaAsistencia
+            consecuencia={
+              <>
+                Puedes unirte igual sin marcarla. Entonces no sales en las listas
+                de asistencia ni de seguimiento de la iglesia, y si ya tenían
+                algo apuntado de ti en ellas, se borra.
+              </>
+            }
+          />
+
+          <Button type="submit" size="lg" className="mt-1 h-[52px] w-full text-[16px]">
+            Enviar solicitud
+          </Button>
+
+          <p className="text-center text-[13.5px] leading-snug text-muted-foreground">
+            Hasta que el pastor lo apruebe no verás nada de la congregación, y
+            ellos solo verán lo que has escrito aquí.
+          </p>
+        </form>
+
+        {!user && (
+          <p className="text-center text-[15px] text-muted-foreground">
+            ¿Ya tienes cuenta?{' '}
+            <Link
+              href={`/acceso?next=${encodeURIComponent(`/solicitar/${slug}`)}`}
+              className="font-semibold text-foreground underline underline-offset-2"
+            >
+              Entra
+            </Link>
+          </p>
         )}
       </main>
+    </div>
+  );
+}
+
+function Campo({
+  etiqueta,
+  id,
+  opcional = false,
+  ayuda,
+  children,
+}: {
+  etiqueta: string;
+  id: string;
+  opcional?: boolean;
+  ayuda?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-[14px] font-semibold">
+        {etiqueta}
+        {opcional && <span className="ml-1.5 font-normal text-muted-foreground">(opcional)</span>}
+      </label>
+      {children}
+      {ayuda && <p className="text-[13px] leading-snug text-muted-foreground">{ayuda}</p>}
     </div>
   );
 }

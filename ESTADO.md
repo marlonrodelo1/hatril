@@ -28,6 +28,83 @@ lee al arrancar.
 
 ## Qué funciona, verificado ejecutándolo
 
+- **Denunciar, bloquear y borrar la cuenta** (30-oct, migración `0053`), lo
+  que Apple y Google exigían para publicar la app. Probado en el navegador con
+  cuentas de prueba, a tamaño de móvil:
+  - El «…» de cada publicación y comentario abre una hoja: lo tuyo se borra (con
+    confirmación); lo de otro se **denuncia** (cinco motivos y un detalle
+    opcional) o se **bloquea** a quien lo escribió. Quien modera, en vez de
+    denunciar, lo quita, y al autor le llega «han quitado una publicación tuya»
+    sin decir quién.
+  - Lo denunciado se le esconde a quien lo denunció para siempre; lo de un
+    bloqueado, mientras dure el bloqueo, y tampoco le llegan sus avisos. El
+    bloqueado no se entera: no puede leer ni sus propias filas.
+  - La cola de quien modera está en `/mi/comunidad/denuncias` (en `/mi` y no en
+    el panel: `moderar_comunidad` se da a miembros rasos) con «Dejarlo» y
+    «Quitar del muro», agrupada por publicación y **sin el nombre de quien
+    denuncia**. El muro le avisa con «Hay N denuncias por revisar».
+  - `/mi/cuenta/bloqueados` para desbloquear, enlazado desde Mi cuenta junto a
+    la política de privacidad (Apple 5.1.1(i)).
+  - **Borrar la cuenta** en `/mi/cuenta/borrar`, con la contraseña: desactiva
+    al momento (membresías a `baja`, sesión cerrada en todos los dispositivos,
+    turnos pendientes a «no puede» con el aviso de siempre a quien lleva el
+    equipo) y borra a los 30 días. Si entra antes, `/mi` le manda a
+    `/cuenta-en-baja` y la recupera con un botón. **La ficha se queda en la
+    iglesia**, sin cuenta ni foto; el muro, los «me gusta», bloqueos, denuncias
+    y avisos de esa persona sí se borran. El pastor no puede borrarse mientras
+    lo sea, ni el super admin. `/borrar-cuenta` es la página pública que pide
+    Google. Probado: desactivar y recuperar (con `invitada@`), y que el pastor
+    no puede. **Sin probar**: el envío con contraseña (no escribo contraseñas en
+    formularios) y el borrado final a los 30 días, que necesita el cron (ver
+    «Qué falta»).
+  - `test:aislamiento` lleva 17 comprobaciones nuevas (256 en total, todo
+    correcto) y las dos tablas nuevas no se ven con la clave publicable.
+- **La bienvenida de la app y las pantallas nuevas del diseño** (30-oct,
+  migración `0054`), del paquete de Claude Design en `docs/diseno/hatril-handoff/`.
+  Probado en el navegador a tamaño de móvil:
+  - **Presentación** (`/bienvenida`): tres pantallas que se pasan con el dedo
+    (scroll-snap, sin librería), las piezas entran escalonadas y quietas con
+    «reducir movimiento». Solo la primera vez: cookie `hatril_bienvenida`. La
+    app sin sesión ya no cae en `/acceso`: el proxy la manda a `/bienvenida` o
+    a `/empezar` (solo con el user agent `HatrilApp/`; en la web, igual que
+    antes).
+  - **La pregunta** (`/empezar`) y **buscar**: por nombre (`/buscar`, con la
+    ciudad siempre a la vista), **cerca de mí** (`/buscar/cerca`) y por ciudad
+    (`/buscar/ciudad`, sugiriendo solo ciudades con iglesias). **Sin mapa**,
+    decidido por Marlon: lista por distancia con radio de 5/10/25/50 km. La
+    distancia la calcula el navegador: la ubicación de quien busca no llega al
+    servidor. El vacío lleva a «Invita a tu iglesia» (hoja de compartir).
+  - **Dónde está cada iglesia**: `iglesias.latitud`/`longitud`, que el pastor
+    pone en Ajustes con «Usar dónde estoy» o pegando las coordenadas de un mapa
+    (sin geocodificar contra nadie). Betania ya tiene la suya.
+  - **Ficha** (`/iglesia/[slug]`), con sus variantes: gestiona las altas en
+    persona, ya eres de otra, o tienes una solicitud pendiente. **Una sola
+    iglesia por persona**: la regla la pone la action (activa o pendiente).
+  - **Solicitar** (`/solicitar/[slug]`): sin sesión, crear la cuenta y pedir
+    entrar es un solo formulario (`crearCuentaYSolicitar`). Teléfono
+    **obligatorio** con prefijo ES/CO, dirección opcional (pasa a la ficha al
+    aprobar), la regla de la contraseña visible y marcándose sola.
+    **Solicitud enviada** en `/mi`, con los tres pasos y **cancelar la
+    solicitud**. Probado cancelar y volver a pedirla con `visita@` (quedó igual
+    salvo la casilla de asistencia, ahora `false` en vez de `null`).
+  - **Foto de perfil** en Mi cuenta: al bucket privado `comunidad`, bajo
+    `perfiles/`, y firmada al pintar (`fotosParaPintar` en
+    `lib/miembros/foto.ts`); las URL viejas de la demo se siguen pintando tal
+    cual. **Permiso de asistencia** en Mi cuenta, darlo o retirarlo cuando se
+    quiera, con la misma lógica que `/acepta` (retirar borra lo apuntado).
+  - **Biblia**: tocar versículos para copiarlos o compartirlos con su cita
+    («Juan 3:16-17 (RV1909)»), y capítulo anterior/siguiente sin volver al
+    índice. Fuera, por decisión de Marlon: el recorrido por la iglesia mientras
+    se espera, y el reproductor de radio ampliado.
+- **Dos arreglos de `next.config.ts` que afectaban a lo que ya había**
+  (30-oct): `Permissions-Policy` decía `geolocation=()`, que niega la ubicación
+  en toda la web sin preguntar; ahora `geolocation=(self)`. Y las server actions
+  tenían el límite por defecto de **1 MB**: una foto normal de móvil fallaba al
+  publicarla en el muro antes de llegar a la action. Ahora 21 MB (cuatro fotos
+  de 5 MB más el texto).
+- **La Biblia tiene texto** (30-oct): la Reina-Valera 1909 entera, 66 libros y
+  31.102 versículos, en `public/biblia/rv1909/`. De dónde sale y qué se le hizo
+  al convertirla, en su `LEEME.md`.
 - **La primera iglesia real: Cuerpo de Cristo** (23-oct), la de Marlon, en
   `https://hatril.com/i/cuerpo-de-cristo` (id `4b79f1b9-…-ecd40b943a23`). Datos,
   logo y fachada sacados de cuerpodecristoacentejo.com; zona `Atlantic/Canary`,
@@ -998,25 +1075,27 @@ lee al arrancar.
 | Contestar un turno con los turnos apagados | `responderTurno` en `/mi/agenda` no pasa por `exigirModulo`: es la respuesta de una persona a SU asignación, no una escritura del equipo. Decidir si se corta |
 | La secretaria no puede aprobar solicitudes | Tiene `aprobar_solicitudes` de salida, pero `iglesia_usuarios` solo admite UPDATE y DELETE del pastor (`0001`). Antes aprobaba a medias sin avisar; ahora la pantalla le dice que las aprueba el pastor. Arreglarlo es una función `security definer` que active o borre solo membresías pendientes |
 | El correo de una cuenta nueva no se verifica | `/crear-cuenta` la crea con `email_confirm: true`. Pesa más desde que aprobar puede enlazar con una ficha: por eso la pantalla avisa de que el correo y el teléfono no prueban nada |
-| Dar o retirar el permiso de asistencia cuando se quiera | No hay pantalla, y el texto de la casilla lo promete («puedo retirar este permiso cuando quiera»): `/acepta` solo sale cuando cambia la versión. Hace falta en `/mi/cuenta` o en la ficha. Mientras, los pastores que se registraron antes del 20-oct siguen fuera de sus propias listas —`/registro` ya pregunta la casilla, pero solo a las altas nuevas—; en la demo, el de Betania |
-| Foto en la ficha de miembro | Va en OTRO bucket, privado y con URL firmada. El de iglesias es público |
+| Dar o retirar el permiso de asistencia cuando se quiera | **Hecho el 30-oct** en Mi cuenta, con la misma lógica que `/acepta`. Los pastores que se registraron antes del 20-oct pueden darlo ya desde ahí |
+| Foto en la ficha de miembro | Desde el 30-oct va al bucket privado con URL firmada (`lib/miembros/foto.ts`). El de iglesias sigue siendo público |
 | Eventos y calendario | Hecho y verificado, con sus textos legales |
 | Área del miembro | Comunidad, devocional con vídeo, **agenda como calendario con sus turnos, lo que se toca cada domingo y la ficha del ensayo**, Biblia, **Equipo** para quien sirve y el reproductor de la radio. Falta el material del equipo |
 | Agenda | **Calendario con día, semana y mes**, los días marcados y una hoja al tocarlos. Junta los horarios semanales, los eventos y las reuniones de los ministerios de cada persona |
 | Stripe | **Hecho el circuito entero**, sin claves todavía. Ver «Qué hay que crear en Stripe» |
 | Correo (Resend) | Nada. Ni bienvenida, ni aviso de solicitud, ni el de «se te acaba la prueba» — que ahora es el que más falta hace: el aviso solo se ve entrando al panel |
 | El muro en `/mi` | A propósito NO está. Con la iglesia bloqueada, un miembro sigue leyendo su área; lo que no puede es publicar en el muro |
-| Exportar y borrar datos | Derecho de supresión del RGPD, sin implementar |
+| Exportar y borrar datos | **Borrar la cuenta, hecho el 30-oct** (la ficha la lleva la iglesia: salir de su fichero se le pide al pastor). Exportar los datos propios, sin implementar |
 | Cumpleaños de la semana en Inicio | Se puede: `fecha_nacimiento` existe. Va con `ver_datos_sensibles` y sin enseñar el año |
 | Asistencia a escala | **Hecha la base, no la escala.** Marcar casillas una a una no sirve para 1.500 personas. Ver «Decidido y pendiente» |
 | Notas de seguimiento en texto libre | A propósito NO están. Necesitan cifrado en reposo y base jurídica antes |
 | Legales de la asistencia y el seguimiento | Hechos: `/privacidad` §3, §4 y §6, el anexo del art. 28 en `/terminos`, y el consentimiento propio |
 | Los bloques de asistencia en Inicio | El diseño los pinta y siguen sin pintarse: el dato ya existe |
-| **App nativa: lo que impide enviar a Apple** | Lo cuenta `docs/app-nativa/fichas.md` §1: borrar la cuenta desde la app, la Biblia vacía, el pago de Stripe al alcance dentro de la app (`/registro`, `/panel/suscripcion`), «Denunciar» y «Bloquear» en el muro, y la regla 4.2 (una web metida en una app; lo que más la separaría, los avisos push). Y compilar en el Mac (`docs/app-nativa/ios.md`) |
-| **App nativa: lo que pide Google** | Borrar la cuenta dentro de la app **y** una dirección web para pedirlo (`/borrar-cuenta`, no existe). El gráfico de 1024×500 y las capturas. La cuenta para quien revisa. El formulario de seguridad de datos con lo de `fichas.md` §5, que ya incluye la plaza pagada y el reparto. Con cuenta personal de Play Console, la prueba cerrada de 12 personas durante 14 días |
+| **App nativa: lo que impide enviar a Apple** | **Hechos el 30-oct** borrar la cuenta, la Biblia con texto y «Denunciar» y «Bloquear». Quedan, de `docs/app-nativa/fichas.md` §1: el pago de Stripe al alcance dentro de la app (`/registro`, `/panel/suscripcion`) y la regla 4.2 (una web metida en una app; lo que más la separaría, los avisos push). Y compilar en el Mac (`docs/app-nativa/ios.md`) |
+| **App nativa: la ubicación** | «Cerca de mí» y el botón de Ajustes piden la ubicación. En la web basta con el permiso del navegador; dentro de la app hace falta declararla al empaquetar: `ACCESS_COARSE_LOCATION` en el `AndroidManifest.xml` y `NSLocationWhenInUseUsageDescription` en el `Info.plist` de iOS, o el WebView la niega sin preguntar |
+| **El cron de las bajas de cuenta** | **Sin él no se borra ninguna cuenta a los 30 días**, y la pantalla lo promete. Hay que poner `INTERNAL_API_TOKEN` en Dokploy (hoy no está ni en `.env.local`: la ruta responde 500) y programar una vez al día `POST /api/v1/cron/bajas` con `Authorization: Bearer $INTERNAL_API_TOKEN`. El borrado final (`borrarCuentaDeVerdad` en `lib/cuenta/baja.ts`) no se ha ejecutado nunca: probarlo con una cuenta de usar y tirar antes de fiarse |
+| **App nativa: lo que pide Google** | Borrar la cuenta dentro de la app y la dirección web para pedirlo (`/borrar-cuenta`) están **hechos desde el 30-oct**. Queda el gráfico de 1024×500 y las capturas. La cuenta para quien revisa. El formulario de seguridad de datos con lo de `fichas.md` §5, que ya incluye la plaza pagada y el reparto. Con cuenta personal de Play Console, la prueba cerrada de 12 personas durante 14 días |
 | **App nativa: antes de cualquiera de las dos** | Desplegar la web con `app-nativa.tsx` y el cambio a hatril.com (los legales en producción aún dicen `hola@hatril.app`). Crear el buzón `hola@hatril.com`. Probar con sesión en un teléfono de verdad. **La firma de subida está solo en este ordenador**, en `Versiones/Android/firma/` (el `.jks` y `CLAVES.txt`): copiarla fuera, a un pendrive o un gestor de contraseñas. Si se pierde, Google tarda días en aceptar una nueva y mientras no se publica nada |
-| Texto de la Biblia | La pantalla `/mi/biblia` está: índice de los 66 libros, buscador y capítulos. **Falta el texto**: unos 4,5 MB de la Reina-Valera 1909 en `public/biblia/rv1909/`, un JSON por libro. La RVR60 tiene derechos de Sociedades Bíblicas Unidas |
-| Foto de perfil del miembro | **Se pinta ya**: `miembros.foto_url` existía desde la `0000` y ahora la usan el muro, los comentarios y el compositor, con las iniciales de color debajo como respaldo. Falta la pantalla para SUBIRLA, que va al bucket privado con URL firmada. Las de la demo son de `randomuser.me`, y eso NO vale para producción: la foto de un miembro es dato personal y no puede servirla un tercero |
+| Texto de la Biblia | **Cargado el 30-oct**: la Reina-Valera 1909 entera. Falta compartir o copiar un versículo, que está en el diseño. La RVR60 tiene derechos de Sociedades Bíblicas Unidas |
+| Foto de perfil del miembro | **Subirla y quitarla, hecho el 30-oct** en Mi cuenta: bucket privado `comunidad`, ruta `perfiles/<iglesia>/…` en `foto_url`, firmada al pintar. Las de la demo siguen siendo URLs de `randomuser.me` y se pintan tal cual: no valen para producción. Falta pedirla en el alta, como dice el diseño |
 
 ---
 
@@ -1493,6 +1572,30 @@ prueba con `stripe listen --forward-to localhost:3000/api/stripe/webhook`.
 ---
 
 ## Decidido y pendiente de construir
+
+**La bienvenida de la app** (decidido por Marlon el 30-oct, y **construida el
+mismo día** salvo el mapa: ver «Qué funciona»). La primera vez que se abre la app: el
+splash del atril, una presentación animada de tres pantallas como mucho, en
+crema y naranja quemado, con botón de saltar. Luego: «¿Ya eres de una iglesia o
+estás buscando una?».
+
+- **Buscando**: elige un radio y ve las iglesias cercanas en mapa con pines y en
+  lista. Hace falta guardar coordenadas por iglesia (hoy solo hay ciudad y
+  dirección) y que el pastor coloque su pin. Con tres iglesias el mapa sale
+  vacío casi siempre: el vacío lleva a «¿No está tu iglesia? Invítala». La
+  ubicación se pide al elegir «cerca de mí», no al abrir.
+- **Ya soy de una**: busca su iglesia por nombre y **solicita**. **Siempre
+  aprueba el pastor**: no hay entrada directa ni por código. Una iglesia abierta
+  dejaría a cualquiera dentro de su muro y sus equipos.
+- **Una sola iglesia por persona, sin «seguir» otras.** La base admite varias
+  (el unique es por pareja), así que la regla la pone la aplicación: con una
+  membresía activa o pendiente no se puede pedir otra; para cambiar, sale de
+  la suya.
+- **La cuenta se pide al final**, al solicitar: el mapa y las fichas se ven sin
+  registrarse (lo pide Apple, y convierte mejor).
+- **Datos**: nombre completo, correo, contraseña, **teléfono** (obligatorio),
+  **dirección** y **foto opcional**. La foto va al bucket privado con URL
+  firmada (hecho el 30-oct, desde Mi cuenta; en el alta todavía no se pide).
 
 **Lo que queda de los legales, que ya no es el bloqueo.** Los textos están
 reescritos y revisados contra el código, y la versión subió a

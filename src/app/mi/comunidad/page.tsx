@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
-import { MessagesSquare } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronRight, Flag, MessagesSquare } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { puedeModerarComunidad } from '@/lib/auth/permisos';
 import { listarMuro } from '@/lib/comunidad/consultas';
+import { cuantasDenunciasPendientes } from '@/lib/comunidad/moderacion';
 import { miFotoDePerfil } from '@/lib/miembros/foto';
 import {
   devocionalDeHoy,
@@ -60,9 +62,9 @@ export const dynamic = 'force-dynamic';
 export default async function ComunidadPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; bloqueado?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, bloqueado } = await searchParams;
   const ctx = await requireIglesia();
   await exigirConsentimientoAlDia(ctx);
 
@@ -75,11 +77,16 @@ export default async function ComunidadPage({
   // El versículo y el devocional SÍ se piden aunque el muro esté apagado: no son
   // del muro, son de la iglesia. Apagar la comunidad es cerrar las
   // publicaciones, no dejar a la congregación sin lo que le toca leer hoy.
-  const [muro, versiculo, devocional, miFoto] = await Promise.all([
+  const moderador = puedeModerarComunidad(ctx);
+
+  const [muro, versiculo, devocional, miFoto, denuncias] = await Promise.all([
     config.activa ? listarMuro(ctx) : Promise.resolve([]),
     versiculoDelDia(ctx),
     devocionalDeHoy(ctx),
     miFotoDePerfil(ctx),
+    // Se cuenta aunque el muro esté apagado: lo denunciado sigue ahí, y quien
+    // modera tiene que poder quitarlo antes de volver a encenderlo.
+    moderador ? cuantasDenunciasPendientes(ctx) : Promise.resolve(0),
   ]);
 
   const nombre = nombreDeLaCuenta(ctx.user);
@@ -116,6 +123,31 @@ export default async function ComunidadPage({
        */}
       <main className="mx-auto flex w-full max-w-[620px] flex-col gap-3 px-4 py-4 sm:gap-4 sm:px-5 sm:py-6">
         {error && <Aviso tipo="error">{error}</Aviso>}
+        {bloqueado && (
+          <Aviso tipo="ok">
+            Ya no verás lo que publica ni lo que comenta. Puedes desbloquear
+            desde Mi cuenta.
+          </Aviso>
+        )}
+
+        {/* La cola del moderador asoma aquí, en el muro, porque es donde
+            trabaja: el permiso de moderar no abre el panel. */}
+        {denuncias > 0 && (
+          <Link
+            href="/mi/comunidad/denuncias"
+            className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-foreground no-underline outline-none hover:bg-surface-active focus-visible:ring-3 focus-visible:ring-ring/20"
+          >
+            <span className="flex size-9 flex-none items-center justify-center rounded-full bg-badge-warning-bg text-badge-warning-fg">
+              <Flag className="size-[17px]" strokeWidth={1.8} />
+            </span>
+            <span className="min-w-0 flex-1 text-[14.5px] font-semibold">
+              {denuncias === 1
+                ? 'Hay 1 denuncia por revisar'
+                : `Hay ${denuncias} denuncias por revisar`}
+            </span>
+            <ChevronRight className="size-[18px] flex-none text-muted-foreground" strokeWidth={1.8} />
+          </Link>
+        )}
 
         {/*
          * Lo del día corona la pantalla, y va FUERA del `if` de la comunidad
@@ -206,7 +238,7 @@ export default async function ComunidadPage({
                 <Publicacion
                   key={p.id}
                   publicacion={p}
-                  puedeModerar={puedeModerarComunidad(ctx)}
+                  puedeModerar={moderador}
                   admiteComentarios={config.comentarios}
                 />
               ))

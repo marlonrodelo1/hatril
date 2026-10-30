@@ -1,10 +1,11 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Heart, MessageCircle, Send, Trash2, X } from 'lucide-react';
+import { Heart, MessageCircle, Send, X } from 'lucide-react';
 
 import { AvatarPersona } from '@/components/avatar-persona';
-import { alternarMeGustaComentario, borrarComentario, comentar } from '../actions';
+import { alternarMeGustaComentario, comentar } from '../actions';
+import { MenuContenido } from './menu-contenido';
 
 /**
  * Un comentario tal y como llega a esta pantalla: con el «hace tanto» ya
@@ -14,6 +15,7 @@ export type ComentarioPintado = {
   id: string;
   texto: string;
   cuando: string;
+  autorId: string;
   autorNombre: string;
   autorFoto: string | null;
   esMio: boolean;
@@ -312,17 +314,16 @@ function Comentario({
 
           <span className="flex-1" />
 
-          {(c.esMio || puedeModerar) && (
-            <form action={borrarComentario.bind(null, c.id)}>
-              <button
-                type="submit"
-                aria-label="Borrar el comentario"
-                className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/20"
-              >
-                <Trash2 className="size-[15px]" strokeWidth={1.7} />
-              </button>
-            </form>
-          )}
+          <MenuContenido
+            tipo="comentario"
+            id={c.id}
+            autorId={c.autorId}
+            autorNombre={c.autorNombre}
+            autorFoto={c.autorFoto}
+            esMio={c.esMio}
+            puedeModerar={puedeModerar}
+            pequeno
+          />
         </div>
       </div>
     </div>
