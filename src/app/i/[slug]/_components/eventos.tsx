@@ -1,11 +1,10 @@
-import Link from 'next/link';
 import { CalendarDays, MapPin } from 'lucide-react';
 
 import type { EventoPublico } from '@/lib/eventos/publica';
 import { formatearInstante } from '@/lib/fecha/zona';
 import { formatearDinero } from '@/lib/format/dinero';
 import type { Moneda } from '@/lib/db/schema';
-import { Button } from '@/components/ui/button';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 /**
  * Lo que la iglesia tiene organizado, en la web pública.
@@ -86,13 +85,11 @@ export function EventosIglesia({
                   tarjetas tengan descripciones de distinto largo: si no, en una
                   rejilla los botones quedan a alturas distintas. */}
               <div className="mt-auto flex flex-wrap items-center gap-3 pt-2">
-                <Button
+                <BotonEnlace href={`/i/${slug}/eventos/${e.id}`}
                   variant="outline"
-                  size="sm"
-                  render={<Link href={`/i/${slug}/eventos/${e.id}`} />}
-                >
+                  size="sm">
                   {e.inscripcionesAbiertas ? 'Apuntarme' : 'Ver más'}
-                </Button>
+                </BotonEnlace>
                 {e.precio && (
                   <span className="text-[15px] font-bold tracking-[-0.01em]">
                     {formatearDinero(e.precio, moneda)}

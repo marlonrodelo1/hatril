@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
  * `src/lib/toast.ts` existe y `src/components/ui/sonner.tsx` también, pero
  * **el `<Toaster />` no está montado en ningún layout del producto**: una
  * llamada a `toast()` no pintaría nada y el fallo sería silencioso. Montarlo
- * traería `next-themes` a una aplicación que es de modo claro únicamente. El
+ * traía `next-themes` (ya no: base común, 17-nov) y nadie más lo usa. El
  * propio botón diciendo «Copiado» resuelve lo mismo y no depende de nada.
  *
  * POR QUÉ ADEMÁS SE PINTA LA URL EN UN INPUT

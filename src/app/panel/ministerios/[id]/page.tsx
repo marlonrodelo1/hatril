@@ -35,6 +35,7 @@ import { DialogoAsignar } from '../_components/dialogo-asignar';
 import { PestanasMinisterio } from './_components/pestanas';
 import { CabeceraPanel } from '../../_components/cabecera';
 import { Contenedor } from '../../_components/contenedor';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 /*
  * Título fijo y no el nombre del ministerio.
@@ -165,16 +166,14 @@ export default async function MinisterioPage({
       >
         {puedeGestionar && (
           <>
-            <Button
-              variant="outline"
-              render={<Link href={`/panel/ministerios/${ministerio.id}/editar`} />}
-            >
+            <BotonEnlace href={`/panel/ministerios/${ministerio.id}/editar`}
+              variant="outline">
               Editar equipo
-            </Button>
-            <Button render={<Link href="?asignar=1" scroll={false} />}>
+            </BotonEnlace>
+            <BotonEnlace href="?asignar=1" scroll={false}>
               <UserPlus strokeWidth={1.8} />
               Asignar miembros
-            </Button>
+            </BotonEnlace>
           </>
         )}
       </CabeceraPanel>
@@ -517,14 +516,12 @@ export default async function MinisterioPage({
 
           {puedeGestionar && (
             <div className="p-4">
-              <Button
+              <BotonEnlace href="?asignar=1" scroll={false}
                 variant="ghost"
-                className="h-[42px] w-full border border-dashed border-border text-muted-foreground hover:bg-surface-alt hover:text-foreground"
-                render={<Link href="?asignar=1" scroll={false} />}
-              >
+                className="h-[42px] w-full border border-dashed border-border text-muted-foreground hover:bg-surface-alt hover:text-foreground">
                 <Plus strokeWidth={1.8} />
                 Sumar a alguien al equipo
-              </Button>
+              </BotonEnlace>
             </div>
           )}
         </section>

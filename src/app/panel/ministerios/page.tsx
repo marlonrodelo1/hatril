@@ -11,9 +11,9 @@ import {
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { iniciales } from '@/lib/format/iniciales';
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
 import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Ministerios' };
 
@@ -51,17 +51,15 @@ export default async function MinisteriosPage({
             de los habituales. Mismo permiso que crear, porque es crear. */}
         {puedeGestionar && (
           <>
-            <Button
-              variant="outline"
-              render={<Link href="/panel/modulos" />}
-            >
+            <BotonEnlace href="/panel/modulos"
+              variant="outline">
               <Blocks strokeWidth={1.9} />
               Módulos
-            </Button>
-            <Button render={<Link href="/panel/ministerios/nuevo" />}>
+            </BotonEnlace>
+            <BotonEnlace href="/panel/ministerios/nuevo">
               <Plus strokeWidth={1.9} />
               Crear ministerio
-            </Button>
+            </BotonEnlace>
           </>
         )}
       </CabeceraPanel>
@@ -168,10 +166,10 @@ function EstadoVacio({ puedeGestionar }: { puedeGestionar: boolean }) {
           idénticos en la misma pantalla es justo lo que el sistema de diseño
           prohíbe: el naranja se queda en la cabecera, que está siempre. */}
       {puedeGestionar && (
-        <Button variant="outline" render={<Link href="/panel/ministerios/nuevo" />}>
+        <BotonEnlace href="/panel/ministerios/nuevo" variant="outline">
           <Plus strokeWidth={1.9} />
           Crear el primer ministerio
-        </Button>
+        </BotonEnlace>
       )}
     </div>
   );

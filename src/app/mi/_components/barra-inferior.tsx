@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useLayoutEffect, useRef, useState } from 'react';
 import {
   BookMarked,
   BookOpen,
@@ -125,8 +126,47 @@ export function BarraInferior({
 }) {
   const pathname = usePathname();
 
+  /*
+   * LA PASTILLA QUE VIAJA (base común, 17-nov)
+   *
+   * El fondo de la pestaña elegida es una pieza aparte que se desliza a la
+   * nueva al cambiar de pantalla, en vez de saltar. La barra vive en el layout
+   * y no se vuelve a montar al navegar: basta con medir la pestaña marcada.
+   * Hasta medirla (el primer pintado), la pestaña lleva el fondo ella misma.
+   */
+  const navRef = useRef<HTMLElement>(null);
+  const [pastilla, setPastilla] = useState<{
+    x: number;
+    y: number;
+    ancho: number;
+    alto: number;
+  } | null>(null);
+
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const medir = () => {
+      const act = nav.querySelector<HTMLElement>('a[aria-current="page"]');
+      setPastilla(
+        act
+          ? {
+              x: act.offsetLeft,
+              y: act.offsetTop,
+              ancho: act.offsetWidth,
+              alto: act.offsetHeight,
+            }
+          : null,
+      );
+    };
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(nav);
+    return () => observador.disconnect();
+  }, [pathname, equipo]);
+
   return (
     <nav
+      ref={navRef}
       aria-label="Secciones"
       className={
         // Flotante en las dos anchuras. `bottom-[calc(...)]` respeta la zona
@@ -157,11 +197,31 @@ export function BarraInferior({
         'md:inset-x-auto md:bottom-5 md:left-1/2 md:w-auto md:-translate-x-1/2'
       }
     >
+      {pastilla && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-0 left-0 rounded-lg border border-primary/30 bg-accent transition-[transform,width] duration-240 ease-hatril motion-reduce:transition-none"
+          style={{
+            width: pastilla.ancho,
+            height: pastilla.alto,
+            transform: `translate(${pastilla.x}px, ${pastilla.y}px)`,
+          }}
+        />
+      )}
       {PESTANAS.map((p) => (
-        <Pestana key={p.href} pestana={p} pathname={pathname} />
+        <Pestana
+          key={p.href}
+          pestana={p}
+          pathname={pathname}
+          conPastilla={pastilla !== null}
+        />
       ))}
       {equipo && (
-        <Pestana pestana={{ ...EQUIPO, href: equipo }} pathname={pathname} />
+        <Pestana
+          pestana={{ ...EQUIPO, href: equipo }}
+          pathname={pathname}
+          conPastilla={pastilla !== null}
+        />
       )}
     </nav>
   );
@@ -170,9 +230,12 @@ export function BarraInferior({
 function Pestana({
   pestana: p,
   pathname,
+  conPastilla,
 }: {
   pestana: { href: string; etiqueta: string; Icono: LucideIcon; raiz?: string };
   pathname: string;
+  /** Con la pastilla ya medida, el fondo lo pone ella y no la pestaña. */
+  conPastilla: boolean;
 }) {
   const raiz = p.raiz ?? p.href;
   const esta = pathname === raiz || pathname.startsWith(`${raiz}/`);
@@ -182,7 +245,11 @@ function Pestana({
       href={p.href}
       aria-current={esta ? 'page' : undefined}
       className={
-        'flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10.5px] font-semibold no-underline hover:no-underline ' +
+        // 11,5 px y no 10,5: el mínimo de la escala (inventario, A16). Cinco
+        // siguen cabiendo a 375 px: «Comunidad» pasa de unos 55 a 60 px, y a
+        // cada pestaña le tocan unos 68. `relative` para quedar encima de la
+        // pastilla, que va antes en el DOM.
+        'relative flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-micro font-semibold no-underline transition-colors duration-150 hover:no-underline ' +
         'md:flex-none md:flex-row md:gap-2 md:px-3 md:py-2 md:text-[13.5px] ' +
         (esta
           /*
@@ -199,7 +266,9 @@ function Pestana({
            * es `accent-foreground` (#92442A, 5.6:1 sobre este fondo) y no el
            * naranja de marca, que sobre su propio fondo suave se queda en 4.15.
            */
-          ? 'border border-primary/30 bg-accent text-accent-foreground'
+          ? conPastilla
+            ? 'border border-transparent text-accent-foreground hover:text-accent-foreground'
+            : 'border border-primary/30 bg-accent text-accent-foreground'
           : 'border border-transparent text-muted-foreground hover:bg-surface-active hover:text-foreground')
       }
     >

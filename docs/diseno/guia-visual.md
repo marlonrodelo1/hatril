@@ -13,10 +13,30 @@ Los tokens están en `src/app/globals.css`, con el porqué de cada color. Lo que
 falla hoy en la aplicación está en [`inventario-visual.md`](inventario-visual.md):
 no lo copies aunque lo veas en otra pantalla.
 
-Tres piezas de esta guía **todavía no existen** y llegan en la fase 2:
-`BotonEnlace`, `Insignia` y `Campo`/`Bloque` compartidos. Cada apartado dice
-qué escribir mientras tanto. En los ejemplos, `<BotonEnlace href={x}>` es hoy
-`<Link href={x} className={buttonVariants()}>`.
+**La base común ya existe (17-nov-2026).** Marlon aprobó las nueve piezas en
+una presentación con voto por pieza, y están en `src/components/ui`:
+
+| Pieza | Fichero | Para |
+|---|---|---|
+| `BotonEnlace` | `boton-enlace.tsx` | Un enlace con forma de botón. Nunca `<Button render={<Link/>}>` ni `render={<a/>}`: Base UI avisa por consola. `nativo` fuerza un `<a>` (descargas de un route handler). |
+| `BotonEnviar` | `boton-enviar.tsx` | El submit de un formulario de server action: dice «Guardando…» solo, sin cambiar de ancho. |
+| `Insignia` | `insignia.tsx` | La pastilla, con `tono`, `punto` y `vivo` (el latido, solo para lo que está en directo). |
+| `Pestanas` | `pestanas.tsx` | Pestañas de sección con el subrayado naranja que viaja. |
+| `Campo`, `Bloque`, `HojaFormulario`, `PieFormulario` | `campo.tsx` | Formularios: una maqueta, el error pegado al campo con icono. |
+| `Lista`, `Fila` | `fila.tsx` | La fila de todas las listas: igual en el móvil, sin apilar columnas. |
+| `EstadoVacio` | `estado-vacio.tsx` | Qué es, qué hacer y el botón, con un gesto de entrada. |
+| `Cifra` | `cifra.tsx` | Rótulo, número en carbón (nunca naranja), el cambio y la barra. |
+
+Además: `Aviso` tiene cuatro tipos (`error`, `ok`, `aviso`, `info`); todas las
+ventanas y hojas usan el mismo velo (`bg-velo`); los menús y desplegables van
+con borde y sin sombra; la barra lateral del panel lleva un marcador que se
+desliza y el buscador Ctrl K (`panel/_components/buscador.tsx`); la barra de
+`/mi`, una pastilla que viaja; y `CabeceraMiembro`, el título grande que se
+recoge al bajar. El movimiento común (tres duraciones, `ease-hatril`) está en
+`globals.css`, «La base común».
+
+Lo que todavía no la usa se va pasando pantalla a pantalla. Si ves una
+pantalla con la forma antigua, no la copies: usa la pieza.
 
 ---
 
@@ -346,16 +366,18 @@ Una sola forma: **pastilla**.
 | neutro | `bg-badge-neutral-bg` / `text-badge-neutral-fg` | rol, tono, datos |
 | peligro | `bg-badge-danger-bg` / `text-badge-danger-fg` | no puede, rechazada |
 
-Fase 2: `src/components/ui/insignia.tsx` con `tono`, que sustituye al
-`badge.tsx` de shadcn (no lo usa nadie y trae `dark:`). Hasta entonces, la
-pastilla de arriba, que es la de `src/app/panel/eventos/page.tsx`, línea 110.
-Su `text-[12px]` es la única medida suelta que se acepta, y solo dentro de la
-insignia.
+Desde el 17-nov es `<Insignia tono="aviso">Sin cubrir</Insignia>`
+(`src/components/ui/insignia.tsx`), que sustituye al `badge.tsx` de shadcn (no
+lo usa nadie y trae `dark:`). `punto` para estados que cambian (un turno);
+`vivo` añade el latido, y solo para lo que está en directo. Su `text-[12px]` es
+la única medida suelta que se acepta, y solo dentro de la insignia.
 
 ## Pestañas, segmentado y opción elegida
 
-- **Pestañas de sección** (las del ministerio): `PestanasMinisterio`. Activa
-  `border-primary bg-accent text-accent-foreground`; las demás, borde gris.
+- **Pestañas de sección** (las del ministerio): `Pestanas`
+  (`src/components/ui/pestanas.tsx`), texto sin borde con un subrayado
+  `bg-primary` que viaja a la elegida. Eran botones con borde y parecían
+  acciones (base común, 17-nov): es la excepción a la regla de abajo.
 - **Segmentado** (Día / Semana / Mes): pista `rounded-xl border bg-surface
   p-1`, opción activa `bg-accent text-accent-foreground`. Referencia:
   `src/app/mi/agenda/page.tsx`, línea 336. No en negro (`bg-foreground`) como

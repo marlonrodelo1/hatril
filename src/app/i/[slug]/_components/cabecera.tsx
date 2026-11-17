@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export type Seccion = { href: string; texto: string };
 
@@ -212,30 +213,26 @@ export function CabeceraIglesia({
               </Button>
             ) : (
               tieneContacto && (
-                <Button
+                <BotonEnlace nativo href="#contacto"
                   variant="secondary"
                   size="sm"
-                  className="hidden h-10 px-4 sm:inline-flex"
-                  render={<a href="#contacto" />}
-                >
+                  className="hidden h-10 px-4 sm:inline-flex">
                   <MapPin strokeWidth={1.8} />
                   Cómo llegar
-                </Button>
+                </BotonEnlace>
               )
             )}
 
             {/* En escritorio no hay menú donde meterla, así que la cuenta va
                 aquí como icono. Solo el icono: a 1024px el menú ya se come 589
                 de los 929 de la píldora y con texto no cabría. */}
-            <Button
+            <BotonEnlace href="/mi"
               variant="ghost"
               size="icon"
               aria-label="Mi cuenta"
-              className="hidden size-10 rounded-full xl:inline-flex"
-              render={<Link href="/mi" />}
-            >
+              className="hidden size-10 rounded-full xl:inline-flex">
               <UserRound strokeWidth={1.8} className="size-[19px]" />
-            </Button>
+            </BotonEnlace>
 
             {secciones.length > 0 && (
               <Button
@@ -305,15 +302,13 @@ export function CabeceraIglesia({
             )}
 
             {tieneContacto && (
-              <Button
+              <BotonEnlace nativo href="#contacto" onClick={() => setAbierto(false)}
                 size="lg"
                 variant={donativos ? 'outline' : 'secondary'}
-                className="w-full rounded-2xl"
-                render={<a href="#contacto" onClick={() => setAbierto(false)} />}
-              >
+                className="w-full rounded-2xl">
                 <MapPin strokeWidth={1.8} />
                 Cómo llegar
-              </Button>
+              </BotonEnlace>
             )}
 
             {/*

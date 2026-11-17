@@ -16,6 +16,7 @@ import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
 import { CabeceraMiembro } from './_components/cabecera-miembro';
 import { cancelarSolicitud } from '../solicitar/actions';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Mi cuenta' };
 
@@ -197,14 +198,12 @@ export default async function MiPage({
             </div>
 
             <div className="flex flex-wrap gap-2.5">
-              <Button
-                render={<Link href={`/solicitar/${solicitud.iglesiaSlug}`} />}
-              >
+              <BotonEnlace href={`/solicitar/${solicitud.iglesiaSlug}`}>
                 Volver a solicitarlo
-              </Button>
-              <Button variant="outline" render={<Link href="/iglesias" />}>
+              </BotonEnlace>
+              <BotonEnlace href="/iglesias" variant="outline">
                 Buscar otra iglesia
-              </Button>
+              </BotonEnlace>
             </div>
           </div>
         )}
@@ -223,9 +222,9 @@ export default async function MiPage({
               </p>
             </div>
 
-            <Button render={<Link href="/iglesias" />}>
+            <BotonEnlace href="/iglesias">
               Buscar mi iglesia
-            </Button>
+            </BotonEnlace>
           </div>
         )}
 

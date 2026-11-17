@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { eq } from 'drizzle-orm';
 import { KeyRound, Mail } from 'lucide-react';
@@ -16,6 +15,7 @@ import { Aviso } from '@/components/aviso';
 import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
 import { guardarMisDatos } from './actions';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Tu cuenta' };
 
@@ -193,14 +193,12 @@ export default async function CuentaPage({
                 dirección nueva y todavía no lo hacemos desde aquí.
               </p>
 
-              <Button
+              <BotonEnlace href="/panel/cuenta/contrasena"
                 variant="outline"
-                className="self-start"
-                render={<Link href="/panel/cuenta/contrasena" />}
-              >
+                className="self-start">
                 <KeyRound strokeWidth={1.8} />
                 Cambiar la contraseña
-              </Button>
+              </BotonEnlace>
             </section>
 
             {ctx.miembroId && (

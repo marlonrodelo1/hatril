@@ -234,7 +234,7 @@ function Capa({
         href={cerrar}
         scroll={false}
         aria-label="Cerrar"
-        className="fixed inset-0 z-40 bg-black/30"
+        className="fixed inset-0 z-40 bg-velo"
       />
       <aside
         role="dialog"

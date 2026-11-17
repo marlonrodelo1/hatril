@@ -12,6 +12,7 @@ import { MarcaIglesia } from '@/app/panel/_components/marca-iglesia';
 import { Campana } from '@/components/campana';
 import { Logo } from '@/components/marca/logo';
 import { MenuCuenta } from '@/components/menu-cuenta';
+import { VigiaTitulo } from './vigia-titulo';
 
 /**
  * La cabecera de cualquier pantalla del área del miembro.
@@ -119,8 +120,31 @@ export async function CabeceraMiembro({
    * aspecto de siempre, el del panel: ya no hay fondo de color que les obligue
    * a vestirse de blanco.
    */
+  /*
+   * EL TÍTULO GRANDE QUE SE RECOGE (base común, 17-nov)
+   *
+   * En las pantallas de primer nivel (las de la barra de abajo: sin flecha de
+   * volver y sin el logotipo de Hatril), el título va grande debajo de la
+   * cabecera, como `<h1>`, y al bajar se recoge en la barra de arriba. Es el
+   * patrón de iOS y Android, y le da a cada pantalla de `/mi` el título de
+   * página que no tenía (inventario, D12).
+   *
+   * Quien decide cuándo se ha recogido es `VigiaTitulo`, en el cliente, con un
+   * IntersectionObserver: pone `data-recogida` en la cabecera. Sin JavaScript
+   * el título grande se ve igual y el chico se queda escondido, que no pierde
+   * nada. En las pantallas de detalle (con flecha) el título va arriba como
+   * siempre, y ahí es él el `<h1>`.
+   */
+  const grande = !volver && !marca;
+  const TituloChico = grande ? 'span' : 'h1';
+
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-background supports-backdrop-filter:bg-background/85 supports-backdrop-filter:backdrop-blur-xl">
+    <>
+    <header
+      data-cabecera-miembro=""
+      data-recogida={grande ? 'no' : undefined}
+      className="group/cabecera sticky top-0 z-20 border-b border-border bg-background supports-backdrop-filter:bg-background/85 supports-backdrop-filter:backdrop-blur-xl"
+    >
       <div className="mx-auto flex max-w-[620px] items-center gap-3 px-4 py-3 sm:px-5">
         {volver && (
           <Link
@@ -139,10 +163,18 @@ export async function CabeceraMiembro({
         {marca ? (
           <Logo variante="logotipo" tamano={22} />
         ) : (
-          <span className="flex min-w-0 flex-col">
-            <span className="truncate text-[15.5px] font-extrabold leading-tight tracking-[-0.02em]">
+          <span
+            className={
+              'flex min-w-0 flex-col ' +
+              (grande
+                ? 'transition-[opacity,translate] duration-240 ease-hatril group-data-[recogida=no]/cabecera:translate-y-1 group-data-[recogida=no]/cabecera:opacity-0 motion-reduce:transition-none'
+                : '')
+            }
+            aria-hidden={grande || undefined}
+          >
+            <TituloChico className="truncate text-[15.5px] font-extrabold leading-tight tracking-[-0.02em]">
               {titulo}
-            </span>
+            </TituloChico>
             {subtitulo && (
               <span className="truncate text-[12.5px] leading-tight text-muted-foreground">
                 {subtitulo}
@@ -175,5 +207,16 @@ export async function CabeceraMiembro({
         />
       </div>
     </header>
+
+    {grande && (
+      <div className="mx-auto w-full max-w-[620px] px-4 pt-5 sm:px-5">
+        <h1 className="t-titulo text-balance">{titulo}</h1>
+        {subtitulo && (
+          <p className="mt-1 text-label text-muted-foreground">{subtitulo}</p>
+        )}
+        <VigiaTitulo />
+      </div>
+    )}
+    </>
   );
 }

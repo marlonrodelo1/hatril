@@ -84,7 +84,7 @@ export function MenuMovil({
       <Dialog.Portal>
         {/* Negro y no `foreground`: en el oscuro, un velo del color del texto
             salía blanquecino. Un velo no debe depender del tema. */}
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/25 data-closed:animate-out data-closed:fade-out-0 data-open:animate-in data-open:fade-in-0" />
+        <Dialog.Backdrop className="fixed inset-0 z-40 bg-velo data-closed:animate-out data-closed:fade-out-0 data-open:animate-in data-open:fade-in-0" />
 
         <Dialog.Popup className="fixed inset-y-0 left-0 z-50 flex h-dvh w-[280px] max-w-[85vw] flex-col border-r border-border bg-surface outline-none data-closed:animate-out data-closed:slide-out-to-left data-open:animate-in data-open:slide-in-from-left">
           <div className="flex flex-none items-center gap-[11px] border-b border-border px-4 py-4">

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { CalendarDays, Check, MapPin } from 'lucide-react';
@@ -6,7 +5,7 @@ import { CalendarDays, Check, MapPin } from 'lucide-react';
 import { eventoPublico } from '@/lib/eventos/publica';
 import { obtenerIglesiaPublica } from '@/lib/iglesias/publica';
 import { formatearInstante } from '@/lib/fecha/zona';
-import { Button } from '@/components/ui/button';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = {
   title: 'Te has apuntado',
@@ -87,12 +86,12 @@ export default async function InscripcionListaPage({
         </p>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" render={<Link href={`/i/${slug}/eventos/${id}`} />}>
+          <BotonEnlace href={`/i/${slug}/eventos/${id}`} variant="outline">
             Volver al evento
-          </Button>
-          <Button variant="ghost" render={<Link href={`/i/${slug}`} />}>
+          </BotonEnlace>
+          <BotonEnlace href={`/i/${slug}`} variant="ghost">
             Ver la iglesia
-          </Button>
+          </BotonEnlace>
         </div>
       </div>
     </div>

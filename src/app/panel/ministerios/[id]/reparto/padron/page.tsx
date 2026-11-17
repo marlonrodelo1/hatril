@@ -16,6 +16,7 @@ import { CONFIRMACIONES } from '../constantes';
 import { borrarSinVenir } from '../actions';
 
 import { requireReparto } from '../guarda';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Padrón del reparto' };
 
@@ -144,12 +145,10 @@ export default async function PadronPage({
                   Se llena en la puerta: el día del reparto, cada hogar que viene
                   por primera vez se apunta en un momento y recibe su número.
                 </p>
-                <Button
-                  variant="outline"
-                  render={<Link href={`/panel/ministerios/${id}/reparto`} />}
-                >
+                <BotonEnlace href={`/panel/ministerios/${id}/reparto`}
+                  variant="outline">
                   Ir a la puerta de hoy
-                </Button>
+                </BotonEnlace>
               </>
             )}
           </div>

@@ -30,6 +30,7 @@ import { salir } from '../../(auth)/actions';
 import { CabeceraMiembro } from '../_components/cabecera-miembro';
 import { FotoPerfil } from './_components/foto-perfil';
 import { cambiarPermisoAsistencia } from './actions';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Mi cuenta' };
 
@@ -213,13 +214,11 @@ export default async function MiCuentaPage({
           <h2 className="t-subtitulo">Tu iglesia</h2>
           <div className="flex flex-wrap gap-2.5">
             {ctx.iglesia.webPublica && (
-              <Button
-                variant="outline"
-                render={<Link href={`/i/${ctx.iglesia.slug}`} />}
-              >
+              <BotonEnlace href={`/i/${ctx.iglesia.slug}`}
+                variant="outline">
                 <ExternalLink strokeWidth={1.8} />
                 La web de {ctx.iglesia.nombre}
-              </Button>
+              </BotonEnlace>
             )}
             <form action={salir}>
               <Button type="submit" variant="ghost">

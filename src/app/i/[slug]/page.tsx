@@ -11,7 +11,6 @@ import { EventosIglesia } from './_components/eventos';
 import type { Moneda } from '@/lib/db/schema';
 import { iniciales } from '@/lib/format/iniciales';
 import { formatearTelefono } from '@/lib/telefono/normalizar';
-import { Button } from '@/components/ui/button';
 import { CarruselIglesia } from './_components/carrusel';
 import { CabeceraIglesia } from './_components/cabecera';
 import { GruposApilados } from './_components/grupos-apilados';
@@ -25,6 +24,7 @@ import { pulsoDelMuro } from '@/lib/comunidad/consultas';
 import { formatearFechaLarga } from '@/lib/fecha/hoy';
 import { radioPublica } from '@/lib/emisora/consultas';
 import { RadioIglesia } from './_components/radio';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 /**
  * La web pública de una iglesia.
@@ -216,23 +216,21 @@ export default async function WebIglesiaPage({
                   se pulsan con el pulgar sin apuntar. */}
               <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 {tieneContacto && (
-                  <Button size="lg" render={<a href="#contacto" />}>
+                  <BotonEnlace nativo href="#contacto" size="lg">
                     <MapPin strokeWidth={1.8} />
                     Cómo llegar
-                  </Button>
+                  </BotonEnlace>
                 )}
                 {iglesia.horarios.length > 0 && (
                   // Sobre la foto, el secundario va en cristal en vez de blanco
                   // opaco: así se ve la imagen a través y los dos botones no
                   // parecen dos parches pegados encima.
-                  <Button
+                  <BotonEnlace nativo href="#horarios"
                     size="lg"
                     variant="outline"
-                    className="border-white/30 bg-white/10 text-white backdrop-blur-md hover:bg-white/20 active:bg-white/25"
-                    render={<a href="#horarios" />}
-                  >
+                    className="border-white/30 bg-white/10 text-white backdrop-blur-md hover:bg-white/20 active:bg-white/25">
                     Ver los horarios
-                  </Button>
+                  </BotonEnlace>
                 )}
               </div>
             </div>
@@ -266,19 +264,17 @@ export default async function WebIglesiaPage({
                 mientras no haya sitio para los dos en una línea. */}
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               {tieneContacto && (
-                <Button size="lg" render={<a href="#contacto" />}>
+                <BotonEnlace nativo href="#contacto" size="lg">
                   <MapPin strokeWidth={1.8} />
                   Cómo llegar
-                </Button>
+                </BotonEnlace>
               )}
               {iglesia.horarios.length > 0 && (
-                <Button
+                <BotonEnlace nativo href="#horarios"
                   size="lg"
-                  variant="outline"
-                  render={<a href="#horarios" />}
-                >
+                  variant="outline">
                   Ver los horarios
-                </Button>
+                </BotonEnlace>
               )}
             </div>
           </div>
@@ -324,15 +320,13 @@ export default async function WebIglesiaPage({
               </div>
 
               {tieneContacto && (
-                <Button
+                <BotonEnlace nativo href="#contacto"
                   variant="outline"
                   size="lg"
-                  className="flex-none"
-                  render={<a href="#contacto" />}
-                >
+                  className="flex-none">
                   <MapPin strokeWidth={1.8} />
                   Cómo llegar
-                </Button>
+                </BotonEnlace>
               )}
             </div>
           )}
@@ -565,24 +559,18 @@ export default async function WebIglesiaPage({
                  * `noopener`, la página de destino puede manipular la nuestra.
                  */}
                 {devocional.videoUrl && (
-                  <Button
+                  <BotonEnlace nativo href={devocional.videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
                     variant="outline"
                     className={
                       devocional.imagenUrl
                         ? 'border-white/30 bg-white/10 text-white backdrop-blur-md hover:bg-white/20 active:bg-white/25'
                         : ''
-                    }
-                    render={
-                      <a
-                        href={devocional.videoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      />
-                    }
-                  >
+                    }>
                     <Play strokeWidth={1.8} />
                     Verlo en vídeo
-                  </Button>
+                  </BotonEnlace>
                 )}
 
                 {devocional.autorNombre && (
@@ -713,14 +701,12 @@ export default async function WebIglesiaPage({
                 de quien todavía no es de la iglesia, que es casi todo el que
                 llega a esta página. */}
             {iglesia.aceptaSolicitudes && (
-              <Button
+              <BotonEnlace href={`/solicitar/${iglesia.slug}`}
                 size="lg"
                 variant="outline"
-                className="mt-2 w-full sm:w-fit"
-                render={<Link href={`/solicitar/${iglesia.slug}`} />}
-              >
+                className="mt-2 w-full sm:w-fit">
                 Quiero ser parte
-              </Button>
+              </BotonEnlace>
             )}
           </div>
 
@@ -797,13 +783,11 @@ export default async function WebIglesiaPage({
                  * baja a 61 y entra con margen. Por eso estos valores son los que
                  * son y no los de por defecto del sistema.
                  */}
-                <Button
-                  className="h-auto w-full flex-col gap-0.5 whitespace-normal px-2 py-1.5 text-center text-[12px] leading-tight sm:text-[13px]"
-                  render={<Link href="/mi/comunidad" />}
-                >
+                <BotonEnlace href="/mi/comunidad"
+                  className="h-auto w-full flex-col gap-0.5 whitespace-normal px-2 py-1.5 text-center text-[12px] leading-tight sm:text-[13px]">
                   <UsersRound strokeWidth={1.8} className="size-[16px]" />
                   Ver la comunidad
-                </Button>
+                </BotonEnlace>
               </div>
             </div>
           </div>

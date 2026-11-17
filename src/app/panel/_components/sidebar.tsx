@@ -2,11 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useMemo, useSyncExternalStore } from 'react';
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { ChevronRight, ExternalLink, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 import { construirMenu, hrefActivo } from '@/lib/panel/secciones';
 import { MarcaIglesia } from './marca-iglesia';
+import { Buscador } from './buscador';
 import type { FlagsDelMenu } from '@/lib/panel/menu';
 
 /**
@@ -135,6 +142,60 @@ export function PanelSidebar({
   // Una sola entrada marcada, la más concreta: el porqué en `hrefActivo`.
   const activo = hrefActivo(bloques, pathname);
 
+  /*
+   * EL MARCADOR QUE SE DESLIZA (base común, 17-nov)
+   *
+   * El fondo naranja suave de la sección elegida ya no va en el enlace: es una
+   * pieza aparte que se mueve a la nueva al cambiar de página. El menú vive en
+   * el layout y no se vuelve a montar al navegar, así que basta con medir el
+   * enlace marcado (`aria-current`) y llevar el fondo hasta él.
+   *
+   * Se sigue midiendo un cuarto de segundo después de cada cambio: al plegar o
+   * desplegar un bloque, los de debajo se mueven con su transición de altura,
+   * y el marcador tiene que acompañarlos en vez de quedarse donde estaban.
+   *
+   * Mientras no se ha medido (el primer pintado), el enlace lleva el fondo
+   * él mismo, como antes, para que nunca falte la marca de dónde estás.
+   */
+  const navRef = useRef<HTMLElement>(null);
+  const [marca, setMarca] = useState<{
+    x: number;
+    y: number;
+    ancho: number;
+    alto: number;
+  } | null>(null);
+
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    let marco = 0;
+    const medir = () => {
+      const act = nav.querySelector<HTMLElement>('a[aria-current="page"]');
+      setMarca(
+        act && act.offsetHeight > 0
+          ? {
+              x: act.offsetLeft,
+              y: act.offsetTop,
+              ancho: act.offsetWidth,
+              alto: act.offsetHeight,
+            }
+          : null,
+      );
+    };
+    const desde = performance.now();
+    const seguir = () => {
+      medir();
+      if (performance.now() - desde < 260) marco = requestAnimationFrame(seguir);
+    };
+    seguir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(nav);
+    return () => {
+      cancelAnimationFrame(marco);
+      observador.disconnect();
+    };
+  }, [activo, encogida, plegados]);
+
   return (
     <aside
       className={
@@ -187,13 +248,35 @@ export function PanelSidebar({
         </button>
       </div>
 
+      {/* ---------- El buscador (Ctrl K) ---------- */}
+      <div className={'border-b border-border py-2 ' + (encogida ? 'px-2' : 'px-3')}>
+        <Buscador
+          bloques={bloques}
+          flags={flags}
+          webIglesia={webIglesia}
+          encogida={encogida}
+        />
+      </div>
+
       {/* ---------- El menú ---------- */}
       <nav
+        ref={navRef}
         className={
-          'flex flex-1 flex-col gap-4 overflow-y-auto py-3 ' +
+          'relative flex flex-1 flex-col gap-4 overflow-y-auto py-3 ' +
           (encogida ? 'px-2' : 'px-3')
         }
       >
+        {marca && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-0 left-0 rounded-md bg-accent transition-[transform,width,height] duration-240 ease-hatril motion-reduce:transition-none"
+            style={{
+              width: marca.ancho,
+              height: marca.alto,
+              transform: `translate(${marca.x}px, ${marca.y}px)`,
+            }}
+          />
+        )}
         {bloques.map((bloque, i) => {
           // Un bloque plegado que contiene la página abierta se abre igual: si
           // no, la única marca de dónde estás desaparece del menú.
@@ -266,7 +349,9 @@ export function PanelSidebar({
                           // crema el fondo de la página casi no se separa del
                           // blanco del menú (1.05:1) y el hover no se veía.
                           (activa
-                            ? 'bg-accent font-semibold text-accent-foreground'
+                            ? marca
+                              ? 'font-semibold text-accent-foreground'
+                              : 'bg-accent font-semibold text-accent-foreground'
                             : 'font-medium text-muted-foreground hover:bg-surface-alt hover:text-foreground')
                         }
                       >

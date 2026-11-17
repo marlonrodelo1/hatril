@@ -49,6 +49,8 @@ export type FlagsDelMenu = {
    */
   ministeriosQueLlevo: { id: string; nombre: string; colorHex: string }[];
   puedeActivarModulos: boolean;
+  /** Para ofrecer «Añadir miembro» en el buscador (Ctrl K) solo a quien puede. */
+  puedeEditarMiembros: boolean;
 };
 
 export const flagsDelMenu = cache(
@@ -94,6 +96,8 @@ export const flagsDelMenu = cache(
       // ministerios, no quien lleva uno: el líder configura lo de dentro del
       // suyo. Es el mismo par que nombra responsable en la ficha del ministerio.
       puedeActivarModulos: esPastor(ctx) || puede(ctx, 'gestionar_ministerios'),
+      // La misma regla que el botón «Añadir miembro» de Miembros.
+      puedeEditarMiembros: esPastor(ctx) || puede(ctx, 'editar_miembros'),
     };
   },
 );

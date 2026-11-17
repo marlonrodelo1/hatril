@@ -33,6 +33,7 @@ import {
   registrarContacto,
 } from '../actions';
 import { CONFIRMACIONES } from '../constantes';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Seguimiento de una persona' };
 
@@ -93,10 +94,10 @@ export default async function PersonaEnSeguimientoPage({
         }
       >
         {persona.telefono && (
-          <Button variant="outline" render={<a href={`tel:${persona.telefono}`} />}>
+          <BotonEnlace nativo href={`tel:${persona.telefono}`} variant="outline">
             <Phone strokeWidth={1.8} />
             {persona.telefono}
-          </Button>
+          </BotonEnlace>
         )}
         {/*
          * WhatsApp abre la conversación con ese número, nada más: no se manda
@@ -104,13 +105,11 @@ export default async function PersonaEnSeguimientoPage({
          * quien acompaña, desde su teléfono, y el contacto lo apunta aquí.
          */}
         {whatsapp && (
-          <Button
-            variant="outline"
-            render={<a href={whatsapp} target="_blank" rel="noopener noreferrer" />}
-          >
+          <BotonEnlace nativo href={whatsapp} target="_blank" rel="noopener noreferrer"
+            variant="outline">
             <MessageCircle strokeWidth={1.8} />
             WhatsApp
-          </Button>
+          </BotonEnlace>
         )}
       </CabeceraPanel>
 

@@ -6,7 +6,6 @@ import { requireModuloMinisterio } from '@/lib/auth/guard-panel';
 import { listarReuniones } from '@/lib/asistencia/consultas';
 import { formatearFechaLarga } from '@/lib/fecha/hoy';
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
 import { CabeceraPanel } from '../../../_components/cabecera';
 import { Contenedor } from '../../../_components/contenedor';
 import { PestanasMinisterio } from '../_components/pestanas';
@@ -16,6 +15,7 @@ import {
   confirmacionYaEstaba,
   SEMANAS_MAXIMAS,
 } from './constantes';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Agenda del ministerio' };
 
@@ -56,10 +56,10 @@ export default async function AgendaPage({
         subtitulo="Ensayos, reuniones y actividades del equipo"
         volver={{ href: '/panel/ministerios', texto: 'Ministerios' }}
       >
-        <Button render={<Link href={`/panel/ministerios/${id}/agenda/nueva`} />}>
+        <BotonEnlace href={`/panel/ministerios/${id}/agenda/nueva`}>
           <CalendarPlus strokeWidth={1.8} />
           Apuntar
-        </Button>
+        </BotonEnlace>
       </CabeceraPanel>
 
       <Contenedor>

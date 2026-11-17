@@ -23,7 +23,7 @@ import {
   type TipoMinisterio,
 } from '@/lib/ministerios/tipos';
 import { Aviso } from '@/components/aviso';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import {
   activarModulo,
   anadirOtroModulo,
@@ -32,6 +32,7 @@ import {
 import { BotonEnviar } from './_components/boton-enviar';
 import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Módulos' };
 
@@ -109,14 +110,12 @@ export default async function ModulosPage({
 
                 <div className="mt-auto flex flex-col gap-3 border-t border-border pt-4">
                   <ListaActivos activos={porTipo.get(otro.id)?.delTipo ?? []} />
-                  <Button
+                  <BotonEnlace href="/panel/ministerios/nuevo"
                     variant="outline"
-                    className="w-full sm:w-fit"
-                    render={<Link href="/panel/ministerios/nuevo" />}
-                  >
+                    className="w-full sm:w-fit">
                     <Plus strokeWidth={1.9} />
                     Crear uno a tu medida
-                  </Button>
+                  </BotonEnlace>
                 </div>
               </article>
             </li>

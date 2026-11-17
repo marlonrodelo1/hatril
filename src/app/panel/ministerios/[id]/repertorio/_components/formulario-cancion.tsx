@@ -1,10 +1,10 @@
-import Link from 'next/link';
 
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Cancion } from '@/lib/repertorio/consultas';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 /**
  * Alta y edición de una canción.
@@ -132,9 +132,9 @@ export function FormularioCancion({
         <Button type="submit">
           {cancion ? 'Guardar los cambios' : 'Añadir al repertorio'}
         </Button>
-        <Button variant="ghost" render={<Link href={cancelarHref} />}>
+        <BotonEnlace href={cancelarHref} variant="ghost">
           Cancelar
-        </Button>
+        </BotonEnlace>
       </div>
     </form>
   );

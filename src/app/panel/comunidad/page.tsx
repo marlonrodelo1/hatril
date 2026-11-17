@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import {
   ArrowRight,
@@ -18,6 +17,7 @@ import { Aviso } from '@/components/aviso';
 import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
 import { guardarComunidad } from './actions';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Comunidad' };
 
@@ -67,10 +67,10 @@ export default async function ComunidadPanelPage({
         titulo="Comunidad"
         subtitulo="El muro interno de la congregación y sus reglas"
       >
-        <Button variant="outline" render={<Link href="/mi/comunidad" />}>
+        <BotonEnlace href="/mi/comunidad" variant="outline">
           Ver el muro
           <ArrowRight strokeWidth={1.9} />
-        </Button>
+        </BotonEnlace>
       </CabeceraPanel>
 
       <Contenedor>
@@ -225,14 +225,12 @@ export default async function ComunidadPanelPage({
               </p>
 
               {esPastor(ctx) && (
-                <Button
+                <BotonEnlace href="/panel/lideres"
                   variant="outline"
                   size="sm"
-                  className="self-start"
-                  render={<Link href="/panel/lideres" />}
-                >
+                  className="self-start">
                   Repartir el permiso
-                </Button>
+                </BotonEnlace>
               )}
 
               {!esPastor(ctx) && puedeModerar && (

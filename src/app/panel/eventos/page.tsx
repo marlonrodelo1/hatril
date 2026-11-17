@@ -9,10 +9,10 @@ import { formatearDinero } from '@/lib/format/dinero';
 import type { Moneda } from '@/lib/db/schema';
 import { ahoraMs } from '@/lib/fecha/ahora';
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
 import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
 import { CONFIRMACIONES } from './constantes';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Eventos' };
 
@@ -45,10 +45,10 @@ export default async function EventosPage({
         titulo="Eventos"
         subtitulo="Retiros, congresos y todo lo que tenga fecha y hora"
       >
-        <Button render={<Link href="/panel/eventos/nuevo" />}>
+        <BotonEnlace href="/panel/eventos/nuevo">
           <CalendarPlus strokeWidth={1.8} />
           Crear evento
-        </Button>
+        </BotonEnlace>
       </CabeceraPanel>
 
       {/* `gap-8` y no el gap-6 de serie: aquí lo que se separa son los dos

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { Plus } from 'lucide-react';
+import { Plus, Wallet } from 'lucide-react';
 
 import { requireFinanzas } from '@/lib/auth/guard-panel';
 import { libro, opciones } from '@/lib/finanzas/consultas';
@@ -9,6 +9,8 @@ import { formatearDineroConSigno } from '@/lib/format/dinero';
 import type { Moneda } from '@/lib/db/schema';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
+import { EstadoVacio } from '@/components/ui/estado-vacio';
 import { CabeceraPanel } from '../../_components/cabecera';
 import { Contenedor } from '../../_components/contenedor';
 import { Paginacion } from '../../_components/paginacion';
@@ -71,13 +73,10 @@ export default async function MovimientosPage({
             : `${total} ${total === 1 ? 'movimiento' : 'movimientos'}`
         }
       >
-        <Button
-          render={<Link href="/panel/finanzas/movimientos/nuevo" />}
-          className="flex-none"
-        >
+        <BotonEnlace href="/panel/finanzas/movimientos/nuevo" className="flex-none">
           <Plus strokeWidth={1.9} />
           Apuntar
-        </Button>
+        </BotonEnlace>
       </CabeceraPanel>
 
       <Contenedor>
@@ -136,10 +135,28 @@ export default async function MovimientosPage({
 
         {paginacion(false)}
 
+        {/* Qué es, qué hacer y el botón (inventario, A6). De contorno: el
+            mismo «Apuntar» ya está en naranja en la cabecera. */}
         {filas.length === 0 ? (
-          <p className="rounded-xl border border-border bg-surface px-4 py-8 text-center text-[14px] text-muted-foreground">
-            No hay movimientos en este periodo.
-          </p>
+          <div className="rounded-xl border border-border bg-surface">
+            <EstadoVacio
+              Icono={Wallet}
+              titulo="No hay movimientos en estas fechas"
+              accion={
+                <BotonEnlace
+                  href="/panel/finanzas/movimientos/nuevo"
+                  variant="outline"
+                >
+                  <Plus strokeWidth={1.9} />
+                  Apuntar un movimiento
+                </BotonEnlace>
+              }
+            >
+              Apunta las entradas y salidas de la iglesia y aparecerán aquí, con
+              su fondo y su fecha. Cambia las fechas de arriba para ver otro
+              periodo.
+            </EstadoVacio>
+          </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-border bg-surface">
             <table className="w-full min-w-[640px] border-collapse">

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { eq } from 'drizzle-orm';
 import { ExternalLink, MessageCircle, Settings } from 'lucide-react';
@@ -27,6 +26,7 @@ import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
 import { Copiar } from './_components/copiar';
 import { guardarRedes } from './actions';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Compartir' };
 
@@ -112,35 +112,23 @@ export default async function CompartirPage({
                     destacado
                   />
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      render={
-                        <a
-                          href={enlaceWhatsapp(
+                    <BotonEnlace nativo href={enlaceWhatsapp(
                             `Esta es la página de ${iglesia.nombre}:`,
                             urlWeb,
                           )}
                           target="_blank"
                           rel="noopener noreferrer"
-                        />
-                      }
-                    >
+                      variant="outline">
                       <MessageCircle strokeWidth={1.8} />
                       Enviar por WhatsApp
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      render={
-                        <a
-                          href={urlWeb}
+                    </BotonEnlace>
+                    <BotonEnlace nativo href={urlWeb}
                           target="_blank"
                           rel="noopener noreferrer"
-                        />
-                      }
-                    >
+                      variant="ghost">
                       <ExternalLink strokeWidth={1.8} />
                       Verla
-                    </Button>
+                    </BotonEnlace>
                   </div>
                   {iglesia.dominioPropio && (
                     <p className="t-label text-muted-foreground">
@@ -157,14 +145,12 @@ export default async function CompartirPage({
               )}
 
               {!iglesia.webPublica && (
-                <Button
+                <BotonEnlace href="/panel/ajustes"
                   variant="outline"
-                  className="w-fit"
-                  render={<Link href="/panel/ajustes" />}
-                >
+                  className="w-fit">
                   <Settings strokeWidth={1.8} />
                   Ir a Ajustes
-                </Button>
+                </BotonEnlace>
               )}
             </Seccion>
 
@@ -179,23 +165,17 @@ export default async function CompartirPage({
                     url={urlUnirse}
                     etiqueta="Enlace para pedir unirse a la iglesia"
                   />
-                  <Button
-                    variant="outline"
-                    className="w-fit"
-                    render={
-                      <a
-                        href={enlaceWhatsapp(
+                  <BotonEnlace nativo href={enlaceWhatsapp(
                           `Únete a ${iglesia.nombre} desde aquí:`,
                           urlUnirse,
                         )}
                         target="_blank"
                         rel="noopener noreferrer"
-                      />
-                    }
-                  >
+                    variant="outline"
+                    className="w-fit">
                     <MessageCircle strokeWidth={1.8} />
                     Enviar por WhatsApp
-                  </Button>
+                  </BotonEnlace>
                 </>
               ) : (
                 <Aviso>

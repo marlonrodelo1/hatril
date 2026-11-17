@@ -6,6 +6,7 @@ import { buscarIglesias, totalEnDirectorio } from '@/lib/iglesias/directorio';
 import { iniciales } from '@/lib/format/iniciales';
 import { Logo } from '@/components/marca/logo';
 import { Button } from '@/components/ui/button';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = {
   title: 'Encuentra tu iglesia',
@@ -51,9 +52,9 @@ export default async function DirectorioPage({
             <Logo variante="logotipo" tamano={22} />
           </Link>
           <span className="flex-1" />
-          <Button variant="outline" size="sm" render={<Link href="/acceso" />}>
+          <BotonEnlace href="/acceso" variant="outline" size="sm">
             Entrar
-          </Button>
+          </BotonEnlace>
         </div>
       </header>
 
@@ -130,12 +131,10 @@ export default async function DirectorioPage({
                 </div>
 
                 <div className="flex flex-none flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    render={<Link href={`/i/${i.slug}`} />}
-                  >
+                  <BotonEnlace href={`/i/${i.slug}`}
+                    variant="outline">
                     Ver la iglesia
-                  </Button>
+                  </BotonEnlace>
                   {/* Carbón y no naranja: un solo botón naranja por pantalla, y
                       aquí ese es «Buscar». Al revés no encaja: «Pedir unirme»
                       se repite en cada tarjeta, así que naranja serían tantos
@@ -143,12 +142,10 @@ export default async function DirectorioPage({
                       primero que hace quien llega. El carbón lo deja por
                       encima de «Ver la iglesia», que va en contorno. */}
                   {i.aceptaSolicitudes && (
-                    <Button
-                      variant="secondary"
-                      render={<Link href={`/solicitar/${i.slug}`} />}
-                    >
+                    <BotonEnlace href={`/solicitar/${i.slug}`}
+                      variant="secondary">
                       Pedir unirme
-                    </Button>
+                    </BotonEnlace>
                   )}
                 </div>
               </div>
@@ -181,9 +178,9 @@ function Vacio({ busqueda, total }: { busqueda?: string; total: number }) {
       </div>
 
       {busqueda && (
-        <Button variant="outline" render={<Link href="/iglesias" />}>
+        <BotonEnlace href="/iglesias" variant="outline">
           Ver todas
-        </Button>
+        </BotonEnlace>
       )}
     </div>
   );

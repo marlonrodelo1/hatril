@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { flagsDelMenu } from '@/lib/panel/menu';
@@ -43,12 +43,15 @@ export async function CabeceraPanel({
   titulo,
   subtitulo,
   volver,
+  insignia,
   children,
 }: {
   titulo: string;
   subtitulo?: string;
   /** Migas para las pantallas de detalle y formulario. */
   volver?: { href: string; texto: string };
+  /** Una `<Insignia>` junto al título: «12 personas», «Borrador». */
+  insignia?: React.ReactNode;
   /** Las acciones de ESTA pantalla: «Crear evento», «Añadir miembro»… */
   children?: React.ReactNode;
 }) {
@@ -90,19 +93,37 @@ export async function CabeceraPanel({
       />
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        {/* La miga de pan: de dónde cuelga esta pantalla. Con la flecha hacia
+            atrás en el móvil, donde es sobre todo «volver»; en escritorio, la
+            ruta entera con el sitio actual en gris, que es lo que se lee de un
+            vistazo al cambiar de pestaña. */}
         {volver && (
-          <Link
-            href={volver.href}
-            className="-ml-1 inline-flex w-fit items-center gap-0.5 text-[13px] text-muted-foreground no-underline hover:text-foreground hover:no-underline"
+          <nav
+            aria-label="Estás en"
+            className="flex min-w-0 items-center gap-1 text-label text-muted-foreground"
           >
-            <ChevronLeft className="size-4" strokeWidth={1.9} />
-            {volver.texto}
-          </Link>
+            <Link
+              href={volver.href}
+              className="-ml-1 inline-flex flex-none items-center gap-0.5 rounded-md text-muted-foreground no-underline transition-colors duration-150 hover:text-foreground hover:no-underline md:ml-0"
+            >
+              <ChevronLeft className="size-4 md:hidden" strokeWidth={1.9} />
+              {volver.texto}
+            </Link>
+            <ChevronRight
+              className="hidden size-3.5 flex-none md:block"
+              strokeWidth={1.9}
+              aria-hidden
+            />
+            <span className="hidden truncate md:block">{titulo}</span>
+          </nav>
         )}
 
-        <h1 className="truncate text-[20px] font-bold leading-tight tracking-[-0.025em] md:text-[22px]">
-          {titulo}
-        </h1>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <h1 className="truncate text-[20px] font-bold leading-tight tracking-[-0.025em] md:text-[22px]">
+            {titulo}
+          </h1>
+          {insignia}
+        </div>
 
         {subtitulo && (
           <p className="truncate text-[13px] text-muted-foreground">

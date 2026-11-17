@@ -68,7 +68,7 @@ export function Hoja({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop
           className={cn(
-            'fixed inset-0 z-40 bg-black/25 duration-150',
+            'fixed inset-0 z-40 bg-velo duration-150',
             'supports-backdrop-filter:backdrop-blur-[2px]',
             'data-open:animate-in data-open:fade-in-0',
             'data-closed:animate-out data-closed:fade-out-0',

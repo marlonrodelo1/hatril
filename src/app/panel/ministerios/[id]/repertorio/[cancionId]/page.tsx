@@ -14,6 +14,7 @@ import { Contenedor } from '../../../../_components/contenedor';
 import { FormularioCancion } from '../_components/formulario-cancion';
 import { archivarCancion, borrarCancion, editarCancion } from '../actions';
 import { CONFIRMACIONES } from '../constantes';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Canción' };
 
@@ -76,17 +77,15 @@ export default async function CancionPage({
         {enlaces.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {enlaces.map((e) => (
-              <Button
+              <BotonEnlace nativo href={e.href} target="_blank" rel="noopener noreferrer"
                 key={e.texto}
-                variant="outline"
-                render={<a href={e.href} target="_blank" rel="noopener noreferrer" />}
-              >
+                variant="outline">
                 <ExternalLink strokeWidth={1.8} />
                 {e.texto}
                 <span className="font-normal text-muted-foreground">
                   en {sitioDe(e.href)}
                 </span>
-              </Button>
+              </BotonEnlace>
             ))}
           </div>
         )}

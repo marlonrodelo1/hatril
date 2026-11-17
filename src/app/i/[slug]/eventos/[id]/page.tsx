@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MAX_ACOMPANANTES } from '@/app/panel/eventos/constantes';
 import { inscribirse } from './actions';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 /**
  * La página de un evento, con su formulario para apuntarse.
@@ -146,22 +147,16 @@ export default async function EventoPublicoPage({
 
             {e.enlacePago && e.enlacePagoHost && (
               <div className="flex flex-col gap-1.5">
-                <Button
-                  variant="secondary"
-                  className="w-fit"
-                  render={
-                    <a
-                      href={e.enlacePago}
+                <BotonEnlace nativo href={e.enlacePago}
                       target="_blank"
                       // `nofollow` además de lo de siempre: este enlace lo pone
                       // la iglesia y no tiene por qué transmitir reputación.
                       rel="noopener noreferrer nofollow"
-                    />
-                  }
-                >
+                  variant="secondary"
+                  className="w-fit">
                   <ExternalLink strokeWidth={1.8} />
                   Pagar la inscripción
-                </Button>
+                </BotonEnlace>
                 {/* El host, delante y en texto. Es la única mitad de esta
                     protección que ve quien va a pulsar: el pastor vio la
                     dirección entera al pegarla, aquí solo se ve el botón. Lo
