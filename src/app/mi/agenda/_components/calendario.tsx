@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CalendarCheck, CalendarDays, Church, Users } from 'lucide-react';
+import { clsx } from 'clsx';
 
-import type { Ocurrencia, TipoDeDia } from '@/lib/agenda/calendario';
+import type { Ocurrencia } from '@/lib/agenda/calendario';
 import { Hoja } from '@/components/hoja';
+import { COLOR_DE_TIPO, LEYENDA, ordenarDelDia } from './tipos-del-dia';
 
 /**
  * La rejilla del mes, con los días marcados y su hoja al tocarlos.
@@ -34,35 +35,6 @@ import { Hoja } from '@/components/hoja';
 
 const DIAS_CABECERA = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
-const ICONOS: Record<TipoDeDia, React.ElementType> = {
-  culto: Church,
-  evento: CalendarDays,
-  ministerio: Users,
-  turno: CalendarCheck,
-};
-
-/**
- * El punto de color de cada tipo, para la rejilla.
- *
- * El turno va en el color del texto y no en un color más: es lo único de la
- * rejilla que es de la persona y no de la iglesia, y el casi negro sobre la
- * tarjeta blanca es lo que más destaca sin gastar el naranja, que está
- * reservado a las acciones.
- *
- * Por eso el culto ya no puede ir en `support-active`: con el carbón de Claude
- * ese token ES el casi negro del texto, y culto y turno salían idénticos. Va en
- * el verde de su propio icono. El ministerio va en el azul secundario de
- * Claude, `info`: en ámbar quedaba a 1.2:1 del naranja del evento, dos
- * tostados casi iguales en un punto de 6px. Azul y naranja se separan por tono
- * aunque se parezcan en luminosidad, también con daltonismo.
- */
-const PUNTOS: Record<TipoDeDia, string> = {
-  culto: 'bg-badge-success-fg',
-  evento: 'bg-primary',
-  ministerio: 'bg-info',
-  turno: 'bg-foreground',
-};
-
 export function CalendarioMes({
   dias,
   mes,
@@ -79,68 +51,93 @@ export function CalendarioMes({
 }) {
   const [abierto, setAbierto] = useState<string | null>(null);
 
-  const delDia = abierto ? (ocurrencias[abierto] ?? []) : [];
+  const delDia = abierto ? ordenarDelDia(ocurrencias[abierto] ?? []) : [];
 
   return (
     <>
-      <div className="flex flex-col gap-1 rounded-xl border border-border bg-surface p-2 sm:p-3">
-        <div className="grid grid-cols-7">
-          {DIAS_CABECERA.map((d, i) => (
-            <span
-              key={i}
-              className="py-1 text-center text-[11px] font-semibold uppercase text-muted-foreground"
-            >
-              {d}
-            </span>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-7 gap-0.5">
-          {dias.map((f) => {
-            const cosas = ocurrencias[f] ?? [];
-            const esDeOtroMes = !f.startsWith(mes);
-            const esHoy = f === hoy;
-
-            // Los tipos que hay ese día, sin repetir: tres puntos como mucho.
-            const tipos = [...new Set(cosas.map((c) => c.tipo))];
-
-            return (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setAbierto(f)}
-                aria-label={`${Number(f.slice(8))}, ${cosas.length} ${cosas.length === 1 ? 'actividad' : 'actividades'}`}
-                className={
-                  'flex aspect-square flex-col items-center justify-center gap-1 rounded-lg text-[13.5px] tabular-nums outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/20 ' +
-                  (esHoy
-                    ? 'bg-primary font-bold text-white'
-                    : esDeOtroMes
-                      ? 'text-disabled-text hover:bg-surface-alt'
-                      : cosas.length
-                        ? 'cursor-pointer font-semibold text-foreground hover:bg-surface-alt'
-                        : 'text-muted-foreground hover:bg-surface-alt')
-                }
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1 rounded-xl border border-border bg-surface p-2 sm:p-3">
+          <div className="grid grid-cols-7">
+            {DIAS_CABECERA.map((d, i) => (
+              <span
+                key={i}
+                className="py-1 text-center text-micro font-bold text-muted-foreground"
               >
-                {Number(f.slice(8))}
+                {d}
+              </span>
+            ))}
+          </div>
 
-                {/* Los puntos van SIEMPRE en su fila, con o sin nada ese día:
-                    sin el hueco reservado, los números bailan de línea entre un
-                    día con actividad y uno sin ella. */}
-                <span className="flex h-1.5 items-center gap-0.5">
-                  {tipos.map((t) => (
-                    <span
-                      key={t}
-                      className={
-                        'size-1.5 rounded-full ' +
-                        (esHoy ? 'bg-white/80' : PUNTOS[t])
-                      }
-                    />
-                  ))}
-                </span>
-              </button>
-            );
-          })}
+          <div className="grid grid-cols-7 gap-0.5">
+            {dias.map((f) => {
+              const cosas = ocurrencias[f] ?? [];
+              const esDeOtroMes = !f.startsWith(mes);
+              const esHoy = f === hoy;
+
+              // Los tipos que hay ese día, sin repetir y en el orden de la
+              // leyenda: cuatro puntos como mucho, y siempre en el mismo sitio,
+              // para que el naranja de un turno se encuentre sin buscarlo.
+              const tipos = LEYENDA.map((l) => l.tipo).filter((t) =>
+                cosas.some((c) => c.tipo === t),
+              );
+
+              return (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setAbierto(f)}
+                  aria-label={`${Number(f.slice(8))}, ${cosas.length} ${cosas.length === 1 ? 'actividad' : 'actividades'}`}
+                  className={clsx(
+                    'flex aspect-square flex-col items-center justify-center gap-1 rounded-lg text-label tabular-nums outline-none transition-colors duration-150 focus-visible:ring-3 focus-visible:ring-ring/20 motion-reduce:transition-none',
+                    esHoy
+                      ? 'bg-primary font-bold text-primary-foreground'
+                      : esDeOtroMes
+                        ? 'text-disabled-text hover:bg-surface-alt'
+                        : cosas.length
+                          ? 'cursor-pointer font-semibold text-foreground hover:bg-surface-alt'
+                          : 'text-muted-foreground hover:bg-surface-alt',
+                  )}
+                >
+                  {Number(f.slice(8))}
+
+                  {/* Los puntos van SIEMPRE en su fila, con o sin nada ese día:
+                      sin el hueco reservado, los números bailan de línea entre
+                      un día con actividad y uno sin ella. */}
+                  <span aria-hidden className="flex h-1.5 items-center gap-0.5">
+                    {tipos.map((t) => (
+                      <span
+                        key={t}
+                        className={clsx(
+                          'size-1.5 rounded-full',
+                          // Sobre el naranja de hoy, el punto del turno sería
+                          // naranja sobre naranja: todos van en la letra del
+                          // relleno, que es el mismo blanco del número.
+                          esHoy ? 'bg-primary-foreground' : COLOR_DE_TIPO[t],
+                        )}
+                      />
+                    ))}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* La leyenda, debajo y fuera de la tarjeta, como un pie de figura. */}
+        <ul
+          aria-label="Qué es cada color"
+          className="flex flex-wrap gap-x-3 gap-y-1.5 px-1 text-micro text-muted-foreground"
+        >
+          {LEYENDA.map((l) => (
+            <li key={l.tipo} className="inline-flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className={clsx('size-[7px] rounded-full', COLOR_DE_TIPO[l.tipo])}
+              />
+              {l.texto}
+            </li>
+          ))}
+        </ul>
       </div>
 
       <Hoja
@@ -150,14 +147,20 @@ export function CalendarioMes({
         descripcion="Lo que hay ese día en la iglesia."
       >
         {delDia.length === 0 ? (
-          <p className="py-6 text-center text-[14.5px] text-muted-foreground">
+          <p className="py-6 text-center text-body text-muted-foreground">
             No hay nada ese día.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
             {delDia.map((o, i) => (
-              <li key={i}>
-                <FilaOcurrencia ocurrencia={o} />
+              <li
+                key={i}
+                className="anim-aparece"
+                // Una detrás de otra al subir la hoja: se lee de arriba abajo,
+                // como se lee el día. Con «reducir movimiento», todas a la vez.
+                style={{ '--retraso': `${Math.min(i, 6) * 40}ms` } as React.CSSProperties}
+              >
+                <FilaOcurrencia ocurrencia={o} enHoja />
               </li>
             ))}
           </ul>
@@ -172,53 +175,60 @@ export function CalendarioMes({
  *
  * El culto del domingo no tiene ficha a la que ir: es una línea del cuadro de
  * horarios. Pintarlo como enlace prometería una pantalla que no existe.
+ *
+ * LA MARCA DE COLOR EN VEZ DEL ICONO
+ * ----------------------------------
+ * Llevaba un cuadrado con un icono por tipo, cada uno en un color distinto del
+ * de su punto en la rejilla: el evento era un punto azul y un icono naranja.
+ * Ahora es una raya vertical del MISMO color que el punto y que la leyenda, y
+ * la fila se reconoce de un vistazo sin aprender dos claves.
+ *
+ * `enHoja`: dentro de la hoja la fila baja a radio 8, porque la hoja ya es la
+ * tarjeta y la regla del sistema es no anidar dos radios de 12.
  */
-export function FilaOcurrencia({ ocurrencia: o }: { ocurrencia: Ocurrencia }) {
-  const Icono = ICONOS[o.tipo];
-
+export function FilaOcurrencia({
+  ocurrencia: o,
+  enHoja = false,
+}: {
+  ocurrencia: Ocurrencia;
+  enHoja?: boolean;
+}) {
   const cuerpo = (
     <>
-      {/* El fondo es un token y solo el color del icono va en línea, que es lo
-          único que se decide en tiempo de ejecución. Un blanco translúcido,
-          como el que había, solo se ve sobre una tarjeta oscura. */}
       <span
-        className={
-          'flex size-9 flex-none items-center justify-center rounded-lg' +
-          // `surface-active` y no `surface-alt`: este último es el hover de
-          // la fila entera, y al pasar el ratón el cuadrado del icono
-          // desaparecía.
-          (o.color ? ' bg-surface-active' : '')
-        }
-        style={o.color ? { color: o.color } : undefined}
-      >
-        <Icono
-          className={'size-[18px] ' + (o.color ? '' : colorDeTipo(o.tipo))}
-          strokeWidth={1.8}
-        />
-      </span>
+        aria-hidden
+        className={clsx('w-1 flex-none self-stretch rounded-full', COLOR_DE_TIPO[o.tipo])}
+      />
 
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-[14.5px] font-semibold">{o.titulo}</span>
+        <span className="truncate text-body font-semibold">{o.titulo}</span>
         {o.detalle && (
-          <span className="truncate text-[13px] text-muted-foreground">
+          <span className="truncate text-label text-muted-foreground">
             {o.detalle}
           </span>
         )}
       </span>
 
-      <span className="flex-none text-[13px] font-semibold tabular-nums text-muted-foreground">
+      <span className="flex-none text-label font-bold tabular-nums text-foreground">
         {o.hora ?? 'Todo el día'}
       </span>
     </>
   );
 
-  const clases =
-    'flex items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5';
+  const clases = clsx(
+    'flex items-center gap-3 border border-border bg-surface px-3 py-2.5',
+    enHoja ? 'rounded-lg' : 'rounded-xl',
+  );
 
   return o.enlace ? (
     <Link
       href={o.enlace}
-      className={clases + ' text-foreground no-underline hover:bg-surface-alt hover:no-underline'}
+      className={clsx(
+        clases,
+        // Regla 11: un enlace con forma de fila lleva el color del texto, o
+        // hereda el naranja que `globals.css` le da a todo `<a>`.
+        'text-foreground no-underline transition-colors duration-150 hover:bg-surface-alt hover:text-foreground hover:no-underline motion-reduce:transition-none',
+      )}
     >
       {cuerpo}
     </Link>
@@ -227,21 +237,13 @@ export function FilaOcurrencia({ ocurrencia: o }: { ocurrencia: Ocurrencia }) {
   );
 }
 
-function colorDeTipo(t: TipoDeDia): string {
-  return t === 'culto'
-    ? 'text-badge-success-fg'
-    : t === 'evento'
-      ? 'text-badge-accent-fg'
-      : t === 'turno'
-        ? 'text-foreground'
-        : 'text-badge-warning-fg';
-}
-
+/**
+ * «Jueves 19 de noviembre», ya con mayúscula: el título de la hoja no admite
+ * una clase, así que no vale el `first-letter:uppercase` de las otras fechas.
+ */
 function tituloDelDia(fecha: string): string {
-  return new Date(fecha + 'T12:00:00Z').toLocaleDateString('es-ES', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    timeZone: 'UTC',
-  });
+  const d = new Date(fecha + 'T12:00:00Z');
+  const dia = d.toLocaleDateString('es-ES', { weekday: 'long', timeZone: 'UTC' });
+  const mes = d.toLocaleDateString('es-ES', { month: 'long', timeZone: 'UTC' });
+  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} ${d.getUTCDate()} de ${mes}`;
 }

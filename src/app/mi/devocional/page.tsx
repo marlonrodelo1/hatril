@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { BookOpen, ChevronRight, ExternalLink, Quote } from 'lucide-react';
+import { BookOpen, ExternalLink, Quote } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
@@ -11,12 +10,26 @@ import {
 import { leerVideo } from '@/lib/devocionales/video';
 import { formatearFechaLarga } from '@/lib/fecha/hoy';
 import { AvatarPersona } from '@/components/avatar-persona';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
+import { EstadoVacio } from '@/components/ui/estado-vacio';
+import { Fila, Lista } from '@/components/ui/fila';
 import { createClient } from '@/lib/supabase/server';
 import { CabeceraMiembro } from '../_components/cabecera-miembro';
+import { TamanoLetra, TextoAMedida } from '../_components/tamano-letra';
 import { VideoDelDevocional } from './_components/video';
 import { Compartir } from './_components/compartir';
+import { BarraLectura } from './_components/barra-lectura';
+import { LoHeLeido } from './_components/lo-he-leido';
 
 export const metadata: Metadata = { title: 'Devocional' };
+
+/** El final de la lectura: hasta ahí se llena la barra de arriba. */
+const FIN_DE_LA_LECTURA = 'fin-del-devocional';
+
+/** «martes, 17 de noviembre» → «Martes, 17 de noviembre». */
+function conMayuscula(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
 
 /**
  * El devocional del día, y el archivo de los anteriores.
@@ -36,12 +49,26 @@ export const metadata: Metadata = { title: 'Devocional' };
  *   - **Se firma.** Un devocional lo escribe alguien de la congregación, con su
  *     nombre y su cara. Sin autor parece una circular; con él, es Marta la que
  *     te está hablando.
- *   - **El versículo destaca de verdad**, con su comilla y su barra de color, en
- *     vez de una caja gris más entre otras cajas grises.
+ *   - **El versículo destaca de verdad**, en su tarjeta y un poco más grande
+ *     que el cuerpo, en vez de una caja gris más entre otras cajas grises.
  *   - **Se puede compartir**, que es lo que la gente hace con un devocional que
  *     le ha llegado.
  *   - **Hay archivo.** Los anteriores, al pie, y se abren con `?d=fecha`. Sin
  *     eso, lo que se publicó ayer desaparecía para siempre.
+ *
+ * PARA LEER CON CALMA (zona 2 del rediseño, 17-nov)
+ * -------------------------------------------------
+ * Un texto largo en el móvil, muchas veces leído por gente mayor: lo que más
+ * pesa es la letra.
+ *   - **A− y A+ en la cabecera** (`TamanoLetra`), recordado en el móvil y
+ *     compartido con la Biblia.
+ *   - **Una línea naranja arriba** que se llena mientras se lee
+ *     (`BarraLectura`), para saber cuánto queda.
+ *   - **«Lo he leído» al final**, que solo ve la propia persona
+ *     (`LoHeLeido`, y allí el porqué).
+ *   - **El versículo pierde la raya naranja** de adorno: el naranja es para
+ *     acciones, y una barra de color junto a un texto se lee como «esto se
+ *     pulsa» o como «esto está seleccionado».
  *
  * Y un detalle que se vio abriendo uno viejo: el «· el último publicado» que
  * avisa de que no estás leyendo el de hoy SOLO se pinta cuando la pantalla ha
@@ -79,28 +106,38 @@ export default async function DevocionalPage({
         user={user!}
         titulo="Devocional"
         subtitulo={ctx.iglesia.nombre}
-        logoUrl={ctx.iglesia.logoUrl}
+        // Con flecha, sin logo, como el resto de pantallas de detalle de `/mi`
+        // (`equipo/_components/marco.tsx`). Aquí además hace falta el sitio: con
+        // la flecha, el logo y A−/A+, «Devocional» se quedaba en «Devoc…».
+        logoUrl={fecha ? undefined : ctx.iglesia.logoUrl}
         // La flecha solo cuando se está leyendo uno del archivo: desde el de hoy
         // no hay a dónde volver, y una flecha que no lleva a ningún sitio ya
         // costó una tanda en el muro.
         volver={fecha ? '/mi/devocional' : undefined}
-      />
+      >
+        {/* Sin devocional no hay nada que leer, ni letra que cambiar. */}
+        {d && <TamanoLetra para="devocional" />}
+      </CabeceraMiembro>
+
+      {d && <BarraLectura hasta={FIN_DE_LA_LECTURA} />}
 
       {!d ? (
-        <main className="mx-auto flex w-full max-w-[620px] flex-col gap-5 px-4 py-6 sm:px-5">
-          <div className="flex flex-col items-start gap-3 rounded-xl border border-border bg-surface p-6">
-            <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
-              <BookOpen className="size-5" strokeWidth={1.7} />
-            </span>
-            <h1 className="t-subtitulo">
-              {fecha ? 'Ese devocional no está' : 'Todavía no hay devocional'}
-            </h1>
-            <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
-              {fecha
-                ? 'Puede que se haya despublicado. Vuelve al de hoy desde la flecha de arriba.'
-                : `Cuando alguien de ${ctx.iglesia.nombre} publique el primero, aparecerá aquí cada día.`}
-            </p>
-          </div>
+        <main className="mx-auto flex w-full max-w-[620px] flex-col gap-4 px-4 py-4 sm:px-5 sm:py-6">
+          <EstadoVacio
+            Icono={BookOpen}
+            titulo={fecha ? 'Ese devocional no está' : 'Todavía no hay devocional'}
+            accion={
+              fecha && (
+                <BotonEnlace variant="outline" href="/mi/devocional">
+                  Ir al de hoy
+                </BotonEnlace>
+              )
+            }
+          >
+            {fecha
+              ? 'Puede que se haya despublicado. El de hoy sigue en su sitio.'
+              : `Cuando alguien de ${ctx.iglesia.nombre} publique el primero, aparecerá aquí cada día.`}
+          </EstadoVacio>
         </main>
       ) : (
         <article className="flex flex-col">
@@ -153,7 +190,7 @@ export default async function DevocionalPage({
                   fotoUrl={d.autorFoto}
                   tamano="sm"
                 />
-                <span className="text-[13.5px] text-muted-foreground">
+                <span className="text-label text-muted-foreground">
                   Lo escribe{' '}
                   <strong className="font-semibold text-foreground">
                     {d.autorNombre}
@@ -162,47 +199,49 @@ export default async function DevocionalPage({
               </div>
             )}
 
-            {d.versiculo && (
-              /*
-               * La comilla grande y la barra de color hacen el trabajo que antes
-               * hacía una caja gris: decir «esto no es el cuerpo, esto es la
-               * cita». Sin ellas, con la misma caja que todo lo demás, el ojo
-               * pasaba de largo.
-               */
-              <blockquote className="relative flex flex-col gap-2 rounded-xl border border-border bg-surface p-5 pl-6">
-                {/* En el naranja de marca, igual que la comilla y la cita. Fue
-                    verde mientras el verde era el segundo color de la marca; con
-                    la paleta de Claude ya no hay verde de marca, y uno aquí se
-                    leería como «correcto». El naranja como texto da 5.0:1 sobre
-                    la tarjeta blanca. */}
-                <span className="absolute inset-y-4 left-0 w-1 rounded-full bg-primary" />
-
-                <Quote
-                  className="size-[18px] text-primary"
-                  strokeWidth={2.2}
-                  aria-hidden
-                />
-
-                <p className="text-pretty text-[17px] font-medium leading-[1.55]">
-                  {d.versiculo}
-                </p>
-
-                {d.referencia && (
-                  <cite className="text-[13.5px] font-semibold not-italic text-primary">
-                    {d.referencia}
-                  </cite>
-                )}
-              </blockquote>
-            )}
-
             {/*
-             * `whitespace-pre-line`: el cuerpo se escribe en un textarea y sus
-             * saltos de línea son del autor. Sin esto, un devocional de cinco
-             * párrafos sale como un ladrillo.
+             * Lo que se lee, a la letra que haya elegido cada uno. El autor de
+             * arriba y los botones de abajo se quedan a su tamaño: son interfaz,
+             * no lectura, y si crecieran con el texto descolocarían la pantalla.
              */}
-            <p className="whitespace-pre-line text-pretty text-[16px] leading-[1.7]">
-              {d.cuerpo}
-            </p>
+            <TextoAMedida para="devocional" className="flex flex-col gap-5">
+              {d.versiculo && (
+                /*
+                 * Sin la raya naranja de antes. Lo que dice «esto es la cita y
+                 * no el cuerpo» es la tarjeta con su borde, la comilla en gris
+                 * y el versículo 2 px más grande que el texto (`1em + 2px`, ver
+                 * `TextoAMedida`). La referencia, en gris: en naranja parecía un
+                 * enlace, y no lleva a ningún sitio.
+                 */
+                <blockquote className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-5">
+                  <Quote
+                    className="size-4 text-muted-foreground"
+                    strokeWidth={1.8}
+                    aria-hidden
+                  />
+
+                  <p className="text-pretty text-[length:calc(1em_+_2px)] font-medium leading-[1.5]">
+                    {d.versiculo}
+                  </p>
+
+                  {d.referencia && (
+                    <cite className="text-label font-semibold not-italic text-muted-foreground">
+                      {d.referencia}
+                    </cite>
+                  )}
+                </blockquote>
+              )}
+
+              {/*
+               * `whitespace-pre-line`: el cuerpo se escribe en un textarea y sus
+               * saltos de línea son del autor. Sin esto, un devocional de cinco
+               * párrafos sale como un ladrillo. Sin tamaño propio: lo hereda de
+               * `TextoAMedida`.
+               */}
+              <p className="whitespace-pre-line text-pretty leading-[1.7]">
+                {d.cuerpo}
+              </p>
+            </TextoAMedida>
 
             {/*
              * El vídeo se VE aquí dentro, y sin llamar a Google hasta que se
@@ -213,17 +252,23 @@ export default async function DevocionalPage({
               <VideoDelDevocional video={video} portada={d.imagenUrl} />
             ) : (
               d.videoUrl && (
-                <a
+                <BotonEnlace
+                  variant="outline"
                   href={d.videoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex w-fit items-center gap-2 rounded-lg border border-border bg-surface px-3.5 py-2.5 text-[14px] font-semibold no-underline hover:bg-surface-alt hover:no-underline"
+                  nuevaPestana
+                  className="w-fit"
                 >
-                  <ExternalLink className="size-4" strokeWidth={1.8} />
+                  <ExternalLink strokeWidth={1.8} />
                   Verlo en vídeo
-                </a>
+                </BotonEnlace>
               )
             )}
+
+            <div id={FIN_DE_LA_LECTURA}>
+              {/* La fecha basta para distinguirlo dentro de la iglesia: hay uno
+                  por día como mucho, y no hay otro identificador en pantalla. */}
+              <LoHeLeido clave={`${ctx.iglesia.id}:${d.fecha}`} />
+            </div>
 
             <Compartir
               titulo={d.titulo ?? 'Devocional'}
@@ -233,22 +278,16 @@ export default async function DevocionalPage({
             />
 
             {anteriores.length > 0 && (
-              <section className="flex flex-col gap-2 border-t border-border pt-5">
-                <h2 className="px-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                  Anteriores
-                </h2>
+              <section className="flex flex-col gap-2.5 border-t border-border pt-5">
+                <h2 className="t-micro px-1">Anteriores</h2>
 
-                <ul className="overflow-hidden rounded-xl border border-border bg-surface">
-                  {anteriores.map((a, i) => (
-                    <li key={a.fecha}>
-                      <Link
-                        href={`/mi/devocional?d=${a.fecha}`}
-                        className={
-                          'flex items-center gap-3 px-3 py-2.5 text-foreground no-underline hover:bg-surface-alt hover:no-underline ' +
-                          (i > 0 ? 'border-t border-border' : '')
-                        }
-                      >
-                        {a.imagenUrl ? (
+                <Lista>
+                  {anteriores.map((a) => (
+                    <Fila
+                      key={a.fecha}
+                      href={`/mi/devocional?d=${a.fecha}`}
+                      inicio={
+                        a.imagenUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={a.imagenUrl}
@@ -258,28 +297,15 @@ export default async function DevocionalPage({
                           />
                         ) : (
                           <span className="flex size-11 flex-none items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                            <BookOpen className="size-[18px]" strokeWidth={1.7} />
+                            <BookOpen className="size-[18px]" strokeWidth={1.8} />
                           </span>
-                        )}
-
-                        <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate text-[14.5px] font-semibold">
-                            {a.titulo ?? 'Devocional'}
-                          </span>
-                          <span className="truncate text-[12.5px] text-muted-foreground first-letter:uppercase">
-                            {formatearFechaLarga(a.fecha)}
-                          </span>
-                        </span>
-
-                        <ChevronRight
-                          className="size-4 flex-none text-muted-foreground"
-                          strokeWidth={2}
-                          aria-hidden
-                        />
-                      </Link>
-                    </li>
+                        )
+                      }
+                      titulo={a.titulo ?? 'Devocional'}
+                      detalle={conMayuscula(formatearFechaLarga(a.fecha))}
+                    />
                   ))}
-                </ul>
+                </Lista>
               </section>
             )}
           </div>

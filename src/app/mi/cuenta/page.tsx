@@ -2,18 +2,20 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import {
   ChevronRight,
-  ExternalLink,
-  HandCoins,
-  LayoutDashboard,
+  Church,
+  KeyRound,
+  Landmark,
   LogOut,
+  Mail,
   ShieldCheck,
   Trash2,
+  User,
   UserX,
   Users,
 } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
-import { puedeGestionarMinisterio } from '@/lib/auth/permisos';
+import { esDelEquipo, puedeGestionarMinisterio } from '@/lib/auth/permisos';
 import { estadoConsentimiento, exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { TEXTO_CONSENTIMIENTO_ASISTENCIA_Y_SEGUIMIENTO } from '@/lib/rgpd/consentimiento';
 import { miFotoDePerfil } from '@/lib/miembros/foto';
@@ -25,12 +27,13 @@ import { misBloqueos } from '@/lib/comunidad/moderacion';
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { nombreDeLaCuenta } from '@/lib/auth/nombre';
 import { createClient } from '@/lib/supabase/server';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Fila } from '@/components/ui/fila';
 import { salir } from '../../(auth)/actions';
 import { CabeceraMiembro } from '../_components/cabecera-miembro';
+import { CuadroIcono, FilaBoton, FilaDato, Grupo } from './_components/ajustes';
 import { FotoPerfil } from './_components/foto-perfil';
+import { InterruptorAsistencia } from './_components/interruptor-asistencia';
 import { cambiarPermisoAsistencia } from './actions';
-import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Mi cuenta' };
 
@@ -41,6 +44,18 @@ const CONFIRMACIONES: Record<string, string> = {
   'asistencia-no': 'Permiso retirado. Ya no sales en las listas, y lo que había apuntado de ti se ha borrado.',
 };
 
+/**
+ * Mi cuenta, ordenada como los ajustes del móvil: la cara arriba y debajo
+ * grupos con la misma fila (`_components/ajustes.tsx`).
+ *
+ * El orden va de lo que más se mira a lo que casi nunca: tus datos y tus
+ * equipos, ofrendar, privacidad, la sesión, y borrar la cuenta al final y
+ * sola. Antes todo pesaba lo mismo —bloqueados y la política eran tan grandes
+ * como tus equipos— y era una pantalla larga que costaba recorrer.
+ *
+ * No hay ningún naranja: aquí no hay una acción de la pantalla, cada fila es
+ * la suya.
+ */
 export default async function MiCuentaPage({
   searchParams,
 }: {
@@ -64,6 +79,19 @@ export default async function MiCuentaPage({
   ]);
 
   const nombre = nombreDeLaCuenta(user!);
+  const correo = user!.email ?? '';
+
+  /*
+   * Cambiar la contraseña con la sesión abierta pide la actual, y esa
+   * pantalla vive en el panel (`/panel/cuenta/contrasena`, con `requirePanel`):
+   * a un miembro raso le devolvería aquí sin decirle nada. Para él, el camino
+   * que sí tiene es el del correo, que es la prueba de identidad que le queda.
+   * `esDelEquipo` es la misma pregunta que hace la puerta del panel, sin
+   * consultar nada.
+   */
+  const contrasena = esDelEquipo(ctx)
+    ? { href: '/panel/cuenta/contrasena', detalle: undefined }
+    : { href: '/recuperar', detalle: 'Te mandamos un enlace a tu correo' };
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
@@ -74,103 +102,122 @@ export default async function MiCuentaPage({
         logoUrl={ctx.iglesia.logoUrl}
       />
 
-      <main className="mx-auto flex w-full max-w-[620px] flex-col gap-6 px-4 py-6 sm:px-5">
+      <main className="mx-auto flex w-full max-w-[620px] flex-col gap-4 px-4 py-4 sm:px-5 sm:py-6">
         {error && <Aviso>{error}</Aviso>}
         {guardado && Object.hasOwn(CONFIRMACIONES, guardado) && (
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
         )}
 
-        <FotoPerfil nombre={nombre} correo={user!.email ?? ''} foto={miFoto} />
+        <FotoPerfil nombre={nombre} correo={correo} foto={miFoto} />
 
-        <section className="flex flex-col gap-3">
-          <h2 className="t-subtitulo">
-            {ministerios.length === 1 ? 'Tu ministerio' : 'Tus ministerios'}
-          </h2>
+        <Grupo rotulo="Tus datos">
+          <FilaDato icono={<User strokeWidth={1.8} />} etiqueta="Nombre">
+            {nombre}
+          </FilaDato>
+          <FilaDato icono={<Mail strokeWidth={1.8} />} etiqueta="Correo">
+            {correo}
+          </FilaDato>
+          {/* La web de la iglesia, que antes era un botón suelto: solo enlaza
+              si la iglesia la tiene publicada. */}
+          <FilaDato
+            icono={<Church strokeWidth={1.8} />}
+            etiqueta="Tu iglesia"
+            href={ctx.iglesia.webPublica ? `/i/${ctx.iglesia.slug}` : undefined}
+            fin={
+              ctx.iglesia.webPublica ? (
+                <span className="flex-none text-label text-muted-foreground">Ver su web</span>
+              ) : undefined
+            }
+          >
+            {ctx.iglesia.nombre}
+          </FilaDato>
+        </Grupo>
+
+        <Grupo rotulo={ministerios.length === 1 ? 'Tu equipo' : 'Tus equipos'}>
           {ministerios.length === 0 ? (
-            <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
-              Todavía no sirves en ningún equipo. Si te apetece echar una mano,
-              díselo en persona el domingo: eso no se pide por una aplicación.
-            </p>
+            <li>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <CuadroIcono>
+                  <Users strokeWidth={1.8} />
+                </CuadroIcono>
+                <span className="flex min-w-0 flex-1 flex-col gap-px">
+                  <span className="text-body font-semibold">
+                    Todavía no sirves en ningún equipo
+                  </span>
+                  <span className="text-pretty text-label text-muted-foreground">
+                    Si te apetece echar una mano, díselo en persona el domingo:
+                    eso no se pide por una aplicación.
+                  </span>
+                </span>
+              </div>
+            </li>
           ) : (
-            <ul className="flex flex-col gap-2.5">
-              {ministerios.map((m) => {
-                const color = colorDeMinisterio(m.colorHex);
-                return (
-                  <li
-                    key={m.id}
-                    className="flex flex-col gap-2.5 rounded-xl border border-border bg-surface p-4"
+            ministerios.map((m) => {
+              const color = colorDeMinisterio(m.colorHex);
+              const rol =
+                m.rolEnMinisterio ??
+                (m.rolEquipo === 'responsable'
+                  ? 'Responsable'
+                  : m.rolEquipo === 'colider'
+                    ? 'Colíder'
+                    : 'Voluntario');
+              return (
+                <li key={m.id} className="border-b border-border last:border-b-0">
+                  {/*
+                   * A la portada del equipo en la propia app, la de la
+                   * pestaña «Equipo». Quien lo lleva entra a sus
+                   * herramientas; quien sirve sin llevarlo, a lo suyo: sus
+                   * turnos, el próximo ensayo, la lista del domingo. Los dos
+                   * van al mismo sitio, y lo que ven lo decide la portada.
+                   *
+                   * Con `puedeGestionarMinisterio` y no `esDelEquipo`: el
+                   * voluntario que lleva la caja entra al panel, pero en ESTE
+                   * equipo no tiene herramientas.
+                   *
+                   * Una fila propia y no la `Fila` de la base común por «Hacia
+                   * dónde vamos», que no sale en ninguna otra pantalla de la
+                   * app y necesita dos renglones enteros.
+                   */}
+                  <Link
+                    href={rutaApp(m.id)}
+                    className="group flex flex-col gap-1.5 px-4 py-3 text-foreground no-underline transition-colors duration-150 hover:bg-surface-alt hover:text-foreground hover:no-underline"
                   >
-                    <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-3">
+                      {/* El color del equipo, en línea: sale de la base de
+                          datos y Tailwind solo genera las clases que ve
+                          escritas. */}
                       <span
-                        className="flex size-9 flex-none items-center justify-center rounded-[10px]"
+                        aria-hidden
+                        className="flex size-8 flex-none items-center justify-center rounded-lg"
                         style={{ background: color.suave }}
                       >
-                        <span
-                          className="size-3 rounded"
-                          style={{ background: color.hex }}
-                        />
+                        <span className="size-3 rounded-full" style={{ background: color.hex }} />
                       </span>
-                      <div className="flex min-w-0 flex-col">
-                        <span className="truncate text-[15.5px] font-bold tracking-[-0.015em]">
-                          {m.nombre}
-                        </span>
-                        <span className="text-[13px] text-muted-foreground">
-                          {m.rolEnMinisterio ??
-                            (m.rolEquipo === 'responsable'
-                              ? 'Responsable'
-                              : m.rolEquipo === 'colider'
-                                ? 'Colíder'
-                                : 'Voluntario')}
-                        </span>
-                      </div>
-                    </div>
+                      <span className="flex min-w-0 flex-1 flex-col gap-px">
+                        <span className="truncate text-body font-semibold">{m.nombre}</span>
+                        <span className="truncate text-label text-muted-foreground">{rol}</span>
+                      </span>
+                      <span className="flex-none text-label text-muted-foreground">
+                        {puedeGestionarMinisterio(ctx, m.id) ? 'Abrir herramientas' : 'Ver tu equipo'}
+                      </span>
+                      <ChevronRight
+                        aria-hidden
+                        className="size-4 flex-none text-muted-foreground transition-transform duration-240 ease-hatril group-hover:translate-x-[3px] motion-reduce:transition-none"
+                        strokeWidth={1.8}
+                      />
+                    </span>
                     {m.objetivo && (
-                      <div className="flex flex-col gap-1">
-                        <span className="t-micro">Hacia dónde vamos</span>
-                        <p className="text-pretty text-[14px] leading-snug">
-                          {m.objetivo}
-                        </p>
-                      </div>
+                      <span className="line-clamp-2 pl-11 text-pretty text-label text-muted-foreground">
+                        <span className="font-semibold">Hacia dónde vamos: </span>
+                        {m.objetivo}
+                      </span>
                     )}
-                    {/*
-                     * A la portada del equipo en la propia app, la de la
-                     * pestaña «Equipo». Quien lo lleva entra a sus
-                     * herramientas; quien sirve sin llevarlo, a lo suyo: sus
-                     * turnos, el próximo ensayo, la lista del domingo. Los dos
-                     * van al mismo sitio, y lo que ven lo decide la portada.
-                     *
-                     * Con `puedeGestionarMinisterio` y no `esDelEquipo`: el
-                     * voluntario que lleva la caja entra al panel, pero en ESTE
-                     * equipo no tiene herramientas. En contorno porque con dos
-                     * ministerios serían dos naranjas, y se admite uno. Y un
-                     * `Link` con las clases del botón, no un `Button` con
-                     * `render`: Base UI le pondría `type="button"` a un enlace.
-                     */}
-                    <Link
-                      href={rutaApp(m.id)}
-                      className={buttonVariants({
-                        variant: 'outline',
-                        className: 'self-start',
-                      })}
-                    >
-                      {puedeGestionarMinisterio(ctx, m.id) ? (
-                        <>
-                          <LayoutDashboard strokeWidth={1.8} />
-                          Abrir herramientas
-                        </>
-                      ) : (
-                        <>
-                          <Users strokeWidth={1.8} />
-                          Ver tu equipo
-                        </>
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+                  </Link>
+                </li>
+              );
+            })
           )}
-        </section>
+        </Grupo>
 
         {/*
          * Donar solo se pinta si la iglesia ha puesto su cuenta. Un botón que al
@@ -182,168 +229,124 @@ export default async function MiCuentaPage({
          * `/privacidad` §3 promete.
          */}
         {donativos && (
-          <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5">
-            <div className="flex items-center gap-2.5">
-              <HandCoins className="size-5 text-accent-brand" strokeWidth={1.8} />
-              <h2 className="t-subtitulo">Ofrendar</h2>
-            </div>
-            <p className="text-pretty text-[14px] leading-relaxed text-muted-foreground">
-              La cuenta de {ctx.iglesia.nombre}. El dinero va directo a ella:
-              Hatril no cobra nada por su cuenta ni se queda comisión.
-            </p>
-            <div className="flex flex-col gap-1 rounded-lg border border-border bg-surface-alt p-3.5">
-              <span className="t-micro">Cuenta</span>
-              {/* `select-all`: en un móvil, copiar un IBAN a mano es donde la
-                  gente se rinde. Un toque lo selecciona entero. */}
-              <span className="select-all break-all text-[15px] font-semibold">
-                {donativos.cuenta}
-              </span>
-              {donativos.titular && (
-                <>
-                  <span className="t-micro mt-1.5">Titular</span>
-                  <span className="select-all text-[14.5px]">
-                    {donativos.titular}
-                  </span>
-                </>
-              )}
-            </div>
-          </section>
-        )}
-
-        <section className="flex flex-col gap-3">
-          <h2 className="t-subtitulo">Tu iglesia</h2>
-          <div className="flex flex-wrap gap-2.5">
-            {ctx.iglesia.webPublica && (
-              <BotonEnlace href={`/i/${ctx.iglesia.slug}`}
-                variant="outline">
-                <ExternalLink strokeWidth={1.8} />
-                La web de {ctx.iglesia.nombre}
-              </BotonEnlace>
+          <Grupo
+            rotulo="Ofrendar"
+            nota={`La cuenta de ${ctx.iglesia.nombre}. El dinero va directo a ella: Hatril no cobra nada por su cuenta ni se queda comisión.`}
+          >
+            <FilaDato icono={<Landmark strokeWidth={1.8} />} etiqueta="Cuenta" copiable>
+              {donativos.cuenta}
+            </FilaDato>
+            {donativos.titular && (
+              <FilaDato icono={<User strokeWidth={1.8} />} etiqueta="Titular" copiable>
+                {donativos.titular}
+              </FilaDato>
             )}
-            <form action={salir}>
-              <Button type="submit" variant="ghost">
-                <LogOut strokeWidth={1.8} />
-                Cerrar sesión
-              </Button>
-            </form>
-          </div>
-        </section>
+          </Grupo>
+        )}
 
         {/*
          * Privacidad a mano dentro de la app (Apple 5.1.1(i)), y las personas
          * bloqueadas, que la hoja de bloquear promete que se deshacen aquí.
          */}
-        <section className="flex flex-col gap-3">
-          <h2 className="t-subtitulo">Privacidad</h2>
+        <Grupo rotulo="Privacidad">
           {/*
            * El permiso de asistencia, que el texto de la casilla promete poder
            * retirar «cuando quiera». Sin ficha no hay a qué colgarlo, y la
-           * sección no sale.
+           * fila no sale.
+           *
+           * El MISMO formulario de siempre, y el interruptor es su botón:
+           * con el permiso dado se envía vacío y lo retira; sin él lleva
+           * `asistencia=on` y lo da. Lo que se autoriza y lo que pasa al
+           * retirarlo se quedan escritos debajo, a la vista: un toque en el
+           * interruptor retira el permiso y borra lo apuntado, y eso no puede
+           * pasar sin haberlo leído.
            */}
           {ctx.miembroId && (
-            <form
-              action={cambiarPermisoAsistencia}
-              className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4"
-            >
-              <div className="flex flex-col gap-1">
-                <span className="text-[15px] font-semibold">Registrar mi asistencia</span>
-                <span className="text-pretty text-[13.5px] leading-relaxed text-muted-foreground">
-                  {TEXTO_CONSENTIMIENTO_ASISTENCIA_Y_SEGUIMIENTO}
-                </span>
-              </div>
-              {consentimiento.asistenciaAceptada ? (
-                <>
-                  <p className="text-[13.5px] font-semibold text-badge-success-fg">
-                    Lo tienes dado.
-                  </p>
-                  <Button type="submit" variant="outline" className="self-start">
-                    Retirar el permiso
-                  </Button>
-                  <p className="text-[12.5px] leading-snug text-muted-foreground">
+            <li className="border-b border-border last:border-b-0">
+              <form action={cambiarPermisoAsistencia}>
+                {!consentimiento.asistenciaAceptada && (
+                  <input type="hidden" name="asistencia" value="on" />
+                )}
+                <InterruptorAsistencia dado={consentimiento.asistenciaAceptada} />
+              </form>
+              <div className="flex flex-col gap-1.5 pr-4 pb-3.5 pl-[60px] text-pretty text-label text-muted-foreground">
+                <p>{TEXTO_CONSENTIMIENTO_ASISTENCIA_Y_SEGUIMIENTO}</p>
+                {consentimiento.asistenciaAceptada && (
+                  <p className="font-semibold text-foreground">
                     Al retirarlo se borra lo que la iglesia tenía apuntado de tu
                     asistencia y de las veces que te contactaron.
                   </p>
-                </>
-              ) : (
-                <>
-                  <input type="hidden" name="asistencia" value="on" />
-                  <p className="text-[13.5px] text-muted-foreground">No lo has dado.</p>
-                  <Button type="submit" variant="outline" className="self-start">
-                    Dar el permiso
-                  </Button>
-                </>
-              )}
-            </form>
+                )}
+              </div>
+            </li>
           )}
-
-          <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
-            <FilaEnlace
-              href="/mi/cuenta/bloqueados"
-              icono={<UserX strokeWidth={1.8} />}
-              titulo="Personas bloqueadas"
-              detalle={
-                bloqueos.length === 0
+          <Fila
+            href="/mi/cuenta/bloqueados"
+            inicio={
+              <CuadroIcono>
+                <UserX strokeWidth={1.8} />
+              </CuadroIcono>
+            }
+            titulo="Personas bloqueadas"
+            fin={
+              <span className="flex-none text-label text-muted-foreground">
+                {bloqueos.length === 0
                   ? 'Nadie'
                   : bloqueos.length === 1
                     ? '1 persona'
-                    : `${bloqueos.length} personas`
-              }
-            />
-            <FilaEnlace
-              href="/privacidad"
-              icono={<ShieldCheck strokeWidth={1.8} />}
-              titulo="Política de privacidad"
-              detalle="Qué datos se guardan y para qué"
-            />
-          </div>
-        </section>
+                    : `${bloqueos.length} personas`}
+              </span>
+            }
+          />
+          <Fila
+            href="/privacidad"
+            inicio={
+              <CuadroIcono>
+                <ShieldCheck strokeWidth={1.8} />
+              </CuadroIcono>
+            }
+            titulo="Política de privacidad"
+            detalle="Qué datos se guardan y para qué"
+          />
+        </Grupo>
+
+        <Grupo rotulo="Sesión">
+          <Fila
+            href={contrasena.href}
+            inicio={
+              <CuadroIcono>
+                <KeyRound strokeWidth={1.8} />
+              </CuadroIcono>
+            }
+            titulo="Cambiar la contraseña"
+            detalle={contrasena.detalle}
+          />
+          <li className="border-b border-border last:border-b-0">
+            <form action={salir}>
+              <FilaBoton icono={<LogOut strokeWidth={1.8} />} titulo="Cerrar sesión" />
+            </form>
+          </li>
+        </Grupo>
 
         {/*
-         * Al final y en su zona, como pide el diseño: es lo único de la pantalla
-         * que no se deshace con otro toque.
+         * Al final y sola, en rojo: es lo único de la pantalla que no se
+         * deshace con otro toque. Lleva a `/mi/cuenta/borrar`, que cuenta lo
+         * que pasa y pide la contraseña; aquí no se confirma nada más, que
+         * sería pedirlo dos veces.
          */}
-        <section className="flex flex-col gap-3 rounded-xl border border-danger-border bg-surface p-5">
-          <h2 className="t-subtitulo text-danger">Borrar mi cuenta</h2>
-          <p className="text-pretty text-[14px] leading-relaxed text-muted-foreground">
-            Se desactiva al momento y se borra a los 30 días, con lo que hayas
-            publicado. Tu ficha en {ctx.iglesia.nombre} la sigue llevando la
-            iglesia.
-          </p>
-          <Link
+        <Grupo>
+          <Fila
             href="/mi/cuenta/borrar"
-            className={buttonVariants({ variant: 'destructive', className: 'self-start' })}
-          >
-            <Trash2 strokeWidth={1.8} />
-            Quiero borrar mi cuenta
-          </Link>
-        </section>
+            inicio={
+              <CuadroIcono peligro>
+                <Trash2 strokeWidth={1.8} />
+              </CuadroIcono>
+            }
+            titulo={<span className="text-danger">Borrar mi cuenta</span>}
+            detalle="Se borra del todo a los 30 días"
+          />
+        </Grupo>
       </main>
     </div>
-  );
-}
-
-function FilaEnlace({
-  href,
-  icono,
-  titulo,
-  detalle,
-}: {
-  href: string;
-  icono: React.ReactNode;
-  titulo: string;
-  detalle: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 border-b border-border px-4 py-3.5 text-foreground no-underline outline-none last:border-b-0 hover:bg-surface-active focus-visible:ring-3 focus-visible:ring-ring/20 [&>svg:first-child]:size-5 [&>svg:first-child]:flex-none [&>svg:first-child]:text-muted-foreground"
-    >
-      {icono}
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="text-[15px] font-semibold">{titulo}</span>
-        <span className="text-[13px] text-muted-foreground">{detalle}</span>
-      </span>
-      <ChevronRight className="size-[18px] flex-none text-muted-foreground" strokeWidth={1.8} />
-    </Link>
   );
 }

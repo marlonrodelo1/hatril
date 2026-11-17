@@ -11,16 +11,15 @@ import {
   sumarDias,
   type Ocurrencia,
 } from '@/lib/agenda/calendario';
-import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
+import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { createClient } from '@/lib/supabase/server';
-import { misTurnos, type MiTurno } from '@/lib/turnos/consultas';
-import { ETIQUETA_RESPUESTA } from '@/lib/turnos/respuestas';
-import { colorDeMinisterio } from '@/lib/ministerios/colores';
+import { misTurnos } from '@/lib/turnos/consultas';
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
 import { CabeceraMiembro } from '../_components/cabecera-miembro';
 import { CalendarioMes, FilaOcurrencia } from './_components/calendario';
-import { responderTurno } from './actions';
+import { ordenarDelDia } from './_components/tipos-del-dia';
+import { Segmentado, type Vista } from './_components/segmentado';
+import { TeTocaServir } from './_components/te-toca-servir';
 import { CONFIRMACIONES_TURNO } from './constantes';
 
 export const metadata: Metadata = { title: 'Agenda' };
@@ -116,7 +115,6 @@ export default async function AgendaPage({
   ]);
 
   const proximos = lista.filter((o) => o.fecha >= hoy).slice(0, 6);
-  const responder = (turnoId: string) => responderTurno.bind(null, turnoId);
 
   // La vista pinta solo lo suyo, aunque se haya traído de más.
   const porFecha = porDia(
@@ -138,22 +136,24 @@ export default async function AgendaPage({
           <Aviso tipo="ok">{CONFIRMACIONES_TURNO[guardado]}</Aviso>
         )}
 
+        {/* Lo primero de la pantalla, y solo con lo que el cliente pinta: la
+            fecha ya compuesta, porque «hoy» es el de la iglesia y eso lo sabe
+            el servidor. */}
         {porContestar.length > 0 && (
-          <section className="flex flex-col gap-2">
-            <h2 className="px-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              Te toca servir
-            </h2>
-            <ul className="flex flex-col gap-2">
-              {porContestar.map((t) => (
-                <li key={t.id}>
-                  <TarjetaMiTurno turno={t} hoy={hoy} responder={responder(t.id)} />
-                </li>
-              ))}
-            </ul>
-          </section>
+          <TeTocaServir
+            turnos={porContestar.map((t) => ({
+              id: t.id,
+              cuando: diaDelTurno(t.fecha, hoy),
+              hora: t.hora,
+              titulo: t.titulo,
+              ministerio: t.ministerio.nombre,
+              puestos: t.puestos,
+              respuesta: t.respuesta,
+            }))}
+          />
         )}
 
-        <Selector vista={vista} ancla={ancla} />
+        <Segmentado vista={vista} ancla={ancla} />
 
         <Navegacion vista={vista} ancla={ancla} />
 
@@ -168,13 +168,11 @@ export default async function AgendaPage({
           <ListaDePeriodo desde={desde} hasta={hasta} porFecha={porFecha} hoy={hoy} />
         )}
 
-        <section className="flex flex-col gap-2">
-          <h2 className="px-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            Próximos
-          </h2>
+        <section className="flex flex-col gap-2.5">
+          <h2 className="t-micro px-1">Próximos</h2>
 
           {proximos.length === 0 ? (
-            <p className="rounded-xl border border-border bg-surface p-5 text-[14.5px] leading-relaxed text-muted-foreground">
+            <p className="rounded-xl border border-border bg-surface p-5 text-body leading-relaxed text-muted-foreground">
               No hay nada apuntado por aquí. Aparecerán los cultos de{' '}
               {ctx.iglesia.nombre}, sus eventos y los ensayos de los equipos en
               los que sirvas.
@@ -183,9 +181,15 @@ export default async function AgendaPage({
             <ul className="flex flex-col gap-2">
               {proximos.map((o, i) => (
                 <li key={i} className="flex flex-col gap-1">
-                  <span className="px-1 text-[12px] font-semibold text-muted-foreground">
-                    {diaCorto(o.fecha, hoy)}
-                  </span>
+                  {/* El día, solo al cambiar de día. Antes salía encima de
+                      cada fila, y con un ensayo y un culto el mismo jueves se
+                      leían dos «Jueves, 19 de noviembre» seguidos, como si
+                      fueran dos días distintos. */}
+                  {(i === 0 || proximos[i - 1]!.fecha !== o.fecha) && (
+                    <span className="px-1 text-label font-semibold text-muted-foreground first-letter:uppercase">
+                      {diaCorto(o.fecha, hoy)}
+                    </span>
+                  )}
                   <FilaOcurrencia ocurrencia={o} />
                 </li>
               ))}
@@ -193,78 +197,6 @@ export default async function AgendaPage({
           )}
         </section>
       </main>
-    </div>
-  );
-}
-
-type Vista = 'dia' | 'semana' | 'mes';
-
-/**
- * Un turno con sus dos botones.
- *
- * El de confirmar va en el secundario y no en naranja: puede haber tres turnos
- * en la lista, y la regla del sistema es un solo botón naranja por pantalla. El
- * secundario —el carbón, desde que dejó de ser verde— es el color de apoyo, y
- * «ahí estaré» es exactamente eso.
- *
- * Contestado ya, los botones se van y queda el estado con un enlace a cambiarlo:
- * dejar «No puedo» a la vista de quien confirmó invita a pulsarlo sin querer.
- */
-function TarjetaMiTurno({
-  turno: t,
-  hoy,
-  responder,
-}: {
-  turno: MiTurno;
-  hoy: string;
-  responder: (formData: FormData) => Promise<void>;
-}) {
-  const estado = ETIQUETA_RESPUESTA[t.respuesta];
-  const color = colorDeMinisterio(t.ministerio.colorHex);
-  const href = `/mi/agenda/turno/${t.id}`;
-
-  return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
-      <Link href={href} className="flex flex-col gap-0.5 text-foreground no-underline hover:no-underline">
-        <span className="inline-flex items-center gap-2 text-[12.5px] font-semibold text-muted-foreground">
-          <span className="size-2 rounded-full" style={{ backgroundColor: color.hex }} aria-hidden />
-          {t.ministerio.nombre} · {t.puestos.join(', ')}
-        </span>
-        <span className="text-[15.5px] font-bold tracking-[-0.012em] first-letter:uppercase">
-          {t.fecha === hoy ? 'Hoy' : formatearFechaLarga(t.fecha)}
-          {t.hora && <span className="font-medium text-muted-foreground"> · {t.hora}</span>}
-        </span>
-        <span className="text-[13.5px] text-muted-foreground">{t.titulo}</span>
-      </Link>
-
-      {t.respuesta === 'pendiente' ? (
-        <div className="flex flex-wrap gap-2">
-          <form action={responder}>
-            <input type="hidden" name="respuesta" value="confirmado" />
-            <input type="hidden" name="desde" value="agenda" />
-            <Button type="submit" variant="secondary" size="sm">
-              Ahí estaré
-            </Button>
-          </form>
-          <form action={responder}>
-            <input type="hidden" name="respuesta" value="no_puede" />
-            <input type="hidden" name="desde" value="agenda" />
-            <Button type="submit" variant="outline" size="sm">
-              No puedo
-            </Button>
-          </form>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center gap-2.5">
-          <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[12.5px] font-semibold ${estado.clase}`}>
-            <estado.Icono className="size-3.5" strokeWidth={2.2} aria-hidden />
-            {estado.miembro}
-          </span>
-          <Link href={href} className="text-[13px] font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
-            Cambiar
-          </Link>
-        </div>
-      )}
     </div>
   );
 }
@@ -308,42 +240,6 @@ function diasDeLaRejilla(ancla: string): string[] {
   return Array.from({ length: 42 }, (_, i) => sumarDias(inicio, i));
 }
 
-function Selector({ vista, ancla }: { vista: Vista; ancla: string }) {
-  const opciones: { id: Vista; texto: string }[] = [
-    { id: 'dia', texto: 'Día' },
-    { id: 'semana', texto: 'Semana' },
-    { id: 'mes', texto: 'Mes' },
-  ];
-
-  return (
-    <div
-      className="flex w-full gap-1 rounded-xl border border-border bg-surface p-1"
-      role="group"
-      aria-label="Cómo ver la agenda"
-    >
-      {opciones.map((o) => (
-        <Link
-          key={o.id}
-          href={`/mi/agenda?v=${o.id}&d=${ancla}`}
-          scroll={false}
-          aria-current={vista === o.id ? 'true' : undefined}
-          className={
-            'flex-1 rounded-lg py-2 text-center text-[13.5px] font-semibold no-underline transition-colors hover:no-underline ' +
-            // El mismo par que la pestaña activa de la barra de abajo. El
-            // naranja translúcido era cosa del fondo oscuro: sobre blanco sale
-            // un rosa que no está en la paleta.
-            (vista === o.id
-              ? 'bg-accent text-accent-foreground'
-              : 'text-muted-foreground hover:bg-surface-alt hover:text-foreground')
-          }
-        >
-          {o.texto}
-        </Link>
-      ))}
-    </div>
-  );
-}
-
 /** Atrás, el periodo que se está mirando, y adelante. */
 function Navegacion({ vista, ancla }: { vista: Vista; ancla: string }) {
   const salto = vista === 'dia' ? 1 : vista === 'semana' ? 7 : 0;
@@ -355,15 +251,15 @@ function Navegacion({ vista, ancla }: { vista: Vista; ancla: string }) {
   return (
     <div className="flex items-center gap-2">
       <Paso href={`/mi/agenda?v=${vista}&d=${anterior}`} etiqueta="Anterior">
-        <ChevronLeft className="size-[18px]" strokeWidth={2} />
+        <ChevronLeft className="size-[18px]" strokeWidth={1.8} />
       </Paso>
 
-      <span className="flex-1 text-center text-[15px] font-bold tracking-[-0.01em] first-letter:uppercase">
+      <span className="flex-1 text-center text-body font-bold tracking-[-0.01em] first-letter:uppercase">
         {tituloDelPeriodo(vista, ancla)}
       </span>
 
       <Paso href={`/mi/agenda?v=${vista}&d=${siguiente}`} etiqueta="Siguiente">
-        <ChevronRight className="size-[18px]" strokeWidth={2} />
+        <ChevronRight className="size-[18px]" strokeWidth={1.8} />
       </Paso>
     </div>
   );
@@ -383,7 +279,7 @@ function Paso({
       href={href}
       scroll={false}
       aria-label={etiqueta}
-      className="flex size-9 flex-none items-center justify-center rounded-lg border border-border bg-surface text-muted-foreground no-underline hover:bg-surface-alt hover:text-foreground hover:no-underline"
+      className="flex size-9 flex-none items-center justify-center rounded-lg border border-border bg-surface text-muted-foreground no-underline transition-colors duration-150 hover:bg-surface-alt hover:text-foreground hover:no-underline motion-reduce:transition-none"
     >
       {children}
     </Link>
@@ -420,7 +316,7 @@ function ListaDePeriodo({
 
   if (conAlgo.length === 0) {
     return (
-      <p className="rounded-xl border border-border bg-surface p-5 text-[14.5px] text-muted-foreground">
+      <p className="rounded-xl border border-border bg-surface p-5 text-body text-muted-foreground">
         {dias.length === 1
           ? 'No hay nada ese día.'
           : 'No hay nada esa semana.'}
@@ -432,11 +328,11 @@ function ListaDePeriodo({
     <div className="flex flex-col gap-4">
       {conAlgo.map((f) => (
         <section key={f} className="flex flex-col gap-2">
-          <h3 className="px-1 text-[12.5px] font-semibold text-muted-foreground first-letter:uppercase">
+          <h3 className="px-1 text-label font-semibold text-muted-foreground first-letter:uppercase">
             {diaCorto(f, hoy)}
           </h3>
           <ul className="flex flex-col gap-2">
-            {(porFecha.get(f) ?? []).map((o, i) => (
+            {ordenarDelDia(porFecha.get(f) ?? []).map((o, i) => (
               <li key={i}>
                 <FilaOcurrencia ocurrencia={o} />
               </li>
@@ -490,4 +386,26 @@ function diaCorto(fecha: string, hoy: string): string {
     month: 'long',
     timeZone: 'UTC',
   });
+}
+
+/**
+ * El día de un turno, corto: «Hoy», «Mañana» o «Domingo 22».
+ *
+ * Sin el mes mientras sea el de hoy: el turno va en una línea con la hora y el
+ * culto, y a 375 px «domingo, 22 de noviembre» la partía en dos. Cuando cae en
+ * el mes siguiente —los turnos llegan a tres semanas vista— el mes sí hace
+ * falta, o el «Domingo 6» se leería como el de este mes, que ya pasó.
+ */
+function diaDelTurno(fecha: string, hoy: string): string {
+  if (fecha === hoy) return 'Hoy';
+  if (fecha === sumarDias(hoy, 1)) return 'Mañana';
+
+  const d = new Date(fecha + 'T12:00:00Z');
+  const dia = d.toLocaleDateString('es-ES', { weekday: 'long', timeZone: 'UTC' });
+  const mes =
+    fecha.slice(0, 7) === hoy.slice(0, 7)
+      ? ''
+      : ` de ${d.toLocaleDateString('es-ES', { month: 'long', timeZone: 'UTC' })}`;
+
+  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} ${d.getUTCDate()}${mes}`;
 }

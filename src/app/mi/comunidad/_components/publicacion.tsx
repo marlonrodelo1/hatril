@@ -1,34 +1,35 @@
-import { Heart } from 'lucide-react';
-
 import { AvatarPersona } from '@/components/avatar-persona';
 import { haceCuanto } from '@/lib/format/hace-cuanto';
-import { Button } from '@/components/ui/button';
 import type { PublicacionMuro } from '@/lib/comunidad/consultas';
 import { alternarMeGusta } from '../actions';
+import { BotonMeGusta } from './boton-me-gusta';
 import { Comentarios, type ComentarioPintado } from './comentarios';
+import { FotosPublicacion } from './fotos-publicacion';
 import { MenuContenido } from './menu-contenido';
 
 /**
  * Una publicación del muro.
  *
- * COMPONENTE DE SERVIDOR, Y CASI TODO CON `<form>`
- * ------------------------------------------------
- * El corazón y el borrar son formularios que llaman a una server action. Ni un
- * `useState` ni un kilobyte de JavaScript para una pantalla que es, sobre todo,
- * texto y fotos.
+ * COMPONENTE DE SERVIDOR, CON TRES ISLAS DE CLIENTE
+ * -------------------------------------------------
+ * La tarjeta, el texto y el «hace tanto» se pintan aquí y no mandan JavaScript.
+ * Las islas son lo que necesita estado en el navegador: el corazón (lo que se
+ * ve mientras viaja el toque), el mosaico de fotos (la hoja que las abre) y los
+ * comentarios (la suya). Las tres siguen escribiendo con server actions.
  *
- * La única pieza de cliente es la hoja de comentarios, y es porque necesita
- * estado en el navegador: si está abierta y a quién se responde. Aun así, los
- * botones de dentro siguen siendo formularios con server action.
+ * TARJETA TAMBIÉN EN EL MÓVIL
+ * ---------------------------
+ * Hasta el 17-nov las publicaciones iban a sangre en el móvil —sin borde a los
+ * lados, de lado a lado de la pantalla— para ganar ancho de texto. El precio
+ * era que unas quedaban pegadas a otras y costaba ver dónde acababa una y
+ * empezaba la siguiente: es el primer fallo que apuntó la zona 2 del rediseño,
+ * y Marlon aprobó la tarjeta. Cada una lleva su borde de 1 px y su `rounded-xl`,
+ * y el aire entre ellas lo pone el `gap` de la página.
  *
- * A SANGRE EN EL MÓVIL, TARJETA EN ESCRITORIO
- * -------------------------------------------
- * En un móvil de 375px, una tarjeta con borde a cada lado deja el texto en 311
- * píxeles útiles y hace que todo parezca apretado contra el marco del teléfono
- * —que es exactamente lo que se veía—. Con `-mx-4` la publicación ocupa el
- * ancho entero y la foto va a sangre, mientras el texto conserva sus 16 px de
- * aire por dentro. A partir de `sm` vuelve a ser una tarjeta con su borde,
- * porque en una pantalla ancha una banda de 900 px de borde a borde no se lee.
+ * Sin `overflow-hidden` en la tarjeta: las fotos nunca tocan una esquina —la
+ * cabecera va siempre encima y las acciones siempre debajo—, así que no hay
+ * nada que recortar, y así no se recorta tampoco el anillo de foco de los
+ * botones del borde.
  */
 export function Publicacion({
   publicacion: p,
@@ -37,12 +38,7 @@ export function Publicacion({
 }: {
   publicacion: PublicacionMuro;
   puedeModerar: boolean;
-  /**
-   * Comentarios cerrados: no se pinta el campo de escribir, pero los que ya
-   * existan se siguen leyendo y su autor los sigue pudiendo borrar. Cerrar no es
-   * borrar, y es lo mismo que hace la `0027`: quita el INSERT y deja el SELECT
-   * donde estaba.
-   */
+  /** Ver `admiteComentarios` en `<Comentarios>`: cerrar no es borrar. */
   admiteComentarios: boolean;
 }) {
   /*
@@ -76,15 +72,15 @@ export function Publicacion({
   }));
 
   return (
-    <article className="-mx-4 flex flex-col gap-3 border-y border-border bg-surface px-4 py-3.5 sm:mx-0 sm:rounded-xl sm:border sm:p-4">
-      <header className="flex items-center gap-3">
+    <article className="flex flex-col rounded-xl border border-border bg-surface">
+      <header className="flex items-center gap-3 px-4 pt-3.5 pb-2.5">
         <AvatarPersona nombre={p.autorNombre} fotoUrl={p.autorFoto} />
 
         <span className="flex min-w-0 flex-col">
-          <span className="truncate text-[14.5px] font-bold leading-tight tracking-[-0.015em]">
+          <span className="truncate text-body font-bold leading-tight tracking-[-0.015em]">
             {p.autorNombre}
           </span>
-          <span className="text-[12.5px] leading-tight text-muted-foreground">
+          <span className="text-label leading-tight text-muted-foreground">
             {haceCuanto(p.createdAt)}
           </span>
         </span>
@@ -106,86 +102,41 @@ export function Publicacion({
       </header>
 
       {p.texto && (
-        <p className="whitespace-pre-line text-pretty text-[15.5px] leading-relaxed">
+        <p className="whitespace-pre-line text-pretty px-4 pb-3.5 text-body leading-relaxed">
           {p.texto}
         </p>
       )}
 
-      {p.imagenes.length > 0 && (
-        /*
-         * `<img>` y no `next/image`.
-         *
-         * Estas URLs vienen firmadas y caducan en una hora. El optimizador de
-         * Next las descargaría y las guardaría en su caché con una clave que
-         * incluye la firma: la misma foto se reoptimizaría entera cada vez que
-         * la firma cambia, y el disco del contenedor se llenaría de copias que
-         * ya no sirven.
-         *
-         * `-mx-4` para que en el móvil la foto llegue hasta el borde, como en
-         * cualquier muro que la gente ya usa. En escritorio vuelve dentro de la
-         * tarjeta y recupera su borde redondeado.
-         */
-        <div
-          className={
-            '-mx-4 grid gap-1 sm:mx-0 sm:gap-2 ' +
-            (p.imagenes.length > 1 ? 'grid-cols-2' : 'grid-cols-1')
-          }
-        >
-          {p.imagenes.map((url) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={url}
-              src={url}
-              alt=""
-              loading="lazy"
-              className={
-                'w-full object-cover sm:rounded-lg sm:border sm:border-border ' +
-                (p.imagenes.length > 1 ? 'aspect-square' : 'max-h-[520px]')
-              }
-            />
-          ))}
-        </div>
-      )}
+      {/* De borde a borde de la tarjeta: la foto es lo que más se mira, y un
+          marco de 16 px a cada lado se la come en un móvil. */}
+      {p.imagenes.length > 0 && <FotosPublicacion urls={p.imagenes} />}
 
       {/*
-       * La fila de acciones la arma <Comentarios>, y el corazón entra dentro
-       * como hijo. No es un capricho de organización: el botón que despliega y
-       * el panel desplegado tienen que ser hermanos en el DOM, y el estado de
-       * «está abierto» solo puede vivir en un componente de cliente. Esta
-       * publicación es de servidor.
+       * Las acciones, en su fila y con su raya encima.
+       *
+       * El corazón es un `<form>` de servidor con la action ya atada al id, y
+       * dentro el botón de cliente que sabe pintar mientras viaja. Así el
+       * formulario sale entero en el HTML y funciona aunque el JavaScript no
+       * haya llegado.
+       *
+       * Los comentarios ya no necesitan armar esta fila. Cuando se desplegaban
+       * debajo, el botón y el panel tenían que ser hermanos y el corazón entraba
+       * como hijo suyo; la hoja vive en un portal, así que cada pieza se
+       * coloca donde le toca.
        */}
-      <Comentarios
-        publicacionId={p.id}
-        comentarios={comentarios}
-        total={p.totalComentarios}
-        admiteComentarios={admiteComentarios}
-        puedeModerar={puedeModerar}
-      >
+      <div className="flex items-center gap-1 border-t border-border px-2 py-1.5">
         <form action={alternarMeGusta.bind(null, p.id)}>
-          <Button
-            type="submit"
-            variant="ghost"
-            size="sm"
-            aria-pressed={p.leHeDado}
-            aria-label={p.leHeDado ? 'Quitar el me gusta' : 'Me gusta'}
-            className={
-              p.leHeDado
-                ? 'text-danger hover:bg-badge-danger-bg hover:text-danger'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }
-          >
-            <Heart
-              className="size-[17px]"
-              strokeWidth={1.8}
-              // Relleno cuando ya le has dado: el color por sí solo no basta
-              // para quien no lo distingue.
-              fill={p.leHeDado ? 'currentColor' : 'none'}
-            />
-            {p.meGusta > 0 ? p.meGusta : 'Me gusta'}
-          </Button>
+          <BotonMeGusta dado={p.leHeDado} cuenta={p.meGusta} />
         </form>
-      </Comentarios>
 
+        <Comentarios
+          publicacionId={p.id}
+          comentarios={comentarios}
+          total={p.totalComentarios}
+          admiteComentarios={admiteComentarios}
+          puedeModerar={puedeModerar}
+        />
+      </div>
     </article>
   );
 }

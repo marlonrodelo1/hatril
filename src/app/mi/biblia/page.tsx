@@ -7,8 +7,11 @@ import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { LIBROS, buscarLibros, libroPorSlug } from '@/lib/biblia/libros';
 import { cargarCapitulo } from '@/lib/biblia/texto';
 import { CabeceraMiembro } from '../_components/cabecera-miembro';
-import { buttonVariants } from '@/components/ui/button';
+import { TamanoLetra } from '../_components/tamano-letra';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 import { Capitulo } from './_components/capitulo';
+import { RejillaCapitulos } from './_components/rejilla-capitulos';
+import { SelectorCapitulo } from './_components/selector-capitulo';
 
 export const metadata: Metadata = { title: 'Biblia' };
 
@@ -26,6 +29,14 @@ export const metadata: Metadata = { title: 'Biblia' };
  *     cada libro es un enlace: en un móvil viejo con mala cobertura la Biblia
  *     sigue abriéndose, que es exactamente el aparato desde el que se va a leer
  *     un domingo por la mañana.
+ *
+ * EL CAPÍTULO, PARA LEER (zona 2 del rediseño, 17-nov)
+ * ----------------------------------------------------
+ * Dentro de un capítulo la cabecera dice solo «Biblia», y el nombre del
+ * capítulo va debajo, grande, con su chevron y la versión: es el botón que
+ * abre la rejilla para saltar a otro (`SelectorCapitulo`). Con «Salmos» arriba
+ * y «Salmos 23» debajo se leía dos veces lo mismo. A− y A+ van en la cabecera,
+ * que no se va al bajar, igual que en el devocional.
  *
  * SIN TEXTO TODAVÍA, Y SE DICE
  * ----------------------------
@@ -74,20 +85,29 @@ export default async function BibliaPage({
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <CabeceraMiembro
-        logoUrl={ctx.iglesia.logoUrl}
+        // Con flecha, sin logo, como el resto de pantallas de detalle de `/mi`
+        // (`equipo/_components/marco.tsx`). En el capítulo, con A−/A+ al lado,
+        // el título se quedaba en «Bib…».
+        logoUrl={libro ? undefined : ctx.iglesia.logoUrl}
         user={ctx.user}
-        titulo={libro ? libro.nombre : 'Biblia'}
+        titulo={libro && !capitulo ? libro.nombre : 'Biblia'}
+        // En el capítulo la versión va bajo el título grande: aquí arriba, al
+        // lado de A−/A+, se cortaba en «Reina-Valera 1…».
         subtitulo={
           libro
-            ? cap
-              ? `Capítulo ${cap} · Reina-Valera 1909`
-              : 'Reina-Valera 1909'
+            ? capitulo
+              ? undefined
+              : cap
+                ? `Capítulo ${cap} · Reina-Valera 1909`
+                : 'Reina-Valera 1909'
             : ctx.iglesia.nombre
         }
         // Aquí la flecha SÍ tiene sentido, al revés que en el muro: dentro de un
         // libro o de un capítulo hay a dónde volver de verdad.
         volver={libro ? (cap ? `/mi/biblia?libro=${libro.slug}` : '/mi/biblia') : undefined}
-      />
+      >
+        {capitulo && <TamanoLetra para="biblia" />}
+      </CabeceraMiembro>
 
       <main className="mx-auto flex w-full max-w-[620px] flex-col gap-4 px-4 py-4 sm:px-5 sm:py-6">
         {/* --- Un capítulo --- */}
@@ -95,42 +115,52 @@ export default async function BibliaPage({
           <>
             {capitulo ? (
               <>
+                <div className="flex flex-col gap-0.5">
+                  <SelectorCapitulo libro={libro} capitulo={numero} />
+                  <p className="text-label text-muted-foreground">
+                    Reina-Valera 1909
+                  </p>
+                </div>
+
+                {/* La `key` vacía lo marcado al cambiar de capítulo: sin ella,
+                    el componente sigue montado al navegar, y los versículos
+                    marcados en el Salmo 23 salían marcados en el 24. */}
                 <Capitulo
+                  key={`${libro.slug}:${numero}`}
                   versiculos={capitulo.versiculos}
                   libro={libro.nombre}
                   capitulo={numero}
                 />
 
                 {/* Anterior y siguiente sin volver al índice. Al cruzar de
-                    libro se sigue: del último de Génesis, al primero de Éxodo. */}
-                <nav aria-label="Capítulos" className="grid grid-cols-2 gap-2">
+                    libro se sigue: del último de Génesis, al primero de Éxodo.
+                    El «Elegir otro capítulo» que había debajo se fue: eso lo
+                    hace ahora el título, y sin JavaScript, la flecha de
+                    arriba. */}
+                <nav aria-label="Capítulos" className="grid grid-cols-2 gap-2 pt-2">
                   {anterior ? (
-                    <Link
+                    <BotonEnlace
+                      variant="outline"
                       href={`/mi/biblia?libro=${anterior.slug}&cap=${anterior.cap}`}
-                      className={buttonVariants({ variant: 'outline' }) + ' w-full justify-start'}
+                      className="w-full justify-start"
                     >
                       <ChevronLeft strokeWidth={1.8} />
                       <span className="truncate">{anterior.nombre} {anterior.cap}</span>
-                    </Link>
+                    </BotonEnlace>
                   ) : (
                     <span />
                   )}
                   {siguiente && (
-                    <Link
+                    <BotonEnlace
+                      variant="outline"
                       href={`/mi/biblia?libro=${siguiente.slug}&cap=${siguiente.cap}`}
-                      className={buttonVariants({ variant: 'outline' }) + ' w-full justify-end'}
+                      className="w-full justify-end"
                     >
                       <span className="truncate">{siguiente.nombre} {siguiente.cap}</span>
                       <ChevronRight strokeWidth={1.8} />
-                    </Link>
+                    </BotonEnlace>
                   )}
                 </nav>
-                <Link
-                  href={`/mi/biblia?libro=${libro.slug}`}
-                  className="self-center text-[14px] font-semibold text-foreground underline underline-offset-2"
-                >
-                  Elegir otro capítulo de {libro.nombre}
-                </Link>
               </>
             ) : (
               <SinTexto />
@@ -141,26 +171,13 @@ export default async function BibliaPage({
         {/* --- Los capítulos de un libro --- */}
         {libro && !cap && (
           <div className="flex flex-col gap-3">
-            <p className="text-[13.5px] text-muted-foreground">
+            <p className="text-label text-muted-foreground">
               {libro.capitulos}{' '}
               {libro.capitulos === 1 ? 'capítulo' : 'capítulos'}
             </p>
 
-            {/* Rejilla de números y no una lista: Salmos tiene 150 y en lista
-                serían diez pantallazos de scroll para llegar al 119. */}
-            <div className="grid grid-cols-6 gap-2 sm:grid-cols-8">
-              {Array.from({ length: libro.capitulos }, (_, i) => i + 1).map(
-                (n) => (
-                  <Link
-                    key={n}
-                    href={`/mi/biblia?libro=${libro.slug}&cap=${n}`}
-                    className="flex h-11 items-center justify-center rounded-lg border border-border bg-surface text-[14.5px] font-semibold text-foreground no-underline tabular-nums hover:border-foreground/20 hover:bg-surface-alt hover:no-underline"
-                  >
-                    {n}
-                  </Link>
-                ),
-              )}
-            </div>
+            {/* La misma rejilla que la hoja del título del capítulo. */}
+            <RejillaCapitulos libro={libro} />
           </div>
         )}
 

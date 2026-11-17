@@ -100,11 +100,19 @@ export default async function MiLayout({
        * suma a su `bottom`: sin ella, con la raya de gestos, los últimos 34 px
        * de cada pantalla quedaban debajo de las pestañas.
        */}
+      {/*
+       * DESDE EL 17-NOV, CON LO QUE MIDE LA BARRA
+       * La barra va anclada abajo y publica lo que ocupa en `--alto-barra-mi`
+       * (con la zona segura ya dentro). El hueco es eso, más el reproductor
+       * (unos 54 px) si hay radio, más un margen para que lo último no quede
+       * rozando. Los 70 px de respaldo son para el primer pintado, antes de que
+       * la barra se haya medido.
+       */}
       <div
         className={
           radio
-            ? 'h-[calc(140px+env(safe-area-inset-bottom))] md:h-[148px]'
-            : 'h-[calc(76px+env(safe-area-inset-bottom))] md:h-[88px]'
+            ? 'h-[calc(var(--alto-barra-mi,70px)+66px)] md:h-[148px]'
+            : 'h-[calc(var(--alto-barra-mi,70px)+12px)] md:h-[88px]'
         }
         aria-hidden
       />

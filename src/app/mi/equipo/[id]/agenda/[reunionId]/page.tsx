@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { MapPin, Pencil, Trash2, UserPlus } from 'lucide-react';
+import { MapPin, Pencil, Save, Trash2, UserPlus, Users, UserX } from 'lucide-react';
+import { clsx } from 'clsx';
 
 import {
   exigirUuid,
@@ -11,17 +12,14 @@ import { cuandoCorto } from '@/lib/ministerios/en-la-app/fechas';
 import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
 import { listaDelEquipo, obtenerReunion } from '@/lib/asistencia/consultas';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
-import { AvatarPersona } from '@/components/avatar-persona';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
+import { BotonEnviar } from '@/components/ui/boton-enviar';
+import { EstadoVacio } from '@/components/ui/estado-vacio';
+import { Insignia } from '@/components/ui/insignia';
 import { CONFIRMACIONES } from '@/app/panel/ministerios/[id]/agenda/constantes';
-import {
-  Fila,
-  Lista,
-  MarcoEquipo,
-  Vacio,
-  ZonaDeBorrar,
-} from '../../../_components/marco';
+import { MarcoEquipo, ZonaDeBorrar } from '../../../_components/marco';
 import { borrarReunionDeMinisterio, guardarListaDelEquipo } from '../actions';
+import { PasarLista } from './_components/pasar-lista';
 
 export const metadata: Metadata = { title: 'Pasar lista' };
 
@@ -35,12 +33,13 @@ export const metadata: Metadata = { title: 'Pasar lista' };
  * no puede enseñar a nadie que la action no vaya a aceptar, ni la action
  * escribir a nadie que esta pantalla no enseñe.
  *
- * Una fila por persona con la casilla grande: se marca con el pulgar de pie en
- * la sala, con el móvil en una mano. La primera vez salen todos marcados, como
- * en el panel —lo normal en un ensayo es que venga casi todo el equipo, y es
- * más rápido desmarcar a dos que marcar a doce—.
+ * Una fila por persona, y la fila entera es la casilla: se marca con el pulgar
+ * de pie en la sala, con el móvil en una mano (`PasarLista`). La primera vez
+ * salen todos marcados, como en el panel —lo normal en un ensayo es que venga
+ * casi todo el equipo, y es más rápido desmarcar a dos que marcar a doce—.
  *
- * El naranja es «Guardar la lista». Editar va arriba como enlace y borrar, en
+ * El naranja es «Guardar la lista», fijo abajo para que no haya que bajar a
+ * buscarlo con doce filas por medio. Editar va arriba como enlace y borrar, en
  * su tarjeta roja al final: ninguno de los dos es lo que se viene a hacer.
  */
 export default async function ReunionEnLaAppPage({
@@ -88,13 +87,21 @@ export default async function ReunionEnLaAppPage({
             {reunion.notas}
           </p>
         )}
-        {/* Una línea y no una cifra grande: es un dato del ensayo, no un
-            indicador que vigilar. */}
-        <p className="text-label font-semibold text-muted-foreground">
+        {/*
+         * Lo GUARDADO, en una insignia: el recuento de abajo es lo que se está
+         * marcando ahora, y la primera vez sale lleno —todos marcados de
+         * entrada—, así que sin esto «Han venido 9 de 9» se leería como una
+         * lista ya pasada.
+         */}
+        <Insignia
+          tono={primeraVez ? 'aviso' : 'exito'}
+          punto
+          className="mt-1 self-start"
+        >
           {primeraVez
             ? 'Todavía sin lista'
-            : `Vinieron ${reunion.presentes} de ${reunion.marcados}`}
-        </p>
+            : `Guardada: vinieron ${reunion.presentes} de ${reunion.marcados}`}
+        </Insignia>
         <Link
           href={`${base}/${reunionId}/editar`}
           className="mt-1 inline-flex items-center gap-1.5 self-start text-label font-semibold text-muted-foreground no-underline hover:text-foreground hover:no-underline"
@@ -108,73 +115,80 @@ export default async function ReunionEnLaAppPage({
         action={guardarListaDelEquipo.bind(null, id, reunionId)}
         className="flex flex-col gap-4"
       >
-        <section className="flex flex-col gap-2.5">
-          <div className="flex flex-col gap-0.5 px-1">
-            <h2 className="t-micro">Quién del equipo vino</h2>
-            {/* Lo dice para que nadie crea que está marcando la asistencia de
-                esas personas a la iglesia: un ensayo no cuenta para el culto. */}
-            <p className="text-label text-muted-foreground">
-              Solo el equipo, y no cuenta para la asistencia a los cultos.
-            </p>
-          </div>
-
-          {equipo.length === 0 ? (
-            // Lista vacía no es equipo vacío: también sale así si todos
-            // negaron el permiso de asistencia. El texto no dice cuál, igual
-            // que la action.
-            ministerio.equipo.length === 0 ? (
-              <Vacio
-                titulo="El equipo está vacío"
-                accion={
-                  <Link
-                    href={`/panel/ministerios/${id}`}
-                    className={buttonVariants({ variant: 'outline' })}
-                  >
-                    <UserPlus strokeWidth={1.8} />
-                    Sumar gente en el panel
-                  </Link>
-                }
-              >
-                Este ministerio todavía no tiene a nadie. Suma a tu gente desde
-                el panel y vuelve aquí para pasar lista.
-              </Vacio>
-            ) : (
-              <Vacio titulo="Nadie a quien pasar lista">
-                No hay nadie en este equipo a quien se le pueda pasar lista.
-              </Vacio>
-            )
+        {equipo.length === 0 ? (
+          // Lista vacía no es equipo vacío: también sale así si todos
+          // negaron el permiso de asistencia. El texto no dice cuál, igual
+          // que la action.
+          ministerio.equipo.length === 0 ? (
+            <EstadoVacio
+              Icono={Users}
+              titulo="El equipo está vacío"
+              className="rounded-xl border border-border bg-surface"
+              accion={
+                <BotonEnlace variant="outline" href={`/panel/ministerios/${id}`}>
+                  <UserPlus strokeWidth={1.8} />
+                  Sumar gente en el panel
+                </BotonEnlace>
+              }
+            >
+              Este ministerio todavía no tiene a nadie. Suma a tu gente desde
+              el panel y vuelve aquí para pasar lista.
+            </EstadoVacio>
           ) : (
-            <Lista>
-              {equipo.map((p) => (
-                <Fila key={p.miembroId}>
-                  {/* La fila entera es la casilla: se marca con el pulgar, de
-                      pie en la sala y con el móvil en una mano. Sin teñir la
-                      fila marcada: en un ensayo viene casi todo el equipo, y
-                      la lista entera en salmón borraba los avatares y las
-                      líneas. Lo dice la casilla. */}
-                  <label className="flex min-h-14 cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-surface-alt md:px-5">
-                    <input
-                      type="checkbox"
-                      name="presentes"
-                      value={p.miembroId}
-                      defaultChecked={p.presente ?? primeraVez}
-                      className="size-5 flex-none accent-primary"
-                    />
-                    <AvatarPersona nombre={p.nombre} tamano="md" />
-                    <span className="min-w-0 flex-1 truncate text-body font-semibold">
-                      {p.nombre}
-                    </span>
-                  </label>
-                </Fila>
-              ))}
-            </Lista>
-          )}
-        </section>
+            <EstadoVacio
+              Icono={UserX}
+              titulo="Nadie a quien pasar lista"
+              className="rounded-xl border border-border bg-surface"
+            >
+              No hay nadie en este equipo a quien se le pueda pasar lista.
+            </EstadoVacio>
+          )
+        ) : (
+          <>
+            {/* Los mismos `presentes` que antes, con el mismo valor de
+                entrada (`presente ?? primeraVez`): la action no se entera de
+                que la pantalla ha cambiado. */}
+            <PasarLista
+              personas={equipo.map((p) => ({
+                miembroId: p.miembroId,
+                nombre: p.nombre,
+                marcado: p.presente ?? primeraVez,
+              }))}
+            />
 
-        {equipo.length > 0 && (
-          <div>
-            <Button type="submit">Guardar la lista</Button>
-          </div>
+            {/*
+             * FIJO ABAJO, ENCIMA DE LA BARRA DE `/mi`
+             * ---------------------------------------
+             * Al alcance del pulgar con la lista a medias, sin bajar a
+             * buscarlo. Sigue DENTRO del `<form>`: `BotonEnviar` lee el
+             * estado de este formulario, y sin JavaScript envía igual.
+             *
+             * La barra publica lo que ocupa en `--alto-barra-mi`, con la
+             * zona segura del iPhone dentro. La radio, cuando la iglesia la
+             * tiene, va pegada encima de la barra y no publica su alto: se la
+             * reconoce por su `<audio>`, que en esta pantalla no hay otro, y
+             * se suben sus 54 px (en escritorio flota 6 px más arriba). Si un
+             * día la radio publica su alto, esto pasa a usar esa variable.
+             *
+             * Por fuera `pointer-events-none`: la franja de los lados no debe
+             * tragarse los toques de la fila que pasa por debajo.
+             */}
+            <div
+              className={clsx(
+                'pointer-events-none fixed inset-x-0 z-20 px-4 sm:px-5',
+                'bottom-[calc(var(--alto-barra-mi,72px)+8px)]',
+                '[html:has(audio)_&]:bottom-[calc(var(--alto-barra-mi,72px)+62px)]',
+                'md:[html:has(audio)_&]:bottom-[calc(var(--alto-barra-mi,72px)+68px)]',
+              )}
+            >
+              <div className="pointer-events-auto mx-auto w-full max-w-[580px]">
+                <BotonEnviar size="lg" className="w-full">
+                  <Save strokeWidth={1.8} />
+                  Guardar la lista
+                </BotonEnviar>
+              </div>
+            </div>
+          </>
         )}
       </form>
 
@@ -182,15 +196,20 @@ export default async function ReunionEnLaAppPage({
         titulo="Borrar de la agenda"
         boton={
           <form action={borrarReunionDeMinisterio.bind(null, id, reunionId)}>
-            <Button type="submit" variant="destructive">
+            <BotonEnviar variant="destructive" pendiente="Borrando…">
               <Trash2 strokeWidth={1.8} />
               Borrar
-            </Button>
+            </BotonEnviar>
           </form>
         }
       >
         Se va con su lista. No hay forma de recuperarla.
       </ZonaDeBorrar>
+
+      {/* El hueco del botón fijo, que flota sobre lo último de la pantalla:
+          sin él, al llegar abajo tapaba la zona de borrar. El de la barra y
+          la radio ya lo pone `mi/layout.tsx`. */}
+      {equipo.length > 0 && <div aria-hidden className="h-12" />}
     </MarcoEquipo>
   );
 }

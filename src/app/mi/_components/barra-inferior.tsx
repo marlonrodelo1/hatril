@@ -164,16 +164,54 @@ export function BarraInferior({
     return () => observador.disconnect();
   }, [pathname, equipo]);
 
+  /*
+   * LO QUE OCUPA LA BARRA, PARA QUIEN SE PONE ENCIMA
+   *
+   * La radio va pegada encima de la barra, y en `/mi` hay piezas fijas abajo
+   * (la barra de acciones de la Biblia, «Guardar la lista»…) que tienen que
+   * quedar por encima. En vez de que cada una adivine el alto de la barra —que
+   * cambia con la zona segura de cada móvil y con el tamaño de letra—, la barra
+   * lo mide y lo publica como `--alto-barra-mi` en la raíz: la distancia del
+   * borde de abajo de la pantalla al borde de arriba de la barra. El hueco del
+   * final de cada pantalla (`mi/layout.tsx`) también la usa.
+   */
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const raiz = document.documentElement;
+    const publicar = () => {
+      const caja = nav.getBoundingClientRect();
+      const ocupa = Math.ceil(window.innerHeight - caja.top);
+      raiz.style.setProperty('--alto-barra-mi', `${ocupa}px`);
+    };
+    publicar();
+    const observador = new ResizeObserver(publicar);
+    observador.observe(nav);
+    window.addEventListener('resize', publicar);
+    return () => {
+      observador.disconnect();
+      window.removeEventListener('resize', publicar);
+      raiz.style.removeProperty('--alto-barra-mi');
+    };
+  }, []);
+
   return (
     <nav
       ref={navRef}
       aria-label="Secciones"
       className={
-        // Flotante en las dos anchuras. `bottom-[calc(...)]` respeta la zona
-        // segura del iPhone: pegada a `bottom-3` a secas, la barra de gestos se
-        // come la fila de abajo.
-        'fixed inset-x-3 z-30 flex items-center gap-1 rounded-2xl border border-border p-1.5 ' +
-        'bottom-[calc(0.75rem+env(safe-area-inset-bottom))] ' +
+        /*
+         * ANCLADA ABAJO EN EL MÓVIL (zona 2, 17-nov)
+         *
+         * Flotaba a 12 px de los bordes y Marlon la veía «desplazada arriba, no
+         * anclada abajo del dispositivo». Ahora, en el móvil, va pegada al
+         * borde de abajo y de lado a lado, como la barra de cualquier app
+         * nativa: una sola raya arriba, y la zona segura del iPhone dentro de
+         * su relleno de abajo para que la barra de gestos no se coma la fila.
+         * En escritorio sigue siendo la pastilla centrada y flotante.
+         */
+        'fixed inset-x-0 bottom-0 z-30 flex items-center gap-1 border-t border-border px-1.5 pt-1.5 ' +
+        'pb-[calc(0.375rem+env(safe-area-inset-bottom))] ' +
         /*
          * El glaseado, con guarda: sin `backdrop-filter` el fondo translúcido
          * dejaría el texto ilegible sobre lo que haya debajo.
@@ -194,7 +232,7 @@ export function BarraInferior({
          */
         'bg-surface supports-backdrop-filter:bg-surface/92 supports-backdrop-filter:backdrop-blur-2xl supports-backdrop-filter:backdrop-saturate-150 ' +
         // Escritorio: pastilla centrada del ancho de su contenido.
-        'md:inset-x-auto md:bottom-5 md:left-1/2 md:w-auto md:-translate-x-1/2'
+        'md:inset-x-auto md:bottom-5 md:left-1/2 md:w-auto md:-translate-x-1/2 md:rounded-2xl md:border md:p-1.5'
       }
     >
       {pastilla && (
@@ -245,11 +283,21 @@ function Pestana({
       href={p.href}
       aria-current={esta ? 'page' : undefined}
       className={
-        // 11,5 px y no 10,5: el mínimo de la escala (inventario, A16). Cinco
-        // siguen cabiendo a 375 px: «Comunidad» pasa de unos 55 a 60 px, y a
-        // cada pestaña le tocan unos 68. `relative` para quedar encima de la
-        // pastilla, que va antes en el DOM.
-        'relative flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-micro font-semibold no-underline transition-colors duration-150 hover:no-underline ' +
+        /*
+         * 11,5 px y no 10,5: el mínimo de la escala (inventario, A16).
+         *
+         * CADA PESTAÑA, DEL ANCHO DE SU NOMBRE
+         * Con las cinco del mismo ancho (`flex-1`) no caben: medido con la
+         * letra de verdad, «Comunidad» ocupa 65 px y «Devocional» 63, y a 360
+         * px a cada pestaña le tocan 62. Se pegaban («ComunidadDevocional»,
+         * lo vio Marlon el 17-nov). Con `flex-auto` cada una parte del ancho
+         * de su nombre y el sobrante se reparte: «Biblia» (31 px) y «Equipo»
+         * (39) ceden lo que les sobra, y las cinco caben con aire hasta en un
+         * móvil de 320 px. La pastilla mide la pestaña, así que sigue bien.
+         *
+         * `relative` para quedar encima de la pastilla, que va antes en el DOM.
+         */
+        'relative flex min-w-0 flex-auto flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-micro font-semibold whitespace-nowrap no-underline transition-colors duration-150 hover:no-underline ' +
         'md:flex-none md:flex-row md:gap-2 md:px-3 md:py-2 md:text-[13.5px] ' +
         (esta
           /*

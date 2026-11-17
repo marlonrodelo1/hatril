@@ -18,6 +18,7 @@ import {
 } from '@/lib/comunidad/reglas';
 import { nombreDeLaCuenta } from '@/lib/auth/nombre';
 import { Aviso } from '@/components/aviso';
+import { EstadoVacio } from '@/components/ui/estado-vacio';
 import { CabeceraMiembro } from '../_components/cabecera-miembro';
 import { CabeceraDelDia } from './_components/cabecera-del-dia';
 import { Publicador } from './_components/publicador';
@@ -116,12 +117,13 @@ export default async function ComunidadPage({
       />
 
       {/*
-       * `gap-3` en móvil y no `gap-4`: las publicaciones van a sangre —sin borde
-       * a los lados— y con cuatro unidades entre ellas el muro se lee como una
-       * lista de fichas sueltas en vez de como una conversación seguida. En
-       * pantalla ancha vuelven a ser tarjetas y el aire hace falta otra vez.
+       * La columna de todas las pantallas de `/mi` (guía visual), con su
+       * `gap-4` también en el móvil. Aquí llevaba `gap-3` porque las
+       * publicaciones iban a sangre y se quería que se leyeran seguidas; desde
+       * el 17-nov cada una es su tarjeta, y ese aire es justo lo que separa
+       * una de la siguiente.
        */}
-      <main className="mx-auto flex w-full max-w-[620px] flex-col gap-3 px-4 py-4 sm:gap-4 sm:px-5 sm:py-6">
+      <main className="mx-auto flex w-full max-w-[620px] flex-col gap-4 px-4 py-4 sm:px-5 sm:py-6">
         {error && <Aviso tipo="error">{error}</Aviso>}
         {bloqueado && (
           <Aviso tipo="ok">
@@ -193,20 +195,15 @@ export default async function ComunidadPage({
            * exactamente la sensación que la `0027` evita dejando el SELECT
            * fuera de la configuración.
            */
-          <div className="flex flex-col items-start gap-3 rounded-xl border border-border bg-surface p-6">
-            <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
-              <MessagesSquare className="size-5" strokeWidth={1.7} />
-            </span>
-
-            <h2 className="text-[17px] font-bold tracking-[-0.02em]">
-              La comunidad está apagada ahora mismo
-            </h2>
-
-            <p className="text-pretty text-[15px] leading-relaxed text-muted-foreground">
+          <div className="rounded-xl border border-border bg-surface">
+            <EstadoVacio
+              Icono={MessagesSquare}
+              titulo="La comunidad está apagada ahora mismo"
+            >
               {ctx.iglesia.nombre} ha cerrado el muro por ahora, así que no se
               puede publicar ni comentar. Lo que se publicó sigue guardado y
               vuelve a verse en cuanto lo enciendan.
-            </p>
+            </EstadoVacio>
           </div>
         ) : (
           <>
@@ -223,15 +220,15 @@ export default async function ComunidadPage({
             {muro.length === 0 ? (
               /* Un muro vacío no es un error, es el primer día. Se dice así en
                  vez de dejar la pantalla en blanco. */
-              <div className="flex flex-col items-start gap-2 rounded-xl border border-border bg-surface p-6">
-                <h2 className="text-[17px] font-bold tracking-[-0.02em]">
-                  Todavía no hay nada por aquí
-                </h2>
-                <p className="text-pretty text-[15px] leading-relaxed text-muted-foreground">
+              <div className="rounded-xl border border-border bg-surface">
+                <EstadoVacio
+                  Icono={MessagesSquare}
+                  titulo="Todavía no hay nada por aquí"
+                >
                   Esto lo ve solo la gente de {ctx.iglesia.nombre}. Una foto del
                   domingo o una petición de oración son buenas maneras de
                   empezar.
-                </p>
+                </EstadoVacio>
               </div>
             ) : (
               muro.map((p) => (
@@ -247,7 +244,7 @@ export default async function ComunidadPage({
             {/* El aviso de las fotos solo si de verdad se pueden subir: un
                 texto que describe algo que la pantalla no ofrece es la clase de
                 mentira pequeña que este repo ya ha pagado en los legales. */}
-            <p className="px-1 pt-2 text-[12.5px] leading-relaxed text-muted-foreground">
+            <p className="px-1 pt-2 text-label leading-relaxed text-muted-foreground">
               Lo que se publica aquí no sale en la web de la iglesia ni lo ve
               nadie de fuera.
               {config.fotos &&
