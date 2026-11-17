@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import {
   BatteryFull,
   Bell,
   BookMarked,
   BookOpen,
   CalendarDays,
+  Check,
   ChevronRight,
   Church,
   Clock,
@@ -16,7 +17,12 @@ import {
   MapPin,
   MessageCircle,
   MessagesSquare,
+  Minus,
+  Pause,
+  Play,
   Quote,
+  Search,
+  Share2,
   ShieldCheck,
   Signal,
   UserPlus,
@@ -330,8 +336,12 @@ function Publicacion({
  * El muro. Arriba la portada del día sin foto, que en la aplicación es el
  * carbón liso con el texto en blanco: no hay fotos de iglesias que se puedan
  * enseñar aquí, y la portada sin foto existe tal cual en el producto.
+ *
+ * Con `animado`, una publicación del pastor entra arriba del todo cada diez
+ * segundos y empuja a las demás (`portada-publicacion` en `globals.css`). Con
+ * «reducir movimiento» está ahí desde el principio, quieta.
  */
-export function PantallaMuro() {
+export function PantallaMuro({ animado = false }: { animado?: boolean }) {
   return (
     <>
       <CabeceraApp titulo="Comunidad" />
@@ -369,6 +379,19 @@ export function PantallaMuro() {
         </div>
       </div>
 
+      {animado && (
+        <div className="portada-publicacion grid flex-none">
+          <div className="min-h-0 overflow-hidden">
+            <Publicacion
+              nombre="Daniel Ruiz"
+              cuando="Ahora mismo"
+              texto="Esta noche a las 19:30, oración en el templo. ¡Los esperamos!"
+              megusta={3}
+              comentarios={0}
+            />
+          </div>
+        </div>
+      )}
       <Publicacion
         nombre="Brandon Molina"
         cuando="Hace 2 horas"
@@ -394,6 +417,36 @@ const SEMANA = [
   { dia: 'Dom', hora: '10:00', que: 'Culto de domingo', donde: 'Sirves en guitarra' },
 ];
 
+/**
+ * El turno por contestar de la agenda. Suelto, en la rejilla de la portada, va
+ * con `rounded-lg` porque vive dentro de una tarjeta; dentro del teléfono, con
+ * el 12 de la agenda de verdad.
+ */
+export function PiezaTeToca({ className = 'rounded-lg' }: { className?: string }) {
+  return (
+    <div
+      className={clsx(
+        'flex flex-col gap-3 border border-border bg-surface p-4',
+        className,
+      )}
+    >
+      <span className="flex flex-col gap-0.5">
+        <span className="text-label font-semibold text-muted-foreground">
+          Domingo · 10:00
+        </span>
+        <span className="text-body font-semibold">Culto de domingo</span>
+        <span className="text-label text-muted-foreground">
+          Alabanza · Guitarra
+        </span>
+      </span>
+      <span className="flex gap-2">
+        <BotonDibujado variante="secondary">Ahí estaré</BotonDibujado>
+        <BotonDibujado variante="outline">No puedo</BotonDibujado>
+      </span>
+    </div>
+  );
+}
+
 /** La agenda en «Semana», con un turno por contestar. */
 export function PantallaAgenda() {
   return (
@@ -415,21 +468,7 @@ export function PantallaAgenda() {
 
         <div className="flex flex-col gap-2">
           <span className="t-micro px-1">Te toca servir</span>
-          <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
-            <span className="flex flex-col gap-0.5">
-              <span className="text-label font-semibold text-muted-foreground">
-                Domingo · 10:00
-              </span>
-              <span className="text-body font-semibold">Culto de domingo</span>
-              <span className="text-label text-muted-foreground">
-                Alabanza · Guitarra
-              </span>
-            </span>
-            <span className="flex gap-2">
-              <BotonDibujado variante="secondary">Ahí estaré</BotonDibujado>
-              <BotonDibujado variante="outline">No puedo</BotonDibujado>
-            </span>
-          </div>
+          <PiezaTeToca className="rounded-xl" />
         </div>
 
         <div className="flex flex-col gap-2">
@@ -538,12 +577,17 @@ function Cifra({ etiqueta, valor }: { etiqueta: string; valor: number }) {
 }
 
 /**
- * Inicio del panel (`/panel/hoy`): lo que espera al pastor al entrar. A tamaño
- * real son 720 px de ancho; quien la pone la encoge con `zoom`.
+ * Inicio del panel (`/panel/hoy`): lo que espera al pastor al entrar. Por
+ * defecto, 720 × 500 a tamaño real; quien la pone puede darle otra medida
+ * (`className`) y la encoge con `zoom`. La columna de la derecha es fluida.
  */
-export function PantallaInicioPanel() {
+export function PantallaInicioPanel({
+  className = 'h-[500px] w-[720px]',
+}: {
+  className?: string;
+}) {
   return (
-    <div className="flex h-[500px] w-[720px] bg-background">
+    <div className={clsx('flex bg-background', className)}>
       <div className="flex w-[192px] flex-none flex-col gap-0.5 border-r border-border bg-surface p-2.5">
         <span className="mb-2 flex items-center gap-2.5 px-1.5 py-1.5">
           <span className="flex size-8 flex-none items-center justify-center rounded-lg border border-border bg-surface-alt text-muted-foreground">
@@ -627,10 +671,17 @@ const TURNO: {
   puesto: string;
   nombre: string | null;
   estado: [keyof typeof TONOS, string];
+  /** A qué pasa cuando la maqueta va animada: la persona contesta. */
+  cambia?: [keyof typeof TONOS, string];
 }[] = [
   { puesto: 'Dirección', nombre: 'Laura Gómez', estado: ['exito', 'Confirmado'] },
   { puesto: 'Guitarra', nombre: 'Tomás Herrera', estado: ['exito', 'Confirmado'] },
-  { puesto: 'Voces', nombre: 'Valeria Ospina', estado: ['neutro', 'Sin contestar'] },
+  {
+    puesto: 'Voces',
+    nombre: 'Valeria Ospina',
+    estado: ['neutro', 'Sin contestar'],
+    cambia: ['exito', 'Confirmado'],
+  },
   { puesto: 'Teclado', nombre: 'Julián Pardo', estado: ['peligro', 'No puede'] },
   { puesto: 'Bajo', nombre: null, estado: ['aviso', 'Sin cubrir'] },
 ];
@@ -638,10 +689,20 @@ const TURNO: {
 /**
  * Los turnos de un ministerio: quién sirve el domingo y en qué puesto. Fluida,
  * sin `zoom`: en el panel de verdad esta tarjeta ya se apaña en un móvil.
+ *
+ * Con `animado`, Valeria contesta: su «Sin contestar» cruza a «Confirmado» y
+ * vuelve, en bucle lento. Las dos insignias se apilan en la misma celda de
+ * rejilla para que la fila no cambie de ancho al cruzar.
  */
-export function PantallaTurnos() {
+export function PantallaTurnos({
+  animado = false,
+  className,
+}: {
+  animado?: boolean;
+  className?: string;
+}) {
   return (
-    <div className="flex flex-col gap-4 bg-background p-4 sm:p-6">
+    <div className={clsx('flex flex-col gap-4 bg-background p-4 sm:p-6', className)}>
       <span className="flex flex-col gap-0.5">
         <span className="text-label text-muted-foreground">
           Ministerios · Alabanza
@@ -651,7 +712,9 @@ export function PantallaTurnos() {
         </span>
       </span>
 
-      <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
+      {/* `rounded-lg` y no el 12 de la pantalla de verdad: aquí siempre va
+          dentro de una tarjeta de la portada, y dos radios de 12 no se anidan. */}
+      <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-surface">
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="text-label font-semibold text-muted-foreground">
@@ -687,9 +750,40 @@ export function PantallaTurnos() {
                 {t.puesto}
               </span>
             </span>
-            <Insignia tono={t.estado[0]}>{t.estado[1]}</Insignia>
+            {animado && t.cambia ? (
+              <span className="grid justify-items-end">
+                <span className="portada-turno-antes [grid-area:1/1]">
+                  <Insignia tono={t.estado[0]}>{t.estado[1]}</Insignia>
+                </span>
+                <span className="portada-turno-despues [grid-area:1/1]">
+                  <Insignia tono={t.cambia[0]}>{t.cambia[1]}</Insignia>
+                </span>
+              </span>
+            ) : (
+              <Insignia tono={t.estado[0]}>{t.estado[1]}</Insignia>
+            )}
           </div>
         ))}
+      </div>
+
+      {/* El turno siguiente, ya completo: la etiqueta es la de la lista de
+          turnos de verdad. En la portada rellena la celda grande, que con un
+          solo turno se quedaba con un palmo de crema vacío arriba y abajo. */}
+      <div className="flex items-end gap-3 rounded-lg border border-border bg-surface px-4 py-3">
+        <span className="flex min-w-0 flex-1 flex-col items-start gap-2">
+          <span className="flex flex-col">
+            <span className="text-label font-semibold text-muted-foreground">
+              Miércoles · 19:30
+            </span>
+            <span className="text-body font-semibold">Reunión de oración</span>
+          </span>
+          <Insignia tono="exito">Todos los puestos cubiertos</Insignia>
+        </span>
+        <span className="hidden flex-none -space-x-2 sm:flex">
+          {['Laura Gómez', 'Tomás Herrera', 'Valeria Ospina'].map((n) => (
+            <AvatarPersona key={n} nombre={n} tamano="sm" className="ring-2 ring-surface" />
+          ))}
+        </span>
       </div>
     </div>
   );
@@ -743,6 +837,368 @@ export function PiezaSolicitud() {
       <span className="flex gap-2">
         <BotonDibujado variante="secondary">Aprobar</BotonDibujado>
         <BotonDibujado variante="outline">Ver ficha</BotonDibujado>
+      </span>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------ */
+/* Las piezas de las rejillas                                                */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * Un aviso suelto encima de la escena de la portada, como los que llegan al
+ * panel. Blanco con borde sobre el fondo de la escena: sin sombra, se despega
+ * por el borde y por el contraste.
+ */
+export function AvisoFlotante({
+  persona,
+  titulo,
+  detalle,
+  className,
+  style,
+}: {
+  /** Con persona va su avatar; sin ella, la marca de confirmado. */
+  persona?: string;
+  titulo: string;
+  detalle: string;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <div
+      style={style}
+      className={clsx(
+        'flex w-max max-w-[300px] items-center gap-3 rounded-xl border border-border bg-surface py-2.5 pr-4 pl-2.5',
+        className,
+      )}
+    >
+      {persona ? (
+        <AvatarPersona nombre={persona} />
+      ) : (
+        <span className="flex size-10 flex-none items-center justify-center rounded-full bg-badge-success-bg text-badge-success-fg">
+          <Check className="size-5" strokeWidth={2.2} />
+        </span>
+      )}
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate text-label font-semibold">{titulo}</span>
+        <span className="truncate text-label text-muted-foreground">{detalle}</span>
+      </span>
+    </div>
+  );
+}
+
+const MINISTERIOS: {
+  nombre: string;
+  responsable: string | null;
+  gente: string[];
+  total: number;
+}[] = [
+  {
+    nombre: 'Alabanza',
+    responsable: 'Laura Gómez',
+    gente: ['Tomás Herrera', 'Valeria Ospina', 'Julián Pardo'],
+    total: 12,
+  },
+  { nombre: 'Jóvenes', responsable: null, gente: [], total: 15 },
+  {
+    nombre: 'Acogida',
+    responsable: 'Esteban Cruz',
+    gente: ['Marta Ríos', 'Andrés Gil'],
+    total: 8,
+  },
+  {
+    nombre: 'Niños',
+    responsable: 'Ana Lucía Rojas',
+    gente: ['Sofía Duque', 'Camila Restrepo', 'Brandon Molina'],
+    total: 10,
+  },
+];
+
+/**
+ * Los ministerios con su responsable y su gente. El que no tiene responsable
+ * lo dice con su insignia, igual que en el Inicio del panel.
+ *
+ * Las caras van solapadas con un anillo del color de la tarjeta: es un borde,
+ * no una sombra, y separa una cara de la siguiente.
+ */
+export function PiezaMinisterios() {
+  return (
+    <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-surface">
+      {MINISTERIOS.map((m) => (
+        <span
+          key={m.nombre}
+          className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0"
+        >
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-body font-semibold">{m.nombre}</span>
+            {/* Solo el nombre: con «· responsable» detrás y las caras al lado,
+                en la columna estrecha se quedaba en «Ana Lucía Rojas ·
+                responsa…». Que es quien lo lleva ya lo dice el título. */}
+            <span className="truncate text-label text-muted-foreground">
+              {m.responsable ?? `${m.total} personas`}
+            </span>
+          </span>
+          {m.responsable ? (
+            <span className="flex flex-none items-center gap-2">
+              <span className="flex -space-x-2">
+                {m.gente.map((n) => (
+                  <AvatarPersona
+                    key={n}
+                    nombre={n}
+                    tamano="sm"
+                    className="ring-2 ring-surface"
+                  />
+                ))}
+              </span>
+              <span className="text-label font-semibold text-muted-foreground tabular-nums">
+                {m.total}
+              </span>
+            </span>
+          ) : (
+            <Insignia tono="aviso">Sin responsable</Insignia>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Una publicación suelta del muro, fuera del teléfono. */
+export function PiezaPublicacion() {
+  return (
+    <div className="overflow-hidden rounded-lg border border-border [&>div]:border-b-0">
+      <Publicacion
+        nombre="Marcela Duarte"
+        cuando="Ayer"
+        texto="Gracias a todos los que trajeron comida para la familia Pardo: hay para dos semanas. Así es esta iglesia."
+        megusta={41}
+        comentarios={9}
+      />
+    </div>
+  );
+}
+
+/**
+ * Los permisos de una persona del equipo, resumidos. Los nombres son los de
+ * `PERMISOS` en `lib/auth/permisos.ts`, tal cual se leen en el panel.
+ *
+ * Con una marca y no con las casillas de la pantalla de verdad: la casilla
+ * marcada es naranja, y en la portada el único color de llamada es el botón.
+ */
+const PERMISOS_DE_RUT: [string, boolean][] = [
+  ['Ver la congregación entera', true],
+  ['Aceptar a quien pide entrar', true],
+  ['Llevar las cuentas', false],
+  ['Ver dirección, fecha de nacimiento y notas', false],
+];
+
+export function PiezaPermisos() {
+  return (
+    <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-surface">
+      <span className="flex items-center gap-3 border-b border-border px-4 py-3">
+        <AvatarPersona nombre="Rut Mena" />
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate text-body font-semibold">Rut Mena</span>
+          <span className="text-label text-muted-foreground">Secretaría</span>
+        </span>
+      </span>
+      {PERMISOS_DE_RUT.map(([permiso, tiene]) => (
+        <span
+          key={permiso}
+          className="flex items-center gap-2.5 border-b border-border px-4 py-2 last:border-b-0"
+        >
+          {tiene ? (
+            <Check className="size-4 flex-none text-badge-success-fg" strokeWidth={2.2} />
+          ) : (
+            <Minus className="size-4 flex-none text-disabled-fg" strokeWidth={2.2} />
+          )}
+          <span
+            className={clsx(
+              'text-label leading-snug',
+              tiene ? 'font-medium' : 'text-muted-foreground',
+            )}
+          >
+            {permiso}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+const FICHERO: { nombre: string; estado: [keyof typeof TONOS, string]; dato: string }[] = [
+  { nombre: 'Camila Restrepo', estado: ['marca', 'Nuevo'], dato: 'Llegó hace dos semanas' },
+  { nombre: 'Andrés Gil', estado: ['exito', 'Activo'], dato: 'Jóvenes · Alabanza' },
+  { nombre: 'Marta Ríos', estado: ['aviso', 'Visitante'], dato: 'Vino el domingo' },
+  { nombre: 'Esteban Cruz', estado: ['exito', 'Activo'], dato: 'Acogida' },
+];
+
+/**
+ * El fichero: buscador, los estados de `lib/miembros/estados.ts` con sus
+ * colores, y unas filas. Sin teléfonos ni correos, ni de mentira: es justo lo
+ * que la portada promete proteger.
+ */
+export function PiezaFichero() {
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-3.5 sm:p-4">
+      <span className="flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-alt px-3 text-label text-muted-foreground">
+        <Search className="size-4 flex-none" strokeWidth={1.8} />
+        <span className="truncate">Buscar por nombre</span>
+      </span>
+      <span className="flex flex-wrap gap-1.5 text-label font-semibold">
+        {[
+          ['Todos', 184],
+          ['Activos', 142],
+          ['Nuevos', 9],
+          ['Visitantes', 21],
+        ].map(([nombre, cuantos], i) => (
+          <span
+            key={nombre}
+            className={clsx(
+              'flex items-center gap-1.5 rounded-full border px-2.5 py-1',
+              i === 0
+                ? 'border-primary/30 bg-accent text-accent-foreground'
+                : 'border-border text-muted-foreground',
+            )}
+          >
+            {nombre}
+            <span className="tabular-nums">{cuantos}</span>
+          </span>
+        ))}
+      </span>
+      <span className="flex flex-col">
+        {FICHERO.map((p) => (
+          <span
+            key={p.nombre}
+            className="flex items-center gap-3 border-t border-border py-2.5"
+          >
+            <AvatarPersona nombre={p.nombre} tamano="sm" />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-body font-semibold">{p.nombre}</span>
+              <span className="truncate text-label text-muted-foreground">
+                {p.dato}
+              </span>
+            </span>
+            <Insignia tono={p.estado[0]}>{p.estado[1]}</Insignia>
+          </span>
+        ))}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * El devocional del día. El bloque de vídeo es el carbón liso con el botón de
+ * reproducir: el devocional lleva vídeo solo «si lo tiene», y una miniatura
+ * inventada sería una foto de nadie.
+ */
+export function PiezaDevocional() {
+  return (
+    <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-surface">
+      <span className="flex aspect-[16/7] items-center justify-center bg-support text-secondary-foreground">
+        <span className="flex size-11 items-center justify-center rounded-full border border-support-muted-foreground">
+          <Play className="ml-0.5 size-5" strokeWidth={1.8} />
+        </span>
+      </span>
+      <span className="flex flex-col gap-1 p-4">
+        <span className="t-micro">Devocional de hoy</span>
+        <span className="t-subtitulo">Cuando todo tiembla</span>
+        <span className="text-label leading-relaxed text-pretty text-muted-foreground">
+          Hay semanas en que todo se mueve a la vez. El salmista no niega la
+          tormenta: dice dónde se refugia.
+        </span>
+      </span>
+    </div>
+  );
+}
+
+/** Un versículo en la Biblia, listo para compartir con su cita. */
+export function PiezaBiblia() {
+  return (
+    <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4">
+      <span className="flex items-center gap-2 text-label font-semibold text-muted-foreground">
+        <BookMarked className="size-4" strokeWidth={1.8} />
+        Salmos 23
+      </span>
+      <p className="text-subtitle leading-snug font-medium text-pretty">
+        <sup className="mr-1 text-micro font-bold text-muted-foreground">1</sup>
+        Jehová es mi pastor; nada me faltará.
+      </p>
+      <span className="flex items-center justify-between gap-3">
+        <span className="text-label text-muted-foreground">RV1909</span>
+        <BotonDibujado variante="outline">
+          <Share2 strokeWidth={1.8} />
+          Compartir
+        </BotonDibujado>
+      </span>
+    </div>
+  );
+}
+
+/*
+ * Las barras de la radio. La altura de cada una es su reposo: con «reducir
+ * movimiento» se quedan así, a alturas distintas, y se sigue leyendo «suena».
+ */
+const BARRAS = [
+  { alto: 'h-3', duracion: '1.1s', retraso: '0ms' },
+  { alto: 'h-5', duracion: '0.9s', retraso: '-300ms' },
+  { alto: 'h-4', duracion: '1.3s', retraso: '-600ms' },
+  { alto: 'h-5', duracion: '1s', retraso: '-150ms' },
+];
+
+/** El reproductor de la radio de la iglesia, sonando. */
+export function PiezaRadio() {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3">
+      <span className="flex size-10 flex-none items-center justify-center rounded-full bg-support text-secondary-foreground">
+        <Pause className="size-[18px]" strokeWidth={2} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-body font-semibold">Radio Betania</span>
+        <span className="text-label text-muted-foreground">En directo</span>
+      </span>
+      <span className="flex h-5 items-end gap-[3px] pr-1" aria-hidden>
+        {BARRAS.map((b, i) => (
+          <span
+            key={i}
+            style={
+              { '--duracion': b.duracion, '--retraso': b.retraso } as CSSProperties
+            }
+            className={clsx('portada-barra w-[3px] origin-bottom rounded-full bg-support', b.alto)}
+          />
+        ))}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * La prueba del aislamiento, dibujada para la franja carbón: lo que pide la
+ * aplicación y lo que devuelve la base de datos. Tono sobre tono, con el gris
+ * de `support-muted-foreground` para lo secundario.
+ */
+export function PiezaAislamiento() {
+  return (
+    <div className="flex flex-col overflow-hidden rounded-xl border border-support-active bg-support-hover">
+      <span className="flex flex-col gap-1 px-5 py-4">
+        <span className="text-label text-support-muted-foreground">
+          Desde Iglesia Betania, la aplicación pide
+        </span>
+        <span className="text-body font-semibold">
+          Los miembros de Iglesia Emmanuel
+        </span>
+      </span>
+      <span className="flex items-center gap-4 border-t border-support px-5 py-4">
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="text-label text-support-muted-foreground">
+            La base de datos devuelve
+          </span>
+          <span className="t-cifra tabular-nums">0 filas</span>
+        </span>
+        <span className="flex size-11 flex-none items-center justify-center rounded-full border border-support-muted-foreground/40">
+          <Lock className="size-5" strokeWidth={1.8} />
+        </span>
       </span>
     </div>
   );

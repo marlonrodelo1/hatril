@@ -69,6 +69,11 @@ Las insignias y los avatares llevan su tamaño dentro del componente.
 La web pública (`/i/[slug]`) y la portada tienen escala de cartel propia
 (`t-display`, `clamp(...)`): es la única excepción, y vive solo ahí.
 
+**La portada lleva además una serif en los titulares**: Newsreader, con una
+palabra en cursiva (17-nov, segundo pase de la portada). La carga
+`src/app/page.tsx` y nadie más; fuera de ahí `font-serif` cae en Georgia. No
+la uses en el panel ni en `/mi`: allí sigue habiendo una sola familia.
+
 ---
 
 ## Página del panel
