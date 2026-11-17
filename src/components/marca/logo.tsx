@@ -43,7 +43,7 @@ import { cn } from '@/lib/utils';
  * sombras.
  */
 
-type Variante = 'simbolo' | 'logotipo';
+type Variante = 'simbolo' | 'logotipo' | 'atril';
 
 export function Logo({
   variante = 'logotipo',
@@ -60,6 +60,27 @@ export function Logo({
 }) {
   if (variante === 'simbolo') {
     return <Simbolo tamano={tamano} className={className} />;
+  }
+
+  if (variante === 'atril') {
+    /*
+     * El atril solo: sin el cuadrado naranja y en el color del texto que lo
+     * rodea (`fill-current`). Para usarlo de adorno, tono sobre tono, como en
+     * la franja carbón de la portada. Es decoración y por eso no se anuncia:
+     * la marca ya la dice el logotipo de la cabecera.
+     */
+    return (
+      <svg
+        viewBox={ATRIL_CAJA.join(' ')}
+        width={Math.round((tamano * ATRIL_CAJA[2]) / ATRIL_CAJA[3])}
+        height={tamano}
+        aria-hidden
+        focusable="false"
+        className={cn('block shrink-0', className)}
+      >
+        <path className="fill-current" d={ATRIL} />
+      </svg>
+    );
   }
 
   return (
@@ -127,6 +148,10 @@ const T_ATRIL =
 /** El atril de `icono-app.svg`, dentro del círculo del 66 %. */
 const ATRIL =
   'M352.71,384.31l318.58,-39.12v104.23l-104.38,0v207.08c0,50.57 45.27,90.54 100.6,87.19v63.72h-311.03v-63.72c55.33,3.35 100.6,-36.62 100.6,-87.19v-207.08h-104.38zM323.99,271.27c43.92,-8.7 88.21,-15.08 132.76,-19.42c19.82,-2.16 38.62,8.29 48.72,25.32c4.43,7.46 5.96,14.64 7.92,23.2c-0.17,-8.78 -0.42,-16.12 2.07,-24.43c5.68,-18.97 21.4,-33.65 41.15,-36.35c44.28,-6.57 88.8,-11.1 133.52,-13.27l9.81,79.88c-36.29,7.08 -72.59,14.17 -108.9,21.17c-24.14,4.65 -48.33,9.96 -72.74,12.96c-24.41,3 -49.17,3.7 -73.71,5.02c-36.92,1.99 -73.85,3.89 -110.78,5.81z';
+
+/** La caja del atril dentro del lienzo de 1024 del icono (x, y, ancho, alto),
+ *  medida con `getBBox()` en el navegador: la variante `atril` lo recorta a eso. */
+const ATRIL_CAJA = [324, 226, 376, 582] as const;
 
 /** `favicon-16.svg`: el cuadrado de esquinas escalonadas y el atril. */
 const FAVICON_16 = {

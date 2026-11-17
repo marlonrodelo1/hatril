@@ -112,6 +112,14 @@
   --hatril-support: #3d3d3a;
   --hatril-support-hover: #30302e;
   --hatril-support-active: #141413;
+  /*
+   * Texto secundario SOBRE el carbón: la franja oscura de la portada. Lo
+   * principal va en blanco con `secondary-foreground`; esto es lo que lo
+   * acompaña, y existe para no escribir un `text-white/70`, que es un color
+   * pensado para un fondo concreto aunque no lleve almohadilla. Es el gris
+   * claro de Claude en oscuro: 6.0:1 sobre #3D3D3A.
+   */
+  --hatril-support-fg-muted: #c2c0b6;
   --hatril-warning: #875a08;
   --hatril-danger: #b53333;
 
@@ -252,6 +260,7 @@
   --color-support: var(--hatril-support);
   --color-support-hover: var(--hatril-support-hover);
   --color-support-active: var(--hatril-support-active);
+  --color-support-muted-foreground: var(--hatril-support-fg-muted);
   --color-warning: var(--hatril-warning);
   --color-danger: var(--hatril-danger);
   --color-dorado: var(--hatril-dorado);
