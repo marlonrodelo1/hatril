@@ -901,3 +901,48 @@
     animation: hatril-centro 520ms var(--ease-hatril) 120ms both;
   }
 }
+
+/* ===== INICIO · Portada de la web de cada iglesia (zona 3, 17-nov-2026) =====
+ *
+ * Las fotos de `/i/[slug]` (`_components/carrusel.tsx`): el acercamiento lento
+ * de cada foto y la barra que se llena, como las historias de Instagram.
+ *
+ * La barra no es adorno: su `animationend` es el reloj que pasa a la foto
+ * siguiente, así que su duración (6 s) tiene que ser la de `DURACION_MS` del
+ * carrusel. El acercamiento dura un segundo más para que la foto que sale siga
+ * creciendo mientras se funde, en vez de quedarse quieta a mitad del cambio.
+ *
+ * Todo dentro de `no-preference`: con «reducir movimiento» las fotos cambian
+ * sin acercarse y la barra se pinta llena, y el carrusel lo sabe y cuenta el
+ * tiempo por su cuenta.
+ *
+ * `iglesia-foto-` y no `portada-`: la portada de Hatril (`src/app/page.tsx`)
+ * ya tiene un `.portada-barra`, el del ecualizador. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes iglesia-foto-acerca {
+    from {
+      transform: scale(1);
+    }
+    to {
+      transform: scale(1.07);
+    }
+  }
+
+  @keyframes iglesia-foto-barra {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  .iglesia-foto-acerca {
+    animation: iglesia-foto-acerca 7s linear both;
+  }
+
+  .iglesia-foto-barra {
+    animation: iglesia-foto-barra 6s linear both;
+  }
+}
+/* ===== FIN · Portada de la web de cada iglesia ===== */

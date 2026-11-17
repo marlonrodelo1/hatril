@@ -1,37 +1,74 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { clsx } from 'clsx';
+
+const MENOS_MOVIMIENTO = '(prefers-reduced-motion: reduce)';
+
+function suscribirMovimiento(avisar: () => void) {
+  const consulta = window.matchMedia(MENOS_MOVIMIENTO);
+  consulta.addEventListener('change', avisar);
+  return () => consulta.removeEventListener('change', avisar);
+}
+function pideMenosMovimiento() {
+  return window.matchMedia(MENOS_MOVIMIENTO).matches;
+}
+// «¿Ya se ha hidratado?» sin un `setState` dentro de un efecto: en el servidor
+// y durante la hidratación vale `false`, y justo después, `true`.
+const sinSuscripcion = () => () => {};
+const siempre = () => true;
+const nunca = () => false;
 
 /**
- * Las fotos de la iglesia, pasando solas.
+ * Cada cuánto cambia la foto. Tiene que coincidir con la duración de
+ * `.iglesia-foto-barra` en `globals.css`: con movimiento, el reloj ES esa
+ * animación (ver más abajo), y esto solo cuenta cuando no la hay.
+ */
+const DURACION_MS = 6000;
+
+/** Lo que tiene que recorrer el dedo en horizontal para que cuente como pasar
+ *  de foto y no como el temblor de quien empieza a desplazarse hacia abajo. */
+const DESLIZAR_PX = 48;
+
+/**
+ * Las fotos de la iglesia, de borde a borde, cambiando solas.
  *
- * SIN LIBRERÍA
- * ------------
- * Un carrusel son dos cosas: una lista que se desplaza y unos puntos para
- * saltar. El desplazamiento lo hace el navegador con `scroll-snap`, así que solo
- * queda decidir cuándo pasar de foto. Meter aquí una dependencia de WebGL o de
- * animación para eso son cientos de kilobytes en la página que más visitas
- * sueltas recibe, y muchas desde un móvil con mala cobertura.
+ * ERA UN CARRUSEL QUE SE DESPLAZABA Y AHORA ES UN FUNDIDO
+ * -------------------------------------------------------
+ * Antes era un contenedor con `scroll-snap` dentro de una tarjeta con margen y
+ * tres puntos debajo. Marlon aprobó (17-nov, zona 3 del rediseño) la foto a
+ * sangre, a casi toda la altura del móvil, con un fundido y un acercamiento
+ * lento, y unas barras como las de las historias de Instagram que dicen cuál
+ * va y cuánto le queda. Los puntos no decían ninguna de las dos cosas: ni que
+ * las fotos cambiaban solas ni cuándo.
  *
- * SE PUEDE ARRASTRAR
- * ------------------
- * Porque es un contenedor con scroll de verdad. En un móvil se pasa con el dedo
- * sin que hayamos escrito una línea para ello, y con teclado funcionan las
- * flechas. Los carruseles hechos con `transform` pierden las dos cosas y hay que
- * reimplementarlas.
+ * Lo que se pierde del desplazamiento —arrastrar con el dedo— se recupera con
+ * un gesto horizontal sencillo. Sin librería, como antes: un fundido son dos
+ * opacidades y una transición.
  *
- * CUÁNDO SE PARA, Y CUÁNDO NO
- * ---------------------------
- * Se para al tocarlo con el dedo y si el sistema pide menos movimiento
- * (`prefers-reduced-motion`).
+ * EL RELOJ ES LA ANIMACIÓN DE LA BARRA, NO UN `setInterval`
+ * ---------------------------------------------------------
+ * La barra se llena con una animación CSS de seis segundos, y al terminar
+ * (`animationend`) pasa a la siguiente foto. Con un temporizador aparte, los
+ * dos relojes se separan en cuanto el navegador frena la pestaña en segundo
+ * plano: se volvía y la foto cambiaba con la barra a medias. Así no pueden
+ * discrepar, y pausar es pausar la animación.
  *
- * NO se para al pasar el ratón por encima, aunque es lo habitual en un carrusel
- * y así estaba escrito al principio. Ocupa el alto del hero: en un escritorio el
- * cursor cae dentro casi siempre, así que la pausa por hover dejaba el carrusel
- * congelado en la primera foto para la mayoría de las visitas. La pausa es
- * correcta en una tira pequeña dentro de un artículo; en la primera pantalla de
- * la web, no.
+ * CON «REDUCIR MOVIMIENTO»
+ * ------------------------
+ * Ni acercamiento ni barra que se llena: la actual se pinta llena y las fotos
+ * cambian igual cada seis segundos, con un temporizador porque ya no hay
+ * animación que avise. El fundido se queda, y es a propósito: cambiar de
+ * opacidad no es moverse, y sin él cada cambio sería un fogonazo, que es peor
+ * para quien pidió menos estímulos.
+ *
+ * CUÁNDO SE PARA
+ * --------------
+ * Mientras hay un dedo encima, como en las historias. NO al pasar el ratón: el
+ * carrusel ocupa toda la primera pantalla, en un escritorio el cursor cae
+ * dentro casi siempre, y la pausa por hover lo dejaba congelado en la primera
+ * foto para la mayoría de las visitas (así estuvo escrito al principio).
  */
 export function CarruselIglesia({
   imagenes,
@@ -40,59 +77,79 @@ export function CarruselIglesia({
 }: {
   imagenes: string[];
   nombre: string;
-  /** El contenido del hero, que va encima de las fotos. */
+  /** El texto de la portada, que va encima de las fotos. */
   children?: React.ReactNode;
 }) {
-  const pista = useRef<HTMLDivElement>(null);
+  const total = imagenes.length;
   const [actual, setActual] = useState(0);
-  const [parado, setParado] = useState(false);
+  const [pausado, setPausado] = useState(false);
+  // Hasta hidratar no se sabe si el sistema pide menos movimiento, y la barra
+  // no arranca: si arrancara en el HTML del servidor y la hidratación tardara
+  // más de seis segundos —un móvil viejo con mala cobertura—, el `animationend`
+  // llegaría antes que el oyente y el carrusel se quedaría en la primera foto.
+  const montado = useSyncExternalStore(sinSuscripcion, siempre, nunca);
+  const reducido = useSyncExternalStore(
+    suscribirMovimiento,
+    pideMenosMovimiento,
+    nunca,
+  );
+  const acercamientos = useRef<(HTMLDivElement | null)[]>([]);
+  const primeraVez = useRef(true);
+  const toque = useRef<{ x: number; y: number } | null>(null);
 
-  /*
-   * EL SCROLL MANDA. EL ESTADO SOLO PINTA.
-   *
-   * Y esto costó un rato. La versión anterior guardaba la foto actual en el
-   * estado y un efecto la traducía a `scrollTo({behavior:'smooth'})`. No
-   * funcionaba, y el motivo es sutil: el desplazamiento suave tarda, y mientras
-   * dura dispara `onScroll` decenas de veces con posiciones INTERMEDIAS. Cada
-   * una recalculaba la foto actual —todavía la 0— y el efecto volvía a mandar
-   * el scroll al principio. El carrusel se peleaba consigo mismo y no se movía.
-   *
-   * Ahora hay un solo sentido: quien quiere cambiar de foto llama a `irA()`, que
-   * habla con el DOM directamente; `onScroll` solo actualiza el estado para
-   * saber qué punto pintar relleno. El estado nunca vuelve a mover el scroll.
-   */
-  function irA(indice: number) {
-    const nodo = pista.current;
-    if (!nodo) return;
-    nodo.scrollTo({ left: nodo.clientWidth * indice, behavior: 'smooth' });
+  function ir(indice: number) {
+    setActual(((indice % total) + total) % total);
   }
 
-  // Pasar de foto cada cinco segundos. Con una sola no hay nada que pasar.
+  // Sin animación no hay `animationend` que avise: aquí manda un temporizador.
   useEffect(() => {
-    if (imagenes.length < 2 || parado) return;
+    if (!montado || !reducido || total < 2 || pausado) return;
+    const id = setTimeout(() => {
+      setActual((a) => (a + 1) % total);
+    }, DURACION_MS);
+    return () => clearTimeout(id);
+  }, [montado, reducido, total, pausado, actual]);
 
-    const menosMovimiento = window.matchMedia(
-      '(prefers-reduced-motion: reduce)',
-    ).matches;
-    if (menosMovimiento) return;
+  /*
+   * El acercamiento vuelve a empezar en la foto que ENTRA.
+   *
+   * Todas las fotos llevan la animación siempre puesta, y no solo la activa,
+   * por la que SALE: si se le quitara la clase al dejar de ser la actual,
+   * volvería de golpe a su tamaño mientras se funde, y ese salto se ve. Así
+   * termina su acercamiento tranquila y la que entra arranca desde el
+   * principio. La primera vez no se toca: ya empezó a crecer con la página.
+   */
+  useEffect(() => {
+    if (primeraVez.current) {
+      primeraVez.current = false;
+      return;
+    }
+    const nodo = acercamientos.current[actual];
+    if (!nodo) return;
+    nodo.classList.remove('iglesia-foto-acerca');
+    void nodo.offsetWidth;
+    nodo.classList.add('iglesia-foto-acerca');
+  }, [actual]);
 
-    const id = setInterval(() => {
-      const nodo = pista.current;
-      if (!nodo || nodo.clientWidth === 0) return;
-      const siguiente =
-        (Math.round(nodo.scrollLeft / nodo.clientWidth) + 1) % imagenes.length;
-      nodo.scrollTo({ left: nodo.clientWidth * siguiente, behavior: 'smooth' });
-    }, 5000);
+  function alTocar(e: React.TouchEvent) {
+    const t = e.touches[0];
+    toque.current = { x: t.clientX, y: t.clientY };
+    setPausado(true);
+  }
 
-    return () => clearInterval(id);
-  }, [imagenes.length, parado]);
-
-  // Lo único que hace el estado: saber qué punto va relleno. Sirve igual para el
-  // paso automático, para los puntos y para cuando alguien arrastra con el dedo.
-  function alDesplazar() {
-    const nodo = pista.current;
-    if (!nodo || nodo.clientWidth === 0) return;
-    setActual(Math.round(nodo.scrollLeft / nodo.clientWidth));
+  function alSoltar(e: React.TouchEvent) {
+    setPausado(false);
+    const inicio = toque.current;
+    toque.current = null;
+    if (!inicio || total < 2) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - inicio.x;
+    const dy = t.clientY - inicio.y;
+    // Claramente horizontal: quien baja la página también mueve el dedo un
+    // poco a los lados, y eso no puede cambiarle la foto.
+    if (Math.abs(dx) > DESLIZAR_PX && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      ir(actual + (dx < 0 ? 1 : -1));
+    }
   }
 
   return (
@@ -110,94 +167,152 @@ export function CarruselIglesia({
      * la fotografía se estira detrás con `absolute inset-0`. Si el texto crece,
      * la foto crece con él.
      *
-     * Y el mínimo va en `svh` acotado con `min()`: un móvil apaisado tiene unos
-     * 360px de alto, así que 460px fijos dejaban la primera pantalla sin que se
-     * viera nada más que la foto.
+     * 84svh y no más: es «casi toda la altura», y lo que queda abajo deja asomar
+     * el título de los horarios, que es lo que dice que la página sigue. En un
+     * móvil apaisado (unos 360px de alto) el mínimo se queda corto y manda el
+     * texto, que es lo que tiene que pasar. En escritorio se acota para que un
+     * monitor alto no sea solo foto.
+     *
+     * `bg-support` debajo de todo: mientras la foto no ha llegado, el texto
+     * blanco tiene un fondo oscuro sobre el que leerse.
      */
     <div
-      className="relative flex min-h-[min(460px,86svh)] items-center overflow-hidden rounded-2xl border border-border md:min-h-[min(560px,84svh)] lg:min-h-[min(620px,86svh)]"
-      onTouchStart={() => setParado(true)}
+      className="relative isolate flex min-h-[84svh] flex-col justify-end overflow-hidden bg-support text-white md:min-h-[min(84svh,760px)] xl:min-h-[min(86svh,820px)]"
+      aria-roledescription="carrusel"
+      aria-label={`Fotos de ${nombre}`}
+      onTouchStart={alTocar}
+      onTouchEnd={alSoltar}
+      onTouchCancel={() => {
+        toque.current = null;
+        setPausado(false);
+      }}
     >
-      <div
-        ref={pista}
-        onScroll={alDesplazar}
-        className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        aria-roledescription="carrusel"
-        aria-label={`Fotos de ${nombre}`}
-      >
-        {imagenes.map((url, i) => (
+      {imagenes.map((url, i) => (
+        <div
+          key={url}
+          aria-hidden={i !== actual}
+          className={clsx(
+            // 900 ms y no los 360 de la base común: entre dos fotos, un fundido
+            // de un tercio de segundo se lee como un corte. Es el del prototipo
+            // aprobado.
+            'absolute inset-0 -z-10 transition-opacity duration-900 ease-hatril',
+            i === actual ? 'opacity-100' : 'opacity-0',
+          )}
+        >
           <div
-            key={url}
-            className="relative h-full w-full flex-none snap-center"
-            aria-roledescription="diapositiva"
-            aria-label={`Foto ${i + 1} de ${imagenes.length}`}
+            ref={(nodo) => {
+              acercamientos.current[i] = nodo;
+            }}
+            className="iglesia-foto-acerca absolute inset-0"
+            style={
+              pausado && i === actual
+                ? { animationPlayState: 'paused' }
+                : undefined
+            }
           >
             <Image
               src={url}
               alt={`${nombre}, foto ${i + 1}`}
               fill
-              // La primera se carga con prioridad porque es lo primero que se ve
-              // al abrir la página; las demás, cuando toquen.
-              priority={i === 0}
-              sizes="(max-width: 768px) 100vw, (max-width: 1180px) calc(100vw - 80px), 1100px"
+              // La primera es lo primero que se ve al abrir la página (el LCP):
+              // va con prioridad. Las demás se cargan solas, porque aunque
+              // estén transparentes caen dentro de la pantalla.
+              preload={i === 0}
+              sizes="100vw"
               className="object-cover"
             />
-
-            {/*
-             * El velo que hace legible el texto de encima.
-             *
-             * Un color plano al 55%, no un degradado: el sistema de diseño de
-             * Hatril los descarta, y aquí además un degradado dejaría el texto
-             * bien arriba y mal abajo según la foto. Plano es predecible con
-             * cualquier imagen que suba la iglesia, que es lo que importa
-             * cuando no controlas las fotos.
-             */}
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 bg-black/55"
-            />
           </div>
-        ))}
+        </div>
+      ))}
+
+      {/*
+       * El velo que hace legible el texto de encima.
+       *
+       * Un color plano al 55%, no un degradado: el sistema de diseño de Hatril
+       * los descarta, y aquí además un degradado dejaría el texto bien arriba y
+       * mal abajo según la foto. Plano es predecible con cualquier imagen que
+       * suba la iglesia, que es lo que importa cuando no controlas las fotos.
+       *
+       * Negro al 55 % y no el `velo` de las ventanas (carbón al 42 %): sobre el
+       * peor punto posible de una foto, el blanco puro, el texto blanco se queda
+       * en 4.75:1 con este y no llega a 3.5 con aquel. Uno solo para todas las
+       * fotos y no uno por foto: con el fundido, dos velos superpuestos
+       * oscurecían el doble a mitad del cambio.
+       */}
+      <div aria-hidden="true" className="absolute inset-0 -z-10 bg-black/55" />
+
+      {/*
+       * El contenido, alineado con la cabecera y con las secciones de abajo.
+       *
+       * El relleno de arriba es el alto de la cabecera más aire: la cabecera va
+       * encima de la foto, y en una pantalla baja el texto no puede meterse
+       * debajo de ella. El de abajo es corto cuando hay barras, que ya traen
+       * su propio aire; con una sola foto no las hay, y el último botón se
+       * quedaba a ocho píxeles del borde de la foto.
+       */}
+      <div
+        className={clsx(
+          'mx-auto flex w-full max-w-[1180px] flex-col px-4 pt-[calc(4rem+env(safe-area-inset-top)+1.5rem)] sm:px-5 md:px-10 xl:pt-[calc(5rem+env(safe-area-inset-top)+2rem)]',
+          total > 1 ? 'pb-2 md:pb-6' : 'pb-6 md:pb-12',
+        )}
+      >
+        {children}
+
+        {total > 1 && (
+          <div
+            role="group"
+            aria-label="Elegir foto"
+            className="mt-4 grid gap-1.5 md:mt-6"
+            style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}
+          >
+            {imagenes.map((url, i) => (
+              /*
+               * La barra mide 3px, pero el botón que la contiene mide 36 de
+               * alto y un tercio del ancho: se pulsa con el pulgar sobre una
+               * foto en movimiento. Con los puntos de antes, el área pulsable
+               * era el punto mismo y fallaba una de cada dos veces.
+               */
+              <button
+                key={url}
+                type="button"
+                onClick={() => ir(i)}
+                aria-label={`Ver la foto ${i + 1} de ${total}`}
+                aria-current={i === actual ? 'true' : undefined}
+                className="flex h-9 cursor-pointer items-center"
+              >
+                <span className="block h-[3px] w-full overflow-hidden rounded-full bg-white/35">
+                  <span
+                    onAnimationEnd={(e) => {
+                      if (
+                        e.animationName === 'iglesia-foto-barra' &&
+                        i === actual
+                      ) {
+                        ir(i + 1);
+                      }
+                    }}
+                    className={clsx(
+                      'block h-full w-full origin-left bg-white',
+                      i < actual && 'scale-x-100',
+                      i > actual && 'scale-x-0',
+                      i === actual &&
+                        (!montado
+                          ? 'scale-x-0'
+                          : reducido
+                            ? 'scale-x-100'
+                            : 'iglesia-foto-barra'),
+                    )}
+                    style={
+                      pausado && i === actual
+                        ? { animationPlayState: 'paused' }
+                        : undefined
+                    }
+                  />
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-
-      {/* El contenido va FUERA del contenedor con scroll: dentro se desplazaría
-          con las fotos y habría que repetirlo en cada una. El `py` de abajo deja
-          sitio a los puntos para que no caigan sobre el último botón. */}
-      {children && (
-        <div className="relative w-full px-5 py-12 sm:px-8 md:px-12 md:py-16">
-          {children}
-        </div>
-      )}
-
-      {imagenes.length > 1 && (
-        <div className="absolute bottom-1 left-0 right-0 flex justify-center">
-          {imagenes.map((url, i) => (
-            /*
-             * El punto mide 8px, pero el botón que lo contiene mide 44: es el
-             * mínimo de un objetivo táctil, y estos se pulsan con el pulgar
-             * sobre una foto en movimiento. Antes el área pulsable era el punto
-             * mismo y fallaba una de cada dos veces.
-             */
-            <button
-              key={url}
-              type="button"
-              onClick={() => irA(i)}
-              aria-label={`Ver la foto ${i + 1}`}
-              aria-current={i === actual}
-              className="group/punto flex size-11 items-center justify-center"
-            >
-              <span
-                className={
-                  'h-2 rounded-full transition-all ' +
-                  (i === actual
-                    ? 'w-7 bg-white'
-                    : 'w-2 bg-white/50 group-hover/punto:bg-white/80')
-                }
-              />
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

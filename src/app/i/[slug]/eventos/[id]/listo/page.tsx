@@ -1,11 +1,11 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { CalendarDays, Check, MapPin } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 import { eventoPublico } from '@/lib/eventos/publica';
 import { obtenerIglesiaPublica } from '@/lib/iglesias/publica';
-import { formatearInstante } from '@/lib/fecha/zona';
 import { BotonEnlace } from '@/components/ui/boton-enlace';
+import { DatosEvento } from '../../../_components/eventos-piezas';
 
 export const metadata: Metadata = {
   title: 'Te has apuntado',
@@ -28,6 +28,11 @@ export const metadata: Metadata = {
  * sustituye a la cuenta, y enseñarlo aquí sería el mismo oráculo con otro
  * nombre: solo aparecería en el alta de verdad. Viaja por correo o no viaja, y
  * mientras Resend no esté montado, la baja la da la iglesia.
+ *
+ * Y por eso tampoco promete un correo, aunque el diseño de la zona 3 lo
+ * dijera («te hemos mandado un correo…»): hoy no se manda ninguno. Del diseño
+ * se queda la forma —la marca que salta y los datos del evento con las mismas
+ * piezas que su página—, no esa frase.
  */
 export default async function InscripcionListaPage({
   params,
@@ -44,48 +49,38 @@ export default async function InscripcionListaPage({
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-16">
-      <div className="flex w-full max-w-[520px] flex-col items-start gap-5 rounded-xl border border-border bg-surface p-7">
-        <span className="flex size-11 items-center justify-center rounded-full bg-badge-success-bg text-badge-success-fg">
-          <Check className="size-[22px]" strokeWidth={2.2} />
+      <div className="flex w-full max-w-[520px] flex-col items-center gap-5 rounded-xl border border-border bg-surface p-6 text-center sm:p-8">
+        {/* Salta una vez al llegar (`anim-salta`, de la base común) y luego
+            se queda quieta. Con «reducir movimiento», ni eso. */}
+        <span className="anim-salta flex size-16 items-center justify-center rounded-full bg-badge-success-bg text-badge-success-fg">
+          <Check className="size-[30px]" strokeWidth={1.8} aria-hidden />
         </span>
 
         <div className="flex flex-col gap-2">
-          <h1 className="text-[24px] font-extrabold leading-tight tracking-[-0.025em]">
-            Listo, te esperamos
-          </h1>
-          <p className="text-[15.5px] leading-relaxed text-muted-foreground">
-            {iglesia.nombre} tiene tu inscripción para <b>{e.titulo}</b>.
+          <h1 className="t-titulo text-balance">Listo, te esperamos</h1>
+          <p className="text-pretty text-body leading-relaxed text-muted-foreground">
+            {iglesia.nombre} tiene tu inscripción para{' '}
+            <b className="font-semibold text-foreground">{e.titulo}</b>.
           </p>
         </div>
 
-        <div className="flex w-full flex-col gap-1.5 rounded-lg border border-border bg-surface-alt p-4 text-[14.5px]">
-          <span className="inline-flex items-center gap-2">
-            <CalendarDays className="size-[17px] flex-none text-muted-foreground" strokeWidth={1.7} />
-            <span className="first-letter:uppercase">
-              {formatearInstante(e.inicioEn, iglesia.timezone, { conAnio: true })}
-            </span>
-          </span>
-          {e.lugar && (
-            <span className="inline-flex items-center gap-2">
-              <MapPin className="size-[17px] flex-none text-muted-foreground" strokeWidth={1.7} />
-              {e.lugar}
-            </span>
-          )}
+        <div className="w-full">
+          <DatosEvento evento={e} timezone={iglesia.timezone} dentro />
         </div>
 
         {(e.enlacePago || e.pagoInstrucciones) && (
-          <p className="text-[14.5px] leading-relaxed text-muted-foreground">
+          <p className="text-pretty text-body leading-relaxed text-muted-foreground">
             Este evento tiene un precio. Vuelve a la página del evento para ver
             cómo pagarlo: la iglesia apunta a mano quién ha pagado.
           </p>
         )}
 
-        <p className="text-[13.5px] leading-relaxed text-muted-foreground">
+        <p className="text-pretty text-label leading-relaxed text-muted-foreground">
           Si no puedes venir o quieres que borren tus datos, escribe a la
           iglesia y lo hacen.
         </p>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap justify-center gap-2">
           <BotonEnlace href={`/i/${slug}/eventos/${id}`} variant="outline">
             Volver al evento
           </BotonEnlace>

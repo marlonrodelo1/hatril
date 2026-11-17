@@ -1,14 +1,15 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ChevronLeft, Clock, Info, Mail, MapPin, Navigation, Phone } from 'lucide-react';
+import { ChevronLeft, Info, Mail, MapPin, Navigation, Phone } from 'lucide-react';
+import { clsx } from 'clsx';
 
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUserContext } from '@/lib/auth/user-context';
 import { solicitudDeUsuario } from '@/lib/solicitudes/consultas';
 import { fichaDeIglesia } from '@/lib/iglesias/directorio';
 import { iniciales } from '@/lib/format/iniciales';
-import { buttonVariants } from '@/components/ui/button';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 import { nombrePais } from '../../buscar/_components/fila-iglesia';
 
 export async function generateMetadata({
@@ -25,8 +26,19 @@ export async function generateMetadata({
  *
  * Más corta que su web (`/i/[slug]`): quien llega aquí desde la búsqueda quiere
  * saber si es la suya, dónde está y cuándo se reúne, y pedir entrar. Un solo
- * naranja, «Solicitar ser miembro», y nada que sugiera entrada directa: siempre
- * aprueba el pastor.
+ * naranja, «Pedir unirme», y nada que sugiera entrada directa: siempre aprueba
+ * el pastor. Se llamaba «Solicitar ser miembro»; ahora dice lo mismo que el
+ * directorio, porque la misma acción lleva el mismo botón en todas partes.
+ *
+ * EL REDISEÑO DEL 17-NOV (zona 3, pieza «Unirse»)
+ * -----------------------------------------------
+ *   - Arriba, la foto de la iglesia con el logo montado sobre el borde. Antes
+ *     no había ninguna aunque la iglesia las tuviera en su web, y es lo que
+ *     hace reconocer el sitio a quien ya ha ido alguna vez. `bannerUrl` es la
+ *     primera de sus `imagenes`, duplicada a propósito para esto (schema). Sin
+ *     foto, el logo encabeza la ficha y no queda ningún hueco gris.
+ *   - El botón, fijo abajo, al alcance del pulgar: con cuatro horarios y la
+ *     dirección, antes quedaba debajo del pliegue en un móvil pequeño.
  *
  * TRES VARIANTES, Y NINGUNA ES UN ERROR
  * -------------------------------------
@@ -36,6 +48,10 @@ export async function generateMetadata({
  *     Hatril se es de una sola, así que no hay botón de solicitar. La base lo
  *     admitiría —el unique es por pareja—; la regla la pone la aplicación.
  *   - Quien mira ya es de ESTA: a su muro.
+ *
+ * Solo lo que es un botón va en el pie fijo. Las variantes que explican algo
+ * van al final de la ficha: un párrafo pegado al borde de la pantalla taparía
+ * media ficha en el móvil.
  */
 export default async function FichaIglesiaPage({
   params,
@@ -59,189 +75,245 @@ export default async function FichaIglesiaPage({
   const horarios = [...iglesia.horarios].sort(
     (a, b) => Number(Boolean(b.destacado)) - Number(Boolean(a.destacado)),
   );
-  const lugar = [iglesia.ciudad, nombrePais(iglesia.pais)].filter(Boolean).join(' · ');
+  // «Bogotá, Colombia»: con coma, para que no se confunda con el punto medio
+  // que la separa de la denominación.
+  const lugar = [iglesia.ciudad, nombrePais(iglesia.pais)].filter(Boolean).join(', ');
 
   const destinoMapa =
     iglesia.latitud !== null && iglesia.longitud !== null
       ? `${iglesia.latitud},${iglesia.longitud}`
       : [iglesia.direccion, iglesia.ciudad].filter(Boolean).join(', ');
 
+  // El mismo orden de antes: ser de esta gana a todo, ser de otra gana a
+  // tener una solicitud, y solo sin nada de eso cuenta si acepta solicitudes.
+  const esDeEsta = ctx?.iglesia.id === iglesia.id;
+  const puedePedir = !ctx && !pendiente && iglesia.aceptaSolicitudes;
+
   return (
     <div className="flex min-h-dvh flex-col bg-background pt-[env(safe-area-inset-top)]">
-      <header className="mx-auto flex w-full max-w-[560px] items-center px-2 pt-2">
-        <Link
-          href="/buscar"
-          aria-label="Volver a buscar"
-          className="flex size-11 items-center justify-center rounded-full text-foreground no-underline outline-none hover:bg-surface-active focus-visible:ring-3 focus-visible:ring-ring/20"
-        >
-          <ChevronLeft className="size-5" strokeWidth={1.9} />
-        </Link>
-      </header>
-
-      <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col gap-6 px-5 pt-2 pb-8">
-        <div className="flex items-center gap-4">
-          {iglesia.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
+      <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col">
+        {iglesia.bannerUrl ? (
+          <div className="relative sm:mt-4 sm:px-5">
+            {/* La proporción del diseño (340 × 120): en el móvil la foto dice
+                qué sitio es sin empujar el nombre fuera de la pantalla. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={iglesia.logoUrl}
+              src={iglesia.bannerUrl}
               alt=""
-              className="size-16 flex-none rounded-2xl border border-border bg-surface object-cover"
+              className="aspect-[17/6] w-full bg-surface-active object-cover sm:rounded-xl"
             />
-          ) : (
-            <span className="flex size-16 flex-none items-center justify-center rounded-2xl bg-accent text-[20px] font-bold text-accent-foreground">
-              {iniciales(iglesia.nombre)}
-            </span>
-          )}
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <h1 className="text-balance text-[24px] leading-tight font-extrabold tracking-[-0.025em]">
-              {iglesia.nombre}
-            </h1>
-            <span className="text-[14.5px] text-muted-foreground">
-              {[iglesia.denominacion, lugar].filter(Boolean).join(' · ')}
+            {/* Encima de la foto, blanco sobre un velo: es lo único que se lee
+                con cualquier imagen debajo, y la regla 5 lo permite ahí. */}
+            <Link
+              href="/buscar"
+              aria-label="Volver a buscar"
+              className="absolute top-2 left-2 flex size-11 items-center justify-center rounded-full bg-black/40 text-white no-underline outline-none hover:bg-black/55 hover:text-white focus-visible:ring-3 focus-visible:ring-white/60 sm:left-7"
+            >
+              <ChevronLeft className="size-5" strokeWidth={1.8} />
+            </Link>
+            <span className="absolute -bottom-7 left-5 sm:left-10">
+              <Logo iglesia={iglesia} montado />
             </span>
           </div>
-        </div>
-
-        {iglesia.descripcion && (
-          <p className="text-pretty text-[16px] leading-relaxed">{iglesia.descripcion}</p>
+        ) : (
+          <header className="flex items-center px-2 pt-2">
+            <Link
+              href="/buscar"
+              aria-label="Volver a buscar"
+              className="flex size-11 items-center justify-center rounded-full text-foreground no-underline outline-none hover:bg-surface-active focus-visible:ring-3 focus-visible:ring-ring/20"
+            >
+              <ChevronLeft className="size-5" strokeWidth={1.8} />
+            </Link>
+          </header>
         )}
 
-        {horarios.length > 0 && (
-          <section className="flex flex-col gap-2">
-            <h2 className="text-[13px] font-bold tracking-[0.04em] text-muted-foreground uppercase">
-              Horarios
-            </h2>
-            <ul className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
-              {horarios.map((h, i) => (
-                <li
-                  key={i}
-                  className={
-                    'flex items-center justify-between gap-3 border-b border-border px-4 py-3 last:border-b-0 ' +
-                    (h.destacado ? 'bg-accent' : '')
-                  }
-                >
-                  <span className="flex items-center gap-2.5">
-                    <Clock
-                      className={'size-[17px] flex-none ' + (h.destacado ? 'text-accent-foreground' : 'text-muted-foreground')}
-                      strokeWidth={1.8}
-                    />
-                    <span className={'text-[15px] font-semibold ' + (h.destacado ? 'text-accent-foreground' : '')}>
-                      {h.nombre}
+        <div
+          className={clsx(
+            'flex flex-1 flex-col gap-6 px-5 pb-8',
+            iglesia.bannerUrl ? 'pt-10' : 'pt-2',
+          )}
+        >
+          <div className="flex flex-col gap-3">
+            {!iglesia.bannerUrl && <Logo iglesia={iglesia} />}
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <h1 className="t-titulo text-balance">{iglesia.nombre}</h1>
+              <span className="text-label text-muted-foreground">
+                {[iglesia.denominacion, lugar].filter(Boolean).join(' · ')}
+              </span>
+            </div>
+          </div>
+
+          {iglesia.descripcion && (
+            <p className="text-pretty text-body leading-relaxed">{iglesia.descripcion}</p>
+          )}
+
+          {horarios.length > 0 && (
+            <section className="flex flex-col gap-2.5">
+              <h2 className="t-micro px-1">Horarios</h2>
+              {/* Compacta: el nombre a un lado y cuándo al otro, una línea por
+                  reunión. La web de la iglesia tiene la semana entera; aquí
+                  basta con saber si encaja. */}
+              <ul className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
+                {horarios.map((h, i) => (
+                  <li
+                    key={i}
+                    className="flex items-baseline justify-between gap-3 border-b border-border px-4 py-2.5 last:border-b-0"
+                  >
+                    <span className="min-w-0 text-body font-semibold">{h.nombre}</span>
+                    <span className="flex-none text-body text-muted-foreground tabular-nums">
+                      {h.dia} · {h.hora}
                     </span>
-                  </span>
-                  <span className={'text-[14.5px] ' + (h.destacado ? 'font-semibold text-accent-foreground' : 'text-muted-foreground')}>
-                    {h.dia} · {h.hora}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
-        {(iglesia.direccion || iglesia.ciudad) && (
-          <section className="flex flex-col gap-2">
-            <h2 className="text-[13px] font-bold tracking-[0.04em] text-muted-foreground uppercase">
-              Dónde estamos
-            </h2>
+          {(iglesia.direccion || iglesia.ciudad) && (
             <div className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
               <MapPin className="size-5 flex-none text-muted-foreground" strokeWidth={1.8} />
               <span className="flex min-w-0 flex-1 flex-col">
-                {iglesia.direccion && <span className="text-[15px] font-semibold">{iglesia.direccion}</span>}
-                {iglesia.ciudad && <span className="text-[13.5px] text-muted-foreground">{iglesia.ciudad}</span>}
+                {iglesia.direccion && (
+                  <span className="text-body font-semibold">{iglesia.direccion}</span>
+                )}
+                {iglesia.ciudad && (
+                  <span className="text-label text-muted-foreground">{iglesia.ciudad}</span>
+                )}
               </span>
               {destinoMapa && (
-                <a
+                <BotonEnlace
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destinoMapa)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                  nuevaPestana
+                  variant="outline"
+                  size="sm"
                 >
                   <Navigation strokeWidth={1.8} />
-                  Cómo llegar
-                </a>
+                  Ir<span className="sr-only">: abrir la dirección en el mapa</span>
+                </BotonEnlace>
               )}
             </div>
-          </section>
-        )}
+          )}
 
-        <span className="flex-1" />
-
-        {ctx?.iglesia.id === iglesia.id ? (
-          <Link href="/mi" className={buttonVariants({ size: 'lg' }) + ' h-[52px] w-full'}>
-            Ya eres de esta iglesia: entrar
-          </Link>
-        ) : ctx ? (
-          <Bloque titulo={`Ya eres de ${ctx.iglesia.nombre}`}>
-            En Hatril se es de una sola iglesia. Si quieres cambiarte, primero
-            habla con tu pastor para salir de la tuya; después podrás pedir
-            entrar aquí.
-          </Bloque>
-        ) : pendiente ? (
-          <Bloque
-            titulo={
-              pendiente.iglesiaSlug === iglesia.slug
-                ? 'Ya pediste entrar aquí'
-                : `Tienes una solicitud pendiente en ${pendiente.iglesiaNombre}`
-            }
-            accion={
-              <Link href="/mi" className={buttonVariants({ variant: 'outline' }) + ' self-start'}>
-                Ver mi solicitud
-              </Link>
-            }
-          >
-            {pendiente.iglesiaSlug === iglesia.slug
-              ? 'Tu solicitud está con el pastor. Te avisaremos cuando responda.'
-              : 'Solo se puede ser de una iglesia. Para pedir entrar aquí, cancela antes esa solicitud.'}
-          </Bloque>
-        ) : !iglesia.aceptaSolicitudes ? (
-          <Bloque
-            titulo="Esta iglesia gestiona las altas en persona"
-            accion={
-              (iglesia.telefono || iglesia.email) && (
-                <div className="flex flex-wrap gap-2">
-                  {iglesia.telefono && (
-                    <a href={`tel:${iglesia.telefono}`} className={buttonVariants({ variant: 'outline' })}>
-                      <Phone strokeWidth={1.8} />
-                      Llamar
-                    </a>
-                  )}
-                  {iglesia.email && (
-                    <a href={`mailto:${iglesia.email}`} className={buttonVariants({ variant: 'outline' })}>
-                      <Mail strokeWidth={1.8} />
-                      Escribir
-                    </a>
-                  )}
-                </div>
-              )
-            }
-          >
-            Ven a un culto y pregunta por el equipo de acogida
-            {iglesia.telefono || iglesia.email ? ', o escríbeles antes.' : '.'}
-          </Bloque>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            <Link
-              href={`/solicitar/${iglesia.slug}`}
-              className={buttonVariants({ size: 'lg' }) + ' h-[52px] w-full text-[16px]'}
+          {ctx && !esDeEsta ? (
+            <Bloque titulo={`Ya eres de ${ctx.iglesia.nombre}`}>
+              En Hatril se es de una sola iglesia. Si quieres cambiarte, primero
+              habla con tu pastor para salir de la tuya; después podrás pedir
+              entrar aquí.
+            </Bloque>
+          ) : !ctx && pendiente ? (
+            <Bloque
+              titulo={
+                pendiente.iglesiaSlug === iglesia.slug
+                  ? 'Ya pediste entrar aquí'
+                  : `Tienes una solicitud pendiente en ${pendiente.iglesiaNombre}`
+              }
+              accion={
+                <BotonEnlace href="/mi" variant="outline" className="self-start">
+                  Ver mi solicitud
+                </BotonEnlace>
+              }
             >
-              Solicitar ser miembro
-            </Link>
-            <p className="text-center text-[13.5px] leading-snug text-muted-foreground">
-              El pastor revisa cada solicitud y te avisamos cuando responda.
-            </p>
-          </div>
-        )}
+              {pendiente.iglesiaSlug === iglesia.slug
+                ? 'Tu solicitud está con el pastor. Te avisaremos cuando responda.'
+                : 'Solo se puede ser de una iglesia. Para pedir entrar aquí, cancela antes esa solicitud.'}
+            </Bloque>
+          ) : !ctx && !iglesia.aceptaSolicitudes ? (
+            <Bloque
+              titulo="Esta iglesia gestiona las altas en persona"
+              accion={
+                (iglesia.telefono || iglesia.email) && (
+                  <div className="flex flex-wrap gap-2">
+                    {iglesia.telefono && (
+                      <BotonEnlace href={`tel:${iglesia.telefono}`} variant="outline">
+                        <Phone strokeWidth={1.8} />
+                        Llamar
+                      </BotonEnlace>
+                    )}
+                    {iglesia.email && (
+                      <BotonEnlace href={`mailto:${iglesia.email}`} variant="outline">
+                        <Mail strokeWidth={1.8} />
+                        Escribir
+                      </BotonEnlace>
+                    )}
+                  </div>
+                )
+              }
+            >
+              Ven a un culto y pregunta por el equipo de acogida
+              {iglesia.telefono || iglesia.email ? ', o escríbeles antes.' : '.'}
+            </Bloque>
+          ) : null}
 
-        {iglesia.webPublica && (
-          <Link
-            href={`/i/${iglesia.slug}`}
-            className="self-center text-[14px] font-semibold text-foreground underline underline-offset-2"
-          >
-            Ver la web de la iglesia
-          </Link>
-        )}
+          {iglesia.webPublica && (
+            <Link
+              href={`/i/${iglesia.slug}`}
+              className="self-center text-label font-semibold text-foreground underline underline-offset-2 hover:text-foreground"
+            >
+              Ver la web de la iglesia
+            </Link>
+          )}
+        </div>
       </main>
+
+      {(esDeEsta || puedePedir) && (
+        // Pegado abajo mientras se baja por la ficha. El cristal solo donde el
+        // navegador sabe hacerlo: sin desenfoque, un fondo translúcido deja
+        // leer a medias lo que pasa por debajo (como la barra de `/mi`).
+        <div className="sticky bottom-0 z-10 border-t border-border bg-surface pb-[calc(0.875rem+env(safe-area-inset-bottom))] supports-backdrop-filter:bg-surface/90 supports-backdrop-filter:backdrop-blur-md">
+          <div className="mx-auto flex w-full max-w-[560px] flex-col gap-1.5 px-5 pt-2.5">
+            {esDeEsta ? (
+              <BotonEnlace href="/mi" size="lg" className="w-full">
+                Ya eres de esta iglesia: entrar
+              </BotonEnlace>
+            ) : (
+              <>
+                <BotonEnlace href={`/solicitar/${iglesia.slug}`} size="lg" className="w-full">
+                  Pedir unirme
+                </BotonEnlace>
+                <p className="text-center text-label text-pretty text-muted-foreground">
+                  El pastor revisa cada solicitud y te avisamos cuando responda.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+/**
+ * El logo de la iglesia, o sus iniciales si no ha subido ninguno.
+ *
+ * `montado` es el que va encima del borde de la foto: el aro del color del
+ * fondo lo despega de la imagen sin sombra (regla 3).
+ */
+function Logo({
+  iglesia,
+  montado = false,
+}: {
+  iglesia: { nombre: string; logoUrl: string | null };
+  montado?: boolean;
+}) {
+  return iglesia.logoUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={iglesia.logoUrl}
+      alt=""
+      className={clsx(
+        'size-16 flex-none rounded-xl bg-surface object-cover',
+        montado ? 'border-[3px] border-background' : 'border border-border',
+      )}
+    />
+  ) : (
+    <span
+      className={clsx(
+        'flex size-16 flex-none items-center justify-center rounded-xl bg-accent text-subtitle font-bold text-accent-foreground',
+        montado && 'border-[3px] border-background',
+      )}
+    >
+      {iniciales(iglesia.nombre)}
+    </span>
   );
 }
 
@@ -259,8 +331,8 @@ function Bloque({
       <div className="flex items-start gap-3">
         <Info className="mt-0.5 size-5 flex-none text-muted-foreground" strokeWidth={1.8} />
         <div className="flex flex-col gap-1">
-          <p className="text-[15.5px] font-bold">{titulo}</p>
-          <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">{children}</p>
+          <p className="text-body font-semibold">{titulo}</p>
+          <p className="text-pretty text-label leading-relaxed text-muted-foreground">{children}</p>
         </div>
       </div>
       {accion}

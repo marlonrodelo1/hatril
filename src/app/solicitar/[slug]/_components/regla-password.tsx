@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, Circle } from 'lucide-react';
+import { Check, Circle, CircleAlert } from 'lucide-react';
+import { clsx } from 'clsx';
 
 /**
  * La regla de la contraseña, visible antes de escribir y marcándose sola.
@@ -17,7 +18,26 @@ const REGLAS = [
   { texto: 'Un número', cumple: (p: string) => /[0-9]/.test(p) },
 ];
 
-export function ReglaPassword({ idCampo }: { idCampo: string }) {
+/** Lo que mira el paso «Tu contraseña» antes de dejar seguir. */
+export function cumpleReglaPassword(p: string): boolean {
+  return REGLAS.every((r) => r.cumple(p));
+}
+
+/**
+ * `fallos` cuenta las veces que se ha intentado seguir sin cumplirla.
+ *
+ * Con cada intento la lista tiembla (la clave nueva la vuelve a montar, y la
+ * animación arranca otra vez), y lo que falta pasa a rojo con su icono. Lo
+ * segundo no es adorno: con «reducir movimiento» no hay temblor, y sin el rojo
+ * no quedaría ninguna señal de por qué no se pasa.
+ */
+export function ReglaPassword({
+  idCampo,
+  fallos = 0,
+}: {
+  idCampo: string;
+  fallos?: number;
+}) {
   const [valor, setValor] = useState('');
 
   useEffect(() => {
@@ -29,21 +49,31 @@ export function ReglaPassword({ idCampo }: { idCampo: string }) {
   }, [idCampo]);
 
   return (
-    <ul id="regla-password" className="flex flex-col gap-1 pt-0.5">
+    <ul
+      key={fallos}
+      id="regla-password"
+      className={clsx('flex flex-col gap-1 pt-0.5', fallos > 0 && 'anim-tiembla')}
+    >
       {REGLAS.map((r) => {
         const ok = r.cumple(valor);
+        const falta = !ok && fallos > 0;
         return (
           <li
             key={r.texto}
-            className={'flex items-center gap-2 text-[13px] ' + (ok ? 'text-badge-success-fg' : 'text-muted-foreground')}
+            className={clsx(
+              'flex items-center gap-2 text-label transition-colors duration-150 motion-reduce:transition-none',
+              ok ? 'text-badge-success-fg' : falta ? 'font-semibold text-badge-danger-fg' : 'text-muted-foreground',
+            )}
           >
             {ok ? (
-              <Check className="size-[15px]" strokeWidth={2.2} aria-hidden />
+              <Check className="size-[15px] flex-none" strokeWidth={1.8} aria-hidden />
+            ) : falta ? (
+              <CircleAlert className="size-[15px] flex-none" strokeWidth={1.8} aria-hidden />
             ) : (
-              <Circle className="size-[13px]" strokeWidth={1.8} aria-hidden />
+              <Circle className="size-[13px] flex-none" strokeWidth={1.8} aria-hidden />
             )}
             {r.texto}
-            <span className="sr-only">{ok ? ' (cumplido)' : ''}</span>
+            <span className="sr-only">{ok ? ' (cumplido)' : falta ? ' (falta)' : ''}</span>
           </li>
         );
       })}

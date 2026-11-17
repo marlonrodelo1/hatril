@@ -52,7 +52,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${jakarta.variable} h-full`}>
+    // `data-scroll-behavior`: `globals.css` pone el desplazamiento suave para
+    // las anclas de la web de cada iglesia, y desde Next 16 eso también hacía
+    // deslizarse cada cambio de página hasta arriba (y un aviso en consola).
+    // Con el atributo, Next lo quita durante la navegación y las anclas siguen
+    // suaves. Ver «Scroll Behavior Override» en la guía de la versión 16.
+    <html lang="es" data-scroll-behavior="smooth" className={`${jakarta.variable} h-full`}>
       <body className="min-h-full flex flex-col">
         {children}
         {/* Botón atrás, barra de estado y arranque; fuera de la app, nada. */}
