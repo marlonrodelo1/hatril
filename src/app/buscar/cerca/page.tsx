@@ -7,6 +7,22 @@ import { CercaDeMi } from './_components/cerca-de-mi';
 
 export const metadata: Metadata = { title: 'Iglesias cerca de ti' };
 
+/*
+ * EN CADA VISITA, Y NO AL COMPILAR
+ *
+ * Sin nada dinámico dentro (ni sesión, ni parámetros), Next la prerenderizaba
+ * en el build, y eso consulta la base. Dentro del contenedor de Docker no
+ * existe `DATABASE_URL` al compilar —es una variable de ejecución— y el build
+ * entero se caía con «Export encountered an error on /buscar/cerca». Desde
+ * `a8af2d3` hasta el 17-nov ningún push llegó a desplegarse por esto, y en
+ * local no se veía porque ahí sí está el `.env.local`.
+ *
+ * Además es lo correcto: una iglesia que pone su ubicación tiene que salir ya,
+ * no en la siguiente compilación. La consulta es pequeña (ver
+ * `iglesiasConUbicacion`).
+ */
+export const dynamic = 'force-dynamic';
+
 /** Ver `CercaDeMi`: aquí solo se cargan las iglesias que han puesto dónde están. */
 export default async function CercaPage() {
   const iglesias = (await iglesiasConUbicacion()).map((i) => ({
