@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { KeyRound } from 'lucide-react';
@@ -6,19 +5,17 @@ import { z } from 'zod';
 
 import { requireSuperAdmin } from '@/lib/auth/super-admin';
 import { ETIQUETAS_ROLES } from '@/lib/auth/permisos';
-import { PASSWORD_PISTA } from '@/lib/auth/password';
-import { fichaCuenta } from '@/lib/admin/consultas';
+import { fichaCuenta, type Tono } from '@/lib/admin/consultas';
 import { leerRegistro } from '@/lib/admin/registro';
 import { haceCuanto } from '@/lib/format/hace-cuanto';
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Insignia } from '@/components/ui/insignia';
+import { Fila } from '@/components/ui/fila';
 import { Contenedor } from '@/app/panel/_components/contenedor';
 import { CabeceraAdmin } from '../../_components/cabecera';
-import { Dato, Insignia, fecha } from '../../_components/piezas';
+import { Dato, fecha } from '../../_components/piezas';
 import { ListaRegistro } from '../../_components/registro';
-import { ponerContrasena } from '../actions';
+import { VentanaContrasena } from './_components/cuentas-contrasena';
 
 export const metadata: Metadata = { title: 'Cuenta' };
 
@@ -27,11 +24,11 @@ const CONFIRMACIONES: Record<string, string> = {
     'Contraseña cambiada. Díctasela por teléfono y pídele que la cambie al entrar.',
 };
 
-const ESTADOS_MEMBRESIA: Record<string, string> = {
-  activo: 'Activa',
-  pendiente: 'Solicitud pendiente',
-  rechazado: 'Rechazada',
-  baja: 'De baja',
+const ESTADOS_MEMBRESIA: Record<string, { texto: string; tono: Tono }> = {
+  activo: { texto: 'Activa', tono: 'exito' },
+  pendiente: { texto: 'Solicitud pendiente', tono: 'aviso' },
+  rechazado: { texto: 'Rechazada', tono: 'peligro' },
+  baja: { texto: 'De baja', tono: 'neutro' },
 };
 
 const primero = (v: string | string[] | undefined) =>
@@ -80,91 +77,90 @@ export default async function AdminCuentaPage({
         {error && <Aviso>{error}</Aviso>}
         {ok && <Aviso tipo="ok">{ok}</Aviso>}
 
-        <div className="grid items-start gap-4 lg:grid-cols-2">
-          <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="t-subtitulo">La cuenta</h2>
-              {cuenta.esSuperAdmin && <Insignia tono="marca">Super admin</Insignia>}
-            </div>
-            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Dato etiqueta="Correo">{cuenta.email ?? '—'}</Dato>
-              <Dato etiqueta="Creada">{fecha(cuenta.createdAt)}</Dato>
-              <Dato etiqueta="Último acceso">
-                {cuenta.ultimoAcceso ? haceCuanto(cuenta.ultimoAcceso) : 'Nunca ha entrado'}
-              </Dato>
-            </dl>
-          </section>
+        {/* Dos columnas como la ficha de una iglesia: a la izquierda lo que se
+            hace (la palanca y lo que ya se hizo), a la derecha lo que se
+            consulta. En el móvil, en ese orden. */}
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+          <div className="flex flex-col gap-4">
+            <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5">
+              <h2 className="t-subtitulo">Lo que puedes hacer</h2>
+              <div className="grid grid-cols-[34px_minmax(0,1fr)] items-center gap-x-3 gap-y-3 sm:grid-cols-[34px_minmax(0,1fr)_auto]">
+                <span className="flex size-[34px] items-center justify-center rounded-lg bg-surface-active">
+                  <KeyRound className="size-4" strokeWidth={1.8} aria-hidden />
+                </span>
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-body font-semibold">
+                    Poner una contraseña provisional
+                  </span>
+                  <span className="text-label text-pretty text-muted-foreground">
+                    Para quien no puede recuperarla por correo. Su contraseña de
+                    ahora deja de valer.
+                  </span>
+                </span>
+                <span className="col-start-2 sm:col-start-auto">
+                  <VentanaContrasena
+                    id={cuenta.id}
+                    para={cuenta.email?.split('@')[0] ?? cuenta.nombre}
+                  />
+                </span>
+              </div>
+            </section>
 
-          <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5">
-            <h2 className="t-subtitulo">Sus iglesias</h2>
-            {cuenta.membresias.length === 0 ? (
-              <p className="text-label text-muted-foreground">
-                No pertenece a ninguna iglesia ni ha pedido entrar en ninguna.
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-3">
-                {cuenta.membresias.map((m) => (
-                  <li key={m.iglesiaId} className="flex items-center justify-between gap-3">
-                    <span className="flex min-w-0 flex-col gap-0.5">
-                      <Link
+            <section className="flex flex-col gap-2.5">
+              <h2 className="t-micro px-1">Lo que se ha hecho con esta cuenta</h2>
+              <ListaRegistro
+                apuntes={historial}
+                dentroDe="cuenta"
+                vacio="Nadie ha tocado esta cuenta desde la administración."
+              />
+            </section>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="t-subtitulo">La cuenta</h2>
+                {cuenta.esSuperAdmin && <Insignia tono="marca">Super admin</Insignia>}
+              </div>
+              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Dato etiqueta="Correo">{cuenta.email ?? '—'}</Dato>
+                <Dato etiqueta="Creada">{fecha(cuenta.createdAt)}</Dato>
+                <Dato etiqueta="Último acceso">
+                  {cuenta.ultimoAcceso ? haceCuanto(cuenta.ultimoAcceso) : 'Nunca ha entrado'}
+                </Dato>
+              </dl>
+            </section>
+
+            {/* Sin relleno en la tarjeta: las filas llegan de borde a borde,
+                como en cualquier lista, y el título lleva el suyo. */}
+            <section className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
+              <h2 className="t-subtitulo px-5 pt-5 pb-3">Sus iglesias</h2>
+              {cuenta.membresias.length === 0 ? (
+                <p className="px-5 pb-5 text-label text-muted-foreground">
+                  No pertenece a ninguna iglesia ni ha pedido entrar en ninguna.
+                </p>
+              ) : (
+                <ul className="flex flex-col border-t border-border">
+                  {cuenta.membresias.map((m) => {
+                    const estado = ESTADOS_MEMBRESIA[m.estado] ?? {
+                      texto: m.estado,
+                      tono: 'neutro' as const,
+                    };
+                    return (
+                      <Fila
+                        key={m.iglesiaId}
                         href={`/admin/iglesias/${m.iglesiaId}`}
-                        className="truncate text-body font-semibold text-foreground"
-                      >
-                        {m.iglesiaNombre}
-                      </Link>
-                      <span className="text-label text-muted-foreground">
-                        {ETIQUETAS_ROLES[m.rol].titulo}
-                      </span>
-                    </span>
-                    <Insignia tono={m.estado === 'activo' ? 'exito' : 'neutro'}>
-                      {ESTADOS_MEMBRESIA[m.estado] ?? m.estado}
-                    </Insignia>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5 lg:col-span-2">
-            <div className="flex flex-col gap-1">
-              <h2 className="t-subtitulo">Poner una contraseña provisional</h2>
-              <p className="max-w-[70ch] text-label text-muted-foreground">
-                Para quien no puede recuperarla por correo. Escríbela, díctasela
-                por teléfono y pídele que la cambie en cuanto entre. Su contraseña
-                de ahora deja de valer.
-              </p>
-            </div>
-            <form action={ponerContrasena} className="flex flex-col gap-3 sm:max-w-[520px]">
-              <input type="hidden" name="id" value={cuenta.id} />
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="password">Contraseña nueva</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="text"
-                  required
-                  autoComplete="off"
-                  spellCheck={false}
-                  minLength={8}
-                />
-                <p className="t-label text-muted-foreground">{PASSWORD_PISTA}.</p>
-              </div>
-              <div>
-                <Button type="submit">
-                  <KeyRound strokeWidth={1.8} /> Cambiar la contraseña
-                </Button>
-              </div>
-            </form>
-          </section>
+                        titulo={m.iglesiaNombre}
+                        detalle={ETIQUETAS_ROLES[m.rol].titulo}
+                        fin={<Insignia tono={estado.tono}>{estado.texto}</Insignia>}
+                      />
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          </div>
         </div>
-
-        <section className="flex flex-col gap-2.5">
-          <h2 className="t-micro px-1">Lo que se ha hecho con esta cuenta</h2>
-          <ListaRegistro
-            apuntes={historial}
-            vacio="Nadie ha tocado esta cuenta desde la administración."
-          />
-        </section>
       </Contenedor>
     </>
   );

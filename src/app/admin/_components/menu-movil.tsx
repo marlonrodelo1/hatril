@@ -2,22 +2,35 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
-import { Dialog } from '@base-ui/react/dialog';
-import { Menu, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ExternalLink, Menu } from 'lucide-react';
+import { clsx } from 'clsx';
 
-import { Logo } from '@/components/marca/logo';
+import { Hoja } from '@/components/hoja';
 import { SECCIONES, seccionActiva } from './secciones';
+import { textoPendientes, usePendientes } from './marco-contexto';
 
 /**
- * El menú de `/admin` en móvil. El mismo patrón que `panel/_components/menu-movil.tsx`,
- * incluido el cierre al navegar ajustando el estado durante el render (el
- * porqué está allí): sin él, el cajón se queda abierto encima de la pantalla
- * nueva.
+ * El menú de `/admin` en móvil.
+ *
+ * EN LA HOJA, COMO EL RESTO DEL PRODUCTO (zona 4, 18-nov)
+ * -------------------------------------------------------
+ * Era un cajón que salía por la izquierda. Ahora sube desde abajo en la misma
+ * `Hoja` del muro, de la agenda y del menú de la web de cada iglesia: es donde
+ * llega el pulgar, y una sola forma de «menú en el móvil» se aprende una vez.
+ * Lleva el número de pendientes junto a Inicio, igual que el lateral.
+ *
+ * SE CIERRA AL NAVEGAR, Y HAY QUE FORZARLO
+ * ----------------------------------------
+ * Next no desmonta la hoja al cambiar de ruta: la navegación es del cliente y
+ * se quedaría abierta encima de la pantalla nueva. La cierra la comparación de
+ * `pathname` de abajo, ajustando el estado durante el render y no en un efecto
+ * (el porqué está en `panel/_components/menu-movil.tsx`).
  */
 export function AdminMenuMovil() {
   const [abierto, setAbierto] = useState(false);
   const pathname = usePathname();
+  const pendientes = usePendientes();
 
   const [rutaPintada, setRutaPintada] = useState(pathname);
   if (rutaPintada !== pathname) {
@@ -25,58 +38,100 @@ export function AdminMenuMovil() {
     setAbierto(false);
   }
 
+  // Cerrarla al llegar al ancho donde ya está el menú lateral. Por encima de
+  // `md` la hoja se vuelve un diálogo centrado, y quien gira la tableta se
+  // quedaría con un menú flotando al lado del de verdad.
+  useEffect(() => {
+    if (!abierto) return;
+    const ancho = window.matchMedia('(min-width: 768px)');
+    function cambioAncho() {
+      if (ancho.matches) setAbierto(false);
+    }
+    ancho.addEventListener('change', cambioAncho);
+    return () => ancho.removeEventListener('change', cambioAncho);
+  }, [abierto]);
+
   const activa = seccionActiva(pathname);
 
   return (
-    <Dialog.Root open={abierto} onOpenChange={setAbierto}>
-      <Dialog.Trigger
-        className="flex size-9 flex-none cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-surface-active hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/20 md:hidden"
+    <>
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
         aria-label="Abrir el menú"
+        aria-expanded={abierto}
+        className="flex size-9 flex-none cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-surface-active hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/20 md:hidden"
       >
-        <Menu className="size-[21px]" strokeWidth={1.7} />
-      </Dialog.Trigger>
+        <Menu className="size-[21px]" strokeWidth={1.8} />
+      </button>
 
-      <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-velo data-closed:animate-out data-closed:fade-out-0 data-open:animate-in data-open:fade-in-0" />
+      <Hoja
+        abierta={abierto}
+        onCambio={setAbierto}
+        titulo="Administración"
+        descripcion="Las secciones del panel de la plataforma."
+      >
+        <nav
+          aria-label="Administración"
+          className="flex flex-col pb-[env(safe-area-inset-bottom)]"
+        >
+          {SECCIONES.map(({ href, etiqueta, Icono }) => {
+            const esActiva = href === activa;
+            const aviso = href === '/admin' ? pendientes : 0;
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={esActiva ? 'page' : undefined}
+                className={clsx(
+                  'flex min-h-12 items-center gap-3 border-b border-border px-1 text-body no-underline transition-colors duration-150 hover:no-underline active:bg-surface-active motion-reduce:transition-none',
+                  // La sección abierta, con el par de «lo elegido» de la guía.
+                  // Sin relleno, como en la hoja de la web de cada iglesia:
+                  // entre filas separadas por una línea, un bloque de color
+                  // parece otro botón.
+                  esActiva
+                    ? 'font-bold text-accent-foreground hover:text-accent-foreground'
+                    : 'font-semibold text-foreground hover:text-foreground',
+                )}
+              >
+                <Icono
+                  aria-hidden
+                  strokeWidth={1.8}
+                  className={clsx(
+                    'size-[18px] flex-none',
+                    esActiva ? 'text-accent-foreground' : 'text-muted-foreground',
+                  )}
+                />
+                <span className="flex-1 truncate">{etiqueta}</span>
+                {aviso > 0 && (
+                  <span
+                    aria-label={textoPendientes(aviso)}
+                    className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-micro font-bold text-accent-foreground tabular-nums"
+                  >
+                    {aviso}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
 
-        <Dialog.Popup className="fixed inset-y-0 left-0 z-50 flex h-dvh w-[280px] max-w-[85vw] flex-col border-r border-border bg-surface outline-none data-closed:animate-out data-closed:slide-out-to-left data-open:animate-in data-open:slide-in-from-left">
-          <div className="flex flex-none items-center gap-3 border-b border-border px-5 py-4">
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <Logo tamano={22} />
-              <Dialog.Title className="t-micro">Administración</Dialog.Title>
-            </div>
-
-            <Dialog.Close
-              className="flex size-[30px] flex-none cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-active hover:text-foreground"
-              aria-label="Cerrar el menú"
-            >
-              <X className="size-[18px]" strokeWidth={1.7} />
-            </Dialog.Close>
-          </div>
-
-          <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-3">
-            {SECCIONES.map(({ href, etiqueta, Icono }) => {
-              const esActiva = href === activa;
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-current={esActiva ? 'page' : undefined}
-                  className={
-                    'flex h-11 items-center gap-3 rounded-md px-3 text-[14.5px] no-underline transition-colors hover:no-underline ' +
-                    (esActiva
-                      ? 'bg-accent font-semibold text-accent-foreground'
-                      : 'font-medium text-muted-foreground')
-                  }
-                >
-                  <Icono className="size-[19px] flex-none" strokeWidth={1.7} />
-                  <span className="truncate">{etiqueta}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </Dialog.Popup>
-      </Dialog.Portal>
-    </Dialog.Root>
+          {/* La portada en otra pestaña: quien la abre desde aquí quiere mirar
+              cómo la ve una iglesia que llega, no irse del admin. */}
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-h-12 items-center gap-3 px-1 text-body font-semibold text-foreground no-underline transition-colors duration-150 hover:text-foreground hover:no-underline active:bg-surface-active motion-reduce:transition-none"
+          >
+            <ExternalLink
+              aria-hidden
+              strokeWidth={1.8}
+              className="size-[18px] flex-none text-muted-foreground"
+            />
+            <span className="flex-1">Ver la portada</span>
+          </a>
+        </nav>
+      </Hoja>
+    </>
   );
 }
