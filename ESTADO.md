@@ -1606,6 +1606,16 @@ prueba con `stripe listen --forward-to localhost:3000/api/stripe/webhook`.
 
 ## Decidido y pendiente de construir
 
+**La app empaquetada, como Pidoo y Gonper socio** (aprobado por Marlon el
+19-nov). Las pantallas del miembro pasan a ir dentro del binario (React + Vite
+en `movil/`) en vez del WebView que carga hatril.com, porque cambiar de pestaña
+le parece lento. El teléfono no lee la base: pide los datos a `/api/v1/app/*`
+con la sesión en un token Bearer, y por detrás corren las mismas guardas y el
+mismo `withUser()`. El panel se queda en la web. Seis fases, unas 8 semanas, y
+a la tienda solo cuando haga todo lo que hace el build de hoy. Plan entero en
+`docs/app-nativa/plan-spa.md`. **Mientras dure la obra, nada nuevo en la web
+`/mi`, solo arreglos**: cada cosa nueva ahí habría que hacerla dos veces.
+
 **La bienvenida de la app** (decidido por Marlon el 30-oct, y **construida el
 mismo día** salvo el mapa: ver «Qué funciona»). La primera vez que se abre la app: el
 splash del atril, una presentación animada de tres pantallas como mucho, en
