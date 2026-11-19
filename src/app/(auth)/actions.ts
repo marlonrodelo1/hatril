@@ -16,6 +16,8 @@ import { inicioDe } from '@/lib/auth/permisos';
 import { campo, campoObligatorio, casilla } from '@/lib/api/formulario';
 import { destinoSeguro } from '@/lib/url/destino-seguro';
 import { olvidarDispositivoDeEstaSesion } from '@/lib/push/dispositivo';
+import { asegurarNombre, configGoogle } from '@/lib/auth/acceso-social';
+import { captureException } from '@/lib/observability/sentry';
 
 /**
  * Acciones de acceso, registro y recuperación.
@@ -97,6 +99,125 @@ async function inicioTrasAcceder(): Promise<string> {
   const ctx = await getCurrentUserContext();
   if (!ctx && (await getCurrentSuperAdmin())) return '/admin';
   return inicioDe(ctx);
+}
+
+// ============================================================================
+// Entrar con Google o con Apple (el porqué de cada camino, en
+// `lib/auth/acceso-social.ts`)
+// ============================================================================
+
+/**
+ * Las dos pantallas desde las que se entra. El error vuelve a la que era: a
+ * quien estaba creando la cuenta, «Entra en tu iglesia» le confundiría.
+ */
+const PantallaDeAcceso = z.enum(['/acceso', '/crear-cuenta']);
+
+const EsquemaGoogleWeb = z.object({
+  next: z.string().optional(),
+  vuelta: PantallaDeAcceso,
+});
+
+/** Google en el navegador: a Google, y de vuelta por `/auth/callback`. */
+export async function entrarConGoogle(formData: FormData) {
+  const parsed = EsquemaGoogleWeb.safeParse({
+    next: campo(formData, 'next'),
+    vuelta: campo(formData, 'vuelta') ?? '/acceso',
+  });
+  if (!parsed.success) volverCon('/acceso', 'No hemos podido abrir Google.');
+
+  const { next, vuelta } = parsed.data;
+  if (!configGoogle()) {
+    volverCon(vuelta, 'Entrar con Google todavía no está disponible.', next);
+  }
+
+  // `next` viaja dentro de la dirección de vuelta, ya reducido a una ruta de
+  // la casa; el callback lo vuelve a comprobar, porque esa dirección también la
+  // puede escribir cualquiera.
+  const vueltaDeGoogle = new URL('/auth/callback', await getOrigin());
+  const destino = destinoSeguro(next);
+  if (destino) vueltaDeGoogle.searchParams.set('next', destino);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: vueltaDeGoogle.toString(),
+      // Sin esto, con una sola cuenta de Google en el navegador entra con ella
+      // sin preguntar, y en el ordenador de la iglesia esa cuenta es de otro.
+      queryParams: { prompt: 'select_account' },
+    },
+  });
+
+  if (error || !data.url) {
+    await captureException(error ?? 'signInWithOAuth sin url', {
+      action: 'acceso_google_web',
+    });
+    volverCon(vuelta, 'No hemos podido abrir Google. Inténtalo otra vez.', next);
+  }
+
+  redirect(data.url);
+}
+
+const EsquemaTokenNativo = z.object({
+  proveedor: z.enum(['google', 'apple']),
+  // Un JWT. El tope es generoso; lo que importa lo comprueba Supabase: la
+  // firma, la audiencia (`app.hatril` o nuestro cliente de Google) y el nonce.
+  idToken: z.string().min(20).max(8192),
+  // El nonce SIN resumir. El teléfono le pasó a Apple o a Google su SHA-256, y
+  // Supabase lo vuelve a calcular para compararlo con el del token: así un
+  // token robado no sirve sin el nonce que solo tenía esta pantalla.
+  nonce: z.string().regex(/^[0-9a-f]{32,128}$/).optional(),
+  nombre: z.string().trim().max(120).optional(),
+  next: z.string().optional(),
+});
+
+/**
+ * Dentro de la app: el token que devuelve la ventana nativa de Apple o Google.
+ *
+ * DEVUELVE EN VEZ DE REDIRIGIR, AL REVÉS QUE EL RESTO DEL FICHERO
+ * ---------------------------------------------------------------
+ * La llama un componente de cliente después de una ventana nativa, no un
+ * formulario. El error se pinta al lado del botón sin recargar la pantalla
+ * (`?error=` borraría lo que la persona tenía escrito en el correo), y el éxito
+ * lo resuelve el cliente con una carga completa hacia `destino`, para que todo
+ * lo que se pinte después ya lea la cookie de sesión nueva.
+ *
+ * Todo lo que llega es de fiar tanto como cualquier petición: nada de aquí abre
+ * una sesión sin que Supabase haya validado el token.
+ */
+export async function entrarConToken(
+  datos: unknown,
+): Promise<{ ok: true; destino: string } | { ok: false; error: string }> {
+  const parsed = EsquemaTokenNativo.safeParse(datos);
+  if (!parsed.success) {
+    return { ok: false, error: 'No hemos podido entrar. Inténtalo otra vez.' };
+  }
+
+  const { proveedor, idToken, nonce, nombre, next } = parsed.data;
+  const marca = proveedor === 'apple' ? 'Apple' : 'Google';
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider: proveedor,
+    token: idToken,
+    nonce,
+  });
+
+  if (error || !data.user) {
+    await captureException(error ?? 'signInWithIdToken sin usuario', {
+      action: 'acceso_nativo',
+      proveedor,
+    });
+    return {
+      ok: false,
+      error: `No hemos podido entrar con ${marca}. Inténtalo otra vez o entra con tu correo.`,
+    };
+  }
+
+  await asegurarNombre(supabase, data.user, nombre);
+
+  // El mismo reparto que con la contraseña: a donde iba, o a su inicio.
+  return { ok: true, destino: destinoSeguro(next) ?? (await inicioTrasAcceder()) };
 }
 
 // ============================================================================

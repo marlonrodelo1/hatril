@@ -19,7 +19,9 @@
  *   (`npm run app:version` dice cuáles);
  * - no existe ios/ (hay que traerlo de GitHub, no generarlo otra vez);
  * - el GoogleService-Info.plist de Firebase no está, no es el de Hatril o no
- *   va dentro del target App (las push; ver abajo por qué se mira).
+ *   va dentro del target App (las push; ver abajo por qué se mira);
+ * - falta lo que piden «Continuar con Apple» y «Continuar con Google»: la
+ *   clave de Apple en los entitlements y el esquema de Google en el Info.plist.
  *
  * Con una dirección de traefik.me avisa de que es una PRUEBA: ese certificado
  * no lo acepta iOS y la app abriría directamente «Sin conexión».
@@ -77,6 +79,28 @@ if (!/^[A-Za-z0-9_-]{30,}$/.test(valorPlist('API_KEY'))) {
 const proyecto = readFileSync(join(raiz, 'ios', 'App', 'App.xcodeproj', 'project.pbxproj'), 'utf8');
 if (!proyecto.includes('GoogleService-Info.plist in Resources')) {
   parar('El GoogleService-Info.plist no está en los Resources del target App (project.pbxproj).');
+}
+
+/*
+ * Entrar con Apple y con Google. Los dos fallos de aquí no los ve nadie hasta
+ * pulsar el botón en un iPhone de verdad: sin la clave de Apple en los
+ * entitlements, la ventana de Apple sale y devuelve un error 1000; sin el
+ * esquema de URL del cliente de Google en el Info.plist, la librería de Google
+ * CIERRA LA APP. El cliente de iOS vive en src/lib/auth/google.ts por eso
+ * mismo: aquí se lee de ahí y se exige su esquema.
+ */
+const entitlements = readFileSync(join(raiz, 'ios', 'App', 'App', 'App.entitlements'), 'utf8');
+if (!entitlements.includes('com.apple.developer.applesignin')) {
+  parar('Falta com.apple.developer.applesignin en ios/App/App/App.entitlements: «Continuar con Apple» fallaría.');
+}
+const textoGoogle = readFileSync(join(raiz, 'src', 'lib', 'auth', 'google.ts'), 'utf8');
+const clienteIos = textoGoogle.match(/ios:\s*\{[^}]*?cliente:\s*'([^']*)'/)?.[1] ?? '';
+if (clienteIos) {
+  const esquema = clienteIos.split('.').reverse().join('.');
+  const infoPlist = readFileSync(join(raiz, 'ios', 'App', 'App', 'Info.plist'), 'utf8');
+  if (!infoPlist.includes(`<string>${esquema}</string>`)) {
+    parar(`El Info.plist no lleva el esquema ${esquema} (CFBundleURLTypes). Sin él, «Continuar con Google» cierra la app.`);
+  }
 }
 
 const numeros = leerNumeros(raiz);

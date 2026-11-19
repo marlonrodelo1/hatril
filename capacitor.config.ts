@@ -146,6 +146,16 @@ const config: CapacitorConfig = {
     FirebaseMessaging: {
       presentationOptions: ['alert', 'sound'],
     },
+
+    // Entrar con Apple y con Google (`src/app/(auth)/_components/acceso-nativo.tsx`).
+    // Solo esos dos: el plugin trae Facebook y Twitter de serie, y su script de
+    // `cap sync` los quita del binario si aquí van a `false`. El SDK de
+    // Facebook en una app de iglesias sería un rastreador más que declarar en
+    // las fichas de las tiendas, sin usarse.
+    SocialLogin: {
+      providers: { google: true, apple: true, facebook: false, twitter: false },
+      logLevel: 1,
+    },
   },
 
   // Lo pide el README del plugin: sin esto, el paquete de Firebase choca con

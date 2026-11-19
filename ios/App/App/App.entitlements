@@ -10,5 +10,14 @@
 	-->
 	<key>aps-environment</key>
 	<string>development</string>
+	<!--
+	  Entrar con Apple. Sin esta clave la ventana de Apple sale y falla con un
+	  error 1000 sin explicación. El App ID app.hatril ya tiene la capacidad
+	  marcada en developer.apple.com (19-nov); si no, la firma lo rechaza.
+	-->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>

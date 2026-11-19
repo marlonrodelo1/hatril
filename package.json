@@ -30,6 +30,7 @@
     "@capacitor/ios": "8.5.3",
     "@capacitor/splash-screen": "8.0.2",
     "@capacitor/status-bar": "8.0.4",
+    "@capgo/capacitor-social-login": "8.7.6",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.112.3",
     "class-variance-authority": "^0.7.1",

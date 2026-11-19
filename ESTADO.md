@@ -28,6 +28,13 @@ lee al arrancar.
 
 ## Qué funciona, verificado ejecutándolo
 
+- **Entrar con Google y con Apple** (19-nov). Botones encima del formulario de
+  `/acceso` y `/crear-cuenta`: Google en la web y en las dos apps, Apple solo en
+  el iPhone. **Probado Google en la web de punta a punta**: la cuenta de Google
+  quedó unida a la cuenta de siempre. Dentro de la app, **sin probar** hasta el
+  build 2. Cuentas, piezas y lo que queda (el SHA-1 de Play, revocar el token
+  de Apple al borrar la cuenta, la política de privacidad) en
+  `docs/app-nativa/acceso-social.md`.
 - **Avisos push en la app** (19-nov, migraciones `0057` y `0058`). Todo lo
   que apunta un aviso en la campana (`emitirNotificacion`) lo manda también al
   teléfono por Firebase Cloud Messaging, con la misma frase. Detalle, cuentas y
