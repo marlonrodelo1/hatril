@@ -5,6 +5,7 @@ import { Church, ChevronRight, MapPin } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/server';
 import { Logo } from '@/components/marca/logo';
+import { buttonVariants } from '@/components/ui/button';
 
 export const metadata: Metadata = { title: 'Empezar' };
 
@@ -54,12 +55,19 @@ export default async function EmpezarPage() {
 
         <span className="flex-1" />
 
-        <p className="pt-8 text-center text-[15px] text-muted-foreground">
-          ¿Ya tienes cuenta?{' '}
-          <Link href="/acceso?next=/mi" className="font-semibold text-foreground underline underline-offset-2">
-            Entra
+        {/* Botón y no enlace de texto: lo pidió Marlon el 19-nov al verlo en
+            el iPhone, donde «Entra» abajo del todo no se veía. Carbón y no
+            naranja: lo principal de esta pantalla es elegir camino, y el
+            naranja es uno por pantalla. */}
+        <div className="flex flex-col gap-2 pt-8">
+          <p className="text-center text-[15px] text-muted-foreground">¿Ya tienes cuenta?</p>
+          <Link
+            href="/acceso?next=/mi"
+            className={buttonVariants({ variant: 'secondary', size: 'lg' }) + ' h-[52px] w-full text-[16px]'}
+          >
+            Entrar
           </Link>
-        </p>
+        </div>
       </div>
     </div>
   );
