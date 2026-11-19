@@ -8,7 +8,7 @@ respuestas, en [`fichas.md`](fichas.md). **Aquí no va ningún secreto.**
 ## Lo que ya está hecho
 
 - `android/`: el proyecto, con `app.hatril`, versión **1.0.0** y versionCode
-  **1**, objetivo Android 16 (API 36, lo que pide Google Play).
+  **2**, objetivo Android 16 (API 36, lo que pide Google Play).
 - La firma de subida, **fuera del repo**, en el Windows:
   `Versiones/Android/firma/hatril-upload.jks`, con su contraseña en
   `CLAVES.txt` al lado. `android/keystore.properties` apunta a ella y tampoco
@@ -16,9 +16,10 @@ respuestas, en [`fichas.md`](fichas.md). **Aquí no va ningún secreto.**
 - La huella SHA-256 de ese certificado, que es pública y sirve para comprobar
   que Google tiene la buena:
   `9A:8B:E1:C6:18:39:B0:BE:BD:EB:D7:6D:48:FE:D5:66:72:00:6A:EE:D4:40:68:9F:AF:3D:4B:48:7E:B6:F6:4D`
-- `Versiones/Android/Hatril-1.0.0-1.aab` y `.apk`: compilados contra
-  **https://hatril.com** el 20-oct-2026, firmados y comprobados. El `.aab`
-  es el que se sube.
+- `Versiones/Android/Hatril-1.0.0-2.aab` y `.apk`: compilados contra
+  **https://hatril.com** el 30-oct-2026, firmados y comprobados, con el
+  permiso de ubicación. El `.aab` es el que se sube. El `-1` del 20-oct no
+  llegó a subirse; si ya estuviera en Play, el 2 entra igual.
 - Sin copia de seguridad en Google Drive (`android:allowBackup="false"`):
   iría con ella la cookie de sesión del WebView. El porqué, en
   `AndroidManifest.xml`.
