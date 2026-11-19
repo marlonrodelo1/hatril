@@ -211,7 +211,20 @@ export function BarraInferior({
          * En escritorio sigue siendo la pastilla centrada y flotante.
          */
         'fixed inset-x-0 bottom-0 z-30 flex items-center gap-1 border-t border-border px-1.5 pt-1.5 ' +
-        'pb-[calc(0.375rem+env(safe-area-inset-bottom))] ' +
+        /*
+         * «SALE RECORTADA POR EL TELÉFONO» (19-nov, en el iPhone)
+         *
+         * El viewport no pide `viewport-fit=cover`, así que iOS deja la web
+         * DENTRO de la zona segura y pinta la franja de la barra de gestos con
+         * el fondo del WebView, el crema (`backgroundColor` de
+         * `capacitor.config.ts`); `env(safe-area-inset-bottom)` vale 0. La
+         * barra, en blanco, se cortaba en seco justo encima de esa franja
+         * crema, con las etiquetas pegadas al borde. Ahora es del mismo crema
+         * que la franja —se leen como una sola barra hasta el borde del
+         * teléfono— y lleva más aire debajo de las etiquetas. Si un día se
+         * pide `viewport-fit=cover`, el `env()` ya está puesto.
+         */
+        'pb-[calc(0.625rem+env(safe-area-inset-bottom))] ' +
         /*
          * El glaseado, con guarda: sin `backdrop-filter` el fondo translúcido
          * dejaría el texto ilegible sobre lo que haya debajo.
@@ -230,7 +243,11 @@ export function BarraInferior({
          * con el blanco al 70 % el texto gris de las pestañas se queda en 2.4:1.
          * Al 92 % da 4.56. Las pestañas miden 10.5px: necesitan 4.5 enteros.
          */
-        'bg-surface supports-backdrop-filter:bg-surface/92 supports-backdrop-filter:backdrop-blur-2xl supports-backdrop-filter:backdrop-saturate-150 ' +
+        // Crema en el móvil (ver arriba), al 96 % y no al 92: el crema es un
+        // pelo más oscuro que el blanco y las etiquetas tienen que seguir en
+        // 4.5:1 con una foto negra pasando por debajo. En escritorio, la
+        // pastilla sigue en blanco.
+        'bg-background supports-backdrop-filter:bg-background/96 md:bg-surface md:supports-backdrop-filter:bg-surface/92 supports-backdrop-filter:backdrop-blur-2xl supports-backdrop-filter:backdrop-saturate-150 ' +
         // Escritorio: pastilla centrada del ancho de su contenido.
         'md:inset-x-auto md:bottom-5 md:left-1/2 md:w-auto md:-translate-x-1/2 md:rounded-2xl md:border md:p-1.5'
       }

@@ -77,6 +77,23 @@ export async function checkRateLimit(
 }
 
 /**
+ * Borra un contador del día. Para quien usa `checkRateLimit` con límite 1 como
+ * «este envío ya llegó» (`publicar` en `mi/comunidad/actions.ts`) y después
+ * falla: sin esto, reintentar el mismo envío se tomaría por un duplicado y no
+ * se publicaría nunca. Falla en silencio, como el resto del fichero.
+ */
+export async function liberarRateLimit(scope: RateLimitScope, clave: string): Promise<void> {
+  try {
+    await dbAdmin.execute(sql`
+      delete from rate_limits
+       where scope = ${scope} and clave = ${clave} and dia = current_date
+    `);
+  } catch (err) {
+    console.warn('[rate-limit] no se pudo liberar el contador:', err);
+  }
+}
+
+/**
  * IP del cliente, respetando las cabeceras de proxy habituales.
  *
  * `x-forwarded-for` puede traer varios saltos; el primero es el cliente real.

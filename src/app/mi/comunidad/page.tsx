@@ -183,7 +183,9 @@ export default async function ComunidadPage({
               nombre={nombre}
               miFoto={miFoto}
               admiteFotos={config.fotos}
-              sobreFoto
+              // Cristal solo si hay foto detrás. Sin foto, la portada es clara
+              // (`cabecera-del-dia.tsx`) y el compositor va con su tarjeta.
+              sobreFoto={Boolean(versiculo?.imagenUrl ?? devocional?.imagenUrl)}
             />
           )}
         </CabeceraDelDia>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ImagePlus, X } from 'lucide-react';
 
@@ -293,7 +294,14 @@ export function Publicador({
           previas={previas}
           onQuitar={quitarTodas}
           enHoja
-          alPublicar={() => setAbierta(false)}
+          alPublicar={() => {
+            setAbierta(false);
+            // Fuera el `?error=` de un intento anterior, y el `?publicar=1`:
+            // ya se ha publicado, y el aviso viejo seguiría ahí encima.
+            if (params.get('error') || params.get('publicar') === '1') {
+              router.replace(pathname, { scroll: false });
+            }
+          }}
         />
       </Hoja>
     </>
@@ -334,12 +342,35 @@ function Formulario({
 }) {
   const formulario = useRef<HTMLFormElement>(null);
 
+  /*
+   * UNA PUBLICACIÓN POR ENVÍO, AUNQUE SE PULSE SEIS VECES
+   * -----------------------------------------------------
+   * El 19-nov Marlon publicó una foto desde el iPhone y salió seis veces:
+   * subir la foto tarda, el botón no decía nada, y lo volvió a pulsar. Ahora
+   * el botón se bloquea y dice «Publicando…» (`BotonPublicar`), y además cada
+   * envío lleva un identificador que el servidor solo acepta una vez
+   * (`publicar` en `../actions.ts`): lo que llegue repetido —un doble toque
+   * antes de que el botón se bloquee, un reintento de la red— no crea otra
+   * publicación. Se inventa al enviar y se olvida al terminar bien, así que la
+   * siguiente publicación lleva uno nuevo.
+   */
+  const envio = useRef<string | null>(null);
+
   return (
     <form
       id={ID_FORM}
       ref={formulario}
       action={async (formData) => {
-        await publicar(formData);
+        envio.current ??= crypto.randomUUID();
+        formData.set('envio', envio.current);
+        try {
+          await publicar(formData);
+        } finally {
+          // También si falla: un error de la action llega como redirección
+          // con `?error=` y se lanza aquí. El servidor ya liberó el envío, y el
+          // siguiente intento lleva uno nuevo.
+          envio.current = null;
+        }
         formulario.current?.reset();
         onQuitar();
         alPublicar?.();
@@ -434,10 +465,22 @@ function Formulario({
 
         <span className="flex-1" />
 
-        <Button type="submit" className={enHoja ? 'h-10 px-5' : undefined}>
-          Publicar
-        </Button>
+        <BotonPublicar className={enHoja ? 'h-10 px-5' : undefined} />
       </div>
     </form>
+  );
+}
+
+/**
+ * «Publicar», bloqueado y diciendo «Publicando…» mientras la action trabaja.
+ * Componente aparte porque `useFormStatus` solo ve el formulario que tiene
+ * ENCIMA en el árbol, no el que el propio componente pinta.
+ */
+function BotonPublicar({ className }: { className?: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" className={className} disabled={pending} aria-busy={pending}>
+      {pending ? 'Publicando…' : 'Publicar'}
+    </Button>
   );
 }

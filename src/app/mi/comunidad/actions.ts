@@ -18,6 +18,7 @@ import {
 } from '@/lib/db/schema';
 import { motivoDenunciaEnum } from '@/lib/db/schema/enums';
 import { campo } from '@/lib/api/formulario';
+import { checkRateLimit, liberarRateLimit } from '@/lib/api/rate-limit';
 import { esGuardHatril } from '@/lib/db/error';
 import {
   autorDeComentario,
@@ -137,6 +138,24 @@ export async function publicar(formData: FormData) {
   }
 
   /*
+   * UN ENVÍO, UNA PUBLICACIÓN (19-nov: una foto salió seis veces). El
+   * compositor manda un identificador por envío (`publicador.tsx`), y aquí se
+   * reclama con un contador de límite 1: si ya llegó, es el mismo envío otra
+   * vez y no se crea nada. Se reclama DESPUÉS de las comprobaciones, que no
+   * gastan nada, y se libera si lo de abajo falla, para que reintentar
+   * funcione. Sin JavaScript no viaja identificador y se publica como siempre.
+   */
+  const envio = z.string().uuid().safeParse(campo(formData, 'envio'));
+  const claveEnvio = envio.success ? `publicar:${ctx.user.id}:${envio.data}` : null;
+  if (claveEnvio) {
+    const reclamo = await checkRateLimit('usuario', claveEnvio, 1);
+    if (!reclamo.ok && !reclamo.degraded) {
+      revalidatePath(DESTINO);
+      return;
+    }
+  }
+
+  /*
    * SE CREA LA FILA PRIMERO, Y LUEGO SE SUBEN LAS FOTOS.
    *
    * Al revés haría falta inventar un identificador antes de tener publicación, y
@@ -158,7 +177,10 @@ export async function publicar(formData: FormData) {
       .returning({ id: publicaciones.id }),
   );
 
-  if (!fila) volver('No se pudo publicar. Inténtalo otra vez.');
+  if (!fila) {
+    if (claveEnvio) await liberarRateLimit('usuario', claveEnvio);
+    volver('No se pudo publicar. Inténtalo otra vez.');
+  }
 
   if (ficheros.length > 0) {
     const subida = await subirImagenesPublicacion(
@@ -172,6 +194,7 @@ export async function publicar(formData: FormData) {
       await withUser(ctx.user.id, (tx) =>
         tx.delete(publicaciones).where(eq(publicaciones.id, fila.id)),
       );
+      if (claveEnvio) await liberarRateLimit('usuario', claveEnvio);
       volver(subida.error);
     }
 
@@ -183,8 +206,19 @@ export async function publicar(formData: FormData) {
     );
   }
 
+  /*
+   * SIN `redirect` AL TERMINAR BIEN, Y ERA LO QUE DUPLICABA
+   * -------------------------------------------------------
+   * Aquí había un `redirect(DESTINO)`. Llamada desde el compositor, una action
+   * que redirige hace que el `await` del cliente LANCE (Next la resuelve como
+   * navegación), así que nada de lo que venía después corría: ni vaciar el
+   * formulario ni cerrar la hoja. La publicación se creaba, la hoja seguía
+   * abierta con el texto y la foto, y lo natural era volver a pulsar. Con
+   * `revalidatePath` basta: el muro se vuelve a pintar con la publicación
+   * nueva, y sin JavaScript también, porque Next repinta la página tras la
+   * action.
+   */
   revalidatePath(DESTINO);
-  redirect(DESTINO);
 }
 
 /**
