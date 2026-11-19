@@ -7,6 +7,7 @@ import { getCurrentUserContext } from '@/lib/auth/user-context';
 import { createClient } from '@/lib/supabase/server';
 import { crearCuentaYSolicitar, solicitarIngreso } from '../actions';
 import { PasosSolicitud } from './_components/pasos-solicitud';
+import { AccesoSocial } from '@/app/(auth)/_components/acceso-social';
 import { Permisos } from './_components/permisos';
 
 export const metadata: Metadata = { title: 'Pedir entrar' };
@@ -73,6 +74,9 @@ export default async function SolicitarPage({
         error={error}
         accion={user ? solicitarIngreso : crearCuentaYSolicitar}
         permisos={<Permisos />}
+        accesoRapido={
+          user ? undefined : <AccesoSocial next={`/solicitar/${slug}`} vuelta="/acceso" />
+        }
       />
     </div>
   );

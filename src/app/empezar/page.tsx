@@ -41,7 +41,7 @@ export default async function EmpezarPage() {
           <Opcion
             href="/buscar"
             icono={<Church strokeWidth={1.8} />}
-            titulo="Ya soy de una iglesia"
+            titulo="Ya pertenezco a una iglesia"
             detalle="Búscala por su nombre y pide entrar."
           />
           <Opcion

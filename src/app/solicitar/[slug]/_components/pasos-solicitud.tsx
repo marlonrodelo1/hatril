@@ -79,6 +79,7 @@ export function PasosSolicitud({
   error,
   accion,
   permisos,
+  accesoRapido,
 }: {
   slug: string;
   nombreIglesia: string;
@@ -90,6 +91,12 @@ export function PasosSolicitud({
   accion: (formData: FormData) => Promise<void>;
   /** El tercer paso, con los textos legales ya escritos en el servidor. */
   permisos: ReactNode;
+  /**
+   * «Continuar con Google / Apple», solo sin sesión y en el primer paso. Va
+   * FUERA del formulario de los pasos: el de Google en la web es otro
+   * `<form>`, y un formulario dentro de otro no es HTML válido.
+   */
+  accesoRapido?: ReactNode;
 }) {
   const pasos: Paso[] = conSesion
     ? ['datos', 'permisos']
@@ -271,6 +278,14 @@ export function PasosSolicitud({
 
       <main className="mx-auto flex w-full max-w-[560px] flex-col gap-5 px-5 pt-5">
         {error && <Aviso>{error}</Aviso>}
+
+        {/* Con Google o Apple se ahorra el correo y la contraseña: entra, y
+            vuelve aquí ya con sesión, al formulario corto (nombre, teléfono y
+            permisos). Lo pidió Marlon el 19-nov: elegir la iglesia, pulsar
+            «Pedir unirme» y AHÍ iniciar sesión. */}
+        {!conSesion && paso === 0 && accesoRapido && (
+          <div className="flex flex-col gap-4">{accesoRapido}</div>
+        )}
 
         {/* La cabecera de los pasos: cuál, cuántos, y la barra que se llena.
             Sin JavaScript no significa nada y cada paso lleva su título. */}

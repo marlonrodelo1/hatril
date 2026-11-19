@@ -78,6 +78,53 @@ export async function buscarIglesias(
   );
 }
 
+/** Lo que la persona escribe se busca tal cual: `%` y `_` no son comodines suyos. */
+function literalParaLike(texto: string): string {
+  return texto.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+/**
+ * Las sugerencias del buscador mientras se escribe
+ * (`/api/v1/iglesias/sugerencias`, `buscar/_components/buscador.tsx`).
+ *
+ * Palabra a palabra y no la frase entera: quien busca «cuerpo cristo» quiere
+ * «Iglesia Cristiana Cuerpo de Cristo», y con `%cuerpo cristo%` no sale. Cada
+ * palabra tiene que estar en el nombre o en la ciudad. Pocas y las que
+ * EMPIEZAN por lo escrito primero: son sugerencias, la lista entera la da
+ * «Buscar» (`buscarIglesias`).
+ */
+export async function sugerirIglesias(texto: string) {
+  const palabras = texto
+    .split(/\s+/)
+    .filter((p) => p.length > 0)
+    .slice(0, 5)
+    .map(literalParaLike);
+  if (palabras.length === 0) return [];
+
+  return withAnon((tx) =>
+    tx
+      .select({
+        slug: iglesias.slug,
+        nombre: iglesias.nombre,
+        ciudad: iglesias.ciudad,
+        pais: iglesias.pais,
+      })
+      .from(iglesias)
+      .where(
+        and(
+          ...palabras.map((p) =>
+            or(ilike(iglesias.nombre, `%${p}%`), ilike(iglesias.ciudad, `%${p}%`)),
+          ),
+        ),
+      )
+      .orderBy(
+        sql`case when ${iglesias.nombre} ilike ${`${palabras.join(' ')}%`} then 0 else 1 end`,
+        asc(iglesias.nombre),
+      )
+      .limit(6),
+  );
+}
+
 /**
  * Una iglesia del directorio, por slug, para la pantalla de solicitud.
  *

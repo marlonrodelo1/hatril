@@ -28,6 +28,21 @@ lee al arrancar.
 
 ## Qué funciona, verificado ejecutándolo
 
+- **Buscar iglesia en la bienvenida, como lo pidió Marlon** (19-nov). «Ya
+  pertenezco a una iglesia» abre el buscador con **sugerencias mientras se
+  escribe** (palabra a palabra: «cuerpo cristo» encuentra «Cuerpo de Cristo»;
+  `/api/v1/iglesias/sugerencias`, pública y como `anon`) y el botón «Buscar».
+  Tocar una lleva a su ficha → «Pedir unirme» → ahí, **«Continuar con Google /
+  Apple»** encima del formulario, y vuelve a la solicitud ya con sesión. «Estoy
+  buscando iglesia» suma **buscar cerca de una dirección** escrita, con
+  Nominatim (OpenStreetMap) desde el teléfono: el servidor no recibe la
+  dirección. Probado en el navegador a tamaño de móvil (sugerencias, el botón
+  de Google en la solicitud, y «Chapinero, Bogotá» → Betania a 0,6 km). **Ojo**:
+  una iglesia solo sale si su pastor marca «Aparecer en el buscador de
+  iglesias» (Ajustes → Directorio de Hatril), y en «cerca» solo si además ha
+  puesto su ubicación. Cuerpo de Cristo y Sion no lo tienen marcado. **Falta**
+  decir en `/privacidad` que la dirección escrita se consulta en
+  OpenStreetMap: va con la próxima versión de la política (decisión de Marlon).
 - **Entrar con Google y con Apple** (19-nov). Botones encima del formulario de
   `/acceso` y `/crear-cuenta`: Google en la web y en las dos apps, Apple solo en
   el iPhone. **Probado Google en la web de punta a punta**: la cuenta de Google

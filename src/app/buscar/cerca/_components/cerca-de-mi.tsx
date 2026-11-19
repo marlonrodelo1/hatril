@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { LocateFixed, MapPinOff, Navigation } from 'lucide-react';
+import { LocateFixed, MapPin, MapPinOff, Navigation } from 'lucide-react';
 
 import { Button, buttonVariants } from '@/components/ui/button';
 import { BotonInvitar } from '../../_components/boton-invitar';
 import { FilaIglesia, type IglesiaEnLista } from '../../_components/fila-iglesia';
+import { geocodificar } from './geocodificar';
 
 /**
  * «Estoy buscando iglesia»: las que hay cerca, ordenadas por distancia.
@@ -17,6 +18,13 @@ import { FilaIglesia, type IglesiaEnLista } from '../../_components/fila-iglesia
  * y la distancia se calcula aquí. Así lo de «no guardamos tu ubicación» no es
  * una promesa: el servidor nunca la recibe. Y se pide al pulsar el botón,
  * después de explicar para qué, no al abrir la pantalla.
+ *
+ * O POR UNA DIRECCIÓN (19-nov)
+ * ----------------------------
+ * Quien no quiere dar la ubicación, o se la ha negado a la app, escribe una
+ * calle, un barrio o una ciudad, y se ordena igual, desde ahí. La dirección se
+ * convierte en coordenadas con OpenStreetMap, desde el teléfono
+ * (`geocodificar.ts`): nuestro servidor tampoco la recibe.
  *
  * SIN MAPA, Y ES UNA DECISIÓN
  * ---------------------------
@@ -32,8 +40,87 @@ type Radio = (typeof RADIOS)[number];
 type Estado =
   | { paso: 'explicar' }
   | { paso: 'buscando' }
-  | { paso: 'lista'; lat: number; lng: number }
+  /** `desde`: la dirección escrita, si no es la ubicación del teléfono. */
+  | { paso: 'lista'; lat: number; lng: number; desde?: string }
   | { paso: 'sin-ubicacion' };
+
+/**
+ * «Calle, barrio o ciudad» y «Buscar». Mientras OpenStreetMap contesta, el
+ * botón lo dice; si no encuentra nada, se pide algo más general en vez de
+ * enseñar una lista vacía.
+ */
+function BuscarPorDireccion({
+  onLugar,
+}: {
+  onLugar: (lugar: { lat: number; lng: number; nombre: string }) => void;
+}) {
+  const [texto, setTexto] = useState('');
+  const [buscando, setBuscando] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  async function buscar(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const direccion = texto.trim();
+    if (direccion.length < 3) {
+      setAviso('Escribe una calle, un barrio o una ciudad.');
+      return;
+    }
+    setBuscando(true);
+    setAviso(null);
+    try {
+      const lugar = await geocodificar(direccion);
+      // Arriba de la lista sale lo que la persona escribió: el nombre de
+      // OpenStreetMap («UPZs Localidad Chapinero, Localidad Chapinero…») es
+      // exacto pero no se reconoce de un vistazo.
+      if (lugar) onLugar({ ...lugar, nombre: direccion });
+      else setAviso('No encontramos esa dirección. Prueba con el barrio o la ciudad.');
+    } catch {
+      setAviso('No hemos podido buscar la dirección. Inténtalo otra vez en un momento.');
+    } finally {
+      setBuscando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={buscar} className="flex flex-col gap-2" role="search">
+      <label htmlFor="direccion" className="text-[14px] font-semibold text-foreground">
+        O escribe una dirección
+      </label>
+      <div className="relative">
+        <MapPin
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground"
+          strokeWidth={1.8}
+        />
+        <input
+          id="direccion"
+          type="search"
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          maxLength={160}
+          enterKeyHint="search"
+          autoComplete="street-address"
+          placeholder="Calle, barrio o ciudad"
+          aria-describedby="direccion-ayuda"
+          className="h-12 w-full rounded-xl border border-input bg-surface pr-3.5 pl-11 text-base outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
+        />
+      </div>
+      {aviso && (
+        <p role="alert" className="flex items-center gap-1.5 text-[14px] text-danger">
+          <MapPinOff aria-hidden className="size-4 flex-none" strokeWidth={1.8} />
+          {aviso}
+        </p>
+      )}
+      <Button type="submit" variant="outline" size="lg" className="h-[52px] w-full" disabled={buscando}>
+        {buscando ? 'Buscando…' : 'Buscar cerca de esta dirección'}
+      </Button>
+      <p id="direccion-ayuda" className="text-[13px] leading-snug text-muted-foreground">
+        La dirección se consulta en OpenStreetMap para situarla. Hatril no la
+        guarda.
+      </p>
+    </form>
+  );
+}
 
 /** Distancia en kilómetros sobre la esfera (haversine). */
 function distanciaKm(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -47,6 +134,10 @@ function distanciaKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 export function CercaDeMi({ iglesias }: { iglesias: ConUbicacion[] }) {
   const [estado, setEstado] = useState<Estado>({ paso: 'explicar' });
   const [radio, setRadio] = useState<Radio>(10);
+
+  function desdeDireccion(lugar: { lat: number; lng: number; nombre: string }) {
+    setEstado({ paso: 'lista', lat: lugar.lat, lng: lugar.lng, desde: lugar.nombre });
+  }
 
   function usarUbicacion() {
     if (!('geolocation' in navigator)) return setEstado({ paso: 'sin-ubicacion' });
@@ -72,10 +163,10 @@ export function CercaDeMi({ iglesias }: { iglesias: ConUbicacion[] }) {
         <ul className="flex flex-col gap-2.5 text-[15.5px] leading-relaxed text-muted-foreground">
           <li>Para eso necesitamos saber dónde estás, solo mientras buscas.</li>
           <li>No guardamos tu ubicación ni la compartimos con ninguna iglesia.</li>
-          <li>Si prefieres no darla, busca por ciudad: verás lo mismo.</li>
+          <li>Si prefieres no darla, escribe una dirección: verás lo mismo.</li>
         </ul>
         <span className="flex-1" />
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-6">
           <Button
             type="button"
             size="lg"
@@ -86,11 +177,12 @@ export function CercaDeMi({ iglesias }: { iglesias: ConUbicacion[] }) {
             <Navigation strokeWidth={1.8} />
             {estado.paso === 'buscando' ? 'Buscando…' : 'Usar mi ubicación'}
           </Button>
+          <BuscarPorDireccion onLugar={desdeDireccion} />
           <Link
             href="/buscar/ciudad"
-            className={buttonVariants({ variant: 'outline', size: 'lg' }) + ' h-[52px] w-full'}
+            className="self-center text-[14px] font-semibold text-foreground underline underline-offset-2"
           >
-            Buscar por ciudad
+            Ver las iglesias de una ciudad
           </Link>
         </div>
       </div>
@@ -107,14 +199,16 @@ export function CercaDeMi({ iglesias }: { iglesias: ConUbicacion[] }) {
           Sin ubicación también funciona
         </h1>
         <p className="text-pretty text-[15.5px] leading-relaxed text-muted-foreground">
-          Busca por la ciudad o el municipio donde vives. Si un día quieres
-          usarla, puedes darle permiso a la app desde los ajustes del teléfono.
+          Escribe tu calle, tu barrio o tu ciudad y te enseñamos las más
+          cercanas. Si un día quieres usar la ubicación, puedes darle permiso a
+          la app desde los ajustes del teléfono.
         </p>
+        <BuscarPorDireccion onLugar={desdeDireccion} />
         <Link
           href="/buscar/ciudad"
-          className={buttonVariants({ size: 'lg' }) + ' h-[52px] w-full'}
+          className="self-center text-[14px] font-semibold text-foreground underline underline-offset-2"
         >
-          Buscar por ciudad
+          Ver las iglesias de una ciudad
         </Link>
       </div>
     );
@@ -129,9 +223,23 @@ export function CercaDeMi({ iglesias }: { iglesias: ConUbicacion[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-[26px] leading-tight font-extrabold tracking-[-0.025em]">
-        Iglesias cerca de ti
-      </h1>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-[26px] leading-tight font-extrabold tracking-[-0.025em]">
+          {estado.desde ? 'Iglesias cerca de' : 'Iglesias cerca de ti'}
+        </h1>
+        {estado.desde && (
+          <p className="flex flex-wrap items-baseline gap-x-2 text-[15px] text-muted-foreground">
+            <span className="font-semibold text-foreground">{estado.desde}</span>
+            <button
+              type="button"
+              onClick={() => setEstado({ paso: 'explicar' })}
+              className="cursor-pointer rounded-sm text-[14px] font-semibold text-foreground underline underline-offset-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/20"
+            >
+              Cambiar
+            </button>
+          </p>
+        )}
+      </div>
 
       <div role="radiogroup" aria-label="Distancia" className="flex gap-2">
         {RADIOS.map((r) => (

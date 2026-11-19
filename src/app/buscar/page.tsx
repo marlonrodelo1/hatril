@@ -1,17 +1,19 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { MapPin, Search } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { z } from 'zod';
 
 import { buscarIglesias, cultoPrincipal } from '@/lib/iglesias/directorio';
 import { buttonVariants } from '@/components/ui/button';
 import { BotonInvitar } from './_components/boton-invitar';
+import { BuscadorIglesias } from './_components/buscador';
 import { FilaIglesia, MarcoBienvenida } from './_components/fila-iglesia';
 
 export const metadata: Metadata = { title: 'Busca tu iglesia' };
 
 /**
- * «Ya soy de una iglesia»: buscarla por su nombre.
+ * «Ya pertenezco a una iglesia»: buscarla por su nombre, con sugerencias
+ * mientras se escribe (`_components/buscador.tsx`).
  *
  * Por GET, como el directorio de la web: la búsqueda es una URL, el botón atrás
  * funciona y no hace falta JavaScript. Busca en el nombre, la ciudad y la
@@ -37,23 +39,9 @@ export default async function BuscarPage({
 
   return (
     <MarcoBienvenida volver="/empezar" titulo="Busca tu iglesia">
-      <form action="/buscar" className="relative">
-        <Search
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground"
-          strokeWidth={1.8}
-        />
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
-          autoFocus={!q}
-          maxLength={80}
-          placeholder="Nombre de la iglesia"
-          aria-label="Nombre de la iglesia"
-          className="h-12 w-full rounded-xl border border-input bg-surface pr-3.5 pl-11 text-base outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
-        />
-      </form>
+      {/* `key` con la búsqueda: al volver con resultados, el campo empieza
+          con lo buscado y sin sugerencias abiertas. */}
+      <BuscadorIglesias key={q} inicial={q} />
 
       {q.length >= 2 && resultados.length > 0 && (
         <>
