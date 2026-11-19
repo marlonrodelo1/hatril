@@ -20,6 +20,8 @@
  * - no existe ios/ (hay que traerlo de GitHub, no generarlo otra vez);
  * - el GoogleService-Info.plist de Firebase no está, no es el de Hatril o no
  *   va dentro del target App (las push; ver abajo por qué se mira);
+ * - la ruta de arranque (`appStartPath`) no existe dentro de app-shell/: en
+ *   iOS la app se cerraría al abrirla;
  * - falta lo que piden «Continuar con Apple» y «Continuar con Google»: la
  *   clave de Apple en los entitlements y el esquema de Google en el Info.plist.
  *
@@ -79,6 +81,18 @@ if (!/^[A-Za-z0-9_-]{30,}$/.test(valorPlist('API_KEY'))) {
 const proyecto = readFileSync(join(raiz, 'ios', 'App', 'App.xcodeproj', 'project.pbxproj'), 'utf8');
 if (!proyecto.includes('GoogleService-Info.plist in Resources')) {
   parar('El GoogleService-Info.plist no está en los Resources del target App (project.pbxproj).');
+}
+
+/*
+ * La ruta de arranque tiene que existir DENTRO de app-shell/, aunque la app
+ * cargue la web desplegada: Capacitor iOS lo comprueba antes de nada y, si no
+ * está, cierra la app con exit(1). El build 2 de TestFlight (19-nov) se
+ * instalaba y se cerraba en negro por esto. Android no lo mira.
+ */
+const config = readFileSync(join(raiz, 'capacitor.config.ts'), 'utf8');
+const rutaDeArranque = config.match(/appStartPath:\s*'([^']+)'/)?.[1];
+if (rutaDeArranque && !existsSync(join(raiz, 'app-shell', rutaDeArranque))) {
+  parar(`Falta app-shell${rutaDeArranque} (appStartPath). Sin ella, la app de iOS se cierra al abrirla. Ver app-shell/mi/index.html.`);
 }
 
 /*
