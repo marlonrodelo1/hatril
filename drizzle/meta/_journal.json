@@ -344,6 +344,20 @@
       "when": 1793368034490,
       "tag": "0054_ubicacion_iglesias",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1795020709847,
+      "tag": "0055_donativos",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1795020736879,
+      "tag": "0056_donativos_rls",
+      "breakpoints": true
     }
   ]
 }

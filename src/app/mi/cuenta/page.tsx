@@ -3,10 +3,13 @@ import type { Metadata } from 'next';
 import {
   ChevronRight,
   Church,
+  ExternalLink,
+  HandHeart,
   KeyRound,
   Landmark,
   LogOut,
   Mail,
+  ReceiptText,
   ShieldCheck,
   Trash2,
   User,
@@ -23,6 +26,8 @@ import { Aviso } from '@/components/aviso';
 import { misMinisterios } from '@/lib/ministerios/consultas';
 import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
 import { donativosDeMiIglesia } from '@/lib/iglesias/donativos';
+import { estadoDeDar, misDonativos } from '@/lib/donativos/consultas';
+import { formatearEuros } from '@/lib/donativos/calculo';
 import { misBloqueos } from '@/lib/comunidad/moderacion';
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { nombreDeLaCuenta } from '@/lib/auth/nombre';
@@ -30,6 +35,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Fila } from '@/components/ui/fila';
 import { salir } from '../../(auth)/actions';
 import { CabeceraMiembro } from '../_components/cabecera-miembro';
+import { EnlaceADar } from '../_components/enlace-a-dar';
 import { CuadroIcono, FilaBoton, FilaDato, Grupo } from './_components/ajustes';
 import { FotoPerfil } from './_components/foto-perfil';
 import { InterruptorAsistencia } from './_components/interruptor-asistencia';
@@ -70,13 +76,41 @@ export default async function MiCuentaPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [ministerios, donativos, bloqueos, miFoto, consentimiento] = await Promise.all([
+  const [ministerios, donativos, bloqueos, miFoto, consentimiento, dar] = await Promise.all([
     misMinisterios(ctx),
     donativosDeMiIglesia(ctx),
     misBloqueos(ctx),
     miFotoDePerfil(ctx),
     estadoConsentimiento(ctx),
+    estadoDeDar(ctx.iglesia.id),
   ]);
+
+  /*
+   * «Lo que he dado», con el total del año al lado. Solo si hay grupo de
+   * Ofrendar que pintar: son tres o cuatro consultas pequeñas, por el índice
+   * de donante y solo de esta persona, y no tiene sentido hacerlas donde no
+   * hay a dónde dar.
+   *
+   * La fila sale con tarjeta, o sin ella si la persona ya dio alguna vez: una
+   * iglesia que desconecta Stripe no le borra a nadie lo que ya dio. Solo con
+   * transferencia y sin nada dado, no: lo de transferencia no pasa por aquí y
+   * la pantalla saldría vacía para siempre.
+   */
+  const hayOfrendar = dar.conTarjeta || donativos !== null;
+  const mios = hayOfrendar ? await misDonativos(ctx) : null;
+  const yaDio =
+    mios !== null &&
+    (mios.lista.length > 0 ||
+      mios.mensuales.length > 0 ||
+      mios.aniosConDatos.some((a) => a !== mios.anio));
+  const totalDelAnio = mios ? Number(mios.total) : 0;
+
+  const notaOfrendar =
+    dar.conTarjeta && donativos
+      ? 'Con tarjeta o por transferencia. El dinero va directo a la iglesia: Hatril no ve tu tarjeta ni se queda comisión.'
+      : dar.conTarjeta
+        ? 'Con tarjeta, una vez o cada mes. El dinero va directo a la iglesia: Hatril no ve tu tarjeta ni se queda comisión.'
+        : `La cuenta de ${ctx.iglesia.nombre}. El dinero va directo a ella: Hatril no cobra nada por su cuenta ni se queda comisión.`;
 
   const nombre = nombreDeLaCuenta(user!);
   const correo = user!.email ?? '';
@@ -220,23 +254,65 @@ export default async function MiCuentaPage({
         </Grupo>
 
         {/*
-         * Donar solo se pinta si la iglesia ha puesto su cuenta. Un botón que al
-         * pulsarlo dice «tu iglesia todavía no ha configurado esto» le pasa el
-         * problema a quien no puede resolverlo.
+         * Ofrendar solo se pinta si la iglesia tiene a dónde: tarjeta (su
+         * cuenta de Stripe conectada) o una cuenta para transferencias. Un
+         * botón que al pulsarlo dice «tu iglesia todavía no ha configurado
+         * esto» le pasa el problema a quien no puede resolverlo.
          *
-         * Y no es una pasarela: es el mismo número que esa congregación ya
-         * publica en su web. Por Hatril no pasa dinero, que es lo que
-         * `/privacidad` §3 promete.
+         * Por Hatril sigue sin pasar dinero, que es lo que `/privacidad` §3
+         * promete: la tarjeta se cobra en la cuenta de Stripe de la iglesia, y
+         * la transferencia es el mismo número que ella publica en su web.
+         *
+         * El `id` es el ancla del «Dar» de la cabecera cuando solo hay
+         * transferencia.
          */}
-        {donativos && (
-          <Grupo
-            rotulo="Ofrendar"
-            nota={`La cuenta de ${ctx.iglesia.nombre}. El dinero va directo a ella: Hatril no cobra nada por su cuenta ni se queda comisión.`}
-          >
-            <FilaDato icono={<Landmark strokeWidth={1.8} />} etiqueta="Cuenta" copiable>
-              {donativos.cuenta}
-            </FilaDato>
-            {donativos.titular && (
+        {hayOfrendar && (
+          <Grupo id="ofrendar" rotulo="Ofrendar" nota={notaOfrendar}>
+            {dar.conTarjeta && (
+              <li className="border-b border-border last:border-b-0">
+                {/* El icono de enlace externo avisa de que se sale: en la app
+                    del iPhone esto abre Safari (`EnlaceADar` cuenta por qué). */}
+                <EnlaceADar
+                  href={`/i/${ctx.iglesia.slug}/dar`}
+                  className="group flex items-center gap-3 px-4 py-3 text-foreground no-underline transition-colors duration-150 hover:bg-surface-alt hover:text-foreground hover:no-underline"
+                >
+                  <CuadroIcono>
+                    <HandHeart strokeWidth={1.8} />
+                  </CuadroIcono>
+                  <span className="flex min-w-0 flex-1 flex-col gap-px">
+                    <span className="text-label text-muted-foreground">Con tarjeta</span>
+                    <span className="truncate text-body font-semibold">
+                      Dar a {ctx.iglesia.nombre}
+                    </span>
+                  </span>
+                  <ExternalLink
+                    aria-hidden
+                    className="size-4 flex-none text-muted-foreground"
+                    strokeWidth={1.8}
+                  />
+                </EnlaceADar>
+              </li>
+            )}
+            {(dar.conTarjeta || yaDio) && (
+              <Fila
+                href="/mi/cuenta/donativos"
+                inicio={
+                  <CuadroIcono>
+                    <ReceiptText strokeWidth={1.8} />
+                  </CuadroIcono>
+                }
+                titulo="Lo que he dado"
+                detalle={
+                  totalDelAnio > 0 ? `Este año, ${formatearEuros(totalDelAnio)}` : undefined
+                }
+              />
+            )}
+            {donativos && (
+              <FilaDato icono={<Landmark strokeWidth={1.8} />} etiqueta="Cuenta" copiable>
+                {donativos.cuenta}
+              </FilaDato>
+            )}
+            {donativos?.titular && (
               <FilaDato icono={<User strokeWidth={1.8} />} etiqueta="Titular" copiable>
                 {donativos.titular}
               </FilaDato>

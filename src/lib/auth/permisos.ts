@@ -321,6 +321,44 @@ export const ETIQUETAS_ROLES: Record<
 };
 
 /**
+ * Lo que pone debajo del nombre en el menú de la cuenta.
+ *
+ * El título del rol a secas se quedaba corto: quien lleva un ministerio sin
+ * rol de líder —responsable o colíder, que puede serlo cualquier miembro— leía
+ * «Miembro» mientras llevaba a su gente desde el panel. Aquí se dice qué lleva,
+ * con las mismas palabras que la ficha del ministerio.
+ *
+ * Secretaría y tesorería se quedan con su título aunque lleven algo: es lo que
+ * les abre el panel, y lo del ministerio ya sale en «Lo que llevas».
+ */
+export function rolParaMostrar(ctx: {
+  rol: RolIglesia;
+  ministeriosQueLlevo: { nombre: string; rol: 'responsable' | 'colider' }[];
+}): string {
+  const titulo = ETIQUETAS_ROLES[ctx.rol].titulo;
+  const lleva = ctx.ministeriosQueLlevo;
+  const uno = lleva.length === 1 ? lleva[0] : undefined;
+
+  if (lleva.length === 0 || ctx.rol === 'pastor') return titulo;
+  if (ctx.rol === 'lider') {
+    return uno ? `Líder de ${uno.nombre}` : `Líder de ${lleva.length} ministerios`;
+  }
+  if (ctx.rol === 'miembro') {
+    // Responsable y colíder valen igual para un hombre que para una mujer;
+    // «encargado» habría obligado a saber cuál es, y la ficha no lo dice.
+    const nombreDe = (r: 'responsable' | 'colider') =>
+      r === 'responsable' ? 'Responsable' : 'Colíder';
+    if (uno) return `${nombreDe(uno.rol)} de ${uno.nombre}`;
+    const roles = new Set(lleva.map((m) => m.rol));
+    const [solo] = roles;
+    return roles.size === 1 && solo
+      ? `${nombreDe(solo)} de ${lleva.length} ministerios`
+      : `Lleva ${lleva.length} ministerios`;
+  }
+  return titulo;
+}
+
+/**
  * La base de cada rol: nada. Se empieza cerrado y el pastor abre lo que quiera,
  * no al revés. Alguien recién aceptado recibe esto más `gestionar_su_ministerio`,
  * que sin liderar nada sigue sin abrirle nada más que lo suyo.

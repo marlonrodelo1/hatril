@@ -2711,6 +2711,102 @@ begin
   r := r || format(E'  %s las funciones de la contabilidad, cerradas a anon, authenticated y service_role (%s)\\n',
                    case when n = 0 then 'OK  ' else 'FALLO' end, n);
 
+  -- -------------------------------------------------------------------------
+  -- Diezmos y ofrendas (0056): quien da es dato protegido. El pastor ve los
+  -- de su iglesia, cada cual los suyos, un miembro raso ninguno ajeno, Sion
+  -- nada de Betania, y nadie escribe con withUser.
+  -- -------------------------------------------------------------------------
+  execute 'reset role';
+  declare
+    DON_V uuid;
+    DON_X uuid;
+  begin
+    insert into public.donativos (iglesia_id, periodicidad, estado, total, moneda,
+                                  donante_nombre, donante_email, donante_auth_user_id, fecha)
+    values (IGL_A, 'una', 'pagado', 50, 'EUR', 'Test V', 'v@test.invalid', USR_V, current_date)
+    returning id into DON_V;
+    insert into public.donativos (iglesia_id, periodicidad, estado, total, moneda,
+                                  donante_nombre, donante_email, fecha)
+    values (IGL_A, 'una', 'pagado', 20, 'EUR', 'Sin cuenta', 'x@test.invalid', current_date)
+    returning id into DON_X;
+    insert into public.donativo_lineas (donativo_id, iglesia_id, tipo_ingreso, fondo_id, importe)
+    values (DON_V, IGL_A, 'diezmo', FON_A, 50), (DON_X, IGL_A, 'ofrenda', FON_A, 20);
+
+    begin
+      insert into public.donativo_lineas (donativo_id, iglesia_id, tipo_ingreso, fondo_id, importe)
+      values (DON_V, IGL_A, 'diezmo', FON_B, 1);
+      r := r || E'  FALLO una línea de donativo de Betania acepta un fondo de Sion\\n';
+    exception when check_violation then
+      r := r || E'  OK   HT140: una línea de donativo de Betania no acepta un fondo de Sion\\n';
+    end;
+
+    -- El pastor de Betania: los dos.
+    perform set_config('request.jwt.claims',
+      format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+    execute 'set local role hatril_app';
+    select count(*) into n from public.donativos where iglesia_id = IGL_A;
+    r := r || format(E'  %s el pastor ve los donativos de su iglesia (%s de 2)\\n',
+                     case when n = 2 then 'OK  ' else 'FALLO' end, n);
+    begin
+      insert into public.donativos (iglesia_id, periodicidad, total, moneda, donante_nombre, donante_email)
+      values (IGL_A, 'una', 1, 'EUR', 'Fabricado', 'f@test.invalid');
+      r := r || E'  FALLO hatril_app puede escribir un donativo\\n';
+    exception when insufficient_privilege then
+      r := r || E'  OK   hatril_app no puede escribir donativos\\n';
+    end;
+    execute 'reset role';
+
+    -- Quien dio: solo el suyo, con su línea.
+    perform set_config('request.jwt.claims',
+      format('{"sub":"%s","role":"authenticated"}', USR_V), true);
+    execute 'set local role hatril_app';
+    select count(*) into n from public.donativos;
+    r := r || format(E'  %s quien dio ve solo su donativo (%s de 1)\\n',
+                     case when n = 1 then 'OK  ' else 'FALLO' end, n);
+    select count(*) into n from public.donativo_lineas;
+    r := r || format(E'  %s quien dio ve solo sus líneas (%s de 1)\\n',
+                     case when n = 1 then 'OK  ' else 'FALLO' end, n);
+    execute 'reset role';
+
+    -- Un miembro raso de la misma iglesia: nada.
+    perform set_config('request.jwt.claims',
+      format('{"sub":"%s","role":"authenticated"}', USR_L), true);
+    execute 'set local role hatril_app';
+    select count(*) into n from public.donativos;
+    r := r || format(E'  %s un miembro raso no ve los donativos de su iglesia (%s)\\n',
+                     case when n = 0 then 'OK  ' else 'FALLO' end, n);
+    select count(*) into n from public.donativo_lineas;
+    r := r || format(E'  %s un miembro raso no ve sus líneas (%s)\\n',
+                     case when n = 0 then 'OK  ' else 'FALLO' end, n);
+    execute 'reset role';
+
+    -- Sion: nada de Betania.
+    perform set_config('request.jwt.claims',
+      format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+    execute 'set local role hatril_app';
+    select count(*) into n from public.donativos where iglesia_id = IGL_A;
+    r := r || format(E'  %s Sion no ve los donativos de Betania (%s)\\n',
+                     case when n = 0 then 'OK  ' else 'FALLO' end, n);
+    execute 'reset role';
+  end;
+
+  select count(*) into n
+    from (values ('anon'), ('authenticated'), ('service_role')) as v(rol),
+         (values ('public.ve_donantes(uuid)'),
+                 ('public.validar_iglesia_donativo_linea()'),
+                 ('public.validar_iglesia_donativo()')) as f(fn)
+   where has_function_privilege(v.rol, f.fn, 'EXECUTE');
+  r := r || format(E'  %s las funciones de los donativos, cerradas a anon, authenticated y service_role (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n
+    from (values ('anon'), ('authenticated'), ('service_role')) as v(rol),
+         (values ('public.cuentas_stripe'), ('public.donativos'),
+                 ('public.donativo_lineas'), ('public.donativos_mensuales')) as t(tabla)
+   where has_table_privilege(v.rol, t.tabla, 'SELECT');
+  r := r || format(E'  %s las tablas de los donativos, cerradas a anon, authenticated y service_role (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
   -- Abortar a proposito: revierte los datos de prueba y devuelve el informe.
   raise exception '%', r;
 end $$;
@@ -2854,6 +2950,15 @@ async function comprobarWithUser(): Promise<string[]> {
     await withUser(USR_A, (tx) => tx.execute(`select ministerio_id from fondos limit 1`));
     await withUser(USR_A, (tx) => tx.execute(`select arqueo_id from movimientos limit 1`));
     lineas.push('  OK   withUser() puede consultar los arqueos y las columnas nuevas de la caja');
+
+    // Diezmos y ofrendas (0055 y 0056): las cuatro tablas, y `en_donativos`,
+    // que el panel enciende con withUser.
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from cuentas_stripe limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from donativos limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from donativo_lineas limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from donativos_mensuales limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select en_donativos from fondos limit 1`));
+    lineas.push('  OK   withUser() puede consultar los donativos y los fondos que se ofrecen');
 
     // LA FUGA, CAZADA POR LA FUNCIÓN QUE USA LA APLICACIÓN.
     //

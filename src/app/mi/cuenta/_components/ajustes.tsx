@@ -20,17 +20,24 @@ import { Lista } from '@/components/ui/fila';
 
 /** Un grupo: el rótulo en `t-micro` fuera de la lista, como en la agenda. */
 export function Grupo({
+  id,
   rotulo,
   nota,
   children,
 }: {
+  /**
+   * Para llegar con un ancla: el «Dar» de la cabecera lleva a `#ofrendar`
+   * cuando la iglesia solo tiene transferencia. El `scroll-mt` deja el rótulo
+   * a la vista debajo de la cabecera, que es pegajosa y lo taparía.
+   */
+  id?: string;
   rotulo?: string;
   /** Lo que conviene saber del grupo entero, debajo de la lista. */
   nota?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-2.5">
+    <section id={id} className="flex scroll-mt-20 flex-col gap-2.5">
       {rotulo && <h2 className="t-micro px-1">{rotulo}</h2>}
       <Lista>{children}</Lista>
       {nota && (

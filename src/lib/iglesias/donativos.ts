@@ -26,9 +26,13 @@ export type Donativos = {
  * HATRIL NO COBRA NADA POR CUENTA DE NADIE
  * ----------------------------------------
  * Esto solo enseña un número de cuenta que la iglesia ya publica en su web. No
- * hay pasarela, no hay comisión y no pasa dinero por aquí, que es exactamente lo
- * que `/privacidad` §3 promete. El día que llegue Stripe será para cobrar la
- * suscripción de la iglesia, no las ofrendas de su gente.
+ * hay pasarela, no hay comisión y no pasa dinero por aquí.
+ *
+ * El pago con tarjeta vive aparte, en `src/lib/donativos/`: se cobra en la
+ * cuenta de Stripe de cada iglesia (Connect) y tampoco pasa por Hatril, que no
+ * se queda comisión. OJO: `/privacidad` §3 dice todavía que por Hatril no pasa
+ * nada de dinero ni datos de pago; antes de encender la tarjeta hay que
+ * reescribirla (los datos de quien da y Stripe como encargado de la iglesia).
  */
 export async function donativosDeMiIglesia(
   ctx: UserContext,

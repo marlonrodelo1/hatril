@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { requireIglesia } from '@/lib/auth/guard-panel';
 import { flagsDelMenu } from '@/lib/panel/menu';
-import { esPastor, ETIQUETAS_ROLES } from '@/lib/auth/permisos';
+import { esPastor, rolParaMostrar } from '@/lib/auth/permisos';
 import { listarNotificaciones, sinLeer } from '@/lib/notificaciones/consultas';
 import { paraLaCampana } from '@/lib/notificaciones/campana';
 import { nombreDeLaCuenta } from '@/lib/auth/nombre';
@@ -74,7 +74,7 @@ export async function CabeceraPanel({
       <MenuCuenta
         nombre={nombre}
         correo={ctx.user.email ?? ''}
-        rol={ETIQUETAS_ROLES[ctx.rol].titulo}
+        rol={rolParaMostrar(ctx)}
         fotoUrl={miFoto}
         esPastor={esPastor(ctx)}
       />

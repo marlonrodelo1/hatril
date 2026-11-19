@@ -106,6 +106,7 @@ export function CabeceraIglesia({
   secciones,
   tieneContacto,
   donativos,
+  paginaDar,
   conFoto,
 }: {
   nombre: string;
@@ -115,6 +116,13 @@ export function CabeceraIglesia({
   secciones: Seccion[];
   tieneContacto: boolean;
   donativos: Donativos | null;
+  /**
+   * `/i/<slug>/dar` si la iglesia cobra con tarjeta. Entonces «Donar» lleva
+   * allí, donde además está la cuenta para transferencias, y la ventana con
+   * solo la cuenta deja de hacer falta. Si solo tiene transferencia, `null`, y
+   * «Donar» sigue abriendo la ventana de siempre.
+   */
+  paginaDar: string | null;
   /** Si la portada lleva fotos debajo. Sin ellas, la cabecera nace sólida. */
   conFoto: boolean;
 }) {
@@ -299,7 +307,20 @@ export function CabeceraIglesia({
              * sitio es para «Cómo llegar». En escritorio no se pierde nada:
              * «Contacto» está en el menú.
              */}
-            {donativos ? (
+            {paginaDar ? (
+              <BotonEnlace
+                href={paginaDar}
+                variant="secondary"
+                size="sm"
+                className={cn(
+                  'hidden h-10 px-4 sm:inline-flex',
+                  sobreFoto && CRISTAL,
+                )}
+              >
+                <HeartHandshake strokeWidth={1.8} />
+                Donar
+              </BotonEnlace>
+            ) : donativos ? (
               <Button
                 type="button"
                 variant="secondary"
@@ -441,10 +462,20 @@ export function CabeceraIglesia({
           <div
             className={clsx(
               'mt-3 grid gap-2 pb-[env(safe-area-inset-bottom)]',
-              donativos && 'grid-cols-2',
+              (paginaDar || donativos) && 'grid-cols-2',
             )}
           >
-            {donativos && (
+            {paginaDar ? (
+              <BotonEnlace
+                href={paginaDar}
+                size="lg"
+                variant="outline"
+                onClick={() => setAbierto(false)}
+              >
+                <HeartHandshake strokeWidth={1.8} />
+                Donar
+              </BotonEnlace>
+            ) : donativos && (
               <Button
                 type="button"
                 size="lg"
@@ -471,7 +502,7 @@ export function CabeceraIglesia({
         </Hoja>
       )}
 
-      {donativos && (
+      {donativos && !paginaDar && (
         <VentanaDonar
           abierta={donarAbierto}
           alCerrar={setDonarAbierto}
@@ -525,18 +556,12 @@ function useRecogida() {
 /**
  * Cómo donar, en una ventana.
  *
- * PENDIENTE: EL BOTÓN DE STRIPE
- * -----------------------------
- * Aquí es donde entra el pago con tarjeta cuando estén los datos de Stripe. Lo
- * que hoy hay —el número de cuenta— no se va a ir con él: no todas las iglesias
- * van a tener Stripe el primer día, y la que solo tiene una cuenta bancaria
- * tiene que poder seguir recibiendo. El botón de tarjeta se pondrá arriba y la
- * transferencia se quedará debajo como la otra forma.
- *
- * Falta decidir una cosa que cambia dónde se guarda: si cada iglesia pega su
- * propio enlace de pago, va una columna en `iglesias`; si el cobro pasa por la
- * cuenta de Hatril con Connect, va el identificador de la cuenta conectada y un
- * endpoint que cree la sesión. Hasta saberlo no se inventa el esquema.
+ * SOLO PARA LA IGLESIA SIN TARJETA
+ * --------------------------------
+ * Con la cuenta de Stripe conectada (Connect, `cuentas_stripe`), «Donar» ya no
+ * abre esto: lleva a `/i/[slug]/dar`, que cobra con tarjeta y enseña la cuenta
+ * del banco debajo como la otra forma. Esta ventana se queda para la iglesia
+ * que solo tiene número de cuenta, que tiene que poder seguir recibiendo.
  */
 function VentanaDonar({
   abierta,

@@ -9,6 +9,7 @@ import { iniciales } from '@/lib/format/iniciales';
 import { devocionalPublico } from '@/lib/devocionales/consultas';
 import { pulsoDelMuro } from '@/lib/comunidad/consultas';
 import { radioPublica } from '@/lib/emisora/consultas';
+import { estadoDeDar } from '@/lib/donativos/consultas';
 import { CabeceraIglesia } from './_components/cabecera';
 import { SeccionPortada } from './_components/seccion-portada';
 import { SeccionHorarios } from './_components/seccion-horarios';
@@ -109,6 +110,10 @@ export default async function WebIglesiaPage({
   // Solo si el pastor la marcó para la web. Va después de comprobar que la web
   // está publicada: `obtenerIglesiaPublica` ya habría devuelto null.
   const radio = await radioPublica(iglesia.id);
+  // Con tarjeta, «Donar» lleva a la página de dar; si solo hay transferencia,
+  // sigue abriendo la ventana con la cuenta. Entra en el ISR de 60 segundos
+  // como lo demás: conectar Stripe tarda un minuto en notarse aquí.
+  const dar = await estadoDeDar(iglesia.id);
   const monedaIglesia = iglesia.moneda as Moneda;
   const secciones: { href: string; texto: string }[] = [];
   if (iglesia.horarios.length > 0) {
@@ -154,6 +159,7 @@ export default async function WebIglesiaPage({
               }
             : null
         }
+        paginaDar={dar.conTarjeta ? `/i/${iglesia.slug}/dar` : null}
         conFoto={iglesia.imagenes.length > 0}
       />
 

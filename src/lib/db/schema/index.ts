@@ -26,6 +26,7 @@ export * from './reparto';
 export * from './comunidad';
 export * from './notificaciones';
 export * from './finanzas';
+export * from './donativos';
 export * from './eventos';
 export * from './rgpd';
 export * from './plataforma';
