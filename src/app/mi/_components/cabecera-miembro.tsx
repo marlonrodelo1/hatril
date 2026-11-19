@@ -16,7 +16,6 @@ import { Campana } from '@/components/campana';
 import { Logo } from '@/components/marca/logo';
 import { MenuCuenta } from '@/components/menu-cuenta';
 import { EnlaceADar } from './enlace-a-dar';
-import { VigiaTitulo } from './vigia-titulo';
 
 /**
  * La cabecera de cualquier pantalla del área del miembro.
@@ -125,22 +124,20 @@ export async function CabeceraMiembro({
    * a vestirse de blanco.
    */
   /*
-   * EL TÍTULO GRANDE QUE SE RECOGE (base común, 17-nov)
+   * EL TÍTULO, SIEMPRE ARRIBA EN LA BARRA (19-nov)
    *
-   * En las pantallas de primer nivel (las de la barra de abajo: sin flecha de
-   * volver y sin el logotipo de Hatril), el título va grande debajo de la
-   * cabecera, como `<h1>`, y al bajar se recoge en la barra de arriba. Es el
-   * patrón de iOS y Android, y le da a cada pantalla de `/mi` el título de
-   * página que no tenía (inventario, D12).
+   * Desde el 17-nov las pantallas de primer nivel llevaban el título grande
+   * debajo de la cabecera, que al bajar se recogía en la barra (el patrón de
+   * iOS). Marlon lo vio en el iPhone: el título grande «está de más», y la
+   * pantalla tiene que verse como cuando ya está recogido —logo, «Comunidad» y
+   * la iglesia arriba, y debajo directamente la portada—. Así que el título va
+   * siempre en la barra, y es él el `<h1>`. Se fue con él `VigiaTitulo`, el
+   * observador que decidía cuándo se recogía.
    *
-   * Quien decide cuándo se ha recogido es `VigiaTitulo`, en el cliente, con un
-   * IntersectionObserver: pone `data-recogida` en la cabecera. Sin JavaScript
-   * el título grande se ve igual y el chico se queda escondido, que no pierde
-   * nada. En las pantallas de detalle (con flecha) el título va arriba como
-   * siempre, y ahí es él el `<h1>`.
+   * `primerNivel` se queda para «Dar», que sigue saliendo solo en las pantallas
+   * de la barra de abajo y en Mi cuenta.
    */
-  const grande = !volver && !marca;
-  const TituloChico = grande ? 'span' : 'h1';
+  const primerNivel = !volver && !marca;
 
   /*
    * «DAR», EN LAS PESTAÑAS (diezmos y ofrendas, 18-nov)
@@ -156,13 +153,11 @@ export async function CabeceraMiembro({
    * la página de dar; solo con transferencia, a la cuenta del banco de Mi
    * cuenta, que es lo único que hay.
    */
-  const dar = grande && ctx ? await estadoDeDar(ctx.iglesia.id) : null;
+  const dar = primerNivel && ctx ? await estadoDeDar(ctx.iglesia.id) : null;
 
   return (
-    <>
     <header
       data-cabecera-miembro=""
-      data-recogida={grande ? 'no' : undefined}
       className="group/cabecera sticky top-0 z-20 border-b border-border bg-background supports-backdrop-filter:bg-background/85 supports-backdrop-filter:backdrop-blur-xl"
     >
       <div className="mx-auto flex max-w-[620px] items-center gap-3 px-4 py-3 sm:px-5">
@@ -183,18 +178,10 @@ export async function CabeceraMiembro({
         {marca ? (
           <Logo variante="logotipo" tamano={22} />
         ) : (
-          <span
-            className={
-              'flex min-w-0 flex-col ' +
-              (grande
-                ? 'transition-[opacity,translate] duration-240 ease-hatril group-data-[recogida=no]/cabecera:translate-y-1 group-data-[recogida=no]/cabecera:opacity-0 motion-reduce:transition-none'
-                : '')
-            }
-            aria-hidden={grande || undefined}
-          >
-            <TituloChico className="truncate text-[15.5px] font-extrabold leading-tight tracking-[-0.02em]">
+          <span className="flex min-w-0 flex-col">
+            <h1 className="truncate text-[15.5px] font-extrabold leading-tight tracking-[-0.02em]">
               {titulo}
-            </TituloChico>
+            </h1>
             {subtitulo && (
               <span className="truncate text-[12.5px] leading-tight text-muted-foreground">
                 {subtitulo}
@@ -243,17 +230,6 @@ export async function CabeceraMiembro({
         </div>
       </div>
     </header>
-
-    {grande && (
-      <div className="mx-auto w-full max-w-[620px] px-4 pt-5 sm:px-5">
-        <h1 className="t-titulo text-balance">{titulo}</h1>
-        {subtitulo && (
-          <p className="mt-1 text-label text-muted-foreground">{subtitulo}</p>
-        )}
-        <VigiaTitulo />
-      </div>
-    )}
-    </>
   );
 }
 
