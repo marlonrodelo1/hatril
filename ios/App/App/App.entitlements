@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Notificaciones push (APNs). Se escribe "development" y Xcode lo cambia
+	  solo a "production" al exportar para TestFlight y la App Store: es el
+	  perfil de distribución el que manda. Sin esta clave, iOS no entrega
+	  ningún token y el registro falla sin ruido.
+	-->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

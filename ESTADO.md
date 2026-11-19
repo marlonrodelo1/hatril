@@ -28,6 +28,16 @@ lee al arrancar.
 
 ## Qué funciona, verificado ejecutándolo
 
+- **Avisos push en la app** (19-nov, migraciones `0057` y `0058`). Todo lo
+  que apunta un aviso en la campana (`emitirNotificacion`) lo manda también al
+  teléfono por Firebase Cloud Messaging, con la misma frase. Detalle, cuentas y
+  claves en `docs/app-nativa/push.md`. **Probado en el emulador de Android**:
+  el `enviarPush` de verdad entregó una en el canal «Avisos», con el atril y el
+  naranja, y borró solo un token muerto. `test:aislamiento` lleva 10
+  comprobaciones nuevas del bloque «Los teléfonos de las push». **Sin probar**:
+  el iPhone (hace falta el build 2 en el Mac y la clave APNs ya está subida), y
+  tocar la push con la app cerrada en un teléfono real. Lo que falta, en «Qué
+  falta».
 - **Denunciar, bloquear y borrar la cuenta** (30-oct, migración `0053`), lo
   que Apple y Google exigían para publicar la app. Probado en el navegador con
   cuentas de prueba, a tamaño de móvil:
@@ -1053,6 +1063,7 @@ lee al arrancar.
 
 | Pieza | Estado |
 |---|---|
+| **Push: lo que queda** | Poner `FIREBASE_SERVICE_ACCOUNT` en Dokploy, en Environment y no en Build-time (sin ella no sale ninguna push y no falla nada). Desplegar. Build nuevo de Android y el build 2 de iOS en el Mac: el 1 de TestFlight no lleva el plugin. Probar en un iPhone y en un Android de verdad, con la app cerrada. El App ID `app.hatril` se creó el 19-nov con Push y Sign In with Apple: el build 1 no había firmado todavía con esa cuenta. Confirmar las dos entidades nuevas de `/privacidad` (Google Ireland y Apple Distribution International) |
 | **Super admin: falta la cuenta de Marlon** | **Cerrado el 28-oct**: `admin@hatril.test` tenía `Hatril2026`, escrita aquí y en `seed-demo.sql`, en un repo público, y la base de local es la de hatril.com; desplegado `/admin`, cualquiera habría podido ponerle contraseña a la cuenta del pastor de Cuerpo de Cristo. Ahora tiene una aleatoria que nadie conoce (comprobado en la base: `Hatril2026` ya no casa con el hash) y el seed la crea igual; se entra por enlace mágico y `test:puertas:admin` sigue 30 de 30. **Lo que falta**: Marlon ya tiene cuenta (29-oct), pero todavía no está en `admin_users`: su contraseña no servía para un super admin. Va en ese orden: insertar su fila desde el SQL Editor de Supabase, entrar y cambiar la contraseña al momento en `/admin/cuentas`, y comprobar en la base que ya no es una de las conocidas. **Nunca escribir aquí, en un repo público, el correo de una cuenta real junto a su contraseña** |
 | **Las migraciones de células van por delante** | La `0052` (registro) está en `main` y aplicada; las `0046`-`0051` de células están aplicadas pero solo en su rama. Al fusionar células, el journal choca y los snapshots `0046` y `0052` salen los dos del `0045`. Qué hacer, en la cabecera de la `0052` |
 | **Super admin, lo que queda** | Sin modo soporte (entrar como el pastor): con datos del art. 9 es una decisión, no un botón. Sin ingresos: los precios viven en Stripe y no hay claves todavía. Cuentas lee mil como mucho y lo avisa |

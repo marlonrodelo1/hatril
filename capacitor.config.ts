@@ -139,6 +139,25 @@ const config: CapacitorConfig = {
       showSpinner: false,
       androidScaleType: 'CENTER_CROP',
     },
+
+    // Con la app abierta, iOS no enseña el aviso si no se le pide: llegaría
+    // y nadie lo vería. Sin `badge`: el número del icono no lo lleva nadie y
+    // se quedaría marcando un aviso ya leído. Android lo enseña siempre.
+    FirebaseMessaging: {
+      presentationOptions: ['alert', 'sound'],
+    },
+  },
+
+  // Lo pide el README del plugin: sin esto, el paquete de Firebase choca con
+  // otro del mismo nombre al resolver las dependencias de Swift en el Mac.
+  experimental: {
+    ios: {
+      spm: {
+        packageOptions: {
+          '@capacitor-firebase/messaging': { symlink: true },
+        },
+      },
+    },
   },
 };
 

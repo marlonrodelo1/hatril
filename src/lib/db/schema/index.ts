@@ -30,3 +30,4 @@ export * from './donativos';
 export * from './eventos';
 export * from './rgpd';
 export * from './plataforma';
+export * from './push';

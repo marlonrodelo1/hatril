@@ -138,6 +138,23 @@ export const ENCARGADOS: readonly Encargado[] = [
     ubicacion: 'Estados Unidos, con cláusulas contractuales tipo',
     activo: false,
   },
+  // Las push de la app (`lib/push/enviar.ts`). Lo que les llega: el texto del
+  // aviso —que puede llevar un nombre o el principio de un comentario— y el
+  // identificador del teléfono. Nada de la ficha.
+  {
+    nombre: 'Google Ireland Ltd. (Firebase Cloud Messaging)',
+    finalidad:
+      'Hace llegar los avisos de la app al teléfono: recibe el texto del aviso y un identificador del dispositivo',
+    ubicacion: 'Estados Unidos, con cláusulas contractuales tipo',
+    activo: true,
+  },
+  {
+    nombre: 'Apple Distribution International Ltd.',
+    finalidad:
+      'Entrega esos mismos avisos en los iPhone, por el servicio de notificaciones de Apple',
+    ubicacion: 'Estados Unidos, con cláusulas contractuales tipo',
+    activo: true,
+  },
 ] as const;
 
 /** ¿Queda algo sin rellenar? La página lo avisa en vez de publicarse a medias. */

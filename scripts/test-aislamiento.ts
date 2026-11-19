@@ -3189,6 +3189,129 @@ async function comprobarRepartoConLaDemo(): Promise<string[]> {
   return lineas;
 }
 
+/**
+ * Los teléfonos de las push (migraciones 0057 y 0058).
+ *
+ * En un bloque propio porque necesita cuentas de verdad en `auth.users`: la
+ * tabla tiene clave foránea a ellas, y las cuentas del bloque grande son uuids
+ * inventados. Se crean aquí dentro y se van con el mismo truco de siempre: el
+ * bloque termina lanzando y la transacción se deshace entera.
+ */
+const PRUEBA_PUSH = `
+do $$
+declare
+  r text := E'\\n';
+  n int;
+  quien uuid;
+  U1 constant uuid := 'a1000000-0000-4000-8000-0000000000a1';
+  U2 constant uuid := 'b1000000-0000-4000-8000-0000000000b1';
+  TOK constant text := 'prueba-aislamiento:token-de-un-telefono-000000000000';
+begin
+  insert into auth.users (id, aud, role, email)
+  values (U1, 'authenticated', 'authenticated', 'push-a@hatril.invalid'),
+         (U2, 'authenticated', 'authenticated', 'push-b@hatril.invalid');
+
+  -- La cuenta 1 apunta su teléfono, por la única puerta que hay.
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', U1), true);
+  execute 'set local role hatril_app';
+
+  perform public.registrar_dispositivo_push(TOK, 'ios');
+  select count(*) into n from public.dispositivos_push;
+  r := r || format(E'  %s una cuenta apunta y ve su teléfono (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.dispositivos_push (token, auth_user_id, plataforma)
+    values ('prueba-aislamiento:token-escrito-a-mano-0000000000', U2, 'ios');
+    r := r || E'  FALLO hatril_app escribe un teléfono sin pasar por la función\\n';
+  exception when insufficient_privilege then
+    r := r || E'  OK   hatril_app no escribe teléfonos a mano\\n';
+  end;
+
+  -- La cuenta 2 no ve ni borra el de la 1.
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', U2), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.dispositivos_push;
+  r := r || format(E'  %s otra cuenta no ve el teléfono ajeno (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  delete from public.dispositivos_push where token = TOK;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s otra cuenta no borra el teléfono ajeno (%s filas)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  -- En ese teléfono entra la cuenta 2: el token cambia de dueño, no se dobla.
+  perform public.registrar_dispositivo_push(TOK, 'ios');
+  execute 'reset role';
+  select count(*), max(auth_user_id::text)::uuid into n, quien
+    from public.dispositivos_push where token = TOK;
+  r := r || format(E'  %s el teléfono pasa a la cuenta que entra, sin copia (%s fila)\\n',
+                   case when n = 1 and quien = U2 then 'OK  ' else 'FALLO' end, n);
+
+  -- Sin sesión, la función no apunta nada.
+  perform set_config('request.jwt.claims', '{}', true);
+  execute 'set local role hatril_app';
+  begin
+    perform public.registrar_dispositivo_push(
+      'prueba-aislamiento:token-sin-sesion-00000000000000', 'android');
+    r := r || E'  FALLO se apunta un teléfono sin sesión\\n';
+  exception when insufficient_privilege then
+    r := r || E'  OK   sin sesión no se apunta ningún teléfono (HT141)\\n';
+  end;
+
+  -- Las puertas de fuera, cerradas: ni la tabla ni la función.
+  execute 'reset role';
+  execute 'set local role anon';
+  begin
+    select count(*) into n from public.dispositivos_push;
+    r := r || E'  FALLO anon lee los teléfonos\\n';
+  exception when insufficient_privilege then
+    r := r || E'  OK   anon no lee los teléfonos\\n';
+  end;
+  begin
+    perform public.registrar_dispositivo_push(TOK, 'ios');
+    r := r || E'  FALLO anon ejecuta registrar_dispositivo_push\\n';
+  exception when insufficient_privilege then
+    r := r || E'  OK   anon no ejecuta registrar_dispositivo_push\\n';
+  end;
+
+  execute 'reset role';
+  execute 'set local role authenticated';
+  begin
+    select count(*) into n from public.dispositivos_push;
+    r := r || E'  FALLO authenticated lee los teléfonos\\n';
+  exception when insufficient_privilege then
+    r := r || E'  OK   authenticated no lee los teléfonos\\n';
+  end;
+
+  -- La cuenta se borra y su teléfono con ella.
+  execute 'reset role';
+  delete from auth.users where id = U2;
+  select count(*) into n from public.dispositivos_push where token = TOK;
+  r := r || format(E'  %s borrar la cuenta borra sus teléfonos (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  raise exception '%', r;
+end $$;
+`;
+
+async function comprobarPush(): Promise<string> {
+  const conexion = postgres(connectionString!, { prepare: false, ssl: 'require', max: 1 });
+  try {
+    await conexion.unsafe(PRUEBA_PUSH);
+    return '  FALLO el bloque de las push no llegó a lanzar el informe';
+  } catch (err) {
+    // Sin `trim()` delante: se comería la sangría de la primera línea.
+    return ((err as { message?: string }).message ?? String(err)).replace(/^\n+/, '').trimEnd();
+  } finally {
+    await conexion.end();
+  }
+}
+
 async function main() {
   let informe: string;
 
@@ -3208,6 +3331,11 @@ async function main() {
 
   console.log('\nAislamiento entre iglesias\n');
   console.log(informe.trim());
+
+  const push = await comprobarPush();
+  console.log('\nLos teléfonos de las push\n');
+  console.log(push);
+  informe += '\n' + push;
 
   // Segunda fase: se llama a la función que usa la aplicación, no a SQL escrito
   // a mano. Es la comprobación que faltaba cuando el panel entero daba 500 con

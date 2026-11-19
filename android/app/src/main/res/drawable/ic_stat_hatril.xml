@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  El icono pequeño de las notificaciones push. Android lo pinta como una
+  silueta: solo cuenta la transparencia, el color lo pone él (el naranja de
+  default_notification_color en el AndroidManifest). Con el icono de la app,
+  que es un cuadrado naranja lleno, saldría un círculo blanco y nada más.
+
+  Es el atril de assets/icono.svg, el mismo trazo copiado tal cual y
+  encuadrado: allí ocupa el 57 % del alto para caber en el círculo del icono
+  adaptativo; aquí, el 83 %, que es lo que deja libre el margen de 2 dp que
+  pide Android. Si cambia el icono, se regenera de ahí.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="700"
+    android:viewportHeight="700">
+    <group android:translateX="-162" android:translateY="-167">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M352.71,384.31l318.58,-39.12v104.23l-104.38,0v207.08c0,50.57 45.27,90.54 100.6,87.19v63.72h-311.03v-63.72c55.33,3.35 100.6,-36.62 100.6,-87.19v-207.08h-104.38zM323.99,271.27c43.92,-8.7 88.21,-15.08 132.76,-19.42c19.82,-2.16 38.62,8.29 48.72,25.32c4.43,7.46 5.96,14.64 7.92,23.2c-0.17,-8.78 -0.42,-16.12 2.07,-24.43c5.68,-18.97 21.4,-33.65 41.15,-36.35c44.28,-6.57 88.8,-11.1 133.52,-13.27l9.81,79.88c-36.29,7.08 -72.59,14.17 -108.9,21.17c-24.14,4.65 -48.33,9.96 -72.74,12.96c-24.41,3 -49.17,3.7 -73.71,5.02c-36.92,1.99 -73.85,3.89 -110.78,5.81z" />
+    </group>
+</vector>

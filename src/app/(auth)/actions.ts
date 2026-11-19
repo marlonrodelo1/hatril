@@ -15,6 +15,7 @@ import { getCurrentSuperAdmin } from '@/lib/auth/super-admin';
 import { inicioDe } from '@/lib/auth/permisos';
 import { campo, campoObligatorio, casilla } from '@/lib/api/formulario';
 import { destinoSeguro } from '@/lib/url/destino-seguro';
+import { olvidarDispositivoDeEstaSesion } from '@/lib/push/dispositivo';
 
 /**
  * Acciones de acceso, registro y recuperación.
@@ -309,6 +310,12 @@ export async function cambiarPassword(formData: FormData) {
 
 export async function salir() {
   const supabase = await createClient();
+  // Antes de cerrar la sesión, que después ya no se sabe de quién era el
+  // teléfono: deja de recibir las push de esta cuenta (`lib/push/dispositivo.ts`).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) await olvidarDispositivoDeEstaSesion(user.id);
   await supabase.auth.signOut();
   redirect('/acceso');
 }

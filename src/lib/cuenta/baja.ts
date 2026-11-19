@@ -8,6 +8,7 @@ import {
   bajasCuenta,
   bloqueosComunidad,
   denunciasComunidad,
+  dispositivosPush,
   iglesiaUsuarios,
   iglesias,
   miembros,
@@ -149,6 +150,11 @@ export async function pedirBajaDeCuenta(authUserId: string): Promise<{ borrarDes
       // Si ya la había pedido —dos toques, o una pestaña vieja— se queda la
       // primera fecha: pedirla otra vez no alarga el plazo.
       .onConflictDoNothing();
+
+    // Sus teléfonos dejan de sonar ya, no a los treinta días: la sesión se
+    // cierra en todos y a una cuenta desactivada no se le avisa de nada. Si
+    // se arrepiente, la app vuelve a apuntar el teléfono al entrar.
+    await tx.delete(dispositivosPush).where(eq(dispositivosPush.authUserId, authUserId));
 
     if (activas.length > 0) {
       await tx
@@ -371,6 +377,9 @@ async function borrarCuentaDeVerdad(authUserId: string) {
     await tx
       .delete(notificaciones)
       .where(eq(notificaciones.destinatarioAuthUserId, authUserId));
+    // La clave foránea de la 0058 ya los borraría con la cuenta; esto cubre
+    // el teléfono que se haya vuelto a apuntar durante la espera.
+    await tx.delete(dispositivosPush).where(eq(dispositivosPush.authUserId, authUserId));
 
     await tx
       .update(bajasCuenta)

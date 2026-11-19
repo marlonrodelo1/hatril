@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { AppNativa } from '@/components/app-nativa';
+import { PushNativo } from '@/components/push-nativo';
 import './globals.css';
 
 /**
@@ -62,6 +63,8 @@ export default function RootLayout({
         {children}
         {/* Botón atrás, barra de estado y arranque; fuera de la app, nada. */}
         <AppNativa />
+        {/* Las push: permiso con sesión, oyentes siempre. Fuera de la app, nada. */}
+        <PushNativo />
       </body>
     </html>
   );

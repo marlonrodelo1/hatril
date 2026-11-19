@@ -1,8 +1,10 @@
 import 'server-only';
 
 import { and, eq, isNull, ne, sql } from 'drizzle-orm';
+import { after } from 'next/server';
 
 import { dbAdmin } from '@/lib/db';
+import { enviarPush } from '@/lib/push/enviar';
 import {
   bloqueosComunidad,
   iglesiaUsuarios,
@@ -11,6 +13,7 @@ import {
   type tipoNotificacionEnum,
 } from '@/lib/db/schema';
 import { resolverPermisos } from '@/lib/auth/permisos';
+import { textoNotificacion } from './textos';
 
 /**
  * Escribir avisos. Es lo único de este módulo que usa `dbAdmin`, y hace falta.
@@ -76,6 +79,29 @@ export async function emitirNotificacion(aviso: Aviso): Promise<void> {
       iglesiaId: aviso.iglesiaId,
       err,
     });
+    // Sin aviso en la campana tampoco hay push: tocarla llevaría a una lista
+    // donde no está.
+    return;
+  }
+
+  mandarPush(destinatarioAuthUserId, aviso);
+}
+
+/**
+ * La misma frase de la campana, al teléfono.
+ *
+ * Con `after`: se manda cuando la respuesta ya ha salido, así que aprobar una
+ * solicitud no espera a Google. Fuera de una petición (un script suelto)
+ * `after` lanza, y entonces se manda sin esperar a que termine.
+ */
+function mandarPush(cuenta: string, aviso: Aviso) {
+  const { titulo, detalle } = textoNotificacion(aviso.tipo, aviso.datos ?? {});
+  const tarea = () =>
+    enviarPush(cuenta, { titulo, cuerpo: detalle, enlace: aviso.enlace ?? '/mi/avisos' });
+  try {
+    after(tarea);
+  } catch {
+    void tarea();
   }
 }
 

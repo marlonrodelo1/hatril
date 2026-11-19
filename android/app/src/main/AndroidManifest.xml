@@ -43,6 +43,23 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <!--
+          Notificaciones push (@capacitor-firebase/messaging). El icono es la
+          silueta del atril en blanco, y Android le pone este naranja: con el
+          icono de la app saldría un círculo blanco. El canal «avisos» lo crea
+          la web al pedir el permiso (src/components/push-nativo.tsx), para que
+          en los ajustes del teléfono se llame «Avisos» y no «Varios».
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_hatril" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/ic_launcher_background" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="avisos" />
     </application>
 
     <!-- Permissions -->

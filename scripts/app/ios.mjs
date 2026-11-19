@@ -17,7 +17,9 @@
  * - falta CAP_SERVER_URL o no es https (también lo mira capacitor.config.ts);
  * - la versión de capacitor.config.ts, la de Android y la de iOS no cuadran
  *   (`npm run app:version` dice cuáles);
- * - no existe ios/ (hay que traerlo de GitHub, no generarlo otra vez).
+ * - no existe ios/ (hay que traerlo de GitHub, no generarlo otra vez);
+ * - el GoogleService-Info.plist de Firebase no está, no es el de Hatril o no
+ *   va dentro del target App (las push; ver abajo por qué se mira).
  *
  * Con una dirección de traefik.me avisa de que es una PRUEBA: ese certificado
  * no lo acepta iOS y la app abriría directamente «Sin conexión».
@@ -48,6 +50,33 @@ const esPrueba = /(^|\.)traefik\.me$/i.test(servidor.hostname);
 
 if (!existsSync(join(raiz, 'ios', 'App', 'App.xcodeproj'))) {
   parar('No existe ios/App/App.xcodeproj. Viene en el repo: haz git pull, no `npx cap add ios`.');
+}
+
+/*
+ * El plist de Firebase, que necesitan las push. En Gonper, un build salió sin
+ * él dentro del binario y la app se cerraba al abrirla, siempre; y otro con
+ * una copia pegada a medias por terminal, con la API_KEY de 8 caracteres,
+ * hacía lo mismo. Los dos se compilaron, firmaron y subieron a TestFlight sin
+ * una queja. Aquí el plugin ya no arranca Firebase sin el plist, pero un
+ * build sin él saldría sin avisos y nadie lo notaría hasta probarlo: mejor
+ * pararlo aquí, que no cuesta un build.
+ */
+const plist = join(raiz, 'ios', 'App', 'App', 'GoogleService-Info.plist');
+if (!existsSync(plist)) {
+  parar('Falta ios/App/App/GoogleService-Info.plist (viene en el repo: git pull). Sin él no hay push.');
+}
+const textoPlist = readFileSync(plist, 'utf8');
+const valorPlist = (clave) =>
+  textoPlist.match(new RegExp(`<key>${clave}</key>\\s*<string>([^<]*)</string>`))?.[1] ?? '';
+if (valorPlist('BUNDLE_ID') !== 'app.hatril' || !/^hatril-/.test(valorPlist('PROJECT_ID'))) {
+  parar('El GoogleService-Info.plist no es el de Hatril (BUNDLE_ID o PROJECT_ID no cuadran).');
+}
+if (!/^[A-Za-z0-9_-]{30,}$/.test(valorPlist('API_KEY'))) {
+  parar('La API_KEY del GoogleService-Info.plist está cortada o rota. Vuelve a traerlo de GitHub.');
+}
+const proyecto = readFileSync(join(raiz, 'ios', 'App', 'App.xcodeproj', 'project.pbxproj'), 'utf8');
+if (!proyecto.includes('GoogleService-Info.plist in Resources')) {
+  parar('El GoogleService-Info.plist no está en los Resources del target App (project.pbxproj).');
 }
 
 const numeros = leerNumeros(raiz);

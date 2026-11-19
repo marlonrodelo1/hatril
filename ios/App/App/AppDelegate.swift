@@ -41,4 +41,36 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         config.delegateClass = SceneDelegate.self
         return config
     }
+
+    // MARK: - Notificaciones push (@capacitor-firebase/messaging)
+    //
+    // iOS entrega el token de APNs a la app, no al plugin. Estos tres avisos se
+    // lo pasan, que es lo que pide su README. Sin el primero, `getToken()` se
+    // queda esperando para siempre y no sale ningún error por ningún lado.
+    //
+    // Firebase lo arranca el propio plugin, y solo si el GoogleService-Info.plist
+    // está dentro del binario: sin él, la app abre igual y se queda sin avisos.
+    // En Gonper, un `FirebaseApp.configure()` a pelo con el plist fuera del
+    // target cerraba la app al abrirla, siempre, y el build subía a TestFlight
+    // sin una queja. Por eso aquí no se llama.
+
+    func application(_ application: UIApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications,
+                                        object: deviceToken)
+    }
+
+    func application(_ application: UIApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications,
+                                        object: error)
+    }
+
+    func application(_ application: UIApplication,
+                     didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+                     fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        NotificationCenter.default.post(name: Notification.Name("didReceiveRemoteNotification"),
+                                        object: completionHandler,
+                                        userInfo: userInfo)
+    }
 }
