@@ -1,14 +1,7 @@
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
-import { puedeVerFondoDe } from '@/lib/auth/permisos';
-import { cuentasDelFondo } from '@/lib/finanzas/del-ministerio';
-import { requireMinisterioEnLaApp } from '@/lib/ministerios/en-la-app/guarda';
-import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
-import { mesPedido } from '@/lib/fecha/mes';
-import type { Moneda } from '@/lib/db/schema';
-import { CuentasDelFondoVista } from '@/app/panel/ministerios/[id]/fondo/_components/cuentas';
-import { MarcoEquipo } from '../../_components/marco';
+import { VistaFondo } from './vista';
+import { cargar } from './datos';
 
 export const metadata: Metadata = { title: 'Fondo' };
 
@@ -29,27 +22,7 @@ export default async function FondoEnLaAppPage({
   searchParams: Promise<{ mes?: string }>;
 }) {
   const { id } = await params;
-  const { ctx, ministerio } = await requireMinisterioEnLaApp(id);
-  if (!puedeVerFondoDe(ctx, id) || !ministerio.conFondo) notFound();
-
   const { mes: mesUrl } = await searchParams;
-  const mes = mesPedido(ctx.iglesia.timezone, mesUrl);
-  const cuentas = await cuentasDelFondo(ctx, id, mes.desde, mes.hasta);
-  if (!cuentas) notFound();
-
-  return (
-    <MarcoEquipo
-      ctx={ctx}
-      titulo={`Fondo · ${ministerio.nombre}`}
-      subtitulo="De solo lectura"
-      volver={rutaApp(id)}
-    >
-      <CuentasDelFondoVista
-        cuentas={cuentas}
-        moneda={ctx.iglesia.moneda as Moneda}
-        base={rutaApp(id, 'fondo')}
-        mes={mes}
-      />
-    </MarcoEquipo>
-  );
+  const datos = await cargar({ id, mes: mesUrl });
+  return <VistaFondo {...datos} />;
 }

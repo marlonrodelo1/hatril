@@ -28,6 +28,22 @@ lee al arrancar.
 
 ## Qué funciona, verificado ejecutándolo
 
+- **La app empaquetada, construida entera** (20-nov; plan y avance en
+  `docs/app-nativa/plan-spa.md`). Todas las pantallas del miembro, también
+  Equipo, van dentro del binario (`movil/`, React + Vite). Los datos, de la API
+  de la app (`/api/v1/app/*`) con la sesión en un token Bearer leído en
+  `usuarioActual()` y las mismas guardas que la web; las escrituras son las
+  MISMAS server actions de la web, por `POST /api/v1/app/accion` y una lista
+  cerrada. Las páginas de `/mi` se partieron en vista y datos para que la web y
+  la app pinten lo mismo sin copiarlo. `npm run test:puertas:app`: 92 casos en
+  verde. **Probado en Chrome a 375 px** (acceso, bienvenida, buscar, ficha,
+  comunidad, devocional, agenda, avisos, Mi cuenta) y el binario de depuración
+  arrancando en el emulador de Android. **Sin probar**: el binario con datos
+  (la API no está desplegada), las escrituras y Equipo (la suscripción de
+  Betania está en pausa, ver «Trampas»), y push, Apple y Google en un teléfono.
+  De paso, `withUser()` hace un viaje menos a la base (unos 85 ms por consulta,
+  también en la web). **Ojo**: `cache()` de React no memoiza en un route
+  handler; en la API lo hace `cachePorPeticion` (`src/lib/peticion.ts`).
 - **Buscar iglesia en la bienvenida, como lo pidió Marlon** (19-nov). «Ya
   pertenezco a una iglesia» abre el buscador con **sugerencias mientras se
   escribe** (palabra a palabra: «cuerpo cristo» encuentra «Cuerpo de Cristo»;
@@ -1133,6 +1149,14 @@ lee al arrancar.
 ---
 
 ## Trampas que ya han costado tiempo
+
+**La prueba de Betania caduca, y entonces `test:puertas` falla entero** (20-nov).
+Betania es `plan = trial` con `trial_until`; el 15-nov venció, con la gracia de
+3 días quedó bloqueada el 19, y el panel manda a todas sus cuentas a
+`/suscripcion`: 251 fallos que no eran de ningún cambio. Si `test:puertas`
+falla en masa con `→/suscripcion`, mirar primero `select slug, plan,
+trial_until from iglesias`. Alargarla es escribir en la base, que en local es
+la de producción.
 
 **Las cookies de `localhost` se comparten entre puertos y entre sesiones.** El
 navegador integrado es uno solo: si otra sesión entra con un enlace mágico en

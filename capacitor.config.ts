@@ -3,62 +3,40 @@ import type { CapacitorConfig } from '@capacitor/cli';
 /**
  * La app nativa de Hatril (Android e iOS).
  *
- * ES LA WEB DE VERDAD, NO UNA COPIA
- * ---------------------------------
- * El WebView carga la aplicación desplegada (`server.url`). No se exporta Next
- * a estático porque no se puede: todo es SSR con la sesión en cookies, y una
- * copia empaquetada se quedaría sin servidor. Lo único que viaja dentro del
- * binario es `app-shell/`: la página de «sin conexión» y el `index.html` que
- * Capacitor exige aunque no se llegue a pintar.
+ * LAS PANTALLAS VAN DENTRO DEL BINARIO (20-nov)
+ * --------------------------------------------
+ * Hasta el build 3 la app era un WebView que cargaba https://hatril.com. Desde
+ * aquí es una SPA empaquetada, como Pidoo y Gonper socio: React + Vite en
+ * `movil/`, compilada en `movil/dist`, que Capacitor mete en el binario. Solo
+ * los datos viajan por la red, a la API de hatril.com (`/api/v1/app/*`). El
+ * plan y sus porqués, en `docs/app-nativa/plan-spa.md`.
  *
- * LA DIRECCIÓN NO SE ESCRIBE AQUÍ
- * -------------------------------
- * Sale de `CAP_SERVER_URL` al hacer el sync, y sin ella no hay sync: este
- * fichero lanza y Capacitor no copia nada. Escribirla a mano es la forma de
- * subir a la tienda un binario que apunta a la dirección de pruebas sin que
- * nadie se dé cuenta. Y tiene que ser https: no se abre ni `cleartext` ni
- * nada parecido, ni siquiera mientras el dominio definitivo no exista.
+ * Lo que eso cambia aquí:
  *
- *   CAP_SERVER_URL=https://hatril.com npm run app:android
+ *   - `webDir` es `movil/dist`, y ya no hay `server.url`, `appStartPath`,
+ *     `allowNavigation` ni `errorPath`: no se carga ninguna web. La pantalla
+ *     de «sin conexión» la pinta la propia app cuando la API no contesta.
+ *   - La dirección de la API se mete al COMPILAR la SPA, no aquí. La pone
+ *     `scripts/app/android.mjs` / `ios.mjs` a partir de `CAP_SERVER_URL`, con
+ *     la misma exigencia de https de siempre:
  *
- * La de traefik.me, la temporal de Dokploy, lleva un certificado que Android
- * e iOS rechazan, y lo que se compila con ella sale marcado como PRUEBA
- * (`scripts/app/android.mjs`).
+ *       CAP_SERVER_URL=https://hatril.com npm run app:android
+ *
+ *     No lances `npx cap sync` a mano: copiaría lo que haya en `movil/dist`,
+ *     que puede ser una compilación contra otra dirección. Los scripts
+ *     compilan primero y comprueban después que lo copiado lleve la buena.
+ *   - Los enlaces que no son de la app (el panel, «Dar», la política) se abren
+ *     fuera, en el navegador del teléfono: Capacitor entrega al sistema todo
+ *     `target="_blank"` (`movil/src/lib/fuera.ts`).
+ *
+ * Lo nativo no cambia: push, Apple, Google, barra de estado y arranque.
  */
-function direccionDelServidor(): URL {
-  const cruda = process.env.CAP_SERVER_URL?.trim();
-
-  if (!cruda) {
-    throw new Error(
-      'Falta CAP_SERVER_URL: la dirección https de la web que carga la app. ' +
-        'Ejemplo: CAP_SERVER_URL=https://hatril.com npm run app:android',
-    );
-  }
-
-  let url: URL;
-  try {
-    url = new URL(cruda);
-  } catch {
-    throw new Error(`CAP_SERVER_URL no es una dirección válida: «${cruda}».`);
-  }
-
-  if (url.protocol !== 'https:') {
-    throw new Error(
-      `CAP_SERVER_URL tiene que ser https y es «${url.protocol}». ` +
-        'La app no carga nada sin cifrar.',
-    );
-  }
-
-  return url;
-}
-
-const servidor = direccionDelServidor();
 
 /**
- * Lo que `src/lib/platform` busca en el User-Agent para saber que la petición
- * viene de la app. La versión tiene que ser la de `versionName` en
- * `android/app/build.gradle`: el script de compilación lo comprueba y se niega
- * a compilar si no coinciden.
+ * Lo que la app añade a su User-Agent. Con la SPA el servidor ya no decide
+ * pantallas por él, pero sigue diciendo en los registros qué versión pidió
+ * cada cosa. La versión tiene que ser la de `versionName` en
+ * `android/app/build.gradle`: el script de compilación lo comprueba.
  */
 const AGENTE = 'HatrilApp/1.0.0';
 
@@ -68,45 +46,20 @@ const CREMA = '#FAF9F5';
 const config: CapacitorConfig = {
   appId: 'app.hatril',
   appName: 'Hatril',
-  webDir: 'app-shell',
+  webDir: 'movil/dist',
 
-  // Lo que se ve mientras la web no ha pintado. Sin esto, un destello blanco
-  // entre el arranque y la primera pantalla.
+  // Lo que se ve mientras la app arranca. Sin esto, un destello blanco.
   backgroundColor: CREMA,
 
   android: { appendUserAgent: AGENTE },
   ios: { appendUserAgent: AGENTE },
 
   server: {
-    // Solo el origen: la ruta la pone `appStartPath`. Si la dirección trajera
-    // barra final, Capacitor pegaría las dos y abriría `//mi`.
-    url: servidor.origin,
-
-    // `/mi` es el desvío que decide a dónde va cada quien: sin sesión, al
-    // acceso; el miembro, al muro; quien lleva algo, a lo suyo. La portada es
-    // publicidad para pastores y dentro de la app no pinta nada.
-    //
-    // Que la primera carga sea una redirección es seguro en un Android al día,
-    // y no lo sería en uno con el WebView sin actualizar en años. Capacitor
-    // solo pide él las páginas —siguiendo la redirección por su cuenta y
-    // entregando el destino con la dirección pedida— cuando el WebView no
-    // sabe inyectar su puente al empezar el documento (DOCUMENT_START_SCRIPT,
-    // `Bridge.loadWebView` y `WebViewLocalServer.handleProxyRequest`). Si lo
-    // sabe, se aparta y el WebView navega solo, como un navegador. Probado en
-    // el emulador: la barra dice /acceso?next=%2Fmi y el formulario envía
-    // ahí. Detalle y límite en docs/app-nativa/android.md.
-    appStartPath: '/mi',
-
-    // El propio host ya está permitido por ser el de `url`; se escribe para que
-    // quede dicho. Todo lo demás —Stripe, WhatsApp, mapas— se abre fuera, en
-    // el navegador del teléfono.
-    allowNavigation: [servidor.host],
-
-    // Dentro de `app-shell/`. Se sirve desde el origen local de la app, no
-    // desde la web: lleva todo dentro, y la dirección a la que vuelve se la
-    // escribe el sync (`scripts/app/destino.mjs`). En Android, además, la
-    // abre MainActivity cuando falla el certificado, que Capacitor no cubre.
-    errorPath: 'sin-conexion.html',
+    // El origen de la app en Android, `https://localhost`. Es el de serie en
+    // Capacitor 8; se escribe porque la API lo tiene en su lista de CORS
+    // (`src/lib/api/cors-app.ts`) y cambiarlo dejaría a la app sin datos.
+    // En iOS el origen es `capacitor://localhost`, también en esa lista.
+    androidScheme: 'https',
   },
 
   plugins: {
@@ -128,9 +81,9 @@ const config: CapacitorConfig = {
       overlaysWebView: false,
     },
 
-    // Se esconde sola a los 2,5 s, o antes si la web llega a montarse
-    // (`src/components/app-nativa.tsx`). No se deja en manual: si no hay red
-    // la web no llega, y la página de error no puede esconderla en Android.
+    // Se esconde en cuanto la app se monta (`src/components/app-nativa.tsx`,
+    // que la SPA usa tal cual). Ya no hay que esperar a la red, pero se deja
+    // el tope por si algo falla antes de montar.
     SplashScreen: {
       launchShowDuration: 2500,
       launchAutoHide: true,
@@ -147,7 +100,7 @@ const config: CapacitorConfig = {
       presentationOptions: ['alert', 'sound'],
     },
 
-    // Entrar con Apple y con Google (`src/app/(auth)/_components/acceso-nativo.tsx`).
+    // Entrar con Apple y con Google (`movil/src/pantallas/acceso/acceso-nativo.tsx`).
     // Solo esos dos: el plugin trae Facebook y Twitter de serie, y su script de
     // `cap sync` los quita del binario si aquí van a `false`. El SDK de
     // Facebook en una app de iglesias sería un rastreador más que declarar en

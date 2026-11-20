@@ -1,10 +1,8 @@
 import 'server-only';
 
-import { and, eq } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 
-import { withUser } from '@/lib/db';
-import { dispositivosPush } from '@/lib/db/schema';
+import { olvidarTelefono } from './telefonos';
 
 /** La cookie con el token de este teléfono, para olvidarlo al salir. */
 export const COOKIE_PUSH = 'hatril_push';
@@ -24,11 +22,8 @@ export async function olvidarDispositivoDeEstaSesion(authUserId: string): Promis
   if (!token) return;
 
   try {
-    await withUser(authUserId, (tx) =>
-      tx
-        .delete(dispositivosPush)
-        .where(and(eq(dispositivosPush.token, token), eq(dispositivosPush.authUserId, authUserId))),
-    );
+    // La misma que usa la API de la app al salir (`/api/v1/app/push`).
+    await olvidarTelefono(authUserId, token);
   } catch (err) {
     console.error('[push] no se pudo olvidar el teléfono al salir', err);
   } finally {

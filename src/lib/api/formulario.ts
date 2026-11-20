@@ -1,4 +1,5 @@
-import 'server-only';
+// Sin `server-only` desde el 20-nov: son cuatro funciones puras, y la app
+// empaquetada (`movil/`) lee sus formularios con las mismas.
 
 /**
  * Lectura de campos de un `FormData` para pasárselos a Zod.

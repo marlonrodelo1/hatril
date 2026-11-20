@@ -181,3 +181,106 @@ Google. Lo que se aprenda ahí vale igual para la app nueva.
 4. **La app dentro de este repo** (`movil/`), no en uno aparte como Pidoo.
    **Recomiendo sí**: comparte el contrato de la API, los componentes y los
    tokens.
+
+---
+
+## Avance
+
+### Fase 0 — hecha (20-nov)
+
+- `usuarioActual()` (`src/lib/auth/usuario.ts`) entiende `Authorization:
+  Bearer`. Todo lo de debajo es el mismo código para la web y la app.
+- `endpointApp()` (`src/lib/api/app.ts`): la guarda es obligatoria, los
+  `redirect()`/`notFound()` de las guardas de la web salen como JSON
+  `{error, ir}`, y el CORS (`src/lib/api/cors-app.ts`) solo deja leer a los
+  orígenes de la app. El `OPTIONS` previo lo contesta `src/proxy.ts`.
+- **`cache()` de React no memoiza en un route handler** (medido: tres
+  llamadas, tres ejecuciones). Lo arregla `cachePorPeticion`
+  (`src/lib/peticion.ts`), que además apunta tramos en `Server-Timing`.
+- `withUser()` hace un viaje menos: el claim y el rol en una sola sentencia,
+  como PostgREST. Unos 85 ms menos por consulta, también en la web.
+  `test:aislamiento`: 278 comprobaciones en verde, incluida la que mira que
+  entra como `hatril_app`.
+- `npm run test:puertas:app`: 41 casos. Falla si aparece un endpoint que no
+  esté en su lista.
+
+### Fase 1 — en curso
+
+Hecho, y probado en Chrome a 375 px contra el Next local:
+
+- La SPA en `movil/` (Vite 8, React Router 7, React Query solo en memoria),
+  con los estilos de la web (`globals.css`) y Plus Jakarta Sans dentro.
+  `next/link` y `next/navigation` se sustituyen por los de React Router, así
+  que los componentes de la web se usan sin tocarlos.
+- Arranque, acceso con contraseña (Apple y Google, listos para el teléfono),
+  salir, sala de espera, bienvenida, empezar, buscar (con sugerencias), por
+  ciudad, cerca de mí, la ficha de la iglesia y «Pedir unirme», crear cuenta y
+  recuperar la contraseña.
+- Las pantallas de la web que comparten con la app se partieron en vista y
+  datos (`vista-ficha`, `vista-empezar`, `vista-buscar`, `vista-ciudad`), y la
+  lógica de crear cuenta y pedir entrar bajó a `src/lib/solicitudes/alta.ts`.
+- `capacitor.config.ts` ya apunta a `movil/dist`. `npm run app:android` /
+  `app:ios` compilan la SPA contra `CAP_SERVER_URL` y comprueban la copia
+  (`scripts/app/compilar-movil.mjs`). Fuera `app-shell/` y `destino.mjs`.
+
+Y en el emulador (Pixel 6, versión de depuración, 20-nov): la app arranca
+desde dentro del binario, con el arranque, la barra de estado de iconos
+oscuros, la presentación, «Empezar» y el buscador; el botón atrás vuelve por
+el historial; Firebase da su token; la letra se sirve desde el teléfono. Una
+vez el emulador se quedó sin memoria y Android cerró la app
+(`lowmemorykiller`): no era un fallo de la app.
+
+### Fases 2, 3 y 4 — construidas (20-nov)
+
+Todas las pantallas del miembro están en la app: comunidad (con la cola de
+denuncias y «denuncia enviada»), devocional, agenda (con turno y ensayo),
+avisos, `/acepta`, `/cuenta-en-baja`, Mi cuenta (bloqueados, borrar la
+cuenta, «Lo que he dado»), la Biblia y las quince de Equipo. Ya no queda
+ninguna «en construcción».
+
+Cómo, sin copiar la web:
+
+- **Las vistas, compartidas.** Cada página de `/mi` se partió en vista (lo que
+  pinta) y datos (lo que consulta). La web pinta la vista con su
+  `CabeceraMiembro`; la app, con la suya. En Equipo, la carga de cada pantalla
+  vive en su `datos.ts` (`cargar`), con su guarda, y la usan la página y la
+  API.
+- **Las actions, las mismas.** `POST /api/v1/app/accion` ejecuta las server
+  actions de la web, solo las de la lista cerrada de
+  `src/lib/api/acciones-app.ts`. En la app, cada módulo de actions se
+  sustituye al compilar por llamadas a ese endpoint (plugin de
+  `movil/vite.config.ts`). Una action ya es un endpoint público con su guarda
+  dentro: esto no abre nada.
+- **Equipo, una sola ruta** (`/api/v1/app/mi/equipo/*`) con la tabla cerrada
+  de `src/lib/app-api/equipo.ts`. El `ctx` que sale va recortado
+  (`ctxParaLaApp`): ni el usuario entero de Supabase ni el plan.
+- La cabecera y «Dar» de la web, que consultan en el servidor, se sustituyen
+  en la app por las suyas al compilar.
+- Vite se niega a compilar si una vista alcanza un módulo `server-only`: es la
+  red que caza cuando algo del servidor se cuela en el teléfono.
+
+Probado: `test:puertas:app` con **92 casos en verde** (entre ellos, que el
+pastor de Sion no abre ni un turno ni un ensayo de Betania, que quien no
+modera no ve la cola de denuncias y que la lista de actions es cerrada),
+`test:aislamiento` en verde, la app de producción compila y su paquete no
+lleva nada secreto. En Chrome a 375 px, como `miembro@`: comunidad,
+devocional, agenda, avisos y Mi cuenta. Las páginas de la web, después de
+partirlas, cargadas una a una como `miembro@` y `lider@`.
+
+**Sin probar, por la suscripción de Betania**: la prueba de la iglesia de
+demostración caducó el 15-nov, y con ella bloqueada las guardas cortan las
+escrituras (publicar, me gusta, responder un turno) y las pantallas de
+Equipo, en la web igual que en la app. Se vio que la action llega y que su
+guarda la para; no se ha visto escribir.
+
+Falta:
+
+- **Desplegar la API** en hatril.com: hasta entonces el binario arranca pero
+  no tiene datos (en el emulador, el CORS de hatril.com rechaza las llamadas,
+  porque allí todavía no existen).
+- Alargar la prueba de Betania y probar las escrituras y Equipo de punta a
+  punta.
+- Probar en el emulador y en el iPhone con la API desplegada, y push, Apple y
+  Google en un teléfono de verdad.
+- La fase 5: un build nuevo de iOS y de Android, TestFlight interno y las
+  notas para la revisión.

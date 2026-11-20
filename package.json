@@ -14,11 +14,14 @@
     "test:aislamiento": "tsx --env-file-if-exists=.env.local scripts/test-aislamiento.ts",
     "test:puertas": "node --env-file-if-exists=.env.local scripts/test-puertas.mjs",
     "test:puertas:admin": "node --env-file-if-exists=.env.local scripts/test-puertas-admin.mjs",
+    "test:puertas:app": "node --env-file-if-exists=.env.local scripts/test-puertas-app.mjs",
     "app:android": "node scripts/app/android.mjs",
     "app:ios": "node scripts/app/ios.mjs",
     "app:version": "node scripts/app/version.mjs",
     "app:iconos": "node scripts/app/iconos.mjs",
-    "capacitor:copy:after": "node scripts/app/destino.mjs",
+    "movil:dev": "vite --config movil/vite.config.ts",
+    "movil:build": "tsc -p movil && vite build --config movil/vite.config.ts",
+    "movil:tipos": "tsc -p movil",
     "alta:asistida": "tsx --env-file-if-exists=.env.local scripts/alta-asistida.ts"
   },
   "dependencies": {
@@ -31,8 +34,10 @@
     "@capacitor/splash-screen": "8.0.2",
     "@capacitor/status-bar": "8.0.4",
     "@capgo/capacitor-social-login": "8.7.6",
+    "@fontsource-variable/plus-jakarta-sans": "5.3.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.112.3",
+    "@tanstack/react-query": "5.108.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
@@ -43,6 +48,7 @@
     "postgres": "^3.4.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-router": "7.18.1",
     "resend": "^6.20.0",
     "sonner": "^2.0.8",
     "stripe": "^22.5.0",
@@ -52,15 +58,18 @@
   "devDependencies": {
     "@capacitor/cli": "8.5.3",
     "@tailwindcss/postcss": "^4",
+    "@tailwindcss/vite": "4.3.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "6.0.3",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "^16.3.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
     "tw-animate-css": "^1.4.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "8.1.5"
   }
 }

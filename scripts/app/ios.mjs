@@ -3,35 +3,36 @@
  *
  *   CAP_SERVER_URL=https://hatril.com npm run app:ios
  *
- * Es `npx cap sync ios` con tres comprobaciones delante. Se lanza en el Mac
- * después de cada `git pull` y antes de abrir Xcode o de archivar: lo que
- * escribe el sync —la configuración con la dirección y la página de sin
- * conexión ya rellena— está en el .gitignore y no viaja por GitHub. Sin él,
- * Xcode no encuentra `App/App/public` ni `capacitor.config.json` y no compila.
+ * Compila la app empaquetada (`movil/`) contra `CAP_SERVER_URL`, que es la
+ * API a la que pide los datos, y hace `npx cap sync ios` con varias
+ * comprobaciones delante. Se lanza en el Mac después de cada `git pull` y
+ * antes de abrir Xcode o de archivar: lo que escribe el sync —la app
+ * compilada y la configuración— está en el .gitignore y no viaja por GitHub.
+ * Sin él, Xcode no encuentra `App/App/public` ni `capacitor.config.json` y no
+ * compila.
  *
  * Compilar y subir no lo hace: eso es Xcode o `xcodebuild`, y los pasos están
  * en docs/app-nativa/ios.md.
  *
  * SE NIEGA SI
  * -----------
- * - falta CAP_SERVER_URL o no es https (también lo mira capacitor.config.ts);
+ * - falta CAP_SERVER_URL o no es https;
  * - la versión de capacitor.config.ts, la de Android y la de iOS no cuadran
  *   (`npm run app:version` dice cuáles);
  * - no existe ios/ (hay que traerlo de GitHub, no generarlo otra vez);
  * - el GoogleService-Info.plist de Firebase no está, no es el de Hatril o no
  *   va dentro del target App (las push; ver abajo por qué se mira);
- * - la ruta de arranque (`appStartPath`) no existe dentro de app-shell/: en
- *   iOS la app se cerraría al abrirla;
  * - falta lo que piden «Continuar con Apple» y «Continuar con Google»: la
  *   clave de Apple en los entitlements y el esquema de Google en el Info.plist.
  *
  * Con una dirección de traefik.me avisa de que es una PRUEBA: ese certificado
- * no lo acepta iOS y la app abriría directamente «Sin conexión».
+ * no lo acepta iOS y la app no podría pedir sus datos.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { compilarMovil, comprobarCopia } from './compilar-movil.mjs';
 import { descuadres, leerNumeros } from './numeros.mjs';
 
 const raiz = process.cwd();
@@ -83,17 +84,6 @@ if (!proyecto.includes('GoogleService-Info.plist in Resources')) {
   parar('El GoogleService-Info.plist no está en los Resources del target App (project.pbxproj).');
 }
 
-/*
- * La ruta de arranque tiene que existir DENTRO de app-shell/, aunque la app
- * cargue la web desplegada: Capacitor iOS lo comprueba antes de nada y, si no
- * está, cierra la app con exit(1). El build 2 de TestFlight (19-nov) se
- * instalaba y se cerraba en negro por esto. Android no lo mira.
- */
-const config = readFileSync(join(raiz, 'capacitor.config.ts'), 'utf8');
-const rutaDeArranque = config.match(/appStartPath:\s*'([^']+)'/)?.[1];
-if (rutaDeArranque && !existsSync(join(raiz, 'app-shell', rutaDeArranque))) {
-  parar(`Falta app-shell${rutaDeArranque} (appStartPath). Sin ella, la app de iOS se cierra al abrirla. Ver app-shell/mi/index.html.`);
-}
 
 /*
  * Entrar con Apple y con Google. Los dos fallos de aquí no los ve nadie hasta
@@ -125,16 +115,15 @@ const version = numeros.ios.versiones[0];
 const build = numeros.ios.builds[0];
 console.log(`\nHatril iOS ${version} (${build}) → ${servidor.origin}${esPrueba ? '   [PRUEBA]' : ''}\n`);
 
+// La app empaquetada primero, contra la API pedida; después el sync, que la
+// copia dentro del proyecto, y se comprueba que la copia es esa.
+compilarMovil(raiz, servidor);
+
 // La línea entera y con shell: en Windows `npx` es un .cmd (ver android.mjs).
 const sync = spawnSync('npx cap sync ios', { shell: true, stdio: 'inherit' });
 if (sync.status !== 0) parar('Falló npx cap sync ios.');
 
-const pagina = join(raiz, 'ios', 'App', 'App', 'public', 'sin-conexion.html');
-// La rellena el hook de Capacitor (scripts/app/destino.mjs). Si no lleva la
-// dirección, «Reintentar» no llevaría a ninguna parte.
-if (!existsSync(pagina) || !readFileSync(pagina, 'utf8').includes(servidor.origin)) {
-  parar(`La página de sin conexión no lleva la dirección: ${pagina}`);
-}
+comprobarCopia(join(raiz, 'ios', 'App', 'App', 'public'), servidor);
 
 console.log(`
 ✓ ios/ sincronizado con ${servidor.origin}.

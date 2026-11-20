@@ -25,8 +25,11 @@ de abrir la Terminal del Mac**:
 
 ## La dirección: https://hatril.com
 
-La app carga la web desplegada en **https://hatril.com**, con su certificado
-válido. Es la dirección de todos los comandos de abajo.
+**Desde el 20-nov la app ya no carga la web**: las pantallas van dentro del
+binario (`movil/`, `docs/app-nativa/plan-spa.md`) y `CAP_SERVER_URL` es la
+API a la que piden los datos. `npm run app:ios` compila la app contra esa
+dirección antes del sync. Es **https://hatril.com**, la de todos los comandos
+de abajo.
 
 Con una de `traefik.me`, la temporal de Dokploy, iOS rechaza el certificado y
 la app abre directamente «Sin conexión»; `npm run app:ios` avisa con

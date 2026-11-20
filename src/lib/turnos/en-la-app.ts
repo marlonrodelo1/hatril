@@ -10,9 +10,10 @@ import type {
 } from '@/lib/ministerios/en-la-app/contrato';
 import { cuandoCorto } from '@/lib/ministerios/en-la-app/fechas';
 import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
-import { listarTurnos, misTurnos, type TurnoResumen } from './consultas';
+import { listarTurnos, misTurnos } from './consultas';
 import { puestosDelMinisterio } from './puestos';
 import { ETIQUETA_RESPUESTA } from './respuestas';
+import { estadoDeTurno, textoDelEstado } from './estado';
 
 /**
  * Los turnos en la zona de equipos: el adaptador de la portada y las cuentas que
@@ -39,88 +40,9 @@ export const proximosTurnos = cache(
     }),
 );
 
-export type EstadoDeTurno = {
-  /** No hay nadie puesto en ningún puesto. */
-  vacio: boolean;
-  /** Puestos de la lista sin nadie que vaya a ir. */
-  huecos: string[];
-  /** Quién ha dicho que no puede, sin repetir a quien lo dijo en dos puestos. */
-  noPueden: string[];
-  /** Personas, no puestos, que todavía no han contestado. */
-  sinContestar: number;
-};
-
-/**
- * Qué le falta a un turno.
- *
- * UN PUESTO CON SOLO «NO PUEDO» ESTÁ SIN CUBRIR
- * --------------------------------------------
- * El panel pinta «Sin cubrir» cuando no hay nadie puesto. Aquí se cuenta además
- * el puesto cuya única persona dijo que no: para quien mira la portada el
- * sábado por la noche, «Bajo: Pedro (no puede)» y «Bajo: nadie» piden lo mismo,
- * buscar a otro.
- */
-export function estadoDeTurno(
-  turno: TurnoResumen,
-  puestos: string[],
-): EstadoDeTurno {
-  const cubiertos = new Set(
-    turno.personas
-      .filter((p) => p.respuesta !== 'no_puede')
-      .map((p) => p.puesto.toLocaleLowerCase('es')),
-  );
-
-  return {
-    vacio: turno.personas.length === 0,
-    huecos: puestos.filter((p) => !cubiertos.has(p.toLocaleLowerCase('es'))),
-    // Por ficha y no por nombre: dos Martas en el equipo son dos personas.
-    // Y solo el nombre de pila, que en una línea de móvil es lo que cabe.
-    noPueden: [
-      ...new Map(
-        turno.personas
-          .filter((p) => p.respuesta === 'no_puede')
-          .map((p) => [p.miembroId, p.nombre.split(' ')[0]!]),
-      ).values(),
-    ],
-    sinContestar: new Set(
-      turno.personas
-        .filter((p) => p.respuesta === 'pendiente')
-        .map((p) => p.miembroId),
-    ).size,
-  };
-}
-
-/** Hasta aquí se nombran los puestos; de ahí en adelante, «y 3 más». */
-const PUESTOS_NOMBRADOS = 3;
-
-/**
- * «Marta no puede · Sin cubrir: Bajo, Teclado · 2 sin contestar».
- *
- * Un turno sin nadie dice eso y nada más: la lista de los siete puestos de
- * alabanza ocupaba tres líneas para contar lo mismo. Y a partir del cuarto
- * puesto vacío se dejan de nombrar, por lo mismo.
- */
-export function textoDelEstado(e: EstadoDeTurno): string | null {
-  if (e.vacio) return 'Nadie puesto todavía';
-
-  const partes: string[] = [];
-
-  if (e.noPueden.length === 1) partes.push(`${e.noPueden[0]} no puede`);
-  if (e.noPueden.length > 1) {
-    partes.push(
-      `${e.noPueden.slice(0, -1).join(', ')} y ${e.noPueden.at(-1)} no pueden`,
-    );
-  }
-  if (e.huecos.length > 0) {
-    const nombrados = e.huecos.slice(0, PUESTOS_NOMBRADOS).join(', ');
-    const resto = e.huecos.length - PUESTOS_NOMBRADOS;
-    partes.push(`Sin cubrir: ${nombrados}${resto > 0 ? ` y ${resto} más` : ''}`);
-  }
-  if (e.sinContestar === 1) partes.push('1 sin contestar');
-  if (e.sinContestar > 1) partes.push(`${e.sinContestar} sin contestar`);
-
-  return partes.length > 0 ? partes.join(' · ') : null;
-}
+// `estadoDeTurno` y `textoDelEstado` viven en `./estado`, sin `server-only`:
+// las pinta también la vista de turnos que comparten la web y la app.
+export { estadoDeTurno, textoDelEstado, type EstadoDeTurno } from './estado';
 
 /** Cuántos turnos con algo pendiente se enseñan en la portada. */
 const EN_LA_PORTADA = 3;

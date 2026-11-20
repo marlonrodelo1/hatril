@@ -4,8 +4,21 @@
     {
       "name": "hatril",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000,
+      "autoPort": false
+    },
+    {
+      "name": "movil",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "movil:dev"
+      ],
+      "port": 5173,
       "autoPort": false
     }
   ]

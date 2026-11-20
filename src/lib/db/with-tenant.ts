@@ -54,10 +54,23 @@ export async function withUser<T>(
       role: 'authenticated',
     });
 
+    /*
+     * LAS DOS COSAS EN UNA SOLA SENTENCIA (20-nov)
+     *
+     * Eran dos `execute`, y cada uno es un viaje a Irlanda: 85 ms medidos desde
+     * Canarias, en una transacción que hace cinco (BEGIN, claim, rol, consulta,
+     * COMMIT). `set_config('role', …, true)` es exactamente `SET LOCAL ROLE`:
+     * el mismo parámetro, con la misma comprobación de que se puede asumir ese
+     * rol, y local a la transacción igual. Es como lo hace el propio PostgREST
+     * de Supabase. El orden de arriba se mantiene: Postgres evalúa la lista de
+     * columnas de izquierda a derecha, así que primero el claim y luego el rol.
+     *
+     * Que de verdad entra como `hatril_app` lo comprueba la segunda fase de
+     * `npm run test:aislamiento`, que llama a esta función y mira `current_user`.
+     */
     await tx.execute(
-      sql`select set_config('request.jwt.claims', ${claims}, true)`,
+      sql`select set_config('request.jwt.claims', ${claims}, true), set_config('role', 'hatril_app', true)`,
     );
-    await tx.execute(sql`set local role hatril_app`);
 
     return fn(tx);
   });

@@ -30,7 +30,23 @@ type Sugerencia = { slug: string; nombre: string; ciudad: string | null; pais: s
 
 const PAUSA_MS = 220;
 
-export function BuscadorIglesias({ inicial }: { inicial: string }) {
+/**
+ * Las dos props opcionales son de la app empaquetada (`movil/`), que reusa
+ * este componente tal cual: allí las sugerencias se piden a la API de la app
+ * en hatril.com, y «Buscar» cambia de pantalla sin recargar la app entera.
+ * En la web no se pasan y todo sigue como estaba.
+ */
+export function BuscadorIglesias({
+  inicial,
+  sugerenciasDesde = '/api/v1/iglesias/sugerencias',
+  alBuscar,
+}: {
+  inicial: string;
+  /** La dirección que da las sugerencias. */
+  sugerenciasDesde?: string;
+  /** Si se pasa, el formulario no navega: se le da la búsqueda. */
+  alBuscar?: (q: string) => void;
+}) {
   const [texto, setTexto] = useState(inicial);
   const [sugerencias, setSugerencias] = useState<Sugerencia[]>([]);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -61,7 +77,7 @@ export function BuscadorIglesias({ inicial }: { inicial: string }) {
       const control = new AbortController();
       enCurso.current = control;
       try {
-        const r = await fetch(`/api/v1/iglesias/sugerencias?q=${encodeURIComponent(q)}`, {
+        const r = await fetch(`${sugerenciasDesde}?q=${encodeURIComponent(q)}`, {
           signal: control.signal,
         });
         if (!r.ok) return;
@@ -81,7 +97,13 @@ export function BuscadorIglesias({ inicial }: { inicial: string }) {
       action="/buscar"
       role="search"
       className="flex flex-col gap-3"
-      onSubmit={() => setSugerencias([])}
+      onSubmit={(e) => {
+        setSugerencias([]);
+        if (alBuscar) {
+          e.preventDefault();
+          alBuscar(texto.trim());
+        }
+      }}
     >
       <div className="relative">
         <Search

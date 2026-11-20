@@ -1,12 +1,11 @@
 'use server';
 
-import { sql } from 'drizzle-orm';
 import { cookies } from 'next/headers';
-import { z } from 'zod';
 
-import { withUser } from '@/lib/db';
-import { createClient } from '@/lib/supabase/server';
+import { EsquemaTelefonoPush } from '@/lib/app-api/push';
+import { usuarioActual } from '@/lib/auth/usuario';
 import { COOKIE_PUSH } from './dispositivo';
+import { apuntarTelefono } from './telefonos';
 
 /**
  * Apuntar el teléfono de quien tiene la sesión para mandarle push.
@@ -28,30 +27,19 @@ import { COOKIE_PUSH } from './dispositivo';
  * `dispositivo.ts`, que es solo de servidor.
  */
 
-const Esquema = z.object({
-  // Un token de FCM son letras, cifras, dos puntos, guiones y guiones bajos.
-  token: z.string().min(20).max(4096).regex(/^[A-Za-z0-9:_-]+$/),
-  plataforma: z.enum(['ios', 'android']),
-});
 
 export async function registrarDispositivo(
   token: unknown,
   plataforma: unknown,
 ): Promise<{ ok: boolean }> {
-  const parsed = Esquema.safeParse({ token, plataforma });
+  const parsed = EsquemaTelefonoPush.safeParse({ token, plataforma });
   if (!parsed.success) return { ok: false };
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioActual();
   if (!user) return { ok: false };
 
-  await withUser(user.id, (tx) =>
-    tx.execute(
-      sql`select public.registrar_dispositivo_push(${parsed.data.token}, ${parsed.data.plataforma})`,
-    ),
-  );
+  // La misma escritura que la API de la app (`/api/v1/app/push`).
+  await apuntarTelefono(user.id, parsed.data.token, parsed.data.plataforma);
 
   // httpOnly: la página no la necesita, y así un script ajeno no la lee.
   (await cookies()).set(COOKIE_PUSH, parsed.data.token, {

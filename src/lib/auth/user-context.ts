@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { cache } from 'react';
+import { cachePorPeticion } from '@/lib/peticion';
 import { and, asc, eq } from 'drizzle-orm';
 import type { User } from '@supabase/supabase-js';
 
@@ -11,7 +11,7 @@ import {
   ministerioMiembros,
   ministerios,
 } from '@/lib/db/schema';
-import { createClient } from '@/lib/supabase/server';
+import { usuarioActual } from '@/lib/auth/usuario';
 import {
   resolverPermisos,
   type MapaPermisos,
@@ -132,12 +132,14 @@ export type UserContext = {
  * Ojo con el matiz: `cache()` deduplica DENTRO de un render de servidor, nunca
  * entre peticiones ni entre personas. No es un caché de datos, no hay nada que
  * invalidar, y no puede devolverle a alguien el contexto de otro.
+ *
+ * Y en un route handler `cache()` no deduplica nada: allí lo hace
+ * `cachePorPeticion`, con la memoria que abre `endpointApp()` para cada
+ * petición de la app (`src/lib/peticion.ts`). Fuera de ella es `cache()` sin más.
  */
-export const getCurrentUserContext = cache(async function getCurrentUserContext(): Promise<UserContext | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export const getCurrentUserContext = cachePorPeticion(async function getCurrentUserContext(): Promise<UserContext | null> {
+  // La misma validación que el resto del render, sin repetir el viaje a Auth.
+  const user = await usuarioActual();
 
   if (!user) return null;
 

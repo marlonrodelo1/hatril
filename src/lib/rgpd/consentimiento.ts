@@ -1,4 +1,7 @@
-import 'server-only';
+// Sin `server-only` desde el 20-nov: aquí solo hay textos y versiones, nada
+// secreto, y la app empaquetada (`movil/`) tiene que enseñar exactamente los
+// mismos que la web. Copiarlos sería abrir la puerta a que el teléfono pida
+// un consentimiento con una letra distinta de la que se guarda.
 
 /**
  * Consentimiento para datos de categoría especial (art. 9 RGPD).

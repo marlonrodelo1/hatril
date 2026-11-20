@@ -1,5 +1,12 @@
 # Android: compilar el .aab y subirlo a Google Play
 
+> **Desde el 20-nov la app ya no carga la web**: las pantallas van dentro del
+> binario (`movil/`, `docs/app-nativa/plan-spa.md`) y `CAP_SERVER_URL` es la
+> API a la que piden los datos. `npm run app:android` compila la app contra
+> esa dirección antes del sync. Lo que este documento cuenta del WebView
+> (`server.url`, la redirección de `/mi`, la página de sin conexión) es
+> historia del build 2.
+
 iOS está en [`ios.md`](ios.md). Lo que pide la ficha de Google Play, con las
 respuestas, en [`fichas.md`](fichas.md). **Aquí no va ningún secreto.**
 
