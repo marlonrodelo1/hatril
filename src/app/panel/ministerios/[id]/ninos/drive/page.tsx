@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import { FolderOpen, Trash2 } from 'lucide-react';
+import { Download, FolderOpen, Trash2 } from 'lucide-react';
 
 import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { fechaDeBorrado } from '@/lib/ninos/limites';
 import { archivosDelDrive, type ArchivoDelDrive } from '@/lib/ninos/consultas';
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { EstadoVacio } from '@/components/ui/estado-vacio';
 import { Insignia } from '@/components/ui/insignia';
 import { CabeceraPanel } from '../../../../_components/cabecera';
@@ -16,7 +16,7 @@ import { SeccionesNinos } from '../_components/secciones';
 import { SubirAlDrive } from '../_components/subir-al-drive';
 import { borrarArchivo } from '../actions';
 import { CONFIRMACIONES } from '../constantes';
-import { requireNinos } from '../guarda';
+import { aceptaFamilias, requireNinos } from '../guarda';
 
 export const metadata: Metadata = { title: 'Drive del ministerio' };
 
@@ -47,6 +47,10 @@ export default async function DrivePage({
 
   const archivos = await archivosDelDrive(ctx, id);
   const urls = await firmarArchivos(archivos);
+  // Descargar es de la responsable y del pastor, como en `drive/exportar`.
+  const descarga = aceptaFamilias(ctx, ministerio);
+  const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
+  const enUnMes = sumarDias(hoy, 30);
 
   const porMes = new Map<string, ArchivoDelDrive[]>();
   for (const a of archivos) {
@@ -90,12 +94,29 @@ export default async function DrivePage({
         ) : (
           [...porMes.entries()].map(([mes, delMes]) => (
             <section key={mes} className="flex flex-col gap-2.5">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                <h2 className="t-micro">{MESES.format(new Date(`${mes}-01T00:00:00Z`))}</h2>
-                {delMes[0]?.caducaEl && (
-                  <span className="text-[12.5px] text-muted-foreground">
-                    Se borra el {fechaDeBorrado(delMes[0].caducaEl)}
-                  </span>
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+                <div className="flex flex-col gap-0.5">
+                  <h2 className="t-micro">{MESES.format(new Date(`${mes}-01T00:00:00Z`))}</h2>
+                  {delMes[0]?.caducaEl && (
+                    <span className="text-[12.5px] text-muted-foreground">
+                      Se borra el {fechaDeBorrado(delMes[0].caducaEl)}
+                      {delMes[0].caducaEl <= enUnMes ? ': descárgalo antes si lo quieres conservar.' : ''}
+                    </span>
+                  )}
+                </div>
+                {descarga && (
+                  // Un `<a>` de los de siempre y no un `Link`: es una descarga,
+                  // no una navegación del router. Con forma de botón como en
+                  // Finanzas (`buttonVariants`), sin `render`, que Base UI
+                  // denuncia en consola.
+                  <a
+                    href={`/panel/ministerios/${id}/ninos/drive/exportar?mes=${mes}`}
+                    download
+                    className={buttonVariants({ variant: 'outline', size: 'sm', className: 'no-underline hover:no-underline' })}
+                  >
+                    <Download className="size-4" strokeWidth={1.9} aria-hidden />
+                    Descargar el mes ({cuantos(delMes)})
+                  </a>
                 )}
               </div>
               <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -131,4 +152,23 @@ export default async function DrivePage({
       </Contenedor>
     </>
   );
+}
+
+/** «12 fotos y 2 vídeos». */
+function cuantos(archivos: ArchivoDelDrive[]): string {
+  const fotos = archivos.filter((a) => a.tipo === 'foto').length;
+  const videos = archivos.length - fotos;
+  return [
+    fotos > 0 ? `${fotos} ${fotos === 1 ? 'foto' : 'fotos'}` : null,
+    videos > 0 ? `${videos} ${videos === 1 ? 'vídeo' : 'vídeos'}` : null,
+  ]
+    .filter(Boolean)
+    .join(' y ');
+}
+
+/** AAAA-MM-DD más `n` días, partida a mano como `formatearFechaLarga`. */
+function sumarDias(fecha: string, n: number): string {
+  const [a, m, d] = fecha.split('-').map(Number);
+  const f = new Date(Date.UTC(a!, m! - 1, d! + n));
+  return f.toISOString().slice(0, 10);
 }

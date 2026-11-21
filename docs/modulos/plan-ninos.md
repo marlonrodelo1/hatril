@@ -39,9 +39,29 @@ v1 sin clases) y la 10 (versión propia `ninos-2026-11`).
   Cristo podría encender el tablón y los maestros subir fotos de niños de
   verdad antes de que el abogado revise los textos. Desplegar cuando esté la
   revisión, o desplegar y no encenderlo.
-- **Lo siguiente**: N3 (el cron del año, el aviso de 30 días y el ZIP por
-  mes). Mientras no esté, nada se borra solo: la fecha de borrado que enseña
-  la pantalla es una promesa sin cron detrás.
+- **N3 hecha**, con la migración `0061` (el aviso `ninos_caducan` y
+  `ninos_archivos.avisado_at`), aplicada. `lib/ninos/caducidad.ts` y
+  `POST /api/v1/cron/ninos`: borra lo caducado (fichero y fila), las
+  publicaciones caducadas, las subidas a medias y los huérfanos de los
+  buckets, y avisa a la responsable (o al pastor) 30 días antes, una vez. Y
+  «Descargar el mes» en el drive, un ZIP que se arma según se lee de Storage
+  (`client-zip`, nueva dependencia, 2.5.1 exacta), solo para la responsable y
+  el pastor, con `requireModuloMinisterioApi`, la guarda de API por ministerio
+  que le faltaba al CSV del reparto. `npm run test:ninos` (nuevo) prueba la
+  limpieza con ficheros de verdad: 12 de 12; se niega a correr si hay datos de
+  Niños de una iglesia que no sea de prueba, porque la limpieza las recorre
+  todas. `test:puertas` con la ruta del ZIP; ZIP descargado y abierto.
+- **Sin programar todavía, como el de las bajas**: el cron. Sin él, nada se
+  borra solo. Hace falta `INTERNAL_API_TOKEN` en Dokploy y una tarea diaria en
+  n8n que haga `POST https://hatril.com/api/v1/cron/ninos` con
+  `Authorization: Bearer <ese token>`; la misma tarea puede llamar después a
+  `/api/v1/cron/bajas`.
+- **Un caso que queda abierto**: una iglesia con la suscripción bloqueada no
+  entra al panel, así que no puede descargar el mes, y el cron lo borra igual
+  a su fecha. Es la misma regla que las demás descargas; decidirlo si llega a
+  pasar.
+- **Lo siguiente**: N4 (los padres, en la app de `movil/`) y N5 (los maestros
+  en la app).
 
 Lo pidió la líder del ministerio de niños de Cuerpo de Cristo, contado por
 Marlon el 20-nov: un tablón para los padres, un cronograma para los maestros,

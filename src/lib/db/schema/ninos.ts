@@ -423,6 +423,12 @@ export const ninosArchivos = pgTable(
     confirmadoAt: timestamp('confirmado_at', { withTimezone: true }),
     exportadoAt: timestamp('exportado_at', { withTimezone: true }),
 
+    /**
+     * Cuándo se avisó de que se borra (30 días antes). Lo pone el cron, y es
+     * lo que impide que avise cada día de lo mismo (`lib/ninos/caducidad.ts`).
+     */
+    avisadoAt: timestamp('avisado_at', { withTimezone: true }),
+
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

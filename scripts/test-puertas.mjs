@@ -226,6 +226,12 @@ async function leerDemo(B) {
            order by (publicada_at is not null) desc, fecha desc limit 1`),
         claseNinos: await uno(sql`
           select id from ninos_cronograma where iglesia_id = ${B} order by fecha limit 1`),
+        // El mes de un archivo del drive, para la descarga en ZIP.
+        mesNinos: (
+          await sql`
+            select to_char(fecha, 'YYYY-MM') as mes from ninos_archivos
+             where iglesia_id = ${B} and confirmado_at is not null limit 1`
+        )[0]?.mes ?? null,
         evento: await uno(sql`
           select e.id from eventos e left join evento_inscripciones i on i.evento_id = e.id
            where e.iglesia_id = ${B}
@@ -721,6 +727,21 @@ function rutas(ids) {
     if (ids.publicacionNinos) {
       pagina('…<Niños>/ninos/publicacion/<publicación>', `${N}/publicacion/${ids.publicacionNinos}`, 'panel/ministerios/[id]/ninos/publicacion/[publicacionId]/page.tsx', NINOS);
     }
+    // Descargar el mes: la responsable y el pastor, no los maestros. A quien
+    // no lleva Niños, 403 (es un route.ts: nada de redirigir).
+    if (ids.mesNinos) {
+      ruta('…<Niños>/ninos/drive/exportar', `${N}/drive/exportar?mes=${ids.mesNinos}`, 'panel/ministerios/[id]/ninos/drive/exportar/route.ts', {
+        [PASTOR]: 'zip',
+        [MAESTRA]: 'zip',
+        [AUXILIAR]: 403,
+        [COLIDER]: 403,
+        [LIDER]: 403,
+        [SECRETARIA]: 403,
+        [CONSOLIDACION]: 403,
+        [ENLACE]: 403,
+        [MADRE]: 403,
+      });
+    }
   }
   // El tablón está APAGADO en Alabanza: quien la lleva llega al 404.
   pagina('…<Alabanza>/ninos (apagado)', `${A}/ninos`, 'panel/ministerios/[id]/ninos/page.tsx', {
@@ -800,6 +821,7 @@ const DESCRIPCION = {
   404: 'la página da 404',
   oculta: 'la página da 404 (no puede verla)',
   csv: '200 text/csv',
+  zip: '200 application/zip',
   403: '403',
   307: '307 (vuelve a su página)',
 };
@@ -948,9 +970,10 @@ async function comprobarRouteTs(def, sesiones, testigos) {
 
     const problemas = [];
     let resumen = '';
-    if (esperado === 'csv') {
+    if (esperado === 'csv' || esperado === 'zip') {
+      const tipo = esperado === 'csv' ? 'text/csv' : 'application/zip';
       for (const r of respuestas) {
-        if (r.status !== 200 || !r.tipo.startsWith('text/csv')) problemas.push(`${r.status} ${r.tipo}`);
+        if (r.status !== 200 || !r.tipo.startsWith(tipo)) problemas.push(`${r.status} ${r.tipo}`);
       }
       if (cuenta === PASTOR) referencia = vistos;
       const filas = respuestas[0].cuerpo.split('\r\n').length;

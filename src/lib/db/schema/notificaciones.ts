@@ -52,6 +52,12 @@ export const tipoNotificacionEnum = pgEnum('tipo_notificacion_enum', [
    * con él en vez de con la congregación.
    */
   'contenido_retirado',
+  /**
+   * Niños: dentro de 30 días se borran las fotos y los vídeos de un mes del
+   * drive. Va a la responsable del ministerio (o al pastor si no la hay), para
+   * que los descargue antes si los quiere conservar (`plan-ninos.md` §5).
+   */
+  'ninos_caducan',
 ]);
 
 export const notificaciones = pgTable(

@@ -3,6 +3,7 @@ import {
   Bell,
   BookOpen,
   CalendarCheck,
+  CalendarClock,
   CalendarX,
   CheckCheck,
   EyeOff,
@@ -67,6 +68,7 @@ const ESTILO: Record<TipoNotificacion, { Icono: LucideIcon; circulo: string }> =
   comentario_en_publicacion: { Icono: MessageCircle, circulo: GENTE },
   me_gusta_en_publicacion: { Icono: Heart, circulo: GENTE },
   denuncia_en_comunidad: { Icono: Flag, circulo: OJO },
+  ninos_caducan: { Icono: CalendarClock, circulo: OJO },
 };
 
 type Grupo = 'Hoy' | 'Esta semana' | 'Antes';

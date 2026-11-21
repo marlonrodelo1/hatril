@@ -82,6 +82,16 @@ export function textoNotificacion(
         detalle: datos.extracto ?? null,
       };
 
+    // Sin nombres de niños: solo cuántas fotos y vídeos, y cuándo.
+    case 'ninos_caducan':
+      return {
+        titulo: `El ${datos.fecha ?? 'mes que viene'} se borran las fotos de ${datos.mes ?? 'un mes'}`,
+        detalle:
+          [datos.cuantos, datos.ministerio ? `de ${datos.ministerio}` : null]
+            .filter(Boolean)
+            .join(' ') + '. Si quieres conservarlas, descárgalas antes desde el drive.',
+      };
+
     case 'contenido_retirado':
       return {
         titulo:
