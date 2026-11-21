@@ -3004,6 +3004,7 @@ async function comprobarWithUser(): Promise<string[]> {
     const conLaDemo = await conDemo({ cuentas: false, publicada: false }, async (demo) => [
       ...(await comprobarRepartoConLaDemo(demo)),
       ...(await comprobarArqueoConLaDemo(demo)),
+      ...(await comprobarNinosConLaDemo(demo)),
     ]);
     return lineas.concat(conLaDemo);
   } catch (err) {
@@ -3167,6 +3168,421 @@ async function comprobarRepartoConLaDemo(demo: Demo): Promise<string[]> {
     lineas.push(
       `  FALLO reparto con la iglesia de prueba: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
     );
+  }
+
+  return lineas;
+}
+
+/**
+ * El ministerio de Niños (0059 y 0060), por `withUser()` y con datos que la
+ * aplicación ve desde su propia conexión.
+ *
+ * Es la RLS más estrecha del producto: por RELACIÓN padre–hijo, no por
+ * iglesia ni por equipo. Lo que tiene que aguantar, de `plan-ninos.md` §7:
+ *
+ *   - La madre ve a SU hijo y no al de otra familia del mismo ministerio, ni el
+ *     cronograma, ni el borrador, ni lo publicado antes de que se la aceptara,
+ *     ni un archivo que no va en una publicación o que no está confirmado.
+ *   - La secretaria, un líder de otro equipo, un miembro raso, quien espera
+ *     aprobación y el pastor de otra iglesia: nada.
+ *   - Aceptar familias, la responsable sí y la colíder no (HT144).
+ *   - Nadie pide el vínculo por otro adulto, ni para un niño de 14 (HT142).
+ *   - De un permiso solo se toca `revocado_at`, solo el propio padre, y no
+ *     vuelve atrás (HT143).
+ *   - Desvincular a la última familia borra al niño.
+ *   - Ni `anon` ni `authenticated` llegan a nada, y los buckets son privados
+ *     y sin policies.
+ *
+ * Lo que escribe va en una transacción que se revierte al final: la iglesia de
+ * prueba queda como la montó `demo.mjs` para las comprobaciones siguientes.
+ */
+async function comprobarNinosConLaDemo(demo: Demo): Promise<string[]> {
+  const lineas: string[] = [];
+  const ok = (cond: boolean, texto: string) =>
+    lineas.push(`  ${cond ? 'OK  ' : 'FALLO'} ${texto}`);
+
+  type Fila = Record<string, string | null>;
+  type Tx = Parameters<Parameters<typeof withUser>[1]>[0];
+  const filas = (res: unknown): Fila[] =>
+    (res as { rows?: Fila[] }).rows ?? (res as Fila[]);
+  const primera = (res: unknown): Fila | undefined => filas(res)[0];
+  const mensaje = (err: unknown) => {
+    const e = err as { code?: string; message?: string; cause?: { message?: string; code?: string } };
+    return `${e.code ?? ''} ${e.cause?.code ?? ''} ${e.cause?.message ?? ''} ${e.message ?? ''}`;
+  };
+
+  const u = demo.usuarios;
+  const f = demo.fichas;
+  const N = demo.ids.ninos;
+  const B = demo.betel.id;
+  const anio = new Date().getUTCFullYear();
+  const REVERTIR = 'revertir-ninos-de-prueba';
+
+  /** Cuántas filas del ministerio de Niños ve esta cuenta en esta tabla. */
+  const contar = async (cuenta: string, tabla: string) =>
+    Number(
+      primera(
+        await withUser(cuenta, (tx) =>
+          tx.execute(
+            dsql`select count(*)::text as n from ${dsql.identifier(tabla)} where ministerio_id = ${N}`,
+          ),
+        ),
+      )?.n ?? -1,
+    );
+
+  /** Pasa la sesión de la transacción a otra cuenta, como el arqueo. */
+  const como = (tx: Tx, cuenta: string) =>
+    tx.execute(
+      dsql`select set_config('request.jwt.claims', ${JSON.stringify({ sub: cuenta, role: 'authenticated' })}, true)`,
+    );
+
+  /** Lo intenta en un savepoint y devuelve el error, o '' si pasó. */
+  const intento = async (tx: Tx, fn: (sp: Tx) => Promise<unknown>) => {
+    try {
+      await tx.transaction(async (sp) => {
+        await fn(sp);
+      });
+      return '';
+    } catch (err) {
+      return mensaje(err);
+    }
+  };
+
+  /** Ejecuta y revierte todo al final, devuelva lo que devuelva. */
+  const yDeshacer = async <T>(cuenta: string, fn: (tx: Tx) => Promise<T>): Promise<T> => {
+    let salida: T | undefined;
+    await withUser(cuenta, async (tx) => {
+      salida = await fn(tx);
+      throw new Error(REVERTIR);
+    }).catch((err: Error) => {
+      if (err.message !== REVERTIR) throw err;
+    });
+    return salida as T;
+  };
+
+  try {
+    // --- Quién ve qué -------------------------------------------------------
+
+    const suyo = filas(
+      await withUser(u.madre, (tx) =>
+        tx.execute(dsql`select id::text as id from ninos where ministerio_id = ${N}`),
+      ),
+    ).map((fila) => fila.id);
+    ok(
+      suyo.length === 1 && suyo[0] === demo.ids.tomas,
+      `withUser() de la madre ve a su hijo y no al de otra familia (${suyo.length} de 2)`,
+    );
+
+    const madre = {
+      familias: await contar(u.madre, 'nino_familias'),
+      permisos: await contar(u.madre, 'nino_consentimientos'),
+      cronograma: await contar(u.madre, 'ninos_cronograma'),
+      publicaciones: await contar(u.madre, 'ninos_publicaciones'),
+      archivos: await contar(u.madre, 'ninos_archivos'),
+    };
+    ok(madre.familias === 1, `la madre ve solo su vinculo (${madre.familias} de 2)`);
+    ok(madre.permisos === 2, `la madre ve solo sus permisos (${madre.permisos} de 3)`);
+    ok(madre.cronograma === 0, `la madre no ve el cronograma de los maestros (${madre.cronograma})`);
+    ok(
+      madre.publicaciones === 1,
+      `la madre ve lo publicado desde que la aceptaron, sin el borrador ni lo de antes (${madre.publicaciones} de 3)`,
+    );
+    ok(
+      madre.archivos === 1,
+      `la madre ve solo el archivo confirmado de lo publicado (${madre.archivos} de 3)`,
+    );
+
+    const madre2 = {
+      ninos: await contar(u.madre2, 'ninos'),
+      publicaciones: await contar(u.madre2, 'ninos_publicaciones'),
+      archivos: await contar(u.madre2, 'ninos_archivos'),
+    };
+    ok(madre2.ninos === 1, `la otra madre ve solo a su hija (${madre2.ninos} de 2)`);
+    ok(
+      madre2.publicaciones === 0 && madre2.archivos === 0,
+      `la madre aceptada hoy no ve lo publicado hace dos dias (${madre2.publicaciones} publicaciones, ${madre2.archivos} archivos)`,
+    );
+
+    for (const [quien, cuenta] of [
+      ['la responsable', u.maestra],
+      ['la colider', u.auxiliar],
+      ['el pastor', u.pastor],
+    ] as const) {
+      const vistos = [
+        await contar(cuenta, 'ninos'),
+        await contar(cuenta, 'ninos_cronograma'),
+        await contar(cuenta, 'ninos_publicaciones'),
+        await contar(cuenta, 'ninos_archivos'),
+      ];
+      ok(
+        vistos.join() === '2,1,3,3',
+        `${quien} ve todo el ministerio (ninos, cronograma, publicaciones, archivos: ${vistos.join(', ')})`,
+      );
+    }
+
+    for (const [quien, cuenta] of [
+      ['la secretaria', u.secretaria],
+      ['el lider de otro equipo', u.lider],
+      ['un miembro raso', u.miembro],
+      ['quien espera aprobacion', u.visita],
+      ['el pastor de otra iglesia', u.sion],
+    ] as const) {
+      const vistos = [
+        'ninos', 'nino_familias', 'nino_consentimientos', 'ninos_cronograma',
+        'ninos_publicaciones', 'ninos_archivos', 'ninos_solicitudes',
+      ];
+      let total = 0;
+      for (const tabla of vistos) total += await contar(cuenta, tabla);
+      ok(total === 0, `${quien} no ve nada de Ninos (${total} filas en las siete tablas)`);
+    }
+
+    // --- Pedir y aceptar ----------------------------------------------------
+
+    const aceptar = await yDeshacer(u.madre, async (tx) => {
+      const [pedida] = filas(
+        await tx.execute(dsql`
+          insert into ninos_solicitudes
+            (iglesia_id, ministerio_id, miembro_id, nombre, anio_nacimiento, parentesco,
+             permiso_imagen, version_texto, ip, user_agent)
+          values (${B}, ${N}, ${f.madre}, 'Martín', ${anio - 3}, 'madre', true, 'ninos-2026-11',
+                  '203.0.113.9', 'prueba')
+          returning id::text as id
+        `),
+      );
+      const id = pedida!.id!;
+
+      await como(tx, u.auxiliar);
+      const laVeLaColider = Number(
+        primera(await tx.execute(dsql`select count(*)::text as n from ninos_solicitudes where id = ${id}`))?.n ?? -1,
+      );
+      const colider = await intento(tx, (sp) =>
+        sp.execute(dsql`select public.aceptar_solicitud_nino(${id}::uuid)`),
+      );
+
+      await como(tx, u.maestra);
+      const laVeLaResponsable = Number(
+        primera(await tx.execute(dsql`select count(*)::text as n from ninos_solicitudes where id = ${id}`))?.n ?? -1,
+      );
+      const nuevo = primera(
+        await tx.execute(dsql`select public.aceptar_solicitud_nino(${id}::uuid)::text as id`),
+      )?.id;
+      const permisos = Number(
+        primera(
+          await tx.execute(
+            dsql`select count(*)::text as n from nino_consentimientos where nino_id = ${nuevo ?? null}::uuid and revocado_at is null`,
+          ),
+        )?.n ?? -1,
+      );
+
+      await como(tx, u.madre);
+      const loVeLaMadre = Number(
+        primera(await tx.execute(dsql`select count(*)::text as n from ninos where ministerio_id = ${N}`))?.n ?? -1,
+      );
+      return { laVeLaColider, colider, laVeLaResponsable, nuevo, permisos, loVeLaMadre };
+    });
+    ok(aceptar.laVeLaColider === 0, `la colider no ve las peticiones pendientes (${aceptar.laVeLaColider})`);
+    ok(
+      aceptar.colider.includes('HT144'),
+      `la colider no puede aceptar una familia (${aceptar.colider.includes('HT144') ? 'HT144' : aceptar.colider.slice(0, 60) || 'paso'})`,
+    );
+    ok(aceptar.laVeLaResponsable === 1, `la responsable ve la peticion (${aceptar.laVeLaResponsable})`);
+    ok(
+      !!aceptar.nuevo && aceptar.permisos === 2,
+      `la responsable la acepta y se apuntan los dos permisos que dio la madre (${aceptar.permisos})`,
+    );
+    ok(aceptar.loVeLaMadre === 2, `despues, la madre ve a sus dos hijos (${aceptar.loVeLaMadre})`);
+
+    const porOtro = await yDeshacer(u.madre, (tx) =>
+      intento(tx, (sp) =>
+        sp.execute(dsql`
+          insert into ninos_solicitudes
+            (iglesia_id, ministerio_id, miembro_id, nombre, anio_nacimiento, parentesco, version_texto)
+          values (${B}, ${N}, ${f.madre2}, 'Otro', ${anio - 4}, 'madre', 'ninos-2026-11')
+        `),
+      ),
+    );
+    ok(
+      porOtro.includes('row-level security'),
+      `nadie pide el vinculo en nombre de otro adulto (${porOtro.includes('row-level security') ? 'RLS' : porOtro.slice(0, 60) || 'paso'})`,
+    );
+
+    const mayor = await yDeshacer(u.madre, (tx) =>
+      intento(tx, (sp) =>
+        sp.execute(dsql`
+          insert into ninos_solicitudes
+            (iglesia_id, ministerio_id, miembro_id, nombre, anio_nacimiento, parentesco, version_texto)
+          values (${B}, ${N}, ${f.madre}, 'Mayor', ${anio - 15}, 'madre', 'ninos-2026-11')
+        `),
+      ),
+    );
+    ok(
+      mayor.includes('HT142'),
+      `no se pide el vinculo para un nino de 14 o mas (${mayor.includes('HT142') ? 'HT142' : mayor.slice(0, 60) || 'paso'})`,
+    );
+
+    // --- Los permisos -------------------------------------------------------
+
+    const permisos = await yDeshacer(u.madre, async (tx) => {
+      const nombre = filas(
+        await tx.execute(dsql`update ninos set nombre = 'Cambiado' where id = ${demo.ids.tomas} returning id`),
+      ).length;
+      const version = await intento(tx, (sp) =>
+        sp.execute(dsql`update nino_consentimientos set version_texto = 'ninos-2027-01' where nino_id = ${demo.ids.tomas}`),
+      );
+      const retirado = filas(
+        await tx.execute(dsql`
+          update nino_consentimientos set revocado_at = now()
+           where nino_id = ${demo.ids.tomas} and tipo = 'imagen' and revocado_at is null
+          returning id
+        `),
+      ).length;
+      const vuelve = await intento(tx, (sp) =>
+        sp.execute(dsql`
+          update nino_consentimientos set revocado_at = null
+           where nino_id = ${demo.ids.tomas} and tipo = 'imagen'
+        `),
+      );
+      return { nombre, version, retirado, vuelve };
+    });
+    ok(permisos.nombre === 0, `la madre no cambia el nombre de su hijo (${permisos.nombre} filas)`);
+    ok(
+      permisos.version.includes('42501'),
+      `de un permiso no se toca mas que la retirada (${permisos.version.includes('42501') ? '42501' : permisos.version.slice(0, 60) || 'paso'})`,
+    );
+    ok(permisos.retirado === 1, `la madre retira el permiso de fotos (${permisos.retirado})`);
+    ok(
+      permisos.vuelve.includes('HT143'),
+      `un permiso retirado no vuelve (${permisos.vuelve.includes('HT143') ? 'HT143' : permisos.vuelve.slice(0, 60) || 'paso'})`,
+    );
+
+    const ajeno = await yDeshacer(u.madre2, async (tx) => {
+      const retirar = filas(
+        await tx.execute(dsql`
+          update nino_consentimientos set revocado_at = now()
+           where nino_id = ${demo.ids.tomas} returning id
+        `),
+      ).length;
+      const dar = await intento(tx, (sp) =>
+        sp.execute(dsql`
+          insert into nino_consentimientos
+            (iglesia_id, ministerio_id, nino_id, miembro_id, tipo, version_texto)
+          values (${B}, ${N}, ${demo.ids.tomas}, ${f.madre2}, 'imagen', 'ninos-2026-11')
+        `),
+      );
+      return { retirar, dar };
+    });
+    ok(ajeno.retirar === 0, `otra madre no retira los permisos de un nino ajeno (${ajeno.retirar})`);
+    // Lo paran dos barreras: HT142 (no está vinculada) y la policy. El trigger
+    // BEFORE corre antes que el `with check`, así que suele saltar el primero;
+    // cualquiera de las dos vale, y la línea dice cuál.
+    const daAjeno = ajeno.dar.includes('HT142')
+      ? 'HT142'
+      : ajeno.dar.includes('row-level security')
+        ? 'RLS'
+        : '';
+    ok(
+      daAjeno !== '',
+      `otra madre no da permisos sobre un nino ajeno (${daAjeno || ajeno.dar.slice(0, 60) || 'paso'})`,
+    );
+
+    // --- El drive y el tablon -----------------------------------------------
+
+    const rutaAjena = await yDeshacer(u.maestra, (tx) =>
+      intento(tx, (sp) =>
+        sp.execute(dsql`
+          insert into ninos_archivos (iglesia_id, ministerio_id, tipo, ruta, bytes, fecha)
+          values (${B}, ${N}, 'foto', ${`${demo.sion.id}/${N}/x.webp`}, 1000, current_date)
+        `),
+      ),
+    );
+    ok(
+      rutaAjena.includes('HT142'),
+      `un archivo no apunta a la carpeta de otra iglesia (${rutaAjena.includes('HT142') ? 'HT142' : rutaAjena.slice(0, 60) || 'paso'})`,
+    );
+
+    const alargar = await yDeshacer(u.maestra, (tx) =>
+      intento(tx, (sp) =>
+        sp.execute(dsql`
+          update ninos_publicaciones set fecha = current_date + 30 where id = ${demo.ids.pubNueva}
+        `),
+      ),
+    );
+    ok(
+      alargar.includes('HT143'),
+      `una publicacion ya publicada no cambia de fecha (${alargar.includes('HT143') ? 'HT143' : alargar.slice(0, 60) || 'paso'})`,
+    );
+
+    // --- Desvincular --------------------------------------------------------
+
+    const quitar = await yDeshacer(u.auxiliar, async (tx) => {
+      const laColider = filas(
+        await tx.execute(dsql`delete from nino_familias where nino_id = ${demo.ids.lia} returning nino_id`),
+      ).length;
+      await como(tx, u.madre2);
+      const laMadre = filas(
+        await tx.execute(dsql`delete from nino_familias where miembro_id = ${f.madre2} returning nino_id`),
+      ).length;
+      await como(tx, u.maestra);
+      const queda = Number(
+        primera(await tx.execute(dsql`select count(*)::text as n from ninos where id = ${demo.ids.lia}`))?.n ?? -1,
+      );
+      return { laColider, laMadre, queda };
+    });
+    ok(quitar.laColider === 0, `la colider no quita a una familia (${quitar.laColider})`);
+    ok(
+      quitar.laMadre === 1 && quitar.queda === 0,
+      `la madre se desvincula y, sin nadie mas de su familia, su hija se borra (${quitar.queda} queda)`,
+    );
+
+    // --- Lo de fuera --------------------------------------------------------
+
+    const tablas = [
+      'ninos_solicitudes', 'ninos', 'nino_familias', 'nino_consentimientos',
+      'ninos_cronograma', 'ninos_publicaciones', 'ninos_archivos',
+    ];
+    const abiertas = filas(
+      await dbAdmin.execute(dsql`
+        select relname::text as tabla
+          from pg_class c join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public' and c.relname in ${tablas}
+           and (has_table_privilege('anon', c.oid, 'SELECT,INSERT,UPDATE,DELETE')
+                or has_table_privilege('authenticated', c.oid, 'SELECT,INSERT,UPDATE,DELETE'))
+      `),
+    ).map((fila) => fila.tabla);
+    ok(abiertas.length === 0, `anon y authenticated no llegan a ninguna tabla de Ninos (${abiertas.join(', ') || 'ninguna'})`);
+
+    const funciones = [
+      'public.es_responsable_de(uuid)', 'public.es_familia_de(uuid)', 'public.familia_desde(uuid)',
+      'public.aceptar_solicitud_nino(uuid,uuid)',
+    ];
+    const ejecutables = filas(
+      await dbAdmin.execute(dsql`
+        select f::text as funcion
+          from unnest(array[${dsql.join(funciones.map((fn) => dsql`${fn}`), dsql`, `)}]::text[]) as f
+         where has_function_privilege('anon', f, 'EXECUTE')
+            or has_function_privilege('authenticated', f, 'EXECUTE')
+            or not has_function_privilege('hatril_app', f, 'EXECUTE')
+      `),
+    ).map((fila) => fila.funcion);
+    ok(
+      ejecutables.length === 0,
+      `las funciones de Ninos solo las ejecuta hatril_app (${ejecutables.join(', ') || 'bien'})`,
+    );
+
+    const buckets = primera(
+      await dbAdmin.execute(dsql`
+        select
+          (select count(*) from storage.buckets where id in ('ninos-fotos', 'ninos-videos') and public = false)::text as privados,
+          (select count(*) from pg_policies where schemaname = 'storage' and tablename = 'objects'
+             and (coalesce(qual, '') || coalesce(with_check, '')) like '%ninos-%')::text as policies
+      `),
+    );
+    ok(
+      buckets?.privados === '2' && buckets?.policies === '0',
+      `los dos buckets de Ninos son privados y sin policies (${buckets?.privados} privados, ${buckets?.policies} policies)`,
+    );
+  } catch (err) {
+    lineas.push(`  FALLO ninos con la iglesia de prueba: ${mensaje(err).trim().slice(0, 120)}`);
   }
 
   return lineas;

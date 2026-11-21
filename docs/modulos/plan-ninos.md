@@ -2,8 +2,26 @@
 
 20 de noviembre de 2026. **Aprobado por Marlon el 20-nov-2026, con las doce
 decisiones del final tal como están.** La 2 (sin clases en la v1) depende de
-que la profesora tenga una o dos clases: falta preguntárselo. No hay nada
-construido.
+que la profesora tenga una o dos clases: falta preguntárselo.
+
+**Estado, 21-nov.** Marlon: «Sí, arráncalo». Confirmó la 2 (una o dos clases:
+v1 sin clases) y la 10 (versión propia `ninos-2026-11`).
+
+- **N0 hecha**: los textos, en `ninos-textos.md`, para el abogado. No están en
+  el código ni en `/privacidad`.
+- **N1 hecha**: `0059` (siete tablas) y `0060` (RLS, funciones, triggers
+  HT142-HT144 y los buckets `ninos-fotos` y `ninos-videos`), aplicadas.
+  `test:aislamiento` en verde con 36 comprobaciones nuevas de Niños sobre la
+  demo de usar y tirar (`maestra`, `auxiliar`, `madre` y `madre2` en
+  `scripts/pruebas/demo.mjs`). `get_advisors` no se pudo pasar (el conector de
+  Supabase no tiene permiso); sus comprobaciones de seguridad, repetidas por
+  SQL, salen limpias.
+- **Cambio sobre §7**: el módulo `ninos` NO se declara todavía en
+  `modulos.ts`. La regla de ese fichero es que solo está lo que se puede
+  pulsar, y sin pantallas sería un interruptor que abre una pestaña vacía. Se
+  declara con la N2.
+- **Pendiente de Marlon**: mirar en Supabase (Storage → Settings) el «Global
+  file size limit». Si es menor de 100 MB, los vídeos se cortan ahí.
 
 Lo pidió la líder del ministerio de niños de Cuerpo de Cristo, contado por
 Marlon el 20-nov: un tablón para los padres, un cronograma para los maestros,

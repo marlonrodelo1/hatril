@@ -223,3 +223,37 @@ export const estadoDenunciaEnum = pgEnum('estado_denuncia_enum', [
   'pendiente',
   'descartada',
 ]);
+
+/**
+ * Qué es del niño quien pide verlo, en el ministerio de Niños.
+ *
+ * Tres y no texto libre: «tía» o «vecina que lo trae» no pueden pedir el
+ * vínculo. Por debajo de 14 años consiente quien tiene la patria potestad o la
+ * tutela (LOPDGDD art. 7.2), y en Colombia su representante legal (Decreto
+ * 1377 art. 12). Nadie más.
+ */
+export const parentescoNinoEnum = pgEnum('parentesco_nino_enum', [
+  'madre',
+  'padre',
+  'tutor_legal',
+]);
+
+export type ParentescoNino = (typeof parentescoNinoEnum.enumValues)[number];
+
+/**
+ * Los dos permisos de una familia sobre su hijo, cada uno su fila.
+ *
+ * `vinculo` es el que deja ver lo del ministerio y guardar el nombre y el año;
+ * `imagen`, el de salir en fotos y vídeos, aparte y opcional: no darlo no
+ * impide el vínculo (RGPD art. 7.4). No van a `tipo_consentimiento_enum`
+ * porque aquel lo da cada persona sobre sí misma, y este lo da un adulto sobre
+ * un menor (`nino_consentimientos`).
+ */
+export const permisoNinoEnum = pgEnum('permiso_nino_enum', ['vinculo', 'imagen']);
+
+export type PermisoNino = (typeof permisoNinoEnum.enumValues)[number];
+
+/** Lo que hay en el drive del ministerio de Niños. Cada uno, su bucket. */
+export const tipoArchivoNinoEnum = pgEnum('tipo_archivo_nino_enum', ['foto', 'video']);
+
+export type TipoArchivoNino = (typeof tipoArchivoNinoEnum.enumValues)[number];

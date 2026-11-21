@@ -33,6 +33,10 @@
  *     miembro       miembro raso, voluntaria de Alabanza
  *     enlace        miembro raso, voluntario de Acción social
  *     visita        sin iglesia: su solicitud está pendiente en Betel
+ *     maestra       rol miembro, responsable de Niños: acepta a las familias
+ *     auxiliar      rol miembro, colíder de Niños: maestro, NO acepta familias
+ *     madre         madre de Tomás, aceptada hace diez días, con permiso de fotos
+ *     madre2        madre de Lía, aceptada hoy, sin permiso de fotos
  *   Sion (la otra): sin publicar, con la suscripción bloqueada.
  *     sion          su pastor
  *
@@ -41,7 +45,10 @@
  * ensayo, turno con gente y una canción; Consolidación con una persona en
  * seguimiento; Acción social con un hogar en el padrón y un fondo vinculado;
  * la Radio con la emisora encendida; un culto con asistencia; un evento con un
- * inscrito, y un movimiento de caja.
+ * inscrito, y un movimiento de caja. Y Niños con dos niños de dos familias, una
+ * clase en el cronograma, tres publicaciones (una de antes de que llegara la
+ * madre, una publicada después y un borrador) y tres archivos (uno publicado,
+ * uno sin publicación y uno sin confirmar).
  *
  * LO QUE DURA PUBLICADA
  * ---------------------
@@ -86,6 +93,11 @@ const ORDEN_BORRADO = [
   'movimientos', 'arqueos', 'cajas', 'fondos',
   'grupo_guias', 'grupo_miembros', 'grupo_semanas', 'grupos',
   'reparto_entregas', 'reparto_beneficiarios', 'reparto_jornadas',
+  // Niños: los archivos antes que sus publicaciones, y los permisos y los
+  // vínculos antes que el niño. Borrar el último vínculo borra al niño solo
+  // (`0060`), así que `ninos` suele llegar ya vacía.
+  'ninos_archivos', 'ninos_publicaciones', 'ninos_cronograma',
+  'nino_consentimientos', 'nino_familias', 'ninos', 'ninos_solicitudes',
   'seguimiento_asignaciones', 'seguimiento_contactos',
   'solicitud_invitaciones', 'solicitudes_ingreso',
   'ministerio_miembros', 'devocionales', 'consentimientos', 'cuentas_stripe',
@@ -93,7 +105,10 @@ const ORDEN_BORRADO = [
 ];
 
 /** Los papeles; cada uno es una cuenta `<papel>.<run>@pruebas.hatril.test`. */
-const CUENTAS = ['pastor', 'secretaria', 'lider', 'colider', 'consolidacion', 'miembro', 'enlace', 'visita', 'sion'];
+const CUENTAS = [
+  'pastor', 'secretaria', 'lider', 'colider', 'consolidacion', 'miembro', 'enlace', 'visita', 'sion',
+  'maestra', 'auxiliar', 'madre', 'madre2',
+];
 
 function conectar() {
   if (!process.env.DATABASE_URL) throw new Error('Falta DATABASE_URL (va en .env.local).');
@@ -252,6 +267,10 @@ export async function montarDemo({ cuentas = true, publicada = true } = {}) {
         consolidacion: await ficha(B, { nombre: 'Noemí', apellidos: 'Arango Pérez', telefono: '+573147773456', auth_user_id: usuarios.consolidacion }),
         miembro: await ficha(B, { nombre: 'Lucía', apellidos: 'Ramírez Soto', telefono: '+573158884567', auth_user_id: usuarios.miembro }),
         enlace: await ficha(B, { nombre: 'Andrés', apellidos: 'Duque Rendón', telefono: '+573169995678', auth_user_id: usuarios.enlace }),
+        maestra: await ficha(B, { nombre: 'Gloria', apellidos: 'Peña Salcedo', telefono: '+573191231234', auth_user_id: usuarios.maestra }),
+        auxiliar: await ficha(B, { nombre: 'Iván', apellidos: 'Torres Lema', telefono: '+573192342345', auth_user_id: usuarios.auxiliar }),
+        madre: await ficha(B, { nombre: 'Paula', apellidos: 'Vargas Ríos', telefono: '+573193453456', auth_user_id: usuarios.madre }),
+        madre2: await ficha(B, { nombre: 'Elena', apellidos: 'Suárez Mora', telefono: '+573194564567', auth_user_id: usuarios.madre2 }),
         // Sin cuenta. Carmen es «la ficha»: la que más datos protegidos tiene,
         // de alguien que no hace la prueba.
         marcel: await ficha(B, { nombre: 'Marcel', apellidos: 'Zapata Gil', telefono: '+573171116789' }),
@@ -277,6 +296,10 @@ export async function montarDemo({ cuentas = true, publicada = true } = {}) {
       await membresia(B, 'miembro', { rol: 'miembro', miembro_id: f.miembro });
       await membresia(B, 'enlace', { rol: 'miembro', miembro_id: f.enlace });
       await membresia(B, 'visita', { rol: 'miembro', estado: 'pendiente', miembro_id: null });
+      await membresia(B, 'maestra', { rol: 'miembro', miembro_id: f.maestra });
+      await membresia(B, 'auxiliar', { rol: 'miembro', miembro_id: f.auxiliar });
+      await membresia(B, 'madre', { rol: 'miembro', miembro_id: f.madre });
+      await membresia(B, 'madre2', { rol: 'miembro', miembro_id: f.madre2 });
       await membresia(sion.id, 'sion', { rol: 'pastor', miembro_id: f.sion });
       await tx`insert into solicitudes_ingreso ${tx({ iglesia_id: B, auth_user_id: usuarios.visita, nombre: 'Valentina Visita' })}`;
 
@@ -306,6 +329,11 @@ export async function montarDemo({ cuentas = true, publicada = true } = {}) {
           repertorio: { activo: false },
           seguimiento: { activo: false },
         }),
+        // `ninos` todavía no está en `modulos.ts` (se declara cuando haya
+        // pantalla, fase N2); el jsonb ya lo admite.
+        ninos: await ministerio('Niños', 'ninos', {
+          agenda: { activo: true }, turnos: { activo: false }, ninos: { activo: true },
+        }),
       };
 
       const equipo = (min, miembro, rol_equipo) =>
@@ -318,6 +346,8 @@ export async function montarDemo({ cuentas = true, publicada = true } = {}) {
       await equipo(m.accionSocial, f.colider, 'colider');
       await equipo(m.accionSocial, f.enlace, 'voluntario');
       await equipo(m.radio, f.colider, 'colider');
+      await equipo(m.ninos, f.maestra, 'responsable');
+      await equipo(m.ninos, f.auxiliar, 'colider');
 
       const uno = async (tabla, datos) =>
         (await tx`insert into ${tx(tabla)} ${tx({ iglesia_id: B, ...datos })} returning id`)[0].id;
@@ -362,6 +392,54 @@ export async function montarDemo({ cuentas = true, publicada = true } = {}) {
         concepto: 'Ofrenda del culto dominical', fondo_id: fondoGeneral, caja_id: caja,
       });
 
+      // Niños. Directo y no por `aceptar_solicitud_nino()`: aquí no hay sesión,
+      // y lo que se prueba después es quién ve qué, no cómo se acepta.
+      const N = m.ninos;
+      const anio = new Date().getUTCFullYear();
+      const tomas = await uno('ninos', { ministerio_id: N, nombre: 'Tomás', anio_nacimiento: anio - 7 });
+      const lia = await uno('ninos', { ministerio_id: N, nombre: 'Lía', anio_nacimiento: anio - 5 });
+      const hace = (dias) => new Date(Date.now() - dias * 86_400_000);
+      await tx`insert into nino_familias ${tx({
+        iglesia_id: B, ministerio_id: N, nino_id: tomas, miembro_id: f.madre, parentesco: 'madre',
+        aceptado_at: hace(10), aceptado_por_miembro_id: f.maestra,
+      })}`;
+      await tx`insert into nino_familias ${tx({
+        iglesia_id: B, ministerio_id: N, nino_id: lia, miembro_id: f.madre2, parentesco: 'madre',
+        aceptado_por_miembro_id: f.maestra,
+      })}`;
+      for (const [nino, madre, tipo] of [[tomas, f.madre, 'vinculo'], [tomas, f.madre, 'imagen'], [lia, f.madre2, 'vinculo']]) {
+        await uno('nino_consentimientos', {
+          ministerio_id: N, nino_id: nino, miembro_id: madre, tipo, version_texto: 'ninos-2026-11',
+          otorgado_at: hace(10), ip: '203.0.113.7', user_agent: 'prueba',
+        });
+      }
+      await uno('ninos_cronograma', {
+        ministerio_id: N, fecha: dia(3), tema: 'David y Goliat', puntos: 'Valentía. Versículo: 1 Samuel 17:45',
+        maestro_miembro_id: f.auxiliar, creado_por_miembro_id: f.maestra,
+      });
+      const pubVieja = await uno('ninos_publicaciones', {
+        ministerio_id: N, fecha: dia(-20), texto: 'Hicimos un mural', autor_miembro_id: f.maestra, publicada_at: hace(20),
+      });
+      const pubNueva = await uno('ninos_publicaciones', {
+        ministerio_id: N, fecha: dia(-2), texto: 'Cantamos y pintamos el arca', autor_miembro_id: f.maestra, publicada_at: hace(2),
+      });
+      const pubBorrador = await uno('ninos_publicaciones', {
+        ministerio_id: N, fecha: dia(0), texto: 'Borrador de hoy', autor_miembro_id: f.auxiliar,
+      });
+      const ruta = (n) => `${B}/${N}/${dia(-2)}/${n}.webp`;
+      const archivoPublicado = await uno('ninos_archivos', {
+        ministerio_id: N, tipo: 'foto', ruta: ruta('a'), bytes: 400000, fecha: dia(-2),
+        publicacion_id: pubNueva, subido_por_miembro_id: f.maestra, confirmado_at: hace(2),
+      });
+      const archivoSuelto = await uno('ninos_archivos', {
+        ministerio_id: N, tipo: 'foto', ruta: ruta('b'), bytes: 410000, fecha: dia(-2),
+        subido_por_miembro_id: f.maestra, confirmado_at: hace(2),
+      });
+      const archivoSinConfirmar = await uno('ninos_archivos', {
+        ministerio_id: N, tipo: 'foto', ruta: ruta('c'), bytes: 420000, fecha: dia(-2),
+        publicacion_id: pubNueva, subido_por_miembro_id: f.maestra,
+      });
+
       const evento = await uno('eventos', {
         titulo: 'Retiro de matrimonios', inicio_en: new Date(Date.now() + 20 * 86_400_000), lugar: 'Finca La Esperanza',
       });
@@ -384,6 +462,15 @@ export async function montarDemo({ cuentas = true, publicada = true } = {}) {
           consolidacion: m.consolidacion,
           accionSocial: m.accionSocial,
           radio: m.radio,
+          ninos: m.ninos,
+          tomas,
+          lia,
+          pubVieja,
+          pubNueva,
+          pubBorrador,
+          archivoPublicado,
+          archivoSuelto,
+          archivoSinConfirmar,
           reunionAlabanza,
           reunionCongregacion,
           turnoAlabanza,
