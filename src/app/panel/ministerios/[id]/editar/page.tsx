@@ -61,6 +61,7 @@ export default async function EditarMinisterioPage({
           ministerio={ministerio}
           error={error}
           puedeCambiarHerramientas={gobierna}
+          compromisoNinos={{ esPastor: esPastor(ctx), iglesia: ctx.iglesia.nombre }}
         />
 
         {gobierna && (

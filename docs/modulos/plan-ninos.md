@@ -16,12 +16,32 @@ v1 sin clases) y la 10 (versión propia `ninos-2026-11`).
   `scripts/pruebas/demo.mjs`). `get_advisors` no se pudo pasar (el conector de
   Supabase no tiene permiso); sus comprobaciones de seguridad, repetidas por
   SQL, salen limpias.
-- **Cambio sobre §7**: el módulo `ninos` NO se declara todavía en
-  `modulos.ts`. La regla de ese fichero es que solo está lo que se puede
-  pulsar, y sin pantallas sería un interruptor que abre una pestaña vacía. Se
-  declara con la N2.
+- **N2 hecha**, sin migración: el módulo «Tablón de familias» en
+  `modulos.ts`, y `/panel/ministerios/[id]/ninos` con Tablón (borrador →
+  fotos del drive → publicar, con la casilla de «he mirado las fotos»),
+  Cronograma, Drive (el teléfono reduce las fotos a WebP y sube con una URL
+  firmada de un solo uso; los vídeos, de un minuto y 100 MB) y Familias
+  (aceptar, «es el mismo que…», rechazar, quitar). Lo enciende el pastor
+  marcando el compromiso, que se guarda en `modulos.ninos.compromiso`. En un
+  ministerio con el tablón, los colíderes y la responsable tienen que tener
+  cuenta. Probado en el navegador con una iglesia de prueba, a 375 px, cada
+  botón; `test:puertas` 77 rutas y 483 combinaciones sin fallos, con la
+  maestra, la auxiliar y la madre; `test:aislamiento` en verde. Y un
+  adaptador mínimo para la portada del equipo (`lib/ninos/en-la-app.ts`, con
+  `visiblePara` estrecho): sin él, la tarjeta de respaldo le saldría a
+  secretaría y le rebotaría. Lleva al panel; lo de la app de verdad es la N5.
+- **Cambio sobre §7**: el tablón NO va en la plantilla del tipo «Niños»
+  (`tipos.ts`). Compromete a la iglesia, así que no se enciende solo al crear
+  el ministerio: lo enciende el pastor desde «Editar», con el compromiso.
 - **Pendiente de Marlon**: mirar en Supabase (Storage → Settings) el «Global
   file size limit». Si es menor de 100 MB, los vídeos se cortan ahí.
+- **Antes de desplegar la N2**: con ella en hatril.com, el pastor de Cuerpo de
+  Cristo podría encender el tablón y los maestros subir fotos de niños de
+  verdad antes de que el abogado revise los textos. Desplegar cuando esté la
+  revisión, o desplegar y no encenderlo.
+- **Lo siguiente**: N3 (el cron del año, el aviso de 30 días y el ZIP por
+  mes). Mientras no esté, nada se borra solo: la fecha de borrado que enseña
+  la pantalla es una promesa sin cron detrás.
 
 Lo pidió la líder del ministerio de niños de Cuerpo de Cristo, contado por
 Marlon el 20-nov: un tablón para los padres, un cronograma para los maestros,

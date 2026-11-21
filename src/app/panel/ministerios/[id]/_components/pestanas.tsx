@@ -64,6 +64,9 @@ export function PestanasMinisterio({
     ? modulosActivos(ministerio.modulos).filter((m) => {
         if (m.id === 'seguimiento') return veSeguimiento;
         if (m.id === 'reparto') return dentro;
+        // `requireNinos`: la misma puerta que el reparto, y por lo mismo. La RLS
+        // de los niños (`0060`) es por relación, y secretaría no está en ella.
+        if (m.id === 'ninos') return dentro;
         return true;
       })
     : [];

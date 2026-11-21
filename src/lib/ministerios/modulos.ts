@@ -1,4 +1,5 @@
 import {
+  Baby,
   CalendarCheck,
   CalendarClock,
   HeartHandshake,
@@ -36,7 +37,7 @@ import { z } from 'zod';
  *
  * SOLO ESTÁ LO QUE FUNCIONA
  * -------------------------
- * Seis módulos, y son los seis que existen de verdad. Material del equipo,
+ * Siete módulos, y son los siete que existen de verdad. Material del equipo,
  * inventario, vínculo con las familias y peticiones de oración están decididos
  * y NO se declaran aquí hasta que se puedan pulsar. Un interruptor que enciende
  * una pestaña vacía hace parecer roto un producto que funciona — la misma regla
@@ -116,6 +117,28 @@ export const MODULOS_MINISTERIO = [
     descripcion:
       'La señal de la emisora y su programación. La congregación la escucha desde la aplicación, y en la web si lo decides tú.',
     Icono: Radio,
+  },
+  {
+    /*
+     * El ministerio de Niños: el tablón que ven los padres en la app, el
+     * cronograma de los maestros y el drive de fotos y vídeos que se vacía al
+     * año. El plan, en `docs/modulos/plan-ninos.md`.
+     *
+     * NO VA EN LA PLANTILLA DEL TIPO «NIÑOS» (`tipos.ts`), a propósito. Es el
+     * único módulo que compromete a la iglesia —comprobar en persona a cada
+     * padre, el certificado negativo de los maestros en España—, así que no se
+     * enciende solo al crear el ministerio: lo enciende el pastor, a mano y
+     * marcando el compromiso (`editarMinisterio`). La configuración guarda
+     * quién lo marcó, cuándo y con qué texto.
+     *
+     * Su RLS es por RELACIÓN padre–hijo (`0060`), y en el panel la puerta es
+     * `desdeDentro`, como el reparto: secretaría no está en el equipo.
+     */
+    id: 'ninos',
+    nombre: 'Tablón de familias',
+    descripcion:
+      'Lo que hacen los niños cada día, con fotos, para sus familias en la app. El cronograma de las clases y las fotos del ministerio, que se borran al año.',
+    Icono: Baby,
   },
 ] as const satisfies readonly ModuloDeclarado[];
 

@@ -162,7 +162,17 @@ export type GuardHatril =
   /** Quien denuncia, o lo denunciado, no son de esta iglesia (`0053`). */
   | 'HT136'
   /** Una de las dos personas de un bloqueo no es de esta iglesia (`0053`). */
-  | 'HT137';
+  | 'HT137'
+  /**
+   * Niños: una fila apunta a un ministerio, un niño, una ficha o una ruta de
+   * otra iglesia, el niño tiene más de 13 años, o da permisos quien no está
+   * vinculado (`0060`).
+   */
+  | 'HT142'
+  /** Niños: algo que no se reescribe —un permiso, una fecha publicada— (`0060`). */
+  | 'HT143'
+  /** Niños: aceptar una familia sin ser la responsable ni el pastor, o una petición que ya no existe (`0060`). */
+  | 'HT144';
 
 /**
  * ¿Es este error uno de nuestros triggers guard?

@@ -203,3 +203,38 @@ export const VERSION_CONSENTIMIENTO_REPARTO = 'reparto-2026-10';
 
 export const TEXTO_CONSENTIMIENTO_IMAGEN =
   'Autorizo que mi foto aparezca en el directorio interno de la congregación.';
+
+/**
+ * Versión de los textos del ministerio de Niños: el compromiso del pastor al
+ * encenderlo y, con la app (fase N4), las casillas de las familias.
+ *
+ * Aparte de `VERSION_POLITICA_PRIVACIDAD` por lo mismo que la del evento y la
+ * del reparto: un cambio en lo de los niños no tiene que mandar a toda la
+ * congregación a `/acepta`. Lo decidió Marlon el 21-nov. La base exige la
+ * forma `^ninos-[0-9]{4}-[0-9]{2}$` (`0059`).
+ *
+ * Los textos salen de `docs/modulos/ninos-textos.md`, que está pendiente de la
+ * revisión de un abogado. Si cambian, sube esto.
+ */
+export const VERSION_TEXTOS_NINOS = 'ninos-2026-11';
+
+/**
+ * Lo que firma el pastor al encender el tablón de familias. Se guarda en
+ * `ministerios.modulos.ninos.compromiso` con quién, cuándo y esta versión.
+ *
+ * Es la iglesia, responsable del tratamiento, la que se compromete: Hatril no
+ * puede comprobar quién es padre de quién, ni guarda el certificado negativo
+ * de nadie (RGPD art. 10). Lo que sí hace es no dejar encender la herramienta
+ * sin que alguien con nombre lo haya leído.
+ */
+export const TEXTO_COMPROMISO_NINOS = (iglesia: string) => ({
+  entrada: `Al encender esta herramienta, ${iglesia}, que es la responsable de estos datos, se compromete a:`,
+  puntos: [
+    'Comprobar en persona que quien pide ver lo de un niño es su madre, su padre o su tutor, antes de aceptarle.',
+    'En España, pedir a quienes dan clase el certificado negativo del Registro Central de Delincuentes Sexuales (Ley Orgánica 8/2021, artículos 57 y 59), también si son voluntarios. Hatril no guarda ese certificado.',
+    'No sacar de Hatril las fotos de los niños para publicarlas en redes, en la web o en grupos de mensajería sin el permiso de sus familias.',
+    'Guardar con el mismo cuidado lo que descargue al exportar el drive.',
+  ],
+  nota: 'Tratar datos e imágenes de menores puede obligar a la iglesia a hacer una evaluación de impacto. Si tienes dudas, consúltalo antes de encenderla.',
+  casilla: 'He leído el compromiso y lo acepto en nombre de la iglesia.',
+});

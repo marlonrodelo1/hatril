@@ -138,6 +138,10 @@ let CONSOLIDACION; // miembro con ver_seguimiento, responsable de Consolidación
 let MIEMBRO; // miembro raso: voluntario en Alabanza, sin panel
 let ENLACE; // miembro raso: voluntario en Acción social, sin panel
 let SION; // pastor de OTRA iglesia, con la suscripción bloqueada
+// Solo en las rutas de Niños: en las demás no tienen caso y no se piden.
+let MAESTRA; // miembro, responsable de Niños: acepta familias
+let AUXILIAR; // miembro, colíder de Niños: maestro, no acepta familias
+let MADRE; // miembro raso, madre aceptada de un niño: el tablón lo ve en la app, no aquí
 
 let CUENTAS = [];
 let IMPRESCINDIBLES = [];
@@ -210,6 +214,18 @@ async function leerDemo(B) {
         fondoAccionSocial: await uno(sql`
           select id from fondos
            where ministerio_id = ${min['Acción social']} and activo limit 1`),
+        // Niños, con el tablón de familias encendido, y una publicación y una
+        // clase del cronograma para sus páginas de detalle.
+        ninos: await uno(sql`
+          select id from ministerios
+           where iglesia_id = ${B} and tipo = 'ninos'
+             and coalesce((modulos -> 'ninos' ->> 'activo')::boolean, false)
+           order by orden, nombre limit 1`),
+        publicacionNinos: await uno(sql`
+          select id from ninos_publicaciones where iglesia_id = ${B}
+           order by (publicada_at is not null) desc, fecha desc limit 1`),
+        claseNinos: await uno(sql`
+          select id from ninos_cronograma where iglesia_id = ${B} order by fecha limit 1`),
         evento: await uno(sql`
           select e.id from eventos e left join evento_inscripciones i on i.evento_id = e.id
            where e.iglesia_id = ${B}
@@ -287,6 +303,19 @@ async function leerDemo(B) {
         select nombre from fondos where iglesia_id = ${B}
         union select nombre from cajas where iglesia_id = ${B}`) {
         anadir(f.nombre, 'fondo o caja');
+      }
+      // Niños: nombres de niños, lo que se cuenta en el tablón y el cronograma.
+      for (const n of await sql`
+        select nombre from ninos where iglesia_id = ${B}
+        union select nombre from ninos_solicitudes where iglesia_id = ${B}`) {
+        anadir(n.nombre, 'niño');
+      }
+      for (const c of await sql`select tema, puntos from ninos_cronograma where iglesia_id = ${B}`) {
+        anadir(c.tema, 'clase de niños');
+        anadir(c.puntos, 'clase de niños');
+      }
+      for (const t of await sql`select texto from ninos_publicaciones where iglesia_id = ${B}`) {
+        anadir(t.texto, 'tablón de niños');
       }
 
       // Sin repetidos: dos personas con los mismos apellidos son un testigo.
@@ -666,6 +695,41 @@ function rutas(ids) {
     },
   );
 
+  // --- Niños: el tablón de familias, desde dentro como el reparto ---
+  // La responsable y la colíder de Niños lo abren; secretaría (con
+  // `gestionar_ministerios`), los líderes de otros equipos y Sara, colíder de
+  // OTROS ministerios, rebotan. La madre no tiene panel: lo suyo va en la app.
+  if (ids.ninos) {
+    const NINOS = {
+      [MAESTRA]: 'pinta',
+      [AUXILIAR]: 'pinta',
+      [COLIDER]: 'min',
+      [LIDER]: 'min',
+      [SECRETARIA]: 'min',
+      [CONSOLIDACION]: 'min',
+      [ENLACE]: '/mi',
+      [MADRE]: '/mi',
+    };
+    const N = `${M}/${ids.ninos}/ninos`;
+    pagina('…<Niños>/ninos', N, 'panel/ministerios/[id]/ninos/page.tsx', NINOS);
+    pagina('…<Niños>/ninos/cronograma', `${N}/cronograma`, 'panel/ministerios/[id]/ninos/cronograma/page.tsx', NINOS);
+    if (ids.claseNinos) {
+      pagina('…<Niños>/ninos/cronograma/<clase>', `${N}/cronograma/${ids.claseNinos}`, 'panel/ministerios/[id]/ninos/cronograma/[entradaId]/page.tsx', NINOS);
+    }
+    pagina('…<Niños>/ninos/drive', `${N}/drive`, 'panel/ministerios/[id]/ninos/drive/page.tsx', NINOS);
+    pagina('…<Niños>/ninos/familias', `${N}/familias`, 'panel/ministerios/[id]/ninos/familias/page.tsx', NINOS);
+    if (ids.publicacionNinos) {
+      pagina('…<Niños>/ninos/publicacion/<publicación>', `${N}/publicacion/${ids.publicacionNinos}`, 'panel/ministerios/[id]/ninos/publicacion/[publicacionId]/page.tsx', NINOS);
+    }
+  }
+  // El tablón está APAGADO en Alabanza: quien la lleva llega al 404.
+  pagina('…<Alabanza>/ninos (apagado)', `${A}/ninos`, 'panel/ministerios/[id]/ninos/page.tsx', {
+    [PASTOR]: '404',
+    [LIDER]: '404',
+    [COLIDER]: 'min',
+    [SECRETARIA]: 'min',
+  });
+
   // Turnos está APAGADO en Acción social: ni el pastor ni el colíder la tienen.
   pagina('…<Acción social>/turnos (apagado)', `${S}/turnos`, 'panel/ministerios/[id]/turnos/page.tsx', {
     [PASTOR]: '404',
@@ -957,8 +1021,11 @@ async function probar(demo) {
     miembro: MIEMBRO,
     enlace: ENLACE,
     sion: SION,
+    maestra: MAESTRA,
+    auxiliar: AUXILIAR,
+    madre: MADRE,
   } = demo.cuentas);
-  CUENTAS = [PASTOR, SECRETARIA, LIDER, COLIDER, CONSOLIDACION, MIEMBRO, ENLACE, SION];
+  CUENTAS = [PASTOR, SECRETARIA, LIDER, COLIDER, CONSOLIDACION, MIEMBRO, ENLACE, SION, MAESTRA, AUXILIAR, MADRE];
   IMPRESCINDIBLES = [PASTOR, MIEMBRO];
 
   const { ids, testigos } = await leerDemo(demo.betel.id);
