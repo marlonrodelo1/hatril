@@ -22,9 +22,8 @@ const Link = forwardRef<HTMLAnchorElement, Props>(function Link(
   { href, prefetch, replace, scroll, ...resto },
   ref,
 ) {
-  // De Next y sin sentido aquí: se sacan para que no lleguen al `<a>`.
+  // De Next y sin sentido aquí: se saca para que no llegue al `<a>`.
   void prefetch;
-  void scroll;
   const destino =
     typeof href === 'string'
       ? href
@@ -33,7 +32,9 @@ const Link = forwardRef<HTMLAnchorElement, Props>(function Link(
   if (/^[a-z][a-z0-9+.-]*:/i.test(destino)) {
     return <a ref={ref} href={destino} {...resto} />;
   }
-  return <EnlaceRouter ref={ref} to={destino} replace={replace} {...resto} />;
+  // `scroll={false}` (las pestañas Día/Semana/Mes de la agenda, el año de los
+  // donativos) es quedarse donde se estaba: `preventScrollReset`.
+  return <EnlaceRouter ref={ref} to={destino} replace={replace} preventScrollReset={scroll === false} {...resto} />;
 });
 
 export default Link;

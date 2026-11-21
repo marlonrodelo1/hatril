@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowLeft, ExternalLink, HandHeart, LogOut } from 'lucide-react';
+import { ArrowLeft, ExternalLink, HandHeart, LogOut, UserRound } from 'lucide-react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 
@@ -117,8 +117,26 @@ export function CabeceraApp({
                   <span className="truncate text-[12.5px] text-muted-foreground">{yo.cuenta.email}</span>
                 </div>
 
-                {yo.panel && (
+                {/* «Mi cuenta» es la única puerta a borrar la cuenta, a los
+                    bloqueos y a lo que se ha dado, y Apple exige poder borrar
+                    la cuenta desde dentro de la app (norma 5.1.1(v)). Desde
+                    que la barra de abajo perdió su pestaña «Mi cuenta», el
+                    camino era este menú; en la web lleva a `/panel/cuenta`,
+                    que a un miembro raso le rebota a `/mi`. */}
+                {conIglesia && (
                   <div className="flex flex-col p-1">
+                    <Link
+                      to="/mi/cuenta"
+                      className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13.5px] font-medium text-muted-foreground transition-colors hover:bg-surface-alt hover:text-foreground"
+                    >
+                      <UserRound className="size-[16px] flex-none" strokeWidth={1.7} />
+                      Mi cuenta
+                    </Link>
+                  </div>
+                )}
+
+                {yo.panel && (
+                  <div className={'flex flex-col p-1 ' + (conIglesia ? 'border-t border-border' : '')}>
                     <button
                       type="button"
                       onClick={() => abrirFuera(yo.panel!)}
@@ -130,7 +148,7 @@ export function CabeceraApp({
                   </div>
                 )}
 
-                <div className={'p-1 ' + (yo.panel ? 'border-t border-border' : '')}>
+                <div className={'p-1 ' + (yo.panel || conIglesia ? 'border-t border-border' : '')}>
                   <button
                     type="button"
                     onClick={() => void salir()}

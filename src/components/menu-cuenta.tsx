@@ -58,6 +58,7 @@ export function MenuCuenta({
   fotoUrl,
   esPastor = false,
   alPanel = false,
+  miCuenta = false,
   soloSalir = false,
 }: {
   nombre: string;
@@ -84,6 +85,19 @@ export function MenuCuenta({
    * una ruta que redirige a la propia pantalla.
    */
   alPanel?: boolean;
+  /**
+   * «Mi cuenta» (`/mi/cuenta`) en lugar de «Tus datos» y «Cambiar la
+   * contraseña». Lo pide el área del miembro.
+   *
+   * Desde que la barra de abajo perdió su pestaña «Mi cuenta» (agosto), el
+   * camino a esa pantalla tenía que ser este menú, y no lo era: sus dos
+   * opciones llevaban a `/panel/cuenta`, que a un miembro raso le rebota a
+   * `/mi` sin decir nada. Nadie, ni el equipo, llegaba a `/mi/cuenta`, y es la
+   * única puerta a borrar la cuenta, a los bloqueos y a lo que se ha dado.
+   * La contraseña no se pierde: `/mi/cuenta` la ofrece, por correo al miembro
+   * y con la pantalla del panel al equipo (`mi/cuenta/datos.ts`).
+   */
+  miCuenta?: boolean;
   /** Sin iglesia detrás: solo «Cerrar sesión». Ver la cabecera del fichero. */
   soloSalir?: boolean;
 }) {
@@ -131,12 +145,20 @@ export function MenuCuenta({
                 Ir al panel
               </Opcion>
             )}
-            <Opcion href="/panel/cuenta" Icono={UserRound}>
-              Tus datos
-            </Opcion>
-            <Opcion href="/panel/cuenta/contrasena" Icono={KeyRound}>
-              Cambiar la contraseña
-            </Opcion>
+            {miCuenta ? (
+              <Opcion href="/mi/cuenta" Icono={UserRound}>
+                Mi cuenta
+              </Opcion>
+            ) : (
+              <>
+                <Opcion href="/panel/cuenta" Icono={UserRound}>
+                  Tus datos
+                </Opcion>
+                <Opcion href="/panel/cuenta/contrasena" Icono={KeyRound}>
+                  Cambiar la contraseña
+                </Opcion>
+              </>
+            )}
             {esPastor && (
               <Opcion href="/panel/suscripcion" Icono={CreditCard}>
                 Suscripción

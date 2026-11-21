@@ -32,7 +32,14 @@
  *    pastor es «sin sesión».
  *
  * Las sesiones se abren sin contraseña (`generateLink` + `verifyOtp`), como en
- * `test:puertas`, y se cierran al terminar. No escribe nada en la base.
+ * `test:puertas`, y se cierran al terminar.
+ *
+ * Las iglesias y las cuentas son de usar y tirar (`scripts/pruebas/demo.mjs`):
+ * se montan al empezar y se borran al terminar, también si falla. Hasta el
+ * 20-nov-2026 eran Betania y Sion, fijas, con contraseña en el repo; Betania
+ * se borró. Betel sale en el buscador público mientras corre: es justo lo que
+ * se comprueba, que lo publicado sale y lo que no, no. Fuera de eso, no escribe
+ * nada en la base.
  *
  * VARIABLES
  * ---------
@@ -43,8 +50,9 @@ import { readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import postgres from 'postgres';
 import { createClient } from '@supabase/supabase-js';
+
+import { conDemo } from './pruebas/demo.mjs';
 
 const BASE = (process.env.PUERTAS_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -67,16 +75,19 @@ for (const [nombre, valor] of Object.entries({
 const RAIZ = fileURLToPath(new URL('..', import.meta.url));
 const CARPETA_API = join(RAIZ, 'src', 'app', 'api', 'v1', 'app');
 
-// Las cuentas de `scripts/seed-demo.sql` y `seed-base-comun.sql`.
-const PASTOR = 'pastor@hatril.test';
-const SECRETARIA = 'secretaria@hatril.test';
-const LIDER = 'lider@hatril.test';
-const MIEMBRO = 'miembro@hatril.test';
-const COLIDER = 'colider@hatril.test';
-const VISITA = 'visita@hatril.test'; // sin iglesia, con solicitud
-const SION = 'pastor.sion@hatril.test'; // pastor de OTRA iglesia
+// Las cuentas de la iglesia de prueba. Los correos cambian en cada ejecución
+// (`<papel>.<run>@pruebas.hatril.test`), así que se rellenan en `probar()`.
+let PASTOR;
+let SECRETARIA;
+let LIDER;
+let MIEMBRO;
+let COLIDER;
+let VISITA; // sin iglesia, con solicitud
+let SION; // pastor de OTRA iglesia
 
-const CUENTAS = [PASTOR, SECRETARIA, LIDER, MIEMBRO, COLIDER, VISITA, SION];
+let CUENTAS = [];
+// El slug de Betel, para la solicitud bien formada de `solicitudValida()`.
+let SLUG_BETEL;
 
 const ORIGEN_IOS = 'capacitor://localhost';
 const ORIGEN_ANDROID = 'https://localhost';
@@ -122,7 +133,7 @@ const ENDPOINTS = [
         return [
           ...espera(r, 200),
           ...igual('situacion', r.json?.situacion, 'iglesia'),
-          ...igual('iglesia.id', r.json?.iglesia?.id, demo.betania.id),
+          ...igual('iglesia.id', r.json?.iglesia?.id, demo.betel.id),
           ...igual('panel', r.json?.panel, '/panel/hoy'),
           ...sinRastroDe(r, demo.sion),
         ];
@@ -131,7 +142,7 @@ const ENDPOINTS = [
         const r = await pedirComo(SECRETARIA, 'GET', '/yo');
         return [
           ...espera(r, 200),
-          ...igual('iglesia.id', r.json?.iglesia?.id, demo.betania.id),
+          ...igual('iglesia.id', r.json?.iglesia?.id, demo.betel.id),
           ...(r.json?.panel ? [] : ['sin panel, y lleva algo en la iglesia']),
           ...sinRastroDe(r, demo.sion),
         ];
@@ -140,7 +151,7 @@ const ENDPOINTS = [
         const r = await pedirComo(LIDER, 'GET', '/yo');
         return [
           ...espera(r, 200),
-          ...igual('iglesia.id', r.json?.iglesia?.id, demo.betania.id),
+          ...igual('iglesia.id', r.json?.iglesia?.id, demo.betel.id),
           ...(r.json?.pestanas?.equipo?.startsWith('/mi/equipo') ? [] : [`pestanas.equipo = ${r.json?.pestanas?.equipo}`]),
           ...sinRastroDe(r, demo.sion),
         ];
@@ -150,7 +161,7 @@ const ENDPOINTS = [
         return [
           ...espera(r, 200),
           ...igual('situacion', r.json?.situacion, 'iglesia'),
-          ...igual('iglesia.id', r.json?.iglesia?.id, demo.betania.id),
+          ...igual('iglesia.id', r.json?.iglesia?.id, demo.betel.id),
           ...igual('panel', r.json?.panel, null),
           ...sinRastroDe(r, demo.sion),
         ];
@@ -159,7 +170,7 @@ const ENDPOINTS = [
         const r = await pedirComo(COLIDER, 'GET', '/yo');
         return [
           ...espera(r, 200),
-          ...igual('iglesia.id', r.json?.iglesia?.id, demo.betania.id),
+          ...igual('iglesia.id', r.json?.iglesia?.id, demo.betel.id),
           ...(r.json?.pestanas?.equipo ? [] : ['sin pestaña de equipo']),
         ];
       },
@@ -173,16 +184,16 @@ const ENDPOINTS = [
           ...igual('panel', r.json?.panel, null),
           // La solicitud sí nombra la iglesia a la que pidió entrar, que es
           // pública en el directorio; el id de la iglesia, no.
-          ...(r.texto.includes(demo.betania.id) ? ['trae el id de Betania'] : []),
+          ...(r.texto.includes(demo.betel.id) ? ['trae el id de Betel'] : []),
           ...(r.texto.includes(demo.sion.id) ? ['trae el id de Sion'] : []),
         ];
       },
-      'pastor de Sion: su iglesia, nada de Betania': async ({ pedirComo, demo }) => {
+      'pastor de Sion: su iglesia, nada de Betel': async ({ pedirComo, demo }) => {
         const r = await pedirComo(SION, 'GET', '/yo');
         return [
           ...espera(r, 200),
           ...igual('iglesia.id', r.json?.iglesia?.id, demo.sion.id),
-          ...sinRastroDe(r, demo.betania),
+          ...sinRastroDe(r, demo.betel),
         ];
       },
     },
@@ -194,17 +205,17 @@ const ENDPOINTS = [
   {
     ruta: 'iglesias',
     casos: {
-      'buscar «betania»: sale, sin sesión': async ({ pedir }) => {
-        const r = await pedir('GET', '/iglesias?q=betania', null);
-        return [...espera(r, 200), ...(slugs(r).includes('betania') ? [] : ['no sale Betania'])];
+      'buscar Betel por su nombre: sale, sin sesión': async ({ pedir, demo }) => {
+        const r = await pedir('GET', `/iglesias?q=${encodeURIComponent(demo.betel.nombre)}`, null);
+        return [...espera(r, 200), ...(slugs(r).includes(demo.betel.slug) ? [] : ['no sale Betel'])];
       },
-      'buscar «sion»: Sion no está en el directorio y no sale': async ({ pedir }) => {
-        const r = await pedir('GET', '/iglesias?q=sion', null);
-        return [...espera(r, 200), ...(slugs(r).includes('sion') ? ['FUGA: sale Sion'] : [])];
+      'buscar Sion por su nombre: no está en el directorio y no sale': async ({ pedir, demo }) => {
+        const r = await pedir('GET', `/iglesias?q=${encodeURIComponent(demo.sion.nombre)}`, null);
+        return [...espera(r, 200), ...(slugs(r).includes(demo.sion.slug) ? ['FUGA: sale Sion'] : [])];
       },
-      'por ciudad «Madrid»: Sion tampoco': async ({ pedir }) => {
+      'por ciudad «Madrid»: Sion tampoco': async ({ pedir, demo }) => {
         const r = await pedir('GET', '/iglesias?ciudad=Madrid', null);
-        return [...espera(r, 200), ...(slugs(r).includes('sion') ? ['FUGA: sale Sion'] : [])];
+        return [...espera(r, 200), ...(slugs(r).includes(demo.sion.slug) ? ['FUGA: sale Sion'] : [])];
       },
       'sin búsqueda: lista vacía, no el directorio entero': async ({ pedir }) => {
         const r = await pedir('GET', '/iglesias', null);
@@ -215,10 +226,10 @@ const ENDPOINTS = [
   {
     ruta: 'iglesias/sugerencias',
     casos: {
-      'sugerencias de «sio»: sin Sion': async ({ pedir }) => {
-        const r = await pedir('GET', '/iglesias/sugerencias?q=sio', null);
+      'sugerencias con el nombre de Sion: sin Sion': async ({ pedir, demo }) => {
+        const r = await pedir('GET', `/iglesias/sugerencias?q=${encodeURIComponent(demo.sion.nombre)}`, null);
         const lista = (r.json?.sugerencias ?? []).map((i) => i.slug);
-        return [...espera(r, 200), ...(lista.includes('sion') ? ['FUGA: sale Sion'] : [])];
+        return [...espera(r, 200), ...(lista.includes(demo.sion.slug) ? ['FUGA: sale Sion'] : [])];
       },
       'una sola letra: 400': async ({ pedir }) => espera(await pedir('GET', '/iglesias/sugerencias?q=b', null), 400),
     },
@@ -235,29 +246,29 @@ const ENDPOINTS = [
   {
     ruta: 'iglesias/cerca',
     casos: {
-      'las que tienen ubicación, sin Sion': async ({ pedir }) => {
+      'las que tienen ubicación, sin Sion': async ({ pedir, demo }) => {
         const r = await pedir('GET', '/iglesias/cerca', null);
-        return [...espera(r, 200), ...(slugs(r).includes('sion') ? ['FUGA: sale Sion'] : [])];
+        return [...espera(r, 200), ...(slugs(r).includes(demo.sion.slug) ? ['FUGA: sale Sion'] : [])];
       },
     },
   },
   {
     ruta: 'iglesias/[slug]',
     casos: {
-      'ficha sin sesión: pública, sin relación': async ({ pedir }) => {
-        const r = await pedir('GET', '/iglesias/betania', null);
+      'ficha sin sesión: pública, sin relación': async ({ pedir, demo }) => {
+        const r = await pedir('GET', `/iglesias/${demo.betel.slug}`, null);
         return [...espera(r, 200), ...igual('relacion', r.json?.relacion, 'sin_sesion')];
       },
-      'ficha como miembro de Betania: de_esta': async ({ pedirComo }) => {
-        const r = await pedirComo(MIEMBRO, 'GET', '/iglesias/betania');
+      'ficha como miembro de Betel: de_esta': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(MIEMBRO, 'GET', `/iglesias/${demo.betel.slug}`);
         return [...espera(r, 200), ...igual('relacion', r.json?.relacion, 'de_esta')];
       },
-      'ficha como visita: su solicitud pendiente': async ({ pedirComo }) => {
-        const r = await pedirComo(VISITA, 'GET', '/iglesias/betania');
+      'ficha como visita: su solicitud pendiente': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(VISITA, 'GET', `/iglesias/${demo.betel.slug}`);
         return [...espera(r, 200), ...igual('relacion', r.json?.relacion, 'pendiente')];
       },
-      'ficha de Betania como pastor de Sion: de_otra, y solo el nombre de la suya': async ({ pedirComo, demo }) => {
-        const r = await pedirComo(SION, 'GET', '/iglesias/betania');
+      'ficha de Betel como pastor de Sion: de_otra, y solo el nombre de la suya': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(SION, 'GET', `/iglesias/${demo.betel.slug}`);
         return [
           ...espera(r, 200),
           ...igual('relacion', r.json?.relacion, 'de_otra'),
@@ -335,9 +346,9 @@ const ENDPOINTS = [
         const r = await pedirComo(MIEMBRO, 'GET', '/mi/comunidad');
         return [...espera(r, 200), ...(Array.isArray(r.json?.muro) ? [] : ['no trae `muro`']), ...sinRastroDe(r, demo.sion)];
       },
-      'pastor de Sion: su muro, nada de Betania': async ({ pedirComo, demo }) => {
+      'pastor de Sion: su muro, nada de Betel': async ({ pedirComo, demo }) => {
         const r = await pedirComo(SION, 'GET', '/mi/comunidad');
-        return [...espera(r, 200), ...sinRastroDe(r, demo.betania)];
+        return [...espera(r, 200), ...sinRastroDe(r, demo.betel)];
       },
     },
   },
@@ -370,9 +381,9 @@ const ENDPOINTS = [
     casos: {
       'miembro: 200': async ({ pedirComo }) => espera(await pedirComo(MIEMBRO, 'GET', '/mi/devocional'), 200),
       'visita sin iglesia: 403': async ({ pedirComo }) => espera(await pedirComo(VISITA, 'GET', '/mi/devocional'), 403),
-      'pastor de Sion: nada de Betania': async ({ pedirComo, demo }) => {
+      'pastor de Sion: nada de Betel': async ({ pedirComo, demo }) => {
         const r = await pedirComo(SION, 'GET', '/mi/devocional');
-        return [...espera(r, 200), ...sinRastroDe(r, demo.betania)];
+        return [...espera(r, 200), ...sinRastroDe(r, demo.betel)];
       },
     },
   },
@@ -384,9 +395,9 @@ const ENDPOINTS = [
         return [...espera(r, 200), ...igual('vista', r.json?.vista, 'semana')];
       },
       'visita sin iglesia: 403': async ({ pedirComo }) => espera(await pedirComo(VISITA, 'GET', '/mi/agenda'), 403),
-      'pastor de Sion: nada de Betania': async ({ pedirComo, demo }) => {
+      'pastor de Sion: nada de Betel': async ({ pedirComo, demo }) => {
         const r = await pedirComo(SION, 'GET', '/mi/agenda');
-        return [...espera(r, 200), ...sinRastroDe(r, demo.betania)];
+        return [...espera(r, 200), ...sinRastroDe(r, demo.betel)];
       },
     },
   },
@@ -397,10 +408,10 @@ const ENDPOINTS = [
         espera(await pedirComo(MIEMBRO, 'GET', '/mi/agenda/turno/abc'), 404),
       'un uuid que no existe: 404': async ({ pedirComo }) =>
         espera(await pedirComo(MIEMBRO, 'GET', '/mi/agenda/turno/00000000-0000-4000-8000-000000000000'), 404),
-      'un turno de Betania pedido desde Sion: 404': async ({ pedirComo, demo }) => {
-        if (!demo.turnoBetania) return ['la demo no tiene turnos en Betania'];
-        const r = await pedirComo(SION, 'GET', `/mi/agenda/turno/${demo.turnoBetania}`);
-        return [...espera(r, 404), ...sinRastroDe(r, demo.betania)];
+      'un turno de Betel pedido desde Sion: 404': async ({ pedirComo, demo }) => {
+        if (!demo.turnoBetel) return ['la iglesia de prueba no tiene turnos'];
+        const r = await pedirComo(SION, 'GET', `/mi/agenda/turno/${demo.turnoBetel}`);
+        return [...espera(r, 404), ...sinRastroDe(r, demo.betel)];
       },
     },
   },
@@ -409,10 +420,10 @@ const ENDPOINTS = [
     casos: {
       'un uuid que no existe: 404': async ({ pedirComo }) =>
         espera(await pedirComo(MIEMBRO, 'GET', '/mi/agenda/reunion/00000000-0000-4000-8000-000000000000'), 404),
-      'una reunión de Betania pedida desde Sion: 404': async ({ pedirComo, demo }) => {
-        if (!demo.reunionBetania) return ['la demo no tiene reuniones en Betania'];
-        const r = await pedirComo(SION, 'GET', `/mi/agenda/reunion/${demo.reunionBetania}`);
-        return [...espera(r, 404), ...sinRastroDe(r, demo.betania)];
+      'una reunión de Betel pedida desde Sion: 404': async ({ pedirComo, demo }) => {
+        if (!demo.reunionBetel) return ['la iglesia de prueba no tiene reuniones'];
+        const r = await pedirComo(SION, 'GET', `/mi/agenda/reunion/${demo.reunionBetel}`);
+        return [...espera(r, 404), ...sinRastroDe(r, demo.betel)];
       },
     },
   },
@@ -442,7 +453,7 @@ const ENDPOINTS = [
     casos: {
       'miembro: 200 con el nombre de su iglesia': async ({ pedirComo, demo }) => {
         const r = await pedirComo(MIEMBRO, 'GET', '/acepta');
-        return [...espera(r, 200), ...igual('iglesiaNombre', r.json?.iglesiaNombre, demo.betania.nombre)];
+        return [...espera(r, 200), ...igual('iglesiaNombre', r.json?.iglesiaNombre, demo.betel.nombre)];
       },
       'visita sin iglesia: 403': async ({ pedirComo }) => espera(await pedirComo(VISITA, 'GET', '/acepta'), 403),
     },
@@ -513,7 +524,7 @@ const ENDPOINTS = [
     casos: {
       'miembro: 200, lo suyo': async ({ pedirComo, demo }) => {
         const r = await pedirComo(MIEMBRO, 'GET', '/mi/cuenta/donativos');
-        return [...espera(r, 200), ...igual('iglesia.slug', r.json?.iglesia?.slug, 'betania'), ...sinRastroDe(r, demo.sion)];
+        return [...espera(r, 200), ...igual('iglesia.slug', r.json?.iglesia?.slug, demo.betel.slug), ...sinRastroDe(r, demo.sion)];
       },
       'año raro: no rompe': async ({ pedirComo }) =>
         espera(await pedirComo(MIEMBRO, 'GET', '/mi/cuenta/donativos?anio=abc'), 200),
@@ -539,8 +550,8 @@ const ENDPOINTS = [
   // ------------------------------------------------------------------
   // Equipo (fase 4): una ruta para las quince pantallas. Cada una pone su
   // guarda en su `cargar`; aquí se mira que la tabla sea cerrada y que las
-  // guardas corten. Con la suscripción de Betania en pausa, sus cuentas
-  // reciben el corte de la suscripción, como en la web.
+  // guardas corten. Betel tiene la prueba en vigor, así que sus cuentas pasan
+  // de la suscripción y llegan a la guarda de cada pantalla.
   // ------------------------------------------------------------------
   {
     ruta: 'mi/equipo/[[...ruta]]',
@@ -551,12 +562,12 @@ const ENDPOINTS = [
         espera(await pedirComo(LIDER, 'GET', '/mi/equipo/00000000-0000-4000-8000-000000000000/otra-cosa'), 404),
       'un id que no es uuid: 404, sin consultar': async ({ pedirComo }) =>
         espera(await pedirComo(LIDER, 'GET', '/mi/equipo/abc/turnos'), 404),
-      'un equipo de Betania pedido desde Sion: no lo ve': async ({ pedirComo, demo }) => {
-        if (!demo.alabanza) return ['la demo no tiene Alabanza'];
+      'un equipo de Betel pedido desde Sion: no lo ve': async ({ pedirComo, demo }) => {
+        if (!demo.alabanza) return ['la iglesia de prueba no tiene Alabanza'];
         const r = await pedirComo(SION, 'GET', `/mi/equipo/${demo.alabanza}/turnos`);
         return [
           ...(r.status === 404 || r.status === 403 ? [] : [`código ${r.status}, se esperaba 404 o 403`]),
-          ...sinRastroDe(r, demo.betania),
+          ...sinRastroDe(r, demo.betel),
         ];
       },
       'el ctx que sale va recortado: sin suscripción ni plan': async ({ pedirComo }) => {
@@ -587,10 +598,10 @@ function slugs(r) {
   return (r.json?.iglesias ?? []).map((i) => i.slug);
 }
 
-/** Una solicitud bien formada a Betania. Ver el caso «ya_tenia»: no escribe. */
+/** Una solicitud bien formada a Betel. Ver el caso «ya_tenia»: no escribe. */
 function solicitudValida() {
   return {
-    slug: 'betania',
+    slug: SLUG_BETEL,
     nombre: 'Prueba de puertas',
     telefono: '600000000',
     prefijo: 'ES',
@@ -607,30 +618,18 @@ function sinRastroDe(r, iglesia) {
 }
 
 // ============================================
-// La demo, solo leyendo
+// La iglesia de prueba
 // ============================================
 
-async function leerDemo() {
-  const sql = postgres(DATABASE_URL, { prepare: false, ssl: 'require', max: 1 });
-  try {
-    return await sql.begin('read only', async (sql) => {
-      const filas = await sql`select id, slug, nombre from iglesias where slug in ('betania', 'sion')`;
-      const por = Object.fromEntries(filas.map((f) => [f.slug, f]));
-      if (!por.betania || !por.sion) throw new Error('Faltan Betania o Sion: falta la semilla de la demo.');
-      const [turno] = await sql`select id from turnos where iglesia_id = ${por.betania.id} limit 1`;
-      const [reunion] = await sql`select id from reuniones where iglesia_id = ${por.betania.id} limit 1`;
-      const [alabanza] = await sql`select id from ministerios where iglesia_id = ${por.betania.id} and nombre = 'Alabanza' limit 1`;
-      return {
-        betania: por.betania,
-        sion: por.sion,
-        turnoBetania: turno?.id ?? null,
-        reunionBetania: reunion?.id ?? null,
-        alabanza: alabanza?.id ?? null,
-      };
-    });
-  } finally {
-    await sql.end();
-  }
+/** Lo que los casos necesitan de `scripts/pruebas/demo.mjs`, con sus nombres. */
+function datosDe(demo) {
+  return {
+    betel: demo.betel,
+    sion: demo.sion,
+    turnoBetel: demo.ids.turnoAlabanza,
+    reunionBetel: demo.ids.reunionCongregacion,
+    alabanza: demo.ids.alabanza,
+  };
 }
 
 // ============================================
@@ -726,7 +725,22 @@ async function main() {
     if (!conCasos.has(ruta)) fallos.push(`${ruta}: hay un route.ts sin casos en este test`);
   }
 
-  const demo = await leerDemo();
+  await conDemo({ cuentas: true, publicada: true }, (d) => probar(d, fallos));
+}
+
+async function probar(montada, fallos) {
+  ({
+    pastor: PASTOR,
+    secretaria: SECRETARIA,
+    lider: LIDER,
+    miembro: MIEMBRO,
+    colider: COLIDER,
+    visita: VISITA,
+    sion: SION,
+  } = montada.cuentas);
+  CUENTAS = [PASTOR, SECRETARIA, LIDER, MIEMBRO, COLIDER, VISITA, SION];
+  SLUG_BETEL = montada.betel.slug;
+  const demo = datosDe(montada);
   const sesiones = {};
   try {
     for (const c of CUENTAS) sesiones[c] = await abrirSesion(c);
@@ -814,7 +828,7 @@ async function main() {
         .split(',')
         .map((t) => t.trim().replace(';dur=', ' '))
         .join(' · ');
-      console.log(`  ${c.padEnd(26)} ${String(r.ms).padStart(5)} ms  ${tramos}`);
+      console.log(`  ${c.padEnd(40)} ${String(r.ms).padStart(5)} ms  ${tramos}`);
     }
 
     console.log(`\n${casos} casos, ${fallos.length} fallos.`);

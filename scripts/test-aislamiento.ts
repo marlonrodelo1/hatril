@@ -20,6 +20,15 @@
  * Se ejecuta contra la base que apunte DATABASE_URL. En CI, contra una rama de
  * Supabase; en local, contra la de desarrollo. Nunca contra producción con
  * datos reales: no los tocaría, pero no hay razón para arriesgarse.
+ *
+ * LA EXCEPCIÓN: LO QUE ENTRA POR `withUser()`
+ * -------------------------------------------
+ * Dos comprobaciones de la segunda fase —el recorte del reparto por equipo y
+ * el arqueo a dos personas— necesitan datos que otra conexión pueda ver, y una
+ * transacción que se revierte no los deja ver. Hasta el 20-nov usaban la demo
+ * fija de Betania; desde que se borró, montan una iglesia de usar y tirar con
+ * `scripts/pruebas/demo.mjs`, sin publicar y sin cuentas en auth, y la borran
+ * al terminar (también si fallan). Ahí sí se escribe y se borra.
  */
 
 import postgres from 'postgres';
@@ -27,8 +36,9 @@ import postgres from 'postgres';
 // La aplicación de verdad. Ver `comprobarWithUser` más abajo.
 import { sql as dsql } from 'drizzle-orm';
 import { withUser } from '../src/lib/db/with-tenant';
-// Solo para buscar las cuentas de la demo; ver `comprobarRepartoConLaDemo`.
+// Solo para contar el padrón de la iglesia de prueba; ver `comprobarRepartoConLaDemo`.
 import { dbAdmin } from '../src/lib/db/client';
+import { conDemo, type montarDemo } from './pruebas/demo.mjs';
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -2965,7 +2975,7 @@ async function comprobarWithUser(): Promise<string[]> {
     // `USR_A` aquí no es el de la fase de arriba: aquella transacción se revirtió
     // entera, así que este uuid no pertenece a ninguna iglesia. La cuenta correcta
     // es 0. Con `ministerios_select_publico` concedida a `hatril_app` devolvía los
-    // ministerios de toda iglesia publicada — y `seed-demo` publica Betania.
+    // ministerios de toda iglesia publicada (entonces Betania, hoy Cuerpo de Cristo).
     //
     // Caveat honesto: contra una base sin ninguna iglesia publicada esta línea
     // pasa en verde sin probar nada. La autoritativa es la de la fase SQL, que se
@@ -2988,10 +2998,22 @@ async function comprobarWithUser(): Promise<string[]> {
     lineas.push(`  FALLO withUser(): ${(e.message ?? String(err)).slice(0, 90)}`);
   }
 
-  return lineas
-    .concat(await comprobarRepartoConLaDemo())
-    .concat(await comprobarArqueoConLaDemo());
+  // Lo que solo se puede probar con datos que `withUser()` vea desde su propia
+  // conexión: una iglesia de usar y tirar, montada y borrada aquí mismo.
+  try {
+    const conLaDemo = await conDemo({ cuentas: false, publicada: false }, async (demo) => [
+      ...(await comprobarRepartoConLaDemo(demo)),
+      ...(await comprobarArqueoConLaDemo(demo)),
+    ]);
+    return lineas.concat(conLaDemo);
+  } catch (err) {
+    const e = err as { message?: string };
+    lineas.push(`  FALLO montar o borrar la iglesia de prueba: ${(e.message ?? String(err)).slice(0, 120)}`);
+    return lineas;
+  }
 }
+
+type Demo = Awaited<ReturnType<typeof montarDemo>>;
 
 /**
  * El arqueo a dos personas, por `withUser()` y con cuentas de verdad.
@@ -3000,14 +3022,11 @@ async function comprobarWithUser(): Promise<string[]> {
  * `withUser`. La fase SQL los pone a mano; si `withUser` dejara de ponerlos
  * —o los pusiera con otra forma—, quien confirma dejaría de ser «quien tiene la
  * sesión» y el control pasaría a fallar abierto o cerrado sin que la fase SQL
- * lo notara. Así que aquí se cuenta con `pastor@`, se intenta confirmar con la
- * misma sesión, y se confirma con la de `secretaria@`, todo en una transacción
- * que se revierte al final: no queda nada en la demo.
- *
- * Caveat honesto, como los de arriba: sin la demo o sin un fondo y una caja en
- * Betania, lo dice en vez de pasar en verde.
+ * lo notara. Así que aquí se cuenta con el pastor, se intenta confirmar con la
+ * misma sesión, y se confirma con la de la secretaria, todo en una transacción
+ * que se revierte al final: el arqueo no llega ni a la iglesia de prueba.
  */
-async function comprobarArqueoConLaDemo(): Promise<string[]> {
+async function comprobarArqueoConLaDemo(demo: Demo): Promise<string[]> {
   const lineas: string[] = [];
 
   type Fila = Record<string, string | null>;
@@ -3016,33 +3035,15 @@ async function comprobarArqueoConLaDemo(): Promise<string[]> {
   const REVERTIR = 'revertir-arqueo-de-prueba';
 
   try {
-    const demo = primera(
-      await dbAdmin.execute(dsql`
-        select
-          (select u.id::text from auth.users u where u.email = 'pastor@hatril.test')     as pastor,
-          (select u.id::text from auth.users u where u.email = 'secretaria@hatril.test') as secretaria,
-          (select iu.miembro_id::text from public.iglesia_usuarios iu
-             join auth.users u on u.id = iu.auth_user_id
-            where u.email = 'pastor@hatril.test')                                        as ficha_pastor,
-          (select iu.miembro_id::text from public.iglesia_usuarios iu
-             join auth.users u on u.id = iu.auth_user_id
-            where u.email = 'secretaria@hatril.test')                                    as ficha_secretaria,
-          (select i.id::text from public.iglesias i where i.slug = 'betania')            as iglesia,
-          (select f.id::text from public.fondos f join public.iglesias i on i.id = f.iglesia_id
-            where i.slug = 'betania' and f.es_general)                                   as fondo,
-          (select c.id::text from public.cajas c join public.iglesias i on i.id = c.iglesia_id
-            where i.slug = 'betania' and c.activo order by c.created_at limit 1)         as caja
-      `),
-    );
-
-    if (
-      !demo?.pastor || !demo.secretaria || !demo.ficha_pastor ||
-      !demo.ficha_secretaria || !demo.iglesia || !demo.fondo || !demo.caja
-    ) {
-      lineas.push('  --   sin la demo de Betania con su caja: el arqueo solo lo prueba la fase SQL');
-      return lineas;
-    }
-    const d = demo as Record<string, string>;
+    const d = {
+      pastor: demo.usuarios.pastor,
+      secretaria: demo.usuarios.secretaria,
+      ficha_pastor: demo.fichas.pastor,
+      ficha_secretaria: demo.fichas.secretaria,
+      iglesia: demo.betel.id,
+      fondo: demo.ids.fondoGeneral,
+      caja: demo.ids.caja,
+    };
 
     let autoconfirmar = '(no se intento)';
     let ingresos = -1;
@@ -3092,15 +3093,15 @@ async function comprobarArqueoConLaDemo(): Promise<string[]> {
     });
 
     lineas.push(
-      `  ${autoconfirmar.includes('HT130') ? 'OK  ' : 'FALLO'} withUser() de pastor@ no confirma el arqueo que conto (${autoconfirmar.includes('HT130') ? 'HT130' : autoconfirmar.slice(0, 60)})`,
+      `  ${autoconfirmar.includes('HT130') ? 'OK  ' : 'FALLO'} withUser() del pastor no confirma el arqueo que conto (${autoconfirmar.includes('HT130') ? 'HT130' : autoconfirmar.slice(0, 60)})`,
     );
     lineas.push(
-      `  ${ingresos === 2 ? 'OK  ' : 'FALLO'} withUser() de secretaria@ lo confirma y se apuntan los dos ingresos (${ingresos})`,
+      `  ${ingresos === 2 ? 'OK  ' : 'FALLO'} withUser() de la secretaria lo confirma y se apuntan los dos ingresos (${ingresos})`,
     );
   } catch (err) {
     const e = err as { message?: string; cause?: { message?: string } };
     lineas.push(
-      `  FALLO arqueo con la demo: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
+      `  FALLO arqueo con la iglesia de prueba: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
     );
   }
 
@@ -3112,16 +3113,12 @@ async function comprobarArqueoConLaDemo(): Promise<string[]> {
  *
  * La fase SQL lo prueba con datos que se revierten; esto lo prueba con la
  * función que usa la aplicación, que es lo que la fase SQL no puede hacer —sus
- * datos ya no existen cuando llega aquí—. Usa la demo de Betania: `lider@` es
- * responsable de Alabanza y NO está en Acción social, y `colider@` es colíder de
- * Acción social. Con la RLS por iglesia de los otros módulos, `lider@` vería el
+ * datos ya no existen cuando llega aquí—. En la iglesia de prueba, el líder es
+ * responsable de Alabanza y NO está en Acción social, y la colíder lo es de
+ * Acción social. Con la RLS por iglesia de los otros módulos, el líder vería el
  * padrón entero.
- *
- * Caveat honesto, como el de los ministerios de arriba: contra una base sin la
- * demo, o con el padrón de Acción social vacío, esto no puede probar nada y lo
- * dice en vez de pasar en verde. La autoritativa es la fase SQL.
  */
-async function comprobarRepartoConLaDemo(): Promise<string[]> {
+async function comprobarRepartoConLaDemo(demo: Demo): Promise<string[]> {
   const lineas: string[] = [];
 
   type Fila = Record<string, string | null>;
@@ -3129,23 +3126,7 @@ async function comprobarRepartoConLaDemo(): Promise<string[]> {
     (filas as { rows?: Fila[] }).rows?.[0] ?? (filas as Fila[])[0];
 
   try {
-    const demo = primera(
-      await dbAdmin.execute(dsql`
-        select
-          (select id::text from auth.users where email = 'lider@hatril.test')   as lider,
-          (select id::text from auth.users where email = 'colider@hatril.test') as colider,
-          (select m.id::text from public.ministerios m
-             join public.iglesias i on i.id = m.iglesia_id
-            where i.slug = 'betania' and lower(m.nombre) = lower('Acción social')) as ministerio
-      `),
-    );
-
-    if (!demo?.lider || !demo.colider || !demo.ministerio) {
-      lineas.push('  --   sin la demo de Betania: el recorte por equipo solo lo prueba la fase SQL');
-      return lineas;
-    }
-
-    const ministerio = demo.ministerio;
+    const ministerio = demo.ids.accionSocial;
     const contar = async (cuenta: string) =>
       Number(
         primera(
@@ -3165,24 +3146,26 @@ async function comprobarRepartoConLaDemo(): Promise<string[]> {
       )?.n ?? -1,
     );
 
+    // La iglesia de prueba nace con un hogar en el padrón: si no está, el
+    // montaje se rompió y esto no probaría nada.
     if (total <= 0) {
-      lineas.push('  --   el padron de Accion social de la demo esta vacio: no hay nada que esconder');
+      lineas.push('  FALLO el padron de Accion social de la iglesia de prueba esta vacio');
       return lineas;
     }
 
-    const loVeElLider = await contar(demo.lider);
+    const loVeElLider = await contar(demo.usuarios.lider);
     lineas.push(
-      `  ${loVeElLider === 0 ? 'OK  ' : 'FALLO'} withUser() de lider@, de otro equipo, no ve el padron del reparto (${loVeElLider} de ${total})`,
+      `  ${loVeElLider === 0 ? 'OK  ' : 'FALLO'} withUser() del lider, de otro equipo, no ve el padron del reparto (${loVeElLider} de ${total})`,
     );
 
-    const loVeElColider = await contar(demo.colider);
+    const loVeElColider = await contar(demo.usuarios.colider);
     lineas.push(
-      `  ${loVeElColider === total ? 'OK  ' : 'FALLO'} withUser() de colider@ ve el padron de su reparto (${loVeElColider} de ${total})`,
+      `  ${loVeElColider === total ? 'OK  ' : 'FALLO'} withUser() de la colider ve el padron de su reparto (${loVeElColider} de ${total})`,
     );
   } catch (err) {
     const e = err as { message?: string; cause?: { message?: string } };
     lineas.push(
-      `  FALLO reparto con la demo: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
+      `  FALLO reparto con la iglesia de prueba: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
     );
   }
 

@@ -10,7 +10,7 @@
  *
  * POR QUÉ UN TEST APARTE Y NO DENTRO DE `test-puertas.mjs`
  * --------------------------------------------------------
- * Aquel está construido alrededor del pastor de Betania: de su respuesta salen
+ * Aquel está construido alrededor del pastor de Betel: de su respuesta salen
  * los testigos, y es la cuenta que «sí puede» en todas las rutas. En `/admin`
  * el pastor es justo de los que NO pueden, y la cuenta que sí es otra. Meterlo
  * allí obligaba a doblar cada comprobación.
@@ -33,6 +33,14 @@
  * Toda `page.tsx` bajo `src/app/admin` tiene que estar en `rutas()`: una
  * pantalla nueva que nadie añade aquí es la que se quedaría sin puerta.
  *
+ * LAS CUENTAS
+ * -----------
+ * Las que NO pueden salen de una iglesia de usar y tirar
+ * (`scripts/pruebas/demo.mjs`), montada al empezar y borrada al terminar.
+ * Hasta el 20-nov-2026 eran las de Betania, que se borró. El super admin sigue
+ * siendo `admin@hatril.test`, que no tiene contraseña conocida: se entra con
+ * enlace mágico, como las demás.
+ *
  *   PUERTAS_URL        base del servidor (por defecto http://localhost:3000)
  *   PUERTAS_CONTROL=1  control negativo: todas las cuentas piden con la sesión
  *                      del super admin. Todos los casos de «no puede» tienen
@@ -45,6 +53,8 @@ import { fileURLToPath } from 'node:url';
 
 import postgres from 'postgres';
 import { createClient } from '@supabase/supabase-js';
+
+import { conDemo } from './pruebas/demo.mjs';
 
 const BASE = (process.env.PUERTAS_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -68,13 +78,12 @@ for (const [nombre, valor] of Object.entries({
 }
 
 const ADMIN = 'admin@hatril.test';
-// Las que NO pueden, cada una por un camino distinto hasta el panel.
-const NO_PUEDEN = [
-  'pastor@hatril.test', // pastor: lo puede todo en SU iglesia
-  'miembro@hatril.test', // miembro raso
-  'visita@hatril.test', // sin iglesia, como el super admin
-  'pastor.sion@hatril.test', // pastor de otra iglesia, con la suscripción bloqueada
-];
+// Las que NO pueden, cada una por un camino distinto hasta el panel: el
+// pastor (lo puede todo en SU iglesia), un miembro raso, una cuenta sin
+// iglesia (como el super admin) y el pastor de otra iglesia, con la
+// suscripción bloqueada. Se rellenan en `probar()` con las de la iglesia de
+// prueba.
+let NO_PUEDEN = [];
 const SIN_SESION = '(sin sesión)';
 
 // ============================================
@@ -94,7 +103,7 @@ const REF = new URL(SUPABASE_URL).hostname.split('.')[0];
  * enseñan las pantallas de `/admin` y lo que nadie más debería recibir junto:
  * un pastor conoce su iglesia, pero no la lista de las demás ni sus correos.
  */
-async function leerDatos() {
+async function leerDatos(demo) {
   const sql = postgres(DATABASE_URL, { ssl: 'require', prepare: false, max: 1 });
   try {
     return await sql.begin('read only', async (tx) => {
@@ -102,11 +111,8 @@ async function leerDatos() {
       const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
       if (error) throw error;
       const correos = data.users.map((u) => u.email).filter(Boolean);
-      const betania = iglesias.find((i) => i.slug === 'betania');
-      const pastor = data.users.find((u) => u.email === 'pastor@hatril.test');
-      if (!betania || !pastor) throw new Error('Falta la demo: Betania o pastor@hatril.test.');
       return {
-        ids: { betania: betania.id, pastor: pastor.id },
+        ids: { iglesia: demo.betel.id, pastor: demo.usuarios.pastor },
         testigos: [...iglesias.map((i) => i.nombre), ...correos],
       };
     });
@@ -199,7 +205,7 @@ function rutas(ids) {
   return [
     { url: '/admin', pagePath: 'admin/page.tsx' },
     { url: '/admin/iglesias', pagePath: 'admin/iglesias/page.tsx' },
-    { url: `/admin/iglesias/${ids.betania}`, pagePath: 'admin/iglesias/[id]/page.tsx' },
+    { url: `/admin/iglesias/${ids.iglesia}`, pagePath: 'admin/iglesias/[id]/page.tsx' },
     { url: '/admin/cuentas', pagePath: 'admin/cuentas/page.tsx' },
     { url: `/admin/cuentas/${ids.pastor}`, pagePath: 'admin/cuentas/[id]/page.tsx' },
     // Con el registro vacío no trae testigos; en cuanto haya un apunte trae
@@ -278,7 +284,14 @@ async function main() {
     process.exit(2);
   }
 
-  const { ids, testigos } = await leerDatos();
+  await conDemo({ cuentas: true, publicada: false }, probar);
+}
+
+async function probar(demo) {
+  const { pastor, miembro, visita, sion } = demo.cuentas;
+  NO_PUEDEN = [pastor, miembro, visita, sion];
+
+  const { ids, testigos } = await leerDatos(demo);
   console.log(`Datos leídos en solo lectura: ${testigos.length} testigos.`);
 
   const abiertas = {};
@@ -309,7 +322,7 @@ async function main() {
         console.log('\n' + r.ruta);
         anterior = r.ruta;
       }
-      console.log(`  ${r.ok ? 'ok   ' : 'FALLO'} ${r.cuenta.padEnd(26)} espera ${r.esperado.padEnd(36)} ${r.obtenido}`);
+      console.log(`  ${r.ok ? 'ok   ' : 'FALLO'} ${r.cuenta.padEnd(40)} espera ${r.esperado.padEnd(36)} ${r.obtenido}`);
     }
 
     const fallos = resultados.filter((r) => !r.ok);

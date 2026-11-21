@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Navigate, Outlet, useLocation, useNavigate } from 'react-router';
+import { Navigate, Outlet, ScrollRestoration, useLocation, useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { AppNativa } from '@/components/app-nativa';
@@ -45,8 +45,13 @@ export function Raiz() {
     if (usuario) void pedirPermisoYApuntar().catch(() => {});
   }, [usuario]);
 
+  // `ScrollRestoration`: cada pantalla nueva empieza arriba, y atrás vuelve a
+  // donde se estaba, como en un navegador y como en la web. Sin él, la app
+  // abría la pantalla siguiente con el scroll de la anterior: «Personas
+  // bloqueadas», que es corta, salía con su primera línea bajo la cabecera.
   return (
     <>
+      <ScrollRestoration />
       <Outlet />
       <AppNativa />
     </>

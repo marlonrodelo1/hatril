@@ -38,9 +38,14 @@ lee al arrancar.
   la app pinten lo mismo sin copiarlo. `npm run test:puertas:app`: 92 casos en
   verde. **Probado en Chrome a 375 px** (acceso, bienvenida, buscar, ficha,
   comunidad, devocional, agenda, avisos, Mi cuenta) y el binario de depuración
-  arrancando en el emulador de Android. **Sin probar**: el binario con datos
-  (la API no está desplegada), las escrituras y Equipo (la suscripción de
-  Betania está en pausa, ver «Trampas»), y push, Apple y Google en un teléfono.
+  arrancando en el emulador de Android. Desplegada en hatril.com el 20-nov
+  (`4a55a8f`): la API responde, el CORS solo deja pasar a la app y sin sesión
+  devuelve 401. **El binario contra esa API, probado en el emulador** el mismo
+  día: acceso, push apuntada, comunidad, devocional, agenda, Biblia, Mi cuenta.
+  Salieron dos fallos de la app, arreglados (no había camino a Mi cuenta ni a
+  borrar la cuenta; cada pantalla heredaba el scroll de la anterior). **Sin
+  probar**: las escrituras y Equipo (se probaban en Betania, que se borró el
+  20-nov; ahora toca en Cuerpo de Cristo), y push, Apple y Google en un teléfono.
   De paso, `withUser()` hace un viaje menos a la base (unos 85 ms por consulta,
   también en la web). **Ojo**: `cache()` de React no memoiza en un route
   handler; en la API lo hace `cachePorPeticion` (`src/lib/peticion.ts`).
@@ -1101,6 +1106,9 @@ lee al arrancar.
 
 | Pieza | Estado |
 |---|---|
+| **Betania borrada; las pruebas, rehechas** | **Betania se borró entera el 20-nov**, por decisión de Marlon: una iglesia inventada salía en el buscador de hatril.com. Con ella, sus 10 cuentas `@hatril.test` (`pastor@`, `secretaria@`, `lider@`, `miembro@`, `visita@`, `colider@`, `consolidacion@`, `enlace@`, `invitada@`, `nuria.avisos@`) y sus 29 ficheros. Quedan `admin@hatril.test`, Sion y `pastor.sion@`, y en `registro_admin` los tres apuntes del 29-oct, que no se pueden borrar a propósito (`/admin` los pinta como «Una iglesia borrada»). Hay copia completa (filas, cuentas y ficheros) en el ordenador de Marlon, fuera del repo: `Escritorio/Hatril-copias/betania-2026-11-20`. **Las cuatro baterías se rehicieron el mismo día** sobre `scripts/pruebas/demo.mjs`: cada ejecución monta dos iglesias de usar y tirar («Betel prueba …» y «Sion prueba …», slug `prueba-auto-…`) con sus cuentas `<papel>.<run>@pruebas.hatril.test` sin contraseña, y las borra al terminar, también si falla o con Ctrl+C; al empezar barre los restos de más de dos horas. El borrado se niega a tocar un slug sin ese prefijo. Comprobado que no deja rastro: mismas iglesias, cuentas, ficheros, fichas y filas de auditoría antes y después. Resultados: `test:aislamiento` todo correcto, y recupera las cuatro comprobaciones por `withUser()` que sin Betania se saltaban; `test:puertas:app` 92 de 92; `test:puertas:admin` 36 de 36; `test:puertas` 411 de 411 en 70 rutas (entran las dos de ofrendas en línea, que se habían quedado fuera de su lista, y lo de la fila siguiente). Los controles negativos siguen viendo las fugas: 293 de 293 en el panel y 24 de 24 en `/admin`. Betel sale en el buscador público solo mientras corre `test:puertas:app`, que comprueba justo eso. **Queda**: los `scripts/seed-*.sql` recrean Betania con contraseña pública (no ejecutarlos; decidir si se borran), y las notas para quien revisa en Apple y Google (`docs/app-nativa/fichas.md` §8) apuntan a Betania y hay que rehacerlas |
+| **`/mi` responde 200 aunque la página corte** | Desde `src/app/mi/loading.tsx` (19-nov) las pantallas de `/mi` salen en streaming: el código HTTP va con el esqueleto, antes de que la página llame a `notFound()` o `redirect()`. Lo cazó `test:puertas` al rehacerla: `/mi/equipo/<id>/fondo` daba 200 a quien debía recibir 404, y al pastor de una iglesia bloqueada en vez de 307 a `/suscripcion`. **No es una fuga**: la página corta igual (se ve en su segmento del payload) y no viaja ningún dato. La prueba ahora lo acepta en `/mi` y sigue mirando el segmento y los testigos. Lo que cambia de verdad: un enlace roto bajo `/mi` ya no da 404 de verdad, y la redirección por suscripción la hace el navegador. Si eso importa, la salida es sacar el `loading.tsx` de las rutas que cortan |
+| **Mi cuenta en el menú de la web: probarlo** | Arreglado en el código el 20-nov, sin probar en el navegador: en el área del miembro, el menú del avatar lleva «Mi cuenta» (`/mi/cuenta`) en vez de «Tus datos» y «Cambiar la contraseña», que a un miembro raso le rebotaban a `/mi` (prop `miCuenta` de `MenuCuenta`). Desde agosto nadie, ni el equipo, llegaba a borrar su cuenta desde la web. Abrirlo con una cuenta de Cuerpo de Cristo, como miembro raso y como alguien del equipo |
 | **Push: lo que queda** | Poner `FIREBASE_SERVICE_ACCOUNT` en Dokploy, en Environment y no en Build-time (sin ella no sale ninguna push y no falla nada). Desplegar. Build nuevo de Android y el build 2 de iOS en el Mac: el 1 de TestFlight no lleva el plugin. Probar en un iPhone y en un Android de verdad, con la app cerrada. El App ID `app.hatril` se creó el 19-nov con Push y Sign In with Apple: el build 1 no había firmado todavía con esa cuenta. Confirmar las dos entidades nuevas de `/privacidad` (Google Ireland y Apple Distribution International) |
 | **Super admin: falta la cuenta de Marlon** | **Cerrado el 28-oct**: `admin@hatril.test` tenía `Hatril2026`, escrita aquí y en `seed-demo.sql`, en un repo público, y la base de local es la de hatril.com; desplegado `/admin`, cualquiera habría podido ponerle contraseña a la cuenta del pastor de Cuerpo de Cristo. Ahora tiene una aleatoria que nadie conoce (comprobado en la base: `Hatril2026` ya no casa con el hash) y el seed la crea igual; se entra por enlace mágico y `test:puertas:admin` sigue 30 de 30. **Lo que falta**: Marlon ya tiene cuenta (29-oct), pero todavía no está en `admin_users`: su contraseña no servía para un super admin. Va en ese orden: insertar su fila desde el SQL Editor de Supabase, entrar y cambiar la contraseña al momento en `/admin/cuentas`, y comprobar en la base que ya no es una de las conocidas. **Nunca escribir aquí, en un repo público, el correo de una cuenta real junto a su contraseña** |
 | **Las migraciones de células van por delante** | La `0052` (registro) está en `main` y aplicada; las `0046`-`0051` de células están aplicadas pero solo en su rama. Al fusionar células, el journal choca y los snapshots `0046` y `0052` salen los dos del `0045`. Qué hacer, en la cabecera de la `0052` |
@@ -1151,6 +1159,8 @@ lee al arrancar.
 ## Trampas que ya han costado tiempo
 
 **La prueba de Betania caduca, y entonces `test:puertas` falla entero** (20-nov).
+Betania ya no existe (ver «Qué falta»), pero la trampa vale para las iglesias
+que se creen las pruebas nuevas: que nazcan con `trial_until` por delante.
 Betania es `plan = trial` con `trial_until`; el 15-nov venció, con la gracia de
 3 días quedó bloqueada el 19, y el panel manda a todas sus cuentas a
 `/suscripcion`: 251 fallos que no eran de ningún cambio. Si `test:puertas`
@@ -1820,6 +1830,12 @@ El encargo de tratamiento del art. 28 ya no está pendiente: es el apartado 7 de
 ---
 
 ## Datos de prueba
+
+**Desde el 20-nov, Betania y sus diez cuentas no existen** (ver «Qué falta»):
+lo que sigue sobre ella es historia, y los seeds la recrearían. En la base
+quedan Sion con `pastor.sion@`, `admin@hatril.test` (super admin, sin
+contraseña conocida) y Cuerpo de Cristo, que es la iglesia modelo de Marlon y
+tiene **gente de verdad**: ahí no van cuentas con contraseña pública.
 
 Las **imágenes de la demo son fotos de verdad, subidas al bucket**: los paisajes
 de Picsum —que sirve fotografías de Unsplash, con licencia de uso comercial y

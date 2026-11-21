@@ -26,8 +26,12 @@ export function useRouter() {
   const navegar = useNavigate();
   return useMemo(
     () => ({
-      push: (ruta: string) => navegar(ruta),
-      replace: (ruta: string) => navegar(ruta, { replace: true }),
+      // `scroll: false` de Next es `preventScrollReset` de React Router: sin
+      // él, `ScrollRestoration` (`raiz.tsx`) sube arriba en cada navegación.
+      push: (ruta: string, opciones?: { scroll?: boolean }) =>
+        navegar(ruta, { preventScrollReset: opciones?.scroll === false }),
+      replace: (ruta: string, opciones?: { scroll?: boolean }) =>
+        navegar(ruta, { replace: true, preventScrollReset: opciones?.scroll === false }),
       back: () => navegar(-1),
       forward: () => navegar(1),
       // En la web vuelve a pedir la página al servidor. Aquí los datos los

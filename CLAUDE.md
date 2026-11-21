@@ -66,6 +66,15 @@ Por eso ahora tiene una segunda fase que llama a `withUser()` de verdad.
 La regla que sale de ahí: **abrir la pantalla y pulsar el botón**. Un cambio que
 no se ha ejecutado no está verificado, por muchos verdes que haya.
 
+**Las pruebas montan sus propias iglesias.** `test:aislamiento`,
+`test:puertas`, `test:puertas:app` y `test:puertas:admin` crean dos iglesias de
+usar y tirar con sus cuentas, sin contraseña (`scripts/pruebas/demo.mjs`), y
+las borran al terminar, también si fallan. Las tres de puertas piden además
+`npm run dev`. La base de local es la de producción: una prueba nunca apunta a
+una iglesia que no haya montado ella, y menos a Cuerpo de Cristo, que tiene
+gente de verdad. Hasta el 20-nov se apoyaban en Betania, una demo fija con las
+contraseñas escritas en este repo público; se borró.
+
 ### Al crear una función en Postgres
 
 **Revócala en su propia migración. Siempre.**

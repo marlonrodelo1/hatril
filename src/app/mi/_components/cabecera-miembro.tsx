@@ -223,6 +223,9 @@ export async function CabeceraMiembro({
             // volver. El miembro raso no, y ofrecérselo sería un enlace que le
             // rebota.
             alPanel={ctx !== null && esDelEquipo(ctx)}
+            // Aquí la cuenta es la del miembro: `/mi/cuenta`, y no la del panel,
+            // que al miembro raso le rebota (ver `MenuCuenta`).
+            miCuenta
             // Sin iglesia, las tres opciones del menú viven detrás de
             // `requireIglesia()` y devolverían a esta misma persona a `/mi`.
             soloSalir={ctx === null}

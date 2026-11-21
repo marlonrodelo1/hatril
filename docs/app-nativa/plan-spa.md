@@ -273,13 +273,43 @@ escrituras (publicar, me gusta, responder un turno) y las pantallas de
 Equipo, en la web igual que en la app. Se vio que la action llega y que su
 guarda la para; no se ha visto escribir.
 
+### El binario contra hatril.com — probado (20-nov)
+
+En el emulador (Pixel 6, versión de depuración compilada contra
+https://hatril.com): bienvenida, buscar con sugerencias, la ficha de Betania,
+entrar con contraseña como `miembro@`, el permiso de notificaciones y el token
+apuntado en `dispositivos_push`, comunidad, devocional, agenda, Biblia (libro,
+capítulos y texto), la campana, Mi cuenta, «Personas bloqueadas» y la pantalla
+de borrar la cuenta (sin borrar). La sesión aguanta reinstalar la app. Equipo
+dice «suscripción en pausa», como debe mientras Betania siga bloqueada.
+
+Dos fallos de la app, arreglados en el momento:
+
+- **No había camino a Mi cuenta.** El menú del avatar solo traía «Cerrar
+  sesión», y Mi cuenta es la única puerta a borrar la cuenta, que Apple exige
+  dentro de la app (5.1.1(v)). Ahora lleva «Mi cuenta».
+- **Cada pantalla se abría con el scroll de la anterior.** Faltaba
+  `ScrollRestoration` en `raiz.tsx`; el `scroll={false}` de Next se traduce a
+  `preventScrollReset` en los shims.
+
+Y uno de la web, **arreglado en el código pero sin probar en el navegador**:
+al miembro raso, «Tus datos» y «Cambiar la contraseña» del menú le llevaban a
+`/panel/cuenta`, y la guarda del panel le devolvía a `/mi`. En la web tampoco
+tenía camino a Mi cuenta ni a borrar la cuenta desde que la barra de abajo
+perdió su pestaña (agosto). Ahora el menú del área del miembro lleva «Mi
+cuenta» (prop `miCuenta` de `MenuCuenta`).
+
+Betania, la iglesia de todo lo anterior, **se borró el mismo 20-nov**. Las
+pruebas automáticas montan ahora sus propias iglesias
+(`scripts/pruebas/demo.mjs`).
+
 Falta:
 
-- **Desplegar la API** en hatril.com: hasta entonces el binario arranca pero
-  no tiene datos (en el emulador, el CORS de hatril.com rechaza las llamadas,
-  porque allí todavía no existen).
-- Alargar la prueba de Betania y probar las escrituras y Equipo de punta a
-  punta.
+- ~~Desplegar la API en hatril.com~~: hecho el 20-nov (`4a55a8f`). Responde,
+  el CORS deja pasar a `https://localhost` y a nadie más, y sin sesión da 401.
+- Probar las escrituras y Equipo de punta a punta, ahora en Cuerpo de Cristo.
+- Abrir el menú de la web con una cuenta de Cuerpo de Cristo y ver que llega a
+  Mi cuenta.
 - Probar en el emulador y en el iPhone con la API desplegada, y push, Apple y
   Google en un teléfono de verdad.
 - La fase 5: un build nuevo de iOS y de Android, TestFlight interno y las
