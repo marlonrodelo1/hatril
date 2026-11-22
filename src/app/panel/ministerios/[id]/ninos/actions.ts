@@ -7,7 +7,14 @@ import { z } from 'zod';
 
 import { exigirModulo, requireGestionMinisterioAccion } from '@/lib/auth/guard-panel';
 import { withUser } from '@/lib/db';
-import { ninoFamilias, ninosArchivos, ninosCronograma, ninosPublicaciones, ninosSolicitudes } from '@/lib/db/schema';
+import {
+  ministerios,
+  ninoFamilias,
+  ninosArchivos,
+  ninosCronograma,
+  ninosPublicaciones,
+  ninosSolicitudes,
+} from '@/lib/db/schema';
 import { esGuardHatril } from '@/lib/db/error';
 import { campo, campoObligatorio, campos, casilla } from '@/lib/api/formulario';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
@@ -25,6 +32,7 @@ import {
   MAX_DURACION_VIDEO_S,
   TIPOS_VIDEO,
 } from '@/lib/ninos/limites';
+import { avisarAceptada, avisarPublicacion } from '@/lib/ninos/avisos';
 import type { UserContext } from '@/lib/auth/user-context';
 
 /**
@@ -53,6 +61,18 @@ function volver(destino: string, mensaje: string): never {
 function hecho(destino: string, clave: string): never {
   revalidatePath(destino.split('?')[0]!);
   redirect(`${destino}${destino.includes('?') ? '&' : '?'}guardado=${clave}`);
+}
+
+/** El nombre del ministerio, para los avisos. */
+async function nombreDelMinisterio(ctx: UserContext, ministerioId: string): Promise<string> {
+  const [m] = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ nombre: ministerios.nombre })
+      .from(ministerios)
+      .where(and(eq(ministerios.id, ministerioId), eq(ministerios.iglesiaId, ctx.iglesia.id)))
+      .limit(1),
+  );
+  return m?.nombre ?? 'Niños';
 }
 
 async function guarda(ministerioId: string): Promise<UserContext> {
@@ -89,6 +109,15 @@ export async function aceptarSolicitud(ministerioId: string, solicitudId: string
     volver(destino, 'Elige si es un niño nuevo o uno que ya está.');
   }
 
+  // Quién lo pidió, para avisarle: la petición se borra al aceptarla.
+  const [pedida] = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ miembroId: ninosSolicitudes.miembroId })
+      .from(ninosSolicitudes)
+      .where(and(eq(ninosSolicitudes.id, solicitudId), eq(ninosSolicitudes.iglesiaId, ctx.iglesia.id)))
+      .limit(1),
+  );
+
   try {
     await withUser(ctx.user.id, (tx) =>
       tx.execute(
@@ -108,6 +137,15 @@ export async function aceptarSolicitud(ministerioId: string, solicitudId: string
       volver(destino, 'Ese niño ya tiene 14 años o más: este ministerio es hasta los 13.');
     }
     throw err;
+  }
+
+  if (pedida) {
+    await avisarAceptada({
+      iglesiaId: ctx.iglesia.id,
+      miembroId: pedida.miembroId,
+      ministerio: await nombreDelMinisterio(ctx, ministerioId),
+      provocadoPor: ctx.user.id,
+    });
   }
 
   hecho(destino, 'aceptada');
@@ -364,7 +402,7 @@ export async function publicar(ministerioId: string, publicacionId: string, form
   exigirIds(destino, ministerioId, publicacionId);
   const ctx = await guarda(ministerioId);
 
-  const error = await withUser(ctx.user.id, async (tx) => {
+  const resultado = await withUser(ctx.user.id, async (tx) => {
     const [conArchivos] = await tx
       .select({ n: sql<number>`count(*)::int` })
       .from(ninosArchivos)
@@ -383,10 +421,20 @@ export async function publicar(ministerioId: string, publicacionId: string, form
       .update(ninosPublicaciones)
       .set({ publicadaAt: new Date() })
       .where(and(estaPublicacion(ctx, ministerioId, publicacionId), isNull(ninosPublicaciones.publicadaAt)))
-      .returning({ id: ninosPublicaciones.id });
-    return hechas.length === 0 ? 'Ya estaba publicada, o ya no existe.' : null;
+      .returning({ fecha: ninosPublicaciones.fecha });
+    return hechas.length === 0 ? 'Ya estaba publicada, o ya no existe.' : { fecha: hechas[0]!.fecha };
   });
-  if (error) volver(destino, error);
+  if (typeof resultado === 'string') volver(destino, resultado);
+
+  // A las familias que la pueden ver. Si se retira y se vuelve a publicar,
+  // avisa otra vez: es lo que espera quien la publica de nuevo.
+  await avisarPublicacion({
+    iglesiaId: ctx.iglesia.id,
+    ministerioId,
+    ministerio: await nombreDelMinisterio(ctx, ministerioId),
+    fecha: resultado.fecha,
+    provocadoPor: ctx.user.id,
+  });
 
   hecho(destino, 'publicada');
 }

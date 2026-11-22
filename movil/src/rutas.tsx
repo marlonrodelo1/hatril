@@ -17,6 +17,7 @@ import { Comunidad, DenunciaEnviada, Denuncias } from './pantallas/mi/comunidad'
 import { Acepta, CuentaEnBaja } from './pantallas/mi/acepta';
 import { Biblia, Bloqueados, Borrar, Cuenta, Donativos } from './pantallas/mi/cuenta';
 import { Equipo } from './pantallas/mi/equipo';
+import { MisHijos, PedirHijo, TablonHijos } from './pantallas/mi/hijos';
 
 /**
  * Las rutas de la app son LAS MISMAS que las de la web.
@@ -70,6 +71,11 @@ export const enrutador = createBrowserRouter([
               { path: '/mi/cuenta/donativos', element: <Donativos /> },
               { path: '/mi/avisos', element: <Avisos /> },
               { path: '/mi/equipo/*', element: <Equipo /> },
+              // Las familias del ministerio de Niños. Solo en la app: en la
+              // web, `/mi/hijos` solo dice que se ve aquí.
+              { path: '/mi/hijos', element: <MisHijos /> },
+              { path: '/mi/hijos/pedir', element: <PedirHijo /> },
+              { path: '/mi/hijos/tablon', element: <TablonHijos /> },
             ],
           },
           { path: '/acepta', element: <Acepta /> },

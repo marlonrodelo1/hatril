@@ -7,6 +7,7 @@ import { ninosArchivos } from '@/lib/db/schema';
 import { emitirNotificacion } from '@/lib/notificaciones/emitir';
 import { tieneModulo } from '@/lib/ministerios/modulos';
 import { BUCKETS, borrarFicheros } from './almacen';
+import { quienLlevaNinos } from './avisos';
 import { fechaDeBorrado } from './limites';
 
 /**
@@ -195,25 +196,7 @@ async function avisarDeLoQueCaduca(errores: string[]): Promise<number> {
     if (!tieneModulo(g.modulos, 'ninos')) continue;
 
     try {
-      // La responsable, con cuenta activa. Si no la hay, los pastores: alguien
-      // tiene que enterarse antes de que se borre.
-      let destinatarios = filas<{ auth_user_id: string }>(
-        await dbAdmin.execute(sql`
-          select iu.auth_user_id::text
-            from ministerio_miembros mm
-            join iglesia_usuarios iu on iu.iglesia_id = mm.iglesia_id and iu.miembro_id = mm.miembro_id
-           where mm.ministerio_id = ${g.ministerio_id}::uuid
-             and mm.activo and mm.rol_equipo = 'responsable' and iu.estado = 'activo'
-        `),
-      );
-      if (destinatarios.length === 0) {
-        destinatarios = filas<{ auth_user_id: string }>(
-          await dbAdmin.execute(sql`
-            select auth_user_id::text from iglesia_usuarios
-             where iglesia_id = ${g.iglesia_id}::uuid and rol = 'pastor' and estado = 'activo'
-          `),
-        );
-      }
+      const destinatarios = await quienLlevaNinos(g.iglesia_id, g.ministerio_id);
 
       const cuantos = [
         g.fotos > 0 ? `${g.fotos} ${g.fotos === 1 ? 'foto' : 'fotos'}` : null,
@@ -225,7 +208,7 @@ async function avisarDeLoQueCaduca(errores: string[]): Promise<number> {
       for (const d of destinatarios) {
         await emitirNotificacion({
           iglesiaId: g.iglesia_id,
-          destinatarioAuthUserId: d.auth_user_id,
+          destinatarioAuthUserId: d,
           tipo: 'ninos_caducan',
           datos: {
             fecha: fechaDeBorrado(g.caduca_el),

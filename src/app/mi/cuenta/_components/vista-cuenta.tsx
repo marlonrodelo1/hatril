@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import Link from 'next/link';
 import {
+  Baby,
   ChevronRight,
   Church,
   ExternalLink,
@@ -78,12 +79,19 @@ export function VistaCuenta({
   nombre,
   correo,
   contrasena,
+  misHijos,
 }: DatosDeMiCuenta & {
   cabecera: ReactNode;
   EnlaceDar: ComponentType<PropsEnlaceDar>;
   urlWebIglesia?: string;
   error?: string;
   guardado?: string;
+  /**
+   * «Mis hijos» del ministerio de Niños. Solo lo pasa la app (`movil/`), y
+   * solo si la iglesia tiene el tablón encendido: lo de los padres no va en
+   * la web `/mi` (`plan-ninos.md` §6), así que la web no cambia.
+   */
+  misHijos?: { detalle: string } | null;
 }) {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
@@ -277,6 +285,21 @@ export function VistaCuenta({
          * Privacidad a mano dentro de la app (Apple 5.1.1(i)), y las personas
          * bloqueadas, que la hoja de bloquear promete que se deshacen aquí.
          */}
+        {misHijos && (
+          <Grupo rotulo="Familia">
+            <Fila
+              href="/mi/hijos"
+              inicio={
+                <CuadroIcono>
+                  <Baby strokeWidth={1.8} />
+                </CuadroIcono>
+              }
+              titulo="Mis hijos en Niños"
+              detalle={misHijos.detalle}
+            />
+          </Grupo>
+        )}
+
         <Grupo rotulo="Privacidad">
           {/*
            * El permiso de asistencia, que el texto de la casilla promete poder

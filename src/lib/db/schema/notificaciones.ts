@@ -58,6 +58,14 @@ export const tipoNotificacionEnum = pgEnum('tipo_notificacion_enum', [
    * que los descargue antes si los quiere conservar (`plan-ninos.md` §5).
    */
   'ninos_caducan',
+  /** Niños: una madre, un padre o un tutor pide ver lo de su hijo. Va a la responsable. */
+  'ninos_solicitud',
+  /** Niños: la responsable te ha aceptado; ya ves el tablón. Va a la familia. */
+  'ninos_aceptada',
+  /** Niños: hay una publicación nueva en el tablón. Va a las familias que la pueden ver. */
+  'ninos_publicacion',
+  /** Niños: una familia ha retirado el permiso de fotos. Va a la responsable, para que quite las suyas. */
+  'ninos_sin_fotos',
 ]);
 
 export const notificaciones = pgTable(

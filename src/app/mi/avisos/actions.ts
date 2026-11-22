@@ -6,7 +6,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 
 import { withUser } from '@/lib/db';
 import { notificaciones } from '@/lib/db/schema';
-import { createClient } from '@/lib/supabase/server';
+import { usuarioActual } from '@/lib/auth/usuario';
 
 /**
  * Marcar avisos como leídos.
@@ -25,10 +25,12 @@ import { createClient } from '@/lib/supabase/server';
  */
 
 async function sesion(): Promise<string> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // `usuarioActual()` y no el cliente de la cookie: estas actions las llama
+  // también la app empaquetada (`POST /api/v1/app/accion`), que manda la
+  // sesión como token Bearer y no lleva cookie. Con la cookie, tocar un aviso
+  // en la app llevaba a «Entrar» con la sesión abierta. La web sigue igual:
+  // sin cabecera, `usuarioActual()` lee la cookie.
+  const user = await usuarioActual();
 
   if (!user) redirect('/acceso?next=/mi/avisos');
   return user.id;

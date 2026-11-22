@@ -29,10 +29,10 @@ fusionar.
 
 ## Cola con migración (de una en una)
 
-**Al 21-nov, la siguiente migración es la 0062 y el siguiente código de
+**Al 21-nov, la siguiente migración es la 0063 y el siguiente código de
 trigger, HT145.** Las últimas: donativos (`0055`-`0056`, HT140; la HT138 y
 la HT139 no las usa nadie), los teléfonos de las push (`0057`-`0058`, HT141)
-y el ministerio de Niños (`0059`-`0061`, HT142-HT144). Las tres, aplicadas en
+y el ministerio de Niños (`0059`-`0062`, HT142-HT144). Las tres, aplicadas en
 la base.
 
 Lo de abajo es la historia de cómo se llegó aquí. Células está en marcha

@@ -11,6 +11,7 @@ import * as equipoAgenda from '@/app/mi/equipo/[id]/agenda/actions';
 import * as equipoRepertorio from '@/app/mi/equipo/[id]/repertorio/actions';
 import * as equipoSeguimiento from '@/app/mi/equipo/[id]/seguimiento/actions';
 import * as equipoTurnos from '@/app/mi/equipo/[id]/turnos/actions';
+import * as hijos from '@/app/mi/hijos/actions';
 
 /**
  * Las server actions que la app empaquetada puede llamar, y SOLO esas.
@@ -60,6 +61,8 @@ export const MODULOS_DE_ACCIONES: Record<string, Record<string, unknown>> = {
   'mi/equipo/[id]/repertorio': equipoRepertorio,
   'mi/equipo/[id]/seguimiento': equipoSeguimiento,
   'mi/equipo/[id]/turnos': equipoTurnos,
+  // Las familias del ministerio de Niños: solo en la app (`plan-ninos.md` §6).
+  'mi/hijos': hijos,
 };
 
 /** La action de `modulo#nombre`, o `null` si no está en la lista. */

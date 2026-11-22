@@ -84,6 +84,10 @@ let MIEMBRO;
 let COLIDER;
 let VISITA; // sin iglesia, con solicitud
 let SION; // pastor de OTRA iglesia
+// Niños: la responsable y dos madres aceptadas (`scripts/pruebas/demo.mjs`).
+let MAESTRA;
+let MADRE; // madre de Tomás, aceptada hace diez días
+let MADRE2; // madre de Lía, aceptada hoy
 
 let CUENTAS = [];
 // El slug de Betel, para la solicitud bien formada de `solicitudValida()`.
@@ -548,6 +552,69 @@ const ENDPOINTS = [
   },
 
   // ------------------------------------------------------------------
+  // Mis hijos (Niños, fase N4). Cada familia, lo suyo; quien además lleva el
+  // ministerio, como una familia más (la RLS le enseñaría todos los niños).
+  // ------------------------------------------------------------------
+  {
+    ruta: 'mi/hijos',
+    casos: {
+      'sin token: 401': async ({ pedir }) => espera(await pedir('GET', '/mi/hijos', null), 401),
+      'visita sin iglesia: 403': async ({ pedirComo }) => espera(await pedirComo(VISITA, 'GET', '/mi/hijos'), 403),
+      'madre: su hijo, y no la hija de otra familia': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(MADRE, 'GET', '/mi/hijos');
+        const nombres = (r.json?.hijos ?? []).map((h) => h.nombre);
+        return [
+          ...espera(r, 200),
+          ...igual('hijos', nombres.join(','), 'Tomás'),
+          ...(r.texto.includes('Lía') ? ['FUGA: trae a Lía, de otra familia'] : []),
+          ...sinRastroDe(r, demo.sion),
+        ];
+      },
+      'la otra madre: su hija': async ({ pedirComo }) => {
+        const r = await pedirComo(MADRE2, 'GET', '/mi/hijos');
+        return [...espera(r, 200), ...igual('hijos', (r.json?.hijos ?? []).map((h) => h.nombre).join(','), 'Lía')];
+      },
+      'la responsable: ningún hijo, aunque lleve el ministerio': async ({ pedirComo }) => {
+        const r = await pedirComo(MAESTRA, 'GET', '/mi/hijos');
+        return [...espera(r, 200), ...igual('hijos', (r.json?.hijos ?? []).length, 0)];
+      },
+      'miembro: ve que hay tablón, sin hijos': async ({ pedirComo }) => {
+        const r = await pedirComo(MIEMBRO, 'GET', '/mi/hijos');
+        return [
+          ...espera(r, 200),
+          ...igual('ministerios', (r.json?.ministerios ?? []).length, 1),
+          ...igual('hijos', (r.json?.hijos ?? []).length, 0),
+        ];
+      },
+    },
+  },
+  {
+    ruta: 'mi/hijos/tablon',
+    casos: {
+      'sin token: 401': async ({ pedir }) => espera(await pedir('GET', '/mi/hijos/tablon', null), 401),
+      'visita sin iglesia: 403': async ({ pedirComo }) =>
+        espera(await pedirComo(VISITA, 'GET', '/mi/hijos/tablon'), 403),
+      'madre: lo publicado desde que la aceptaron, sin el borrador ni lo de antes': async ({ pedirComo }) => {
+        const r = await pedirComo(MADRE, 'GET', '/mi/hijos/tablon');
+        const textos = (r.json?.publicaciones ?? []).map((p) => p.texto);
+        return [...espera(r, 200), ...igual('publicaciones', textos.join(' | '), 'Cantamos y pintamos el arca')];
+      },
+      'la madre aceptada hoy: nada de hace dos días': async ({ pedirComo }) => {
+        const r = await pedirComo(MADRE2, 'GET', '/mi/hijos/tablon');
+        return [...espera(r, 200), ...igual('publicaciones', (r.json?.publicaciones ?? []).length, 0)];
+      },
+      'la responsable: como una familia sin hijos, nada': async ({ pedirComo }) => {
+        const r = await pedirComo(MAESTRA, 'GET', '/mi/hijos/tablon');
+        return [...espera(r, 200), ...igual('publicaciones', (r.json?.publicaciones ?? []).length, 0)];
+      },
+      'miembro sin hijos: nada': async ({ pedirComo }) => {
+        const r = await pedirComo(MIEMBRO, 'GET', '/mi/hijos/tablon');
+        return [...espera(r, 200), ...igual('publicaciones', (r.json?.publicaciones ?? []).length, 0)];
+      },
+    },
+  },
+
+  // ------------------------------------------------------------------
   // Equipo (fase 4): una ruta para las quince pantallas. Cada una pone su
   // guarda en su `cargar`; aquí se mira que la tabla sea cerrada y que las
   // guardas corten. Betel tiene la prueba en vigor, así que sus cuentas pasan
@@ -737,8 +804,11 @@ async function probar(montada, fallos) {
     colider: COLIDER,
     visita: VISITA,
     sion: SION,
+    maestra: MAESTRA,
+    madre: MADRE,
+    madre2: MADRE2,
   } = montada.cuentas);
-  CUENTAS = [PASTOR, SECRETARIA, LIDER, MIEMBRO, COLIDER, VISITA, SION];
+  CUENTAS = [PASTOR, SECRETARIA, LIDER, MIEMBRO, COLIDER, VISITA, SION, MAESTRA, MADRE, MADRE2];
   SLUG_BETEL = montada.betel.slug;
   const demo = datosDe(montada);
   const sesiones = {};

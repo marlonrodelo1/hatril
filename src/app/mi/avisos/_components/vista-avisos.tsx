@@ -5,10 +5,12 @@ import {
   CalendarCheck,
   CalendarClock,
   CalendarX,
+  CameraOff,
   CheckCheck,
   EyeOff,
   Flag,
   Heart,
+  Images,
   MessageCircle,
   UserCheck,
   UserPlus,
@@ -69,6 +71,10 @@ const ESTILO: Record<TipoNotificacion, { Icono: LucideIcon; circulo: string }> =
   me_gusta_en_publicacion: { Icono: Heart, circulo: GENTE },
   denuncia_en_comunidad: { Icono: Flag, circulo: OJO },
   ninos_caducan: { Icono: CalendarClock, circulo: OJO },
+  ninos_solicitud: { Icono: UserPlus, circulo: TURNO },
+  ninos_aceptada: { Icono: UserCheck, circulo: BIEN },
+  ninos_publicacion: { Icono: Images, circulo: GENTE },
+  ninos_sin_fotos: { Icono: CameraOff, circulo: OJO },
 };
 
 type Grupo = 'Hoy' | 'Esta semana' | 'Antes';

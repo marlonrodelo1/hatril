@@ -60,8 +60,28 @@ v1 sin clases) y la 10 (versión propia `ninos-2026-11`).
   entra al panel, así que no puede descargar el mes, y el cron lo borra igual
   a su fecha. Es la misma regla que las demás descargas; decidirlo si llega a
   pasar.
-- **Lo siguiente**: N4 (los padres, en la app de `movil/`) y N5 (los maestros
-  en la app).
+- **N4 hecha**, con la migración `0062` (cuatro avisos: petición, aceptada,
+  publicación y sin fotos), aplicada. En la app de `movil/`: «Mis hijos»
+  (`/mi/hijos`, entrando desde Mi cuenta → Familia, solo si la iglesia tiene
+  el tablón), pedir el vínculo con la información y las dos casillas de
+  `ninos-textos.md`, el tablón con sus fotos firmadas, dar y quitar el permiso
+  de fotos y desvincularse. Vistas compartidas en `src/app/mi/hijos/_components`,
+  actions en `src/app/mi/hijos/actions.ts` (en la lista de
+  `acciones-app.ts`), datos en `lib/ninos/familia.ts` y endpoints
+  `/api/v1/app/mi/hijos` y `/mi/hijos/tablon`. En la web, `/mi/hijos` solo dice
+  que se ve en la app (para que los avisos no lleven a un 404). Avisos: a la
+  responsable cuando piden y cuando quitan el permiso de fotos; a la familia
+  cuando la aceptan; a las familias cuando se publica. `test:puertas:app`, 104
+  casos sin fallos (cada madre ve lo suyo, y la responsable que también lleva
+  el ministerio no ve hijos ajenos); probado en la app a 375 px de punta a
+  punta, con el panel aceptando y publicando.
+- **Arreglado por el camino, fuera de Niños**: las actions de avisos
+  (`src/app/mi/avisos/actions.ts`) leían la sesión de la cookie, y la app
+  manda token: tocar cualquier aviso en la app llevaba a «Entrar». Ahora usan
+  `usuarioActual()`. **El mismo fallo sigue en `mi/cuenta/borrar/actions.ts`**
+  (borrar la cuenta y recuperarla desde la app), que no se ha tocado.
+- **Lo siguiente**: N5 (los maestros en la app: cronograma y publicar desde
+  Equipo).
 
 Lo pidió la líder del ministerio de niños de Cuerpo de Cristo, contado por
 Marlon el 20-nov: un tablón para los padres, un cronograma para los maestros,

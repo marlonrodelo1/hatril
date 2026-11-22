@@ -9,6 +9,7 @@ import { VistaBorrar } from '@/app/mi/cuenta/_components/vista-borrar';
 import { VistaCuenta } from '@/app/mi/cuenta/_components/vista-cuenta';
 import { VistaDonativos } from '@/app/mi/cuenta/_components/vista-donativos';
 import { libroPorSlug } from '@/lib/biblia/libros';
+import type { RespuestaHijos } from '@/lib/app-api/hijos';
 import type {
   RespuestaBiblia,
   RespuestaBloqueados,
@@ -45,6 +46,10 @@ export function Cuenta() {
   const [parametros] = useSearchParams();
   const { data: yo } = useYo();
   const datos = useQuery({ queryKey: ['cuenta'], queryFn: () => pedir<RespuestaCuenta>('/mi/cuenta') });
+  // «Mis hijos» solo sale si la iglesia tiene el tablón de familias. Aparte y
+  // sin bloquear: si tarda o falla, Mi cuenta se pinta igual, sin esa fila.
+  const hijos = useQuery({ queryKey: ['hijos'], queryFn: () => pedir<RespuestaHijos>('/mi/hijos') });
+  const misHijos = hijos.data && hijos.data.ministerios.length > 0 ? { detalle: detalleDeMisHijos(hijos.data) } : null;
 
   const cabecera = <CabeceraApp titulo="Mi cuenta" subtitulo={yo?.iglesia?.nombre} logoUrl={yo?.iglesia?.logoUrl} />;
   if (datos.isPending) return <Cargando cabecera={cabecera} />;
@@ -65,8 +70,16 @@ export function Cuenta() {
       guardado={parametros.get('guardado') ?? undefined}
       {...datos.data}
       contrasena={contrasena}
+      misHijos={misHijos}
     />
   );
+}
+
+function detalleDeMisHijos(d: RespuestaHijos): string {
+  if (d.hijos.length === 1) return `${d.hijos[0]!.nombre}: ver el tablón y los permisos`;
+  if (d.hijos.length > 1) return `${d.hijos.length} hijos: ver el tablón y los permisos`;
+  if (d.solicitudes.length > 0) return 'Esperando a que la responsable lo acepte';
+  return 'Ver lo que hacen en el ministerio, con sus fotos';
 }
 
 export function Bloqueados() {
