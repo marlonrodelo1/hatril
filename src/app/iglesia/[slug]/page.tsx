@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUserContext } from '@/lib/auth/user-context';
 import { solicitudDeUsuario } from '@/lib/solicitudes/consultas';
 import { fichaDeIglesia } from '@/lib/iglesias/directorio';
+import { mapaWeb } from '@/lib/lugares/mapa';
 import { VistaFicha } from './_components/vista-ficha';
 
 export async function generateMetadata({
@@ -73,6 +74,7 @@ export default async function FichaIglesiaPage({
       miIglesia={ctx?.iglesia.nombre ?? null}
       esDeEsta={ctx?.iglesia.id === iglesia.id}
       pendiente={pendiente && { nombre: pendiente.iglesiaNombre, slug: pendiente.iglesiaSlug }}
+      mapa={mapaWeb()}
     />
   );
 }

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { ChevronLeft } from 'lucide-react';
 
 import { cultoPrincipal, iglesiasConUbicacion } from '@/lib/iglesias/directorio';
+import { mapaWeb } from '@/lib/lugares/mapa';
 import { CercaDeMi } from './_components/cerca-de-mi';
 
 export const metadata: Metadata = { title: 'Iglesias cerca de ti' };
@@ -49,7 +50,7 @@ export default async function CercaPage() {
         </Link>
       </header>
       <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col px-5 pt-2">
-        <CercaDeMi iglesias={iglesias} />
+        <CercaDeMi iglesias={iglesias} mapa={mapaWeb()} />
       </main>
     </div>
   );

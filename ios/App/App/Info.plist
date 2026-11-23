@@ -44,6 +44,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Para hacer una foto en el momento y subirla a Hatril: al muro de tu iglesia, a un devocional o a la portada de un ministerio. Solo se usa cuando tú lo pides.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Para enseñarte las iglesias cerca de ti cuando pulsas «Usar mi ubicación». Solo se usa mientras buscas, no se guarda y no se comparte con ninguna iglesia.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Para guardar en tus fotos una imagen de Hatril cuando mantienes el dedo sobre ella y eliges guardarla.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

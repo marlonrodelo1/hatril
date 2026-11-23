@@ -24,9 +24,63 @@ Nixpacks). Las tres variables `NEXT_PUBLIC_` tienen que estar **además** en
 *Build-time Arguments*: Next las incrusta en el JavaScript al compilar, no las
 lee al arrancar.
 
+Las tres de Google Maps (`GOOGLE_MAPS_CLAVE_SERVIDOR`,
+`GOOGLE_MAPS_CLAVE_NAVEGADOR`, `GOOGLE_MAPS_MAP_ID`) van al revés: **solo en
+Environment**, porque se leen en cada petición. Cómo se sacan, en
+`docs/google-maps.md`.
+
+---
+
+## La próxima versión de la app: iOS build 8 y Android versionCode 4
+
+En las tiendas está lo del 23-nov a las 12:24 (`69e488c`): Android versionCode
+3 e iOS build 5, con Niños en la app y la portada de Equipo arreglada. Los
+builds 5 y 7 de iOS se quedaban en blanco al abrirse. Lo que lleva la
+siguiente, además de lo que ya estaba:
+
+| Qué | Commit | Plataforma |
+|---|---|---|
+| La app de iOS ya no se queda en blanco al abrirla (Supabase vacío al compilar en el Mac) | `419fea0` | iOS |
+| Bienvenida: carrusel de fotos en lugar del atril | `734a571` | las dos |
+| Niños: con el tablón apagado, las familias dejan de ver las fotos | `7137e85` | las dos |
+| La pantalla del turno del equipo se caía en el iPhone | `0ef86f7` | iOS |
+| Google Maps: sugerencias de Google en «cerca de una dirección», mapa con el logo de cada iglesia como pin en «cerca de mí» y «Ver en el mapa» en la ficha | `c383f86` (migración) y el commit de Google Maps del 23-nov | las dos |
+| Permiso de ubicación en iOS (`NSLocationWhenInUseUsageDescription`): sin él, «Usar mi ubicación» fallaba sin preguntar | el commit de Google Maps del 23-nov | iOS |
+
+Antes de compilar:
+
+- **Android**: subir `versionCode` a 4 en `android/app/build.gradle`. Todavía
+  está en 3.
+- **iOS**: ya está en 8 (`419fea0`).
+- **Google Maps**: las variables en Dokploy (Environment) y desplegada la web
+  antes de publicar la app. La app pide sugerencias y el mapa a hatril.com:
+  sin la web nueva, «cerca de una dirección» falla, y sin las variables el
+  mapa no aparece y la dirección dice «no disponible».
+
 ---
 
 ## Qué funciona, verificado ejecutándolo
+
+- **Google Maps** (23-nov, `docs/google-maps.md`, migración `0063`). Probado
+  a 375 px con las claves de verdad, sobre una iglesia de prueba en Bogotá:
+  - **En la app** (`movil`, Vite contra el Next local): «cerca de una
+    dirección» sugiere con Google mientras se escribe («Calle 63 #9-60
+    Bogota» → tres de Bogotá, con «Google Maps» al pie); al elegir, la lista
+    por distancia; «Mapa» pinta la iglesia con **su logo como pin** (o sus
+    iniciales si no tiene) y el punto de quien busca; tocar el pin lo marca en
+    carbón y sube su fila. La ficha, «Ver en el mapa».
+  - **En la web**: `/i/[slug]` con «Ver en el mapa», y en Ajustes la dirección
+    sugiere, rellena sola coordenadas, sitio de Google y ciudad, y se guarda
+    (comprobado en la base; guardar otra vez sin cambios no mueve la fecha).
+  - **El cron** (`refrescarCoordenadas`, llamado directamente): a los 26 días
+    las vuelve a pedir; a los 31 con un sitio inexistente, las borra.
+  - Lo que se vio y se arregló probando: la lista de sugerencias se abría
+    hacia abajo y la tapaba el teclado (ahora se abre hacia arriba si no
+    cabe); la fila de la iglesia elegida quedaba fuera de la pantalla; y
+    `/mapa` iba con caché de 5 minutos y enseñaba el pin viejo.
+  - **Sin probar**: `/buscar/cerca` y `/iglesia/[slug]` de la web en el
+    navegador (son los mismos componentes que la app, y responden 200), y nada
+    en un teléfono de verdad.
 
 - **La app empaquetada, construida entera** (20-nov; plan y avance en
   `docs/app-nativa/plan-spa.md`). Todas las pantallas del miembro, también
@@ -57,13 +111,16 @@ lee al arrancar.
   Apple»** encima del formulario, y vuelve a la solicitud ya con sesión. «Estoy
   buscando iglesia» suma **buscar cerca de una dirección** escrita, con
   Nominatim (OpenStreetMap) desde el teléfono: el servidor no recibe la
-  dirección. Probado en el navegador a tamaño de móvil (sugerencias, el botón
+  dirección. **Desde el 23-nov es Google** (ver «Qué falta» → Google Maps):
+  Nominatim no encontraba ninguna dirección colombiana con «#». Probado en el navegador a tamaño de móvil (sugerencias, el botón
   de Google en la solicitud, y «Chapinero, Bogotá» → Betania a 0,6 km). **Ojo**:
   una iglesia solo sale si su pastor marca «Aparecer en el buscador de
   iglesias» (Ajustes → Directorio de Hatril), y en «cerca» solo si además ha
   puesto su ubicación. Cuerpo de Cristo y Sion no lo tienen marcado. **Falta**
-  decir en `/privacidad` que la dirección escrita se consulta en
-  OpenStreetMap: va con la próxima versión de la política (decisión de Marlon).
+  decir en `/privacidad` que la dirección escrita se consulta en Google (antes
+  OpenStreetMap), pasando por nuestro servidor, y que el mapa, al abrirlo, lo
+  carga Google en el teléfono: va con la próxima versión de la política
+  (decisión de Marlon).
 - **Entrar con Google y con Apple** (19-nov). Botones encima del formulario de
   `/acceso` y `/crear-cuenta`: Google en la web y en las dos apps, Apple solo en
   el iPhone. **Probado Google en la web de punta a punta**: la cuenta de Google
@@ -124,12 +181,15 @@ lee al arrancar.
   - **La pregunta** (`/empezar`) y **buscar**: por nombre (`/buscar`, con la
     ciudad siempre a la vista), **cerca de mí** (`/buscar/cerca`) y por ciudad
     (`/buscar/ciudad`, sugiriendo solo ciudades con iglesias). **Sin mapa**,
-    decidido por Marlon: lista por distancia con radio de 5/10/25/50 km. La
+    decidido por Marlon (hasta el 23-nov, que pidió «Mapa» al lado de la
+    lista): lista por distancia con radio de 5/10/25/50 km. La
     distancia la calcula el navegador: la ubicación de quien busca no llega al
     servidor. El vacío lleva a «Invita a tu iglesia» (hoja de compartir).
   - **Dónde está cada iglesia**: `iglesias.latitud`/`longitud`, que el pastor
     pone en Ajustes con «Usar dónde estoy» o pegando las coordenadas de un mapa
-    (sin geocodificar contra nadie). Betania ya tiene la suya.
+    (sin geocodificar contra nadie). Desde el 23-nov, también eligiendo la
+    dirección de las sugerencias de Google, y entonces caducan a los 30 días
+    si no se refrescan (migración `0063`).
   - **Ficha** (`/iglesia/[slug]`), con sus variantes: gestiona las altas en
     persona, ya eres de otra, o tienes una solicitud pendiente. **Una sola
     iglesia por persona**: la regla la pone la action (activa o pendiente).
@@ -1147,7 +1207,8 @@ lee al arrancar.
 | Legales de la asistencia y el seguimiento | Hechos: `/privacidad` §3, §4 y §6, el anexo del art. 28 en `/terminos`, y el consentimiento propio |
 | Los bloques de asistencia en Inicio | El diseño los pinta y siguen sin pintarse: el dato ya existe |
 | **App nativa: lo que impide enviar a Apple** | **Hechos el 30-oct** borrar la cuenta, la Biblia con texto y «Denunciar» y «Bloquear». Quedan, de `docs/app-nativa/fichas.md` §1: el pago de Stripe al alcance dentro de la app (`/registro`, `/panel/suscripcion`) y la regla 4.2 (una web metida en una app; lo que más la separaría, los avisos push). Y compilar en el Mac (`docs/app-nativa/ios.md`) |
-| **App nativa: la ubicación en iOS** | «Cerca de mí» y el botón de Ajustes piden la ubicación. Android ya la declara (30-oct, versionCode 2: la aproximada y la precisa, y el hardware como opcional; el porqué en el `AndroidManifest.xml`). Falta `NSLocationWhenInUseUsageDescription` en el `Info.plist` de iOS, o el WebView la niega sin preguntar. Sin probar todavía dentro de la app: hace falta que hatril.com tenga desplegado `/buscar/cerca` |
+| **App nativa: la ubicación en iOS** | **Puesta el 23-nov** `NSLocationWhenInUseUsageDescription` en el `Info.plist`: sin ella el WebView negaba la ubicación sin preguntar. Va en el build 8. Android ya la declaraba (30-oct, versionCode 2). **Sin probar en un iPhone**: hace falta el Mac |
+| **Google Maps: lo que queda** | Hecho y probado el 23-nov (ver «Qué funciona»). El proyecto es `hatril-mapas`, facturado a «Pago de Firebase» (la otra cuenta de facturación ya tenía su máximo de tres proyectos). Queda: **las variables en Dokploy** (Environment, no Build-time; hoy solo están en `.env.local`); **borrar la clave «Maps Platform API Key»** que Google creó sola al habilitar, sin restringir y con 32 APIs; crear un **Map ID** propio (`GOOGLE_MAPS_MAP_ID`; sin él se usa `DEMO_MAP_ID`, que Google da solo para probar); los **topes diarios** de las dos APIs; **programar `POST /api/v1/cron/lugares` una vez al día** (sin él, las coordenadas de Google se caen de «cerca» a los 30 días, a propósito); y contarlo en `/privacidad` (Google como destinatario de la dirección escrita y del mapa). Tras desplegar, probar una sugerencia en hatril.com: si el VPS sale a Google por IPv6, la clave del servidor (restringida a `187.124.37.206`) dirá que no, y habrá que añadir su IPv6 |
 | **El cron de las bajas de cuenta** | **Sin él no se borra ninguna cuenta a los 30 días**, y la pantalla lo promete. Hay que poner `INTERNAL_API_TOKEN` en Dokploy (hoy no está ni en `.env.local`: la ruta responde 500) y programar una vez al día `POST /api/v1/cron/bajas` con `Authorization: Bearer $INTERNAL_API_TOKEN`. El borrado final (`borrarCuentaDeVerdad` en `lib/cuenta/baja.ts`) no se ha ejecutado nunca: probarlo con una cuenta de usar y tirar antes de fiarse |
 | **App nativa: lo que pide Google** | Borrar la cuenta dentro de la app y la dirección web para pedirlo (`/borrar-cuenta`) están **hechos desde el 30-oct**. Queda el gráfico de 1024×500 y las capturas. La cuenta para quien revisa. El formulario de seguridad de datos con lo de `fichas.md` §5, que ya incluye la plaza pagada y el reparto. Con cuenta personal de Play Console, la prueba cerrada de 12 personas durante 14 días |
 | **App nativa: antes de cualquiera de las dos** | Desplegar la web con `app-nativa.tsx` y el cambio a hatril.com (los legales en producción aún dicen `hola@hatril.app`). Crear el buzón `hola@hatril.com`. Probar con sesión en un teléfono de verdad. **La firma de subida está solo en este ordenador**, en `Versiones/Android/firma/` (el `.jks` y `CLAVES.txt`): copiarla fuera, a un pendrive o un gestor de contraseñas. Si se pierde, Google tarda días en aceptar una nueva y mientras no se publica nada |

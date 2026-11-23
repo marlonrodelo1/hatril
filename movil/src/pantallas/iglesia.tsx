@@ -48,7 +48,7 @@ export function FichaIglesia() {
     return <SinConexion mensaje={ficha.error.message} reintentar={() => void ficha.refetch()} />;
   }
 
-  const { iglesia, relacion, pendienteEn, miIglesia } = ficha.data;
+  const { iglesia, relacion, pendienteEn, miIglesia, mapas } = ficha.data;
   return (
     <VistaFicha
       iglesia={iglesia}
@@ -56,6 +56,7 @@ export function FichaIglesia() {
       esDeEsta={relacion === 'de_esta'}
       pendiente={pendienteEn}
       urlWeb={`${WEB_URL}/i/${iglesia.slug}`}
+      mapa={mapas ? { desde: `${WEB_URL}/mapa` } : null}
     />
   );
 }

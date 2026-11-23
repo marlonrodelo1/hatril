@@ -4,6 +4,7 @@ import { usuarioActual } from '@/lib/auth/usuario';
 import { getCurrentUserContext } from '@/lib/auth/user-context';
 import { fichaDeIglesia } from '@/lib/iglesias/directorio';
 import { solicitudDeUsuario } from '@/lib/solicitudes/consultas';
+import { mapasConfigurados } from '@/lib/lugares/mapa';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -67,6 +68,7 @@ export const GET = endpointApp({ guarda: publica }, async ({ params }) => {
       webPublica: iglesia.webPublica,
     },
     relacion,
+    mapas: mapasConfigurados(),
     pendienteEn,
     miIglesia,
     nombreSugerido: typeof nombre === 'string' && nombre.trim() ? nombre.trim() : null,

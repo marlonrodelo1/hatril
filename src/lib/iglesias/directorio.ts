@@ -4,6 +4,7 @@ import { and, asc, eq, ilike, isNotNull, or, sql } from 'drizzle-orm';
 
 import { withAnon, dbAdmin } from '@/lib/db';
 import { iglesias, type HorarioSemanal } from '@/lib/db/schema';
+import { coordenadasVigentes, latitudVigente, longitudVigente } from '@/lib/lugares/vigencia';
 
 /**
  * El directorio público de iglesias.
@@ -173,13 +174,18 @@ export async function totalEnDirectorio(): Promise<number> {
  * ubicación de quien busca no sale de su teléfono. Con cientos de iglesias
  * habrá que acotar por país o por una caja de coordenadas; con las de hoy, una
  * lista entera pesa menos que una foto.
+ *
+ * Sin las coordenadas de Google que hayan pasado de sus 30 días
+ * (`lib/lugares/vigencia.ts`).
  */
 export async function iglesiasConUbicacion(): Promise<IglesiaEnDirectorio[]> {
   return withAnon((tx) =>
     tx
       .select(COLUMNAS_DIRECTORIO)
       .from(iglesias)
-      .where(and(isNotNull(iglesias.latitud), isNotNull(iglesias.longitud)))
+      .where(
+        and(isNotNull(iglesias.latitud), isNotNull(iglesias.longitud), coordenadasVigentes),
+      )
       .orderBy(asc(iglesias.nombre))
       .limit(500),
   );
@@ -248,8 +254,9 @@ export async function fichaDeIglesia(slug: string) {
       bannerUrl: iglesias.bannerUrl,
       horarios: iglesias.horarios,
       timezone: iglesias.timezone,
-      latitud: iglesias.latitud,
-      longitud: iglesias.longitud,
+      // Las de Google, solo sus 30 días (`lib/lugares/vigencia.ts`).
+      latitud: latitudVigente,
+      longitud: longitudVigente,
       aceptaSolicitudes: iglesias.aceptaSolicitudes,
       webPublica: iglesias.webPublica,
     })

@@ -827,6 +827,15 @@ begin
     r := r || E'  OK   anon no ve trial_until\\n';
   end;
 
+  -- 0063: la fecha de las coordenadas de Google la necesita el filtro de
+  -- «cerca»; el sitio de Google del que salieron, nadie de fuera.
+  begin
+    perform lugar_google_id from public.iglesias limit 1;
+    r := r || E'  FALLO anon lee iglesias.lugar_google_id\\n';
+  exception when others then
+    r := r || E'  OK   anon no ve de que sitio de Google salen las coordenadas\\n';
+  end;
+
   begin
     perform plan from public.iglesias limit 1;
     r := r || E'  FALLO anon lee el plan\\n';

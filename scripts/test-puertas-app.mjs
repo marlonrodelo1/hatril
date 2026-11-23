@@ -253,8 +253,42 @@ const ENDPOINTS = [
     casos: {
       'las que tienen ubicación, sin Sion': async ({ pedir, demo }) => {
         const r = await pedir('GET', '/iglesias/cerca', null);
-        return [...espera(r, 200), ...(slugs(r).includes(demo.sion.slug) ? ['FUGA: sale Sion'] : [])];
+        return [
+          ...espera(r, 200),
+          ...(slugs(r).includes(demo.sion.slug) ? ['FUGA: sale Sion'] : []),
+          ...(typeof r.json?.mapas === 'boolean' ? [] : ['no trae `mapas`']),
+        ];
       },
+    },
+  },
+  // ------------------------------------------------------------------
+  // Las direcciones con Google (23-nov). Públicas y con freno por IP. Lo
+  // que importa: que contesten sin sesión, y que la entrada se valide ANTES
+  // de gastar una consulta de pago (`lib/lugares/publicas.ts`).
+  // ------------------------------------------------------------------
+  {
+    ruta: 'lugares/sugerencias',
+    casos: {
+      'sin texto: 400, sin preguntar a Google': async ({ pedir }) =>
+        espera(await pedir('GET', '/lugares/sugerencias?sesion=prueba-puertas-0001', null), 400),
+      'sin token de sesión de Places: 400': async ({ pedir }) =>
+        espera(await pedir('GET', `/lugares/sugerencias?q=${encodeURIComponent('Calle Mayor')}`, null), 400),
+      'una dirección colombiana: 200 con sugerencias, o 503 sin clave': async ({ pedir }) => {
+        const q = encodeURIComponent('Calle 45 #12-30, Bogotá');
+        const r = await pedir('GET', `/lugares/sugerencias?q=${q}&sesion=prueba-puertas-0001`, null);
+        if (!process.env.GOOGLE_MAPS_CLAVE_SERVIDOR) return espera(r, 503);
+        return [
+          ...espera(r, 200),
+          ...((r.json?.sugerencias?.length ?? 0) > 0 ? [] : ['Google no sugiere nada para una dirección de Bogotá']),
+        ];
+      },
+    },
+  },
+  {
+    ruta: 'lugares/detalle',
+    casos: {
+      'un id que no lo es: 400, sin preguntar a Google': async ({ pedir }) =>
+        espera(await pedir('GET', `/lugares/detalle?id=${encodeURIComponent('<script>')}`, null), 400),
     },
   },
   {
