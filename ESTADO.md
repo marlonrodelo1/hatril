@@ -50,8 +50,9 @@ siguiente, además de lo que ya estaba:
 
 Antes de compilar:
 
-- **Android**: subir `versionCode` a 4 en `android/app/build.gradle`. Todavía
-  está en 3.
+- **Android**: `versionCode` 4 (23-nov, `npm run app:version -- build
+  android`), y el `.aab` compilado ese día contra hatril.com con células ya
+  en `main` (`cfa7d40`).
 - **iOS**: ya está en 9 (23-nov, `npm run app:version -- build ios`; el 8
   ya lo tenía App Store Connect, según Marlon).
 - **Espera a células** (decisión de Marlon, 23-nov): la versión sale cuando
