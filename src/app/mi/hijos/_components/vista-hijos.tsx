@@ -59,7 +59,14 @@ export function VistaHijos({
           <Aviso tipo="ok">{CONFIRMACIONES[guardado]}</Aviso>
         )}
 
-        {ministerios.length === 0 ? (
+        {ministerios.length === 0 && (hijos.length > 0 || solicitudes.length > 0) ? (
+          // El pastor lo apagó: no se publica ni se ve nada, pero los permisos
+          // y el vínculo siguen siendo de la familia, y se pueden quitar.
+          <Aviso tipo="info">
+            Tu iglesia ha apagado el tablón de familias: no se publica ni se ve nada. Puedes seguir quitando el
+            permiso de fotos o desvincularte.
+          </Aviso>
+        ) : ministerios.length === 0 ? (
           <Aviso tipo="info">Tu iglesia no usa todavía el tablón de familias del ministerio de Niños.</Aviso>
         ) : !tieneFicha ? (
           <Aviso tipo="info">

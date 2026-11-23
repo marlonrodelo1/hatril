@@ -46,10 +46,14 @@ export function Cuenta() {
   const [parametros] = useSearchParams();
   const { data: yo } = useYo();
   const datos = useQuery({ queryKey: ['cuenta'], queryFn: () => pedir<RespuestaCuenta>('/mi/cuenta') });
-  // «Mis hijos» solo sale si la iglesia tiene el tablón de familias. Aparte y
-  // sin bloquear: si tarda o falla, Mi cuenta se pinta igual, sin esa fila.
+  // «Mis hijos» sale si la iglesia tiene el tablón de familias, o si esta
+  // familia tiene algo ahí aunque el pastor lo haya apagado: quitar el permiso
+  // de fotos o desvincularse tiene que poder hacerse siempre (RGPD art. 7.3).
+  // Aparte y sin bloquear: si tarda o falla, Mi cuenta se pinta igual, sin esa fila.
   const hijos = useQuery({ queryKey: ['hijos'], queryFn: () => pedir<RespuestaHijos>('/mi/hijos') });
-  const misHijos = hijos.data && hijos.data.ministerios.length > 0 ? { detalle: detalleDeMisHijos(hijos.data) } : null;
+  const conAlgo =
+    hijos.data && (hijos.data.ministerios.length > 0 || hijos.data.hijos.length > 0 || hijos.data.solicitudes.length > 0);
+  const misHijos = hijos.data && conAlgo ? { detalle: detalleDeMisHijos(hijos.data) } : null;
 
   const cabecera = <CabeceraApp titulo="Mi cuenta" subtitulo={yo?.iglesia?.nombre} logoUrl={yo?.iglesia?.logoUrl} />;
   if (datos.isPending) return <Cargando cabecera={cabecera} />;

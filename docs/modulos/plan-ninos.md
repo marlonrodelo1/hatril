@@ -115,6 +115,21 @@ v1 sin clases) y la 10 (versión propia `ninos-2026-11`).
   como objeto. Ahora la tarjeta trae solo `id` y `nombre`, y el icono se busca
   por id en `lib/ministerios/en-la-app/iconos.ts` (el del fondo, que es
   derivado, vive ahí). `test:puertas:app` mira que ninguna tarjeta traiga más.
+- **Probado de punta a punta, 23-nov**: `npm run test:ninos:recorrido` (nuevo,
+  pide `npm run dev`) sigue la historia entera por las puertas que usa la
+  gente: el panel, enviando cada formulario como un navegador sin JavaScript, y
+  la app, con el token de cada cuenta. Encender con y sin compromiso, nombrar y
+  quitar maestros, pedir con cada error posible, aceptar, rechazar, «es el
+  mismo que…», el segundo progenitor, la madre con dos hijas, el maestro que
+  es padre, el cronograma, subir fotos y vídeos de verdad con cada límite, el
+  tablón con sus avisos, los permisos de fotos de los dos padres, desvincularse,
+  el ZIP, la suscripción vencida y apagar el tablón: 169 comprobaciones.
+- **Arreglado por esa prueba**: con el tablón apagado, las familias seguían
+  viendo lo publicado y sus fotos entrando desde un aviso, y la app les
+  escondía «Mis hijos», así que no podían quitar el permiso de fotos ni
+  desvincularse. Ahora el tablón de la familia solo trae lo de ministerios con
+  el tablón encendido, y «Mis hijos» sigue en Mi cuenta mientras la familia
+  tenga hijos o peticiones, con un aviso de que está apagado.
 - **Lo siguiente**: nada de código en Niños hasta que Marlon decida. Queda lo
   de fuera: la revisión del abogado de `ninos-textos.md`, programar el cron,
   el límite global de Storage y una versión nueva de la app.

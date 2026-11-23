@@ -16,6 +16,7 @@
     "test:puertas:admin": "node --env-file-if-exists=.env.local scripts/test-puertas-admin.mjs",
     "test:puertas:app": "node --env-file-if-exists=.env.local scripts/test-puertas-app.mjs",
     "test:ninos": "tsx --tsconfig scripts/pruebas/tsconfig.json --env-file-if-exists=.env.local scripts/test-ninos-caducidad.ts",
+    "test:ninos:recorrido": "node --env-file-if-exists=.env.local scripts/test-ninos-recorrido.mjs",
     "app:android": "node scripts/app/android.mjs",
     "app:ios": "node scripts/app/ios.mjs",
     "app:version": "node scripts/app/version.mjs",

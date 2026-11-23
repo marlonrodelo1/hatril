@@ -180,15 +180,24 @@ export async function tablonDeLaFamilia(ctx: UserContext): Promise<PublicacionPa
   const yo = ctx.miembroId;
   if (!yo) return [];
 
+  // Solo de los ministerios con el tablón encendido. Apagarlo es retirarlo
+  // (`ministerios/actions.ts`), y hasta el 23-nov las familias seguían viendo
+  // lo publicado, con sus fotos, entrando desde un aviso viejo: la app ya les
+  // escondía «Mis hijos», pero esta lista no miraba el módulo.
+  const conTablon = new Set((await ministeriosConTablon(ctx)).map((m) => m.id));
+  if (conTablon.size === 0) return [];
+
   const { pubs, archivos } = await withUser(ctx.user.id, async (tx) => {
-    const desdes = await tx
-      .select({
-        ministerioId: ninoFamilias.ministerioId,
-        desde: sql<string>`min((${ninoFamilias.aceptadoAt} at time zone ${ctx.iglesia.timezone})::date)::text`,
-      })
-      .from(ninoFamilias)
-      .where(and(eq(ninoFamilias.iglesiaId, ctx.iglesia.id), eq(ninoFamilias.miembroId, yo)))
-      .groupBy(ninoFamilias.ministerioId);
+    const desdes = (
+      await tx
+        .select({
+          ministerioId: ninoFamilias.ministerioId,
+          desde: sql<string>`min((${ninoFamilias.aceptadoAt} at time zone ${ctx.iglesia.timezone})::date)::text`,
+        })
+        .from(ninoFamilias)
+        .where(and(eq(ninoFamilias.iglesiaId, ctx.iglesia.id), eq(ninoFamilias.miembroId, yo)))
+        .groupBy(ninoFamilias.ministerioId)
+    ).filter((d) => conTablon.has(d.ministerioId));
     if (desdes.length === 0) return { pubs: [], archivos: [] };
 
     const pubs = await tx
