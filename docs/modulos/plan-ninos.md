@@ -109,11 +109,12 @@ v1 sin clases) y la 10 (versión propia `ninos-2026-11`).
   el borrador, subir una foto desde el teléfono, publicar sin la casilla (se
   niega) y con ella, el cronograma, quitar una familia; como maestro, las
   familias sin botones. Y la subida del drive del panel, otra vez.
-- **Encontrado y sin arreglar, fuera de Niños**: la portada de Equipo en la
-  app (`/mi/equipo/[id]`) se rompe para cualquiera que lleve un ministerio:
-  `TarjetaModulo` pinta `modulo.Icono`, que es un componente y llega por JSON
-  como objeto. En la web no pasa. A Niños se entra bien por su dirección,
-  pero no desde la portada hasta que se arregle (es de la sesión de la app).
+- **Arreglado después, fuera de Niños**: la portada de Equipo en la app
+  (`/mi/equipo/[id]`) se rompía para cualquiera que llevara un ministerio:
+  `TarjetaModulo` pintaba `modulo.Icono`, un componente que por JSON llegaba
+  como objeto. Ahora la tarjeta trae solo `id` y `nombre`, y el icono se busca
+  por id en `lib/ministerios/en-la-app/iconos.ts` (el del fondo, que es
+  derivado, vive ahí). `test:puertas:app` mira que ninguna tarjeta traiga más.
 - **Lo siguiente**: nada de código en Niños hasta que Marlon decida. Queda lo
   de fuera: la revisión del abogado de `ninos-textos.md`, programar el cron,
   el límite global de Storage y una versión nueva de la app.

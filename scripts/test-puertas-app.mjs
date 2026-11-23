@@ -656,6 +656,19 @@ const ENDPOINTS = [
   {
     ruta: 'mi/equipo/[[...ruta]]',
     casos: {
+      // La portada se caía en la app: cada tarjeta traía el `Icono` del
+      // catálogo, un componente, y por JSON llegaba como un objeto que React no
+      // sabe pintar. Ahora el icono se busca por id (`en-la-app/iconos.ts`).
+      'portada del equipo: las tarjetas viajan sin componentes dentro': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(MAESTRA, 'GET', `/mi/equipo/${demo.ninos}`);
+        const tarjetas = r.json?.datos?.tarjetas ?? [];
+        const raras = tarjetas.filter((t) => Object.keys(t.modulo ?? {}).sort().join(',') !== 'id,nombre');
+        return [
+          ...espera(r, 200),
+          ...(tarjetas.length > 0 ? [] : ['no trae tarjetas']),
+          ...raras.map((t) => `la tarjeta ${t.modulo?.id} trae ${Object.keys(t.modulo ?? {}).join(', ')}`),
+        ];
+      },
       'Niños: la responsable ve el tablón, con el borrador': async ({ pedirComo, demo }) => {
         const r = await pedirComo(MAESTRA, 'GET', `/mi/equipo/${demo.ninos}/ninos`);
         return [

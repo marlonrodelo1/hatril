@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import Link from 'next/link';
 import {
   CalendarDays,
@@ -7,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import type { Pendiente } from '@/lib/ministerios/en-la-app/contrato';
+import { iconoDePieza } from '@/lib/ministerios/en-la-app/iconos';
 import type { TarjetaDePortada } from '@/lib/ministerios/en-la-app/portada';
 import { Insignia } from './insignia';
 
@@ -36,11 +38,15 @@ export function TarjetaModulo({ tarjeta }: { tarjeta: TarjetaDePortada }) {
   return (
     <section className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
       <header className="flex items-center gap-2.5 px-4 pb-1 pt-4 md:px-5">
-        <modulo.Icono
-          className="size-[18px] flex-none text-muted-foreground"
-          strokeWidth={1.8}
-          aria-hidden
-        />
+        {/* Por id y no `modulo.Icono`: en la app la tarjeta llega en JSON
+            (`iconos.ts`). Con `createElement` porque es un componente que ya
+            existe, elegido de un catálogo, y no uno creado en el render, que
+            es lo que la regla del compilador de React quiere evitar. */}
+        {createElement(iconoDePieza(modulo.id), {
+          className: 'size-[18px] flex-none text-muted-foreground',
+          strokeWidth: 1.8,
+          'aria-hidden': true,
+        })}
         {/* Sin `truncate`: «Seguimiento de personas» con su insignia al lado
             se quedaba en «Seguimiento de perso…» a 375 px. */}
         <h2 className="t-subtitulo min-w-0 flex-1">{modulo.nombre}</h2>
