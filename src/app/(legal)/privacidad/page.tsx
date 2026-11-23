@@ -195,9 +195,15 @@ export default function PrivacidadPage() {
           quienes llevan esa red —su responsable y sus colíderes— y quienes llevan
           ese grupo; los demás que van contigo ven a quien lo lleva, no la lista,
           y quien no lleva esa red ni va a ese grupo no ve ni la lista ni dónde ni
-          cuándo se reúne. Eso lo impone la base de datos, no solo la pantalla. En
-          la pantalla de su grupo, quien lo lleva ve los nombres, no los
-          teléfonos.
+          cuándo se reúne. Eso lo impone la base de datos, no solo la pantalla.{' '}
+          <strong className="font-semibold">
+            Quien lleva tu grupo ve tu nombre y tu teléfono
+          </strong>
+          , para poder llamarte o escribirte por WhatsApp; los de los demás grupos,
+          no. Si te escribe por WhatsApp, tu número pasa por Meta, como en cualquier
+          mensaje de WhatsApp. Puedes salir de tu grupo cuando quieras desde Mi
+          cuenta, y si te suman a uno sin que lo pidas, te llega un aviso que lo
+          dice.
         </P>
         <P>
           De quien solo pide entrar desde el directorio: nombre, correo,
@@ -205,7 +211,9 @@ export default function PrivacidadPage() {
           de invitación de un grupo, se guarda también de qué grupo y con qué
           enlace; eso solo lo ve el pastor, y se borra al resolver tu solicitud.
           Al aprobarla entras en él si sigue abierto, su enlace no ha cambiado y
-          no vas ya a otro de su red.
+          no vas ya a otro de su red. Si ya eres de la iglesia, con ese enlace
+          entras tú mismo en el grupo, después de leer que quien lo lleva verá tu
+          nombre y tu teléfono.
         </P>
         <P>
           De quien visita una iglesia por primera vez y le apunta alguien del

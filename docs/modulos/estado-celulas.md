@@ -19,6 +19,39 @@ las dos verificaciones de sus arreglos: ver «La revisión del 23-oct», más ab
 
 ---
 
+## 23-nov: fusión con main y lo que pidió Marlon
+
+Un mes después, la rama seguía sin fusionar y las 0048-0051 vivían solo en el
+disco (aplicadas en la base, sin commitear). Marlon volvió a pedir células
+(plan en `plan-celulas.md`) y decidió tres cosas: **el líder ve el teléfono de
+su gente**, el líder no da de alta a nadie (solo el enlace) y la asistencia se
+queda en recuento. Lo hecho:
+
+- **Fusión con main** (37 commits: 0052-0062, la app empaquetada, Niños, el
+  borrado de Betania). Journal en orden de `when`; las tablas y enums de
+  células, copiados a los snapshots 0052-0062 (`drizzle-kit generate` dice «sin
+  cambios»). El SQL de 0046-0051 casa con el hash que guardó la base.
+- **En la app empaquetada**: las tres pantallas de `/mi/equipo/[id]/grupos`,
+  partidas en datos y vista y registradas (`PANTALLAS_EQUIPO`, `CARGAS`,
+  `VISTAS`, `MODULOS_DE_ACCIONES`). «Tu célula», en los datos y la vista de
+  Mi cuenta que comparten la web y la app.
+- **Teléfonos**: `telefonosDeLaCelula` recibe lo que devuelve la guarda y solo
+  mira a los de esa célula. Llamar, WhatsApp y «Escribir a la célula» (abre
+  WhatsApp con el mensaje: no se puede mandar a varios números desde fuera).
+- **El enlace sirve a todos**: quien ya es de la iglesia entra él mismo
+  (`unirse_a_grupo`), y cualquiera puede salir desde Mi cuenta
+  (`salir_de_grupo`).
+- **Avisos**: `grupo_nuevo_integrante` a quien lleva la célula cuando entra
+  alguien, y `grupo_incorporado` a quien suma la red sin pedirlo.
+- **Encargar en un paso**: «Nueva célula» deja elegir de líder a cualquiera de
+  la iglesia, y si no estaba en el equipo de la red entra en él.
+- **La distinción**: la ficha del panel dice a qué célula va cada cual, y
+  Miembros filtra por «va a una célula», solo para el pastor.
+- **Pruebas** sin Betania: la red pasa a `scripts/pruebas/demo.mjs`, y
+  `test:puertas:app` mira que ningún teléfono ajeno viaje.
+
+---
+
 ## Qué hay
 
 **La pieza (`src/lib/db/schema/grupos.ts`).** Cuatro tablas que no dicen
@@ -157,14 +190,18 @@ Hatril el jueves no sale en el aviso por la reunión del martes, pero su líder
 sí puede reportarla si quiere. La primera versión bloqueaba ese reporte: se
 cazó al probarlo.
 
-**Sin dirección, sin notas, sin teléfonos.** Una célula se reúne en casa de
-alguien: zona sí, calle no. El tema va acotado a 120 caracteres y no hay
-campo de peticiones (serían datos de salud). El líder ve nombres, no
-teléfonos: con cuarenta líderes serían los teléfonos de la congregación.
+**Sin dirección y sin notas.** Una célula se reúne en casa de alguien: zona
+sí, calle no. El tema va acotado a 120 caracteres y no hay campo de
+peticiones (serían datos de salud). Hasta el 23-nov el líder veía nombres y
+no teléfonos («con cuarenta líderes serían los teléfonos de la
+congregación»); **Marlon lo cambió**: quien lleva una célula ve el teléfono
+de los suyos y de nadie más, y a cambio cada cual puede salir de su célula y
+se le avisa si la red le suma.
 
-**El líder de célula no da de alta a nadie.** Entra quien llega por el
-enlace, con su consentimiento en `/solicitar`, y a quien ya es de la iglesia
-—tenga la app o no— lo suma la red desde el panel. Cerrar no es borrar: la
+**El líder de célula no da de alta a nadie** (Marlon lo confirmó el 23-nov).
+Entra quien llega por el enlace, con su consentimiento en `/solicitar`; desde
+el 23-nov también quien ya es de la iglesia, con el mismo enlace
+(`unirse_a_grupo`); y a quien no usa la app lo suma la red desde el panel. Cerrar no es borrar: la
 célula sale de las listas y su gente queda fuera, pero sus semanas se quedan.
 Desde la 0049 eso lo garantiza la base: en un grupo cerrado no entra nadie
 (HT132); dar de baja o archivar una ficha le saca de sus grupos con su `hasta`;

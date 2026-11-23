@@ -267,8 +267,10 @@ se fue?** (ausentes, lo que ya hace `seguimiento`).
 - **Ojo**: no colgar las reuniones de célula de `reuniones` sin más. La agenda
   del equipo y el calendario de cada miembro las leerían, y habría que añadir
   `grupo_id is null` a cada consulta existente.
-- Sin dirección de la casa (barrio y día bastan), sin teléfonos para el líder en
-  la v1, sin ofrenda en el reporte (va a Finanzas).
+- Sin dirección de la casa (barrio y día bastan) y sin ofrenda en el reporte (va
+  a Finanzas). **Teléfonos para el líder: sí, desde el 23-nov**, por decisión de
+  Marlon: quien lleva una célula ve el de SU gente, con Llamar y WhatsApp, y
+  cada cual puede salir de su célula. El plan de esa tanda, en `plan-celulas.md`.
 
 ---
 

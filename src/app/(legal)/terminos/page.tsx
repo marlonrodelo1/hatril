@@ -280,9 +280,12 @@ export default function TerminosPage() {
           campo para la dirección ni para notas, la asistencia se cuenta y no se
           apunta por persona, y la lista de cada grupo solo la ven el pastor,
           quienes llevan esa red y quienes llevan ese grupo: lo impone la base de
-          datos. Te comprometes a no escribir direcciones, teléfonos ni
-          peticiones de oración en el nombre, la zona o el tema, igual que con
-          los demás campos libres.
+          datos. Quien lleva un grupo ve además el teléfono de su gente, para
+          llamarla o escribirle, y nada de los demás grupos; cada cual puede salir
+          del suyo cuando quiera. Te comprometes a que quien lleve un grupo use
+          esos teléfonos solo para el grupo, y a no escribir direcciones,
+          teléfonos ni peticiones de oración en el nombre, la zona o el tema,
+          igual que con los demás campos libres.
         </P>
 
         <P>
