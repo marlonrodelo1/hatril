@@ -49,8 +49,10 @@ const PAPEL = { lider: 'Líder', auxiliar: 'Auxiliar', participante: null } as c
  * El naranja es «Guardar cambios» de los datos. Cambiar líder, sumar y quitar
  * van de contorno o de icono: salen varias veces en la pantalla.
  *
- * Los teléfonos no salen. Ni aquí ni en la app: con cuarenta líderes de célula,
- * enseñarlos sería repartir los teléfonos de la congregación.
+ * Los teléfonos no salen aquí: esta es la pantalla de gestionar la red, no la
+ * de llamar. Desde el 23-nov (lo decidió Marlon) quien lleva la célula —y la
+ * red, por la misma puerta— los ve en la pantalla de la célula de la app
+ * (`telefonosDeLaCelula`); el pastor, además, en la ficha de cada cual.
  */
 export default async function GrupoPage({
   params,
