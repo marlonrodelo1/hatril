@@ -80,9 +80,14 @@ export function VistaGrupo({
 
   // El mensaje de partida para la célula: cuándo es la próxima y de qué va.
   const hora = horaCorta(grupo.hora);
+  // `diaCorto` dice «Hoy», «Mañana» o «Martes 1 dic»: el artículo, solo en lo
+  // último («nos vemos mañana», no «el mañana»).
+  const dia = diaCorto(fechaProxima, hoy);
+  const cuandoNosVemos =
+    fechaProxima === hoy || dia === 'Mañana' ? dia.toLocaleLowerCase('es') : `el ${dia.toLocaleLowerCase('es')}`;
   const mensaje = [
     'Hola a todos.',
-    `Nos vemos el ${diaCorto(fechaProxima, hoy).toLocaleLowerCase('es')}${hora ? ` a las ${hora}` : ''}.`,
+    `Nos vemos ${cuandoNosVemos}${hora ? ` a las ${hora}` : ''}.`,
     temaProximo ? `Tema: ${temaProximo}.` : null,
   ]
     .filter(Boolean)

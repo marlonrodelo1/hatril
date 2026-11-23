@@ -874,12 +874,27 @@ const ENDPOINTS = [
         const r = await pedirAccion(MIEMBRO, 'mi/equipo/[id]/grupos/[grupoId]#reportarSemana', [
           demo.celulas,
           demo.pinos,
-          { __campos: { hubo: 'si', semana: '2026-11-16', asistentes: '3', visitas: '0' } },
+          { __campos: { hubo: 'si', semana: lunesPasado(), asistentes: '3', visitas: '0' } },
         ]);
         const cerrada =
           r.status === 404 ||
           (r.status === 200 && typeof r.json?.redirigir === 'string' && !r.json.redirigir.includes('guardado='));
         return cerrada ? [] : [`código ${r.status}: ${r.texto.slice(0, 120)}`];
+      },
+      // El camino de escritura de la app entero: el stub de la action, la lista
+      // cerrada y la action de verdad, con el líder (rol miembro) y su célula.
+      'Células: el líder reporta la semana de su célula desde la app': async ({ pedirAccion, demo }) => {
+        const r = await pedirAccion(ENLACE, 'mi/equipo/[id]/grupos/[grupoId]#reportarSemana', [
+          demo.celulas,
+          demo.pinos,
+          { __campos: { hubo: 'si', semana: lunesPasado(), asistentes: '3', visitas: '1', tema: 'Prueba de la app' } },
+        ]);
+        return [
+          ...espera(r, 200),
+          ...(typeof r.json?.redirigir === 'string' && r.json.redirigir.includes('guardado=reporte')
+            ? []
+            : [`no vuelve con el reporte guardado: ${r.texto.slice(0, 160)}`]),
+        ];
       },
     },
   },
@@ -950,6 +965,13 @@ function solicitudValida() {
     consentimiento: true,
     asistencia: false,
   };
+}
+
+/** El lunes de la semana pasada (UTC): una semana que el líder siempre puede reportar. */
+function lunesPasado() {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7) - 7);
+  return d.toISOString().slice(0, 10);
 }
 
 /** Los teléfonos de la lista que salen en la respuesta, con o sin espacios ni `+`. */
