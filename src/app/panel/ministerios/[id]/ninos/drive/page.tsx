@@ -14,7 +14,7 @@ import { PestanasMinisterio } from '../../_components/pestanas';
 import { CuadroArchivo, firmarArchivos } from '../_components/archivo';
 import { SeccionesNinos } from '../_components/secciones';
 import { SubirAlDrive } from '../_components/subir-al-drive';
-import { borrarArchivo } from '../actions';
+import { borrarArchivo, confirmarSubida, prepararSubida } from '../actions';
 import { CONFIRMACIONES } from '../constantes';
 import { aceptaFamilias, requireNinos } from '../guarda';
 
@@ -84,7 +84,12 @@ export default async function DrivePage({
               Lo ven los maestros y el pastor. Las familias, solo lo que publiques en el tablón.
             </p>
           </div>
-          <SubirAlDrive ministerioId={id} hoy={hoyEnLaIglesia(ctx.iglesia.timezone)} />
+          <SubirAlDrive
+            ministerioId={id}
+            hoy={hoyEnLaIglesia(ctx.iglesia.timezone)}
+            preparar={prepararSubida}
+            confirmar={confirmarSubida}
+          />
         </section>
 
         {archivos.length === 0 ? (

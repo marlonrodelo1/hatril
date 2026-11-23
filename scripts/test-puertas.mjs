@@ -152,7 +152,14 @@ const RUTA_MARCO = '/panel/cuenta/contrasena';
 
 // Las páginas de fuera de `src/app/panel` que este test cubre a propósito, con
 // la misma exigencia que las del panel: existir y estar en `rutas()`.
-const FUERA_DEL_PANEL = ['mi/equipo/[id]/fondo/page.tsx'];
+const FUERA_DEL_PANEL = [
+  'mi/equipo/[id]/fondo/page.tsx',
+  // Niños desde la app (N5): nombres de niños, de sus familias y fotos.
+  'mi/equipo/[id]/ninos/page.tsx',
+  'mi/equipo/[id]/ninos/cronograma/page.tsx',
+  'mi/equipo/[id]/ninos/familias/page.tsx',
+  'mi/equipo/[id]/ninos/publicacion/[publicacionId]/page.tsx',
+];
 
 // ============================================
 // 1. La iglesia de prueba, en solo lectura
@@ -726,6 +733,29 @@ function rutas(ids) {
     pagina('…<Niños>/ninos/familias', `${N}/familias`, 'panel/ministerios/[id]/ninos/familias/page.tsx', NINOS);
     if (ids.publicacionNinos) {
       pagina('…<Niños>/ninos/publicacion/<publicación>', `${N}/publicacion/${ids.publicacionNinos}`, 'panel/ministerios/[id]/ninos/publicacion/[publicacionId]/page.tsx', NINOS);
+    }
+
+    // Lo mismo desde la app (N5), con la puerta del adaptador: la responsable
+    // y el maestro entran; a todos los demás la zona les da 404 de la PROPIA
+    // página, sin rebote, como el fondo. La madre tampoco: lo suyo es «Mis
+    // hijos», no la herramienta de los maestros.
+    const NINOS_APP = {
+      [MAESTRA]: 'pinta',
+      [AUXILIAR]: 'pinta',
+      [MIEMBRO]: 'oculta',
+      [COLIDER]: 'oculta',
+      [LIDER]: 'oculta',
+      [SECRETARIA]: 'oculta',
+      [CONSOLIDACION]: 'oculta',
+      [ENLACE]: 'oculta',
+      [MADRE]: 'oculta',
+    };
+    const NA = `/mi/equipo/${ids.ninos}/ninos`;
+    pagina('/mi/equipo/<Niños>/ninos', NA, 'mi/equipo/[id]/ninos/page.tsx', NINOS_APP);
+    pagina('/mi/equipo/<Niños>/ninos/cronograma', `${NA}/cronograma`, 'mi/equipo/[id]/ninos/cronograma/page.tsx', NINOS_APP);
+    pagina('/mi/equipo/<Niños>/ninos/familias', `${NA}/familias`, 'mi/equipo/[id]/ninos/familias/page.tsx', NINOS_APP);
+    if (ids.publicacionNinos) {
+      pagina('/mi/equipo/<Niños>/ninos/publicacion/<publicación>', `${NA}/publicacion/${ids.publicacionNinos}`, 'mi/equipo/[id]/ninos/publicacion/[publicacionId]/page.tsx', NINOS_APP);
     }
     // Descargar el mes: la responsable y el pastor, no los maestros. A quien
     // no lleva Niños, 403 (es un route.ts: nada de redirigir).

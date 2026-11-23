@@ -25,6 +25,14 @@ export const PANTALLAS_EQUIPO = [
   { nombre: 'cancion', patron: [':id', 'repertorio', ':cancionId'], busqueda: ['error', 'guardado'] },
   { nombre: 'seguimiento', patron: [':id', 'seguimiento'], busqueda: ['error', 'guardado'] },
   { nombre: 'persona', patron: [':id', 'seguimiento', ':miembroId'], busqueda: ['error', 'guardado'] },
+  { nombre: 'ninos', patron: [':id', 'ninos'], busqueda: ['error', 'guardado'] },
+  { nombre: 'ninosCronograma', patron: [':id', 'ninos', 'cronograma'], busqueda: [] },
+  { nombre: 'ninosFamilias', patron: [':id', 'ninos', 'familias'], busqueda: ['error', 'guardado'] },
+  {
+    nombre: 'ninosPublicacion',
+    patron: [':id', 'ninos', 'publicacion', ':publicacionId'],
+    busqueda: ['error', 'guardado'],
+  },
 ] as const;
 
 export type NombrePantallaEquipo = (typeof PANTALLAS_EQUIPO)[number]['nombre'];

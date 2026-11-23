@@ -80,8 +80,43 @@ v1 sin clases) y la 10 (versión propia `ninos-2026-11`).
   manda token: tocar cualquier aviso en la app llevaba a «Entrar». Ahora usan
   `usuarioActual()`. **El mismo fallo sigue en `mi/cuenta/borrar/actions.ts`**
   (borrar la cuenta y recuperarla desde la app), que no se ha tocado.
-- **Lo siguiente**: N5 (los maestros en la app: cronograma y publicar desde
-  Equipo).
+- **N5 hecha**, sin migración. En la app, Equipo → Niños
+  (`/mi/equipo/[id]/ninos`), con la puerta estrecha del adaptador (el pastor,
+  la responsable y los maestros): el tablón (escribir el borrador y entrar),
+  la publicación (la lista de quién puede salir arriba, subir fotos y vídeos
+  ahí mismo desde el teléfono, añadir del drive, la casilla de «he mirado» y
+  publicar, retirar, borrar), el cronograma para leer, y las familias (la
+  responsable y el pastor aceptan y quitan; el maestro ve la lista de niños).
+  La tarjeta de la portada ya lleva a la app, no al panel. Las actions son las
+  del panel envueltas con `enLaApp` (`mi/equipo/[id]/ninos/actions.ts`, en la
+  lista de `acciones-app.ts`). Fuera, a propósito: apuntar clases y el drive
+  suelto (borrar, descargar el mes), que siguen en el panel.
+- **Cambiado en la subida, también en el panel**: `SubirAlDrive` recibe las
+  actions por props y sube con un `fetch` PUT a la URL firmada, sin el cliente
+  de Supabase de la web (que lee `process.env` y en la app no existe);
+  `prepararSubida` recibe un `FormData` (la API de la app no deja pasar
+  objetos). Se puede subir dentro de un borrador y entra ya en él. Y a una
+  publicación YA publicada no se le añade nada sin retirarla antes: antes se
+  podía con «Añadir del drive», y eso se saltaba la revisión de quién sale.
+  Lo comprueba el servidor (`esBorrador`), no solo la pantalla. Dentro de una
+  publicación, «Elegir fotos y vídeos» va en contorno: el naranja es «Publicar».
+- **Probado**: `test:puertas:app` 116 casos sin fallos (la madre, el líder de
+  otro equipo y el pastor de Sion no entran; el maestro no acepta familias; la
+  ruta de Storage no viaja a la app; a lo publicado no se suben fotos);
+  `test:puertas` 78 rutas sin fallos, y las cuatro páginas nuevas de
+  `/mi/equipo/[id]/ninos` en `FUERA_DEL_PANEL`, 44 combinaciones sin fallos;
+  `test:aislamiento` en verde. En la app a 375 px, como responsable: escribir
+  el borrador, subir una foto desde el teléfono, publicar sin la casilla (se
+  niega) y con ella, el cronograma, quitar una familia; como maestro, las
+  familias sin botones. Y la subida del drive del panel, otra vez.
+- **Encontrado y sin arreglar, fuera de Niños**: la portada de Equipo en la
+  app (`/mi/equipo/[id]`) se rompe para cualquiera que lleve un ministerio:
+  `TarjetaModulo` pinta `modulo.Icono`, que es un componente y llega por JSON
+  como objeto. En la web no pasa. A Niños se entra bien por su dirección,
+  pero no desde la portada hasta que se arregle (es de la sesión de la app).
+- **Lo siguiente**: nada de código en Niños hasta que Marlon decida. Queda lo
+  de fuera: la revisión del abogado de `ninos-textos.md`, programar el cron,
+  el límite global de Storage y una versión nueva de la app.
 
 Lo pidió la líder del ministerio de niños de Cuerpo de Cristo, contado por
 Marlon el 20-nov: un tablón para los padres, un cronograma para los maestros,

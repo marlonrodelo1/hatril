@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useId, useState } from 'react';
 import { CircleAlert, CircleCheck, Upload } from 'lucide-react';
 
-import { createClient } from '@/lib/supabase/client';
 import {
   LADO_FOTO,
   LADO_MINIATURA,
@@ -16,7 +15,7 @@ import {
 } from '@/lib/ninos/limites';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { confirmarSubida, prepararSubida } from '../actions';
+import type { PreparadaSubida } from '../actions';
 
 /**
  * Subir fotos y vídeos al drive desde el teléfono o el ordenador.
@@ -35,11 +34,46 @@ import { confirmarSubida, prepararSubida } from '../actions';
  *     (`prepararSubida`), y le pide que confirme (`confirmarSubida`). El VPS
  *     no ve pasar ni un byte.
  *
+ * LAS ACTIONS LLEGAN POR PROPS, Y LA SUBIDA ES UN `PUT` A SECAS
+ * -------------------------------------------------------------
+ * Lo usan el panel y la app empaquetada (`movil/`, Equipo → Niños). La app
+ * sustituye cada `actions.ts` que se importa por llamadas a su API, y solo
+ * admite los de su lista: las del panel no están, y las de la app son otras
+ * (`mi/equipo/[id]/ninos/actions.ts`). Por eso cada pantalla pasa las suyas.
+ * Y sin el cliente de Supabase de la web, que lee `process.env` y en la app no
+ * existe: la URL firmada ya lleva el permiso, así que basta un `fetch` con el
+ * mismo cuerpo que manda supabase-js.
+ *
  * De uno en uno y no en paralelo: con la cobertura de un salón de iglesia,
  * veinte subidas a la vez acaban todas a medias.
  */
 
 type Estado = { nombre: string; estado: 'esperando' | 'subiendo' | 'hecho' | 'error'; mensaje?: string };
+
+/**
+ * Lo que necesita `prepararSubida`, en un `FormData`: la app solo deja pasar a
+ * sus actions texto y formularios, no objetos. Lo que no hay, no viaja.
+ */
+function datosDeSubida(d: Record<string, string | number | null>): FormData {
+  const datos = new FormData();
+  for (const [campo, valor] of Object.entries(d)) {
+    if (valor !== null) datos.set(campo, String(valor));
+  }
+  return datos;
+}
+
+/** Lo mismo que `uploadToSignedUrl` de supabase-js: multipart, sin pisar nada. */
+async function subirFirmado(url: string, cuerpo: Blob): Promise<boolean> {
+  const datos = new FormData();
+  datos.append('cacheControl', '3600');
+  datos.append('', cuerpo);
+  try {
+    const r = await fetch(url, { method: 'PUT', headers: { 'x-upsert': 'false' }, body: datos });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
 
 async function reducir(fichero: File, lado: number, calidad: number): Promise<Blob> {
   const imagen = await createImageBitmap(fichero, { imageOrientation: 'from-image' });
@@ -80,10 +114,26 @@ function duracionDe(fichero: File): Promise<number> {
   });
 }
 
-export function SubirAlDrive({ ministerioId, hoy }: { ministerioId: string; hoy: string }) {
+export function SubirAlDrive({
+  ministerioId,
+  hoy,
+  preparar,
+  confirmar,
+  publicacion,
+}: {
+  ministerioId: string;
+  hoy: string;
+  preparar: (ministerioId: string, datos: FormData) => Promise<PreparadaSubida>;
+  confirmar: (ministerioId: string, archivoId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  /**
+   * Si se sube desde una publicación: entra ya en ella, con su fecha, y no se
+   * pregunta el día.
+   */
+  publicacion?: { id: string; fecha: string };
+}) {
   const router = useRouter();
   const idFicheros = useId();
-  const [fecha, setFecha] = useState(hoy);
+  const [fecha, setFecha] = useState(publicacion?.fecha ?? hoy);
   const [estados, setEstados] = useState<Estado[]>([]);
   const [ocupado, setOcupado] = useState(false);
 
@@ -133,39 +183,42 @@ export function SubirAlDrive({ ministerioId, hoy }: { ministerioId: string; hoy:
       return;
     }
 
-    const preparada = await prepararSubida(ministerioId, {
-      tipo: esVideo ? 'video' : 'foto',
-      mime: cuerpo.type,
-      bytes: cuerpo.size,
-      fecha,
-      duracionS,
-      mimeMiniatura: miniatura ? (miniatura.type as 'image/webp' | 'image/jpeg') : null,
-    });
+    const preparada = await preparar(
+      ministerioId,
+      datosDeSubida({
+        tipo: esVideo ? 'video' : 'foto',
+        mime: cuerpo.type,
+        bytes: cuerpo.size,
+        fecha,
+        duracionS,
+        mimeMiniatura: miniatura ? miniatura.type : null,
+        publicacionId: publicacion?.id ?? null,
+      }),
+    );
+    // En la app, una action que no devuelve nada es una que ha redirigido
+    // (sin permiso, el módulo apagado) o que no llegó al servidor: la pantalla
+    // ya enseña el porqué arriba.
+    if (!preparada) {
+      marcar(i, { estado: 'error', mensaje: 'No se ha subido.' });
+      return;
+    }
     if (!preparada.ok) {
       marcar(i, { estado: 'error', mensaje: preparada.error });
       return;
     }
 
-    const storage = createClient().storage;
-    const subida = await storage
-      .from(preparada.bucket)
-      .uploadToSignedUrl(preparada.fichero.ruta, preparada.fichero.token, cuerpo, {
-        contentType: cuerpo.type,
-      });
-    if (subida.error) {
+    if (!(await subirFirmado(preparada.fichero.url, cuerpo))) {
       marcar(i, { estado: 'error', mensaje: 'Se cortó la subida. Vuelve a intentarlo con mejor cobertura.' });
       return;
     }
-    if (miniatura && preparada.miniatura) {
-      // Si la miniatura falla, la foto se pinta con el original: no se pierde nada.
-      await storage
-        .from(preparada.miniatura.bucket)
-        .uploadToSignedUrl(preparada.miniatura.ruta, preparada.miniatura.token, miniatura, {
-          contentType: miniatura.type,
-        });
-    }
+    // Si la miniatura falla, la foto se pinta con el original: no se pierde nada.
+    if (miniatura && preparada.miniatura) await subirFirmado(preparada.miniatura.url, miniatura);
 
-    const confirmada = await confirmarSubida(ministerioId, preparada.id);
+    const confirmada = await confirmar(ministerioId, preparada.id);
+    if (!confirmada) {
+      marcar(i, { estado: 'error', mensaje: 'No se ha subido.' });
+      return;
+    }
     marcar(i, confirmada.ok ? { estado: 'hecho' } : { estado: 'error', mensaje: confirmada.error });
   }
 
@@ -189,6 +242,7 @@ export function SubirAlDrive({ ministerioId, hoy }: { ministerioId: string; hoy:
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+        {!publicacion && (
         <div className="flex flex-col gap-1.5 sm:max-w-[220px]">
           <Label htmlFor={`${idFicheros}-fecha`}>Día de la actividad</Label>
           <Input
@@ -200,11 +254,17 @@ export function SubirAlDrive({ ministerioId, hoy }: { ministerioId: string; hoy:
             disabled={ocupado}
           />
         </div>
+        )}
         <label
           htmlFor={idFicheros}
           aria-disabled={ocupado}
           className={
-            'inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-[18px] text-[15px] font-semibold text-primary-foreground hover:bg-accent-hover has-focus-visible:ring-[3px] has-focus-visible:ring-primary/30 ' +
+            'inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg px-[18px] text-[15px] font-semibold has-focus-visible:ring-[3px] has-focus-visible:ring-primary/30 ' +
+            // Dentro de una publicación el naranja es «Publicar»: un solo botón
+            // naranja por pantalla. En el drive, subir es la acción de la pantalla.
+            (publicacion
+              ? 'border border-border bg-surface-alt text-foreground hover:bg-surface-active '
+              : 'bg-primary text-primary-foreground hover:bg-accent-hover ') +
             (ocupado ? 'pointer-events-none opacity-70' : '')
           }
         >

@@ -88,6 +88,7 @@ let SION; // pastor de OTRA iglesia
 let MAESTRA;
 let MADRE; // madre de Tomás, aceptada hace diez días
 let MADRE2; // madre de Lía, aceptada hoy
+let AUXILIAR; // colíder de Niños: maestro, no acepta familias
 
 let CUENTAS = [];
 // El slug de Betel, para la solicitud bien formada de `solicitudValida()`.
@@ -647,6 +648,122 @@ const ENDPOINTS = [
       },
     },
   },
+  // ------------------------------------------------------------------
+  // Niños en Equipo (fase N5): la puerta ESTRECHA, la de quien lleva ESE
+  // ministerio (la responsable y los maestros) y el pastor. Ni las familias
+  // ni el líder de otro ministerio ni el pastor de otra iglesia.
+  // ------------------------------------------------------------------
+  {
+    ruta: 'mi/equipo/[[...ruta]]',
+    casos: {
+      'Niños: la responsable ve el tablón, con el borrador': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(MAESTRA, 'GET', `/mi/equipo/${demo.ninos}/ninos`);
+        return [
+          ...espera(r, 200),
+          ...igual('pantalla', r.json?.pantalla, 'ninos'),
+          ...igual('publicaciones', (r.json?.datos?.publicaciones ?? []).length, 3),
+          ...sinRastroDe(r, demo.sion),
+        ];
+      },
+      'Niños: el maestro (colíder) entra, y no le salen familias que aceptar': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(AUXILIAR, 'GET', `/mi/equipo/${demo.ninos}/ninos`);
+        return [...espera(r, 200), ...igual('familiasEsperando', r.json?.datos?.familiasEsperando, 0)];
+      },
+      'Niños: una madre no entra al tablón del equipo': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(MADRE, 'GET', `/mi/equipo/${demo.ninos}/ninos`);
+        return [
+          ...(r.status === 403 || r.status === 404 ? [] : [`código ${r.status}, se esperaba 403 o 404`]),
+          ...(r.texto.includes('Cantamos') ? ['FUGA: trae el tablón'] : []),
+        ];
+      },
+      'Niños: el líder de otro ministerio no entra': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(LIDER, 'GET', `/mi/equipo/${demo.ninos}/ninos/familias`);
+        return [
+          ...(r.status === 403 || r.status === 404 ? [] : [`código ${r.status}, se esperaba 403 o 404`]),
+          ...(r.texto.includes('Tomás') ? ['FUGA: trae a los niños'] : []),
+        ];
+      },
+      'Niños: el pastor de Sion no ve nada de Betel': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(SION, 'GET', `/mi/equipo/${demo.ninos}/ninos/cronograma`);
+        return [
+          ...(r.status === 403 || r.status === 404 ? [] : [`código ${r.status}, se esperaba 403 o 404`]),
+          ...sinRastroDe(r, demo.betel),
+          ...(r.texto.includes('Goliat') ? ['FUGA: trae el cronograma'] : []),
+        ];
+      },
+      'Niños: el maestro lee el cronograma': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(AUXILIAR, 'GET', `/mi/equipo/${demo.ninos}/ninos/cronograma`);
+        return [
+          ...espera(r, 200),
+          ...igual('próxima', r.json?.datos?.proximas?.[0]?.tema, 'David y Goliat'),
+        ];
+      },
+      'Niños: el maestro ve los niños y no acepta familias': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(AUXILIAR, 'GET', `/mi/equipo/${demo.ninos}/ninos/familias`);
+        return [
+          ...espera(r, 200),
+          ...igual('acepta', r.json?.datos?.acepta, false),
+          ...igual('niños', (r.json?.datos?.ninos ?? []).length, 2),
+        ];
+      },
+      'Niños: la publicación trae sus fotos firmadas, sin la ruta de Storage': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(MAESTRA, 'GET', `/mi/equipo/${demo.ninos}/ninos/publicacion/${demo.pubNueva}`);
+        const archivos = r.json?.datos?.archivos ?? [];
+        return [
+          ...espera(r, 200),
+          ...igual('pantalla', r.json?.pantalla, 'ninosPublicacion'),
+          // El sin confirmar no sale: no se sabe si llegó a subirse.
+          ...igual('archivos', archivos.length, 1),
+          ...(archivos.every((a) => !('ruta' in a) && !('miniaturaRuta' in a)) ? [] : ['FUGA: la ruta de Storage viaja a la app']),
+          ...igual('pueden', (r.json?.datos?.pueden ?? []).join(','), 'Tomás'),
+        ];
+      },
+      'Niños: una publicación que no existe: 404': async ({ pedirComo, demo }) =>
+        espera(
+          await pedirComo(MAESTRA, 'GET', `/mi/equipo/${demo.ninos}/ninos/publicacion/00000000-0000-4000-8000-000000000000`),
+          404,
+        ),
+    },
+  },
+  {
+    ruta: 'accion',
+    casos: {
+      'Niños, Equipo: una madre no retira lo publicado': async ({ pedirAccion, pedirComo, demo }) => {
+        const r = await pedirAccion(MADRE, 'mi/equipo/[id]/ninos#retirarPublicacion', [demo.ninos, demo.pubNueva]);
+        const despues = await pedirComo(MAESTRA, 'GET', `/mi/equipo/${demo.ninos}/ninos/publicacion/${demo.pubNueva}`);
+        // `enLaApp` cierra con un 404 a quien no es del equipo, como la pantalla.
+        // Si algún día redirige, que no sea al panel.
+        const cerrada = r.status === 404 || (r.status === 200 && typeof r.json?.redirigir === 'string');
+        return [
+          ...(cerrada ? [] : [`código ${r.status}, se esperaba 404 o una redirección: ${r.texto.slice(0, 120)}`]),
+          ...(r.json?.redirigir?.startsWith('/panel') ? [`redirige al panel: ${r.json.redirigir}`] : []),
+          ...igual('sigue publicada', despues.json?.datos?.publicacion?.publicada, true),
+        ];
+      },
+      'Niños, Equipo: una madre no prepara una subida': async ({ pedirAccion, demo }) => {
+        const r = await pedirAccion(MADRE, 'mi/equipo/[id]/ninos#prepararSubida', [
+          demo.ninos,
+          { __campos: { tipo: 'foto', mime: 'image/webp', bytes: '1000', fecha: '2026-01-01', publicacionId: demo.pubBorrador } },
+        ]);
+        return [
+          ...espera(r, 200),
+          ...(typeof r.json?.redirigir === 'string' ? [] : [`no redirige: ${r.texto.slice(0, 160)}`]),
+          ...(r.json?.redirigir?.startsWith('/panel') ? [`redirige al panel: ${r.json.redirigir}`] : []),
+        ];
+      },
+      'Niños, Equipo: a lo publicado no se suben fotos sin retirarlo': async ({ pedirAccion, demo }) => {
+        const r = await pedirAccion(MAESTRA, 'mi/equipo/[id]/ninos#prepararSubida', [
+          demo.ninos,
+          { __campos: { tipo: 'foto', mime: 'image/webp', bytes: '1000', fecha: '2026-01-01', publicacionId: demo.pubNueva } },
+        ]);
+        return [
+          ...espera(r, 200),
+          ...igual('ok', r.json?.valor?.ok, false),
+          ...(String(r.json?.valor?.error ?? '').includes('Ya está publicada') ? [] : [`error: ${r.json?.valor?.error}`]),
+        ];
+      },
+    },
+  },
 ];
 
 // ============================================
@@ -696,6 +813,9 @@ function datosDe(demo) {
     turnoBetel: demo.ids.turnoAlabanza,
     reunionBetel: demo.ids.reunionCongregacion,
     alabanza: demo.ids.alabanza,
+    ninos: demo.ids.ninos,
+    pubNueva: demo.ids.pubNueva,
+    pubBorrador: demo.ids.pubBorrador,
   };
 }
 
@@ -807,8 +927,9 @@ async function probar(montada, fallos) {
     maestra: MAESTRA,
     madre: MADRE,
     madre2: MADRE2,
+    auxiliar: AUXILIAR,
   } = montada.cuentas);
-  CUENTAS = [PASTOR, SECRETARIA, LIDER, MIEMBRO, COLIDER, VISITA, SION, MAESTRA, MADRE, MADRE2];
+  CUENTAS = [PASTOR, SECRETARIA, LIDER, MIEMBRO, COLIDER, VISITA, SION, MAESTRA, MADRE, MADRE2, AUXILIAR];
   SLUG_BETEL = montada.betel.slug;
   const demo = datosDe(montada);
   const sesiones = {};
@@ -823,7 +944,15 @@ async function probar(montada, fallos) {
       pedirAccion: async (cuenta, id, args) => {
         const form = new FormData();
         form.set('__id', id);
-        form.set('__args', JSON.stringify(args));
+        // `{ __campos }` es un `FormData`, y viaja como lo manda la app
+        // (`movil/src/lib/acciones.ts`): sus campos aparte, `{ __fd: n }` en su sitio.
+        let n = 0;
+        const serializados = args.map((a) => {
+          if (!a || typeof a !== 'object' || !('__campos' in a)) return a;
+          for (const [campo, valor] of Object.entries(a.__campos)) form.append(`__fd${n}:${campo}`, valor);
+          return { __fd: n++ };
+        });
+        form.set('__args', JSON.stringify(serializados));
         const cabeceras = cuenta ? { authorization: `Bearer ${sesiones[cuenta].token}` } : {};
         const r = await fetch(BASE + '/api/v1/app/accion', {
           method: 'POST',

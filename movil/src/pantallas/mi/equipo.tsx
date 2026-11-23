@@ -17,6 +17,10 @@ import { VistaCancionNueva } from '@/app/mi/equipo/[id]/repertorio/nueva/vista';
 import { VistaCancion } from '@/app/mi/equipo/[id]/repertorio/[cancionId]/vista';
 import { VistaSeguimiento } from '@/app/mi/equipo/[id]/seguimiento/vista';
 import { VistaSeguimientoPersona } from '@/app/mi/equipo/[id]/seguimiento/[miembroId]/vista';
+import { VistaNinos } from '@/app/mi/equipo/[id]/ninos/vista';
+import { VistaCronograma } from '@/app/mi/equipo/[id]/ninos/cronograma/vista';
+import { VistaFamilias } from '@/app/mi/equipo/[id]/ninos/familias/vista';
+import { VistaPublicacion } from '@/app/mi/equipo/[id]/ninos/publicacion/[publicacionId]/vista';
 import { emparejarPantalla, type NombrePantallaEquipo } from '@/lib/app-api/equipo';
 import { CabeceraApp } from '@movil/componentes/cabecera-app';
 import { ErrorApi, pedir } from '@movil/lib/api';
@@ -24,7 +28,7 @@ import { NoExiste } from '../en-obras';
 import { Cargando, ErrorDePantalla } from './comun';
 
 /**
- * Las quince pantallas de `/mi/equipo`, con sus vistas de la web.
+ * Las diecinueve pantallas de `/mi/equipo`, con sus vistas de la web.
  *
  * La dirección decide la pantalla con la misma tabla que la API
  * (`PANTALLAS_EQUIPO`), y la API devuelve sus datos con su guarda. Las vistas
@@ -48,6 +52,10 @@ const VISTAS: Record<NombrePantallaEquipo, ComponentType<never>> = {
   cancion: VistaCancion,
   seguimiento: VistaSeguimiento,
   persona: VistaSeguimientoPersona,
+  ninos: VistaNinos,
+  ninosCronograma: VistaCronograma,
+  ninosFamilias: VistaFamilias,
+  ninosPublicacion: VistaPublicacion,
 } as Record<NombrePantallaEquipo, ComponentType<never>>;
 
 type RespuestaEquipo = { pantalla: NombrePantallaEquipo; datos: Record<string, unknown> };

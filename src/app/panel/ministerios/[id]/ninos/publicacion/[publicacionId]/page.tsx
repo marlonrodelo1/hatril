@@ -19,9 +19,12 @@ import { Label } from '@/components/ui/label';
 import { CabeceraPanel } from '../../../../../_components/cabecera';
 import { Contenedor } from '../../../../../_components/contenedor';
 import { CuadroArchivo, firmarArchivos } from '../../_components/archivo';
+import { SubirAlDrive } from '../../_components/subir-al-drive';
 import {
   adjuntarArchivos,
   borrarPublicacion,
+  confirmarSubida,
+  prepararSubida,
   editarPublicacion,
   publicar,
   quitarDePublicacion,
@@ -156,7 +159,22 @@ export default async function PublicacionPage({
             </ul>
           )}
 
-          {disponibles.length > 0 ? (
+          {publicada ? (
+            <p className="text-pretty text-[13.5px] leading-snug text-muted-foreground">
+              Ya está publicada. Para añadir fotos, retírala del tablón, añádelas y vuelve a publicarla:
+              así se vuelve a mirar quién sale.
+            </p>
+          ) : (
+            <SubirAlDrive
+              ministerioId={id}
+              hoy={hoy}
+              preparar={prepararSubida}
+              confirmar={confirmarSubida}
+              publicacion={{ id: publicacionId, fecha: publicacion.fecha }}
+            />
+          )}
+
+          {publicada ? null : disponibles.length > 0 ? (
             <details className="flex flex-col gap-3 rounded-lg border border-border bg-surface-alt p-3.5">
               <summary className="cursor-pointer text-[14.5px] font-semibold">
                 Añadir del drive ({disponibles.length} sin publicar)

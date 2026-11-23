@@ -16,12 +16,16 @@ import { cargar as cancionNueva } from '@/app/mi/equipo/[id]/repertorio/nueva/da
 import { cargar as cancion } from '@/app/mi/equipo/[id]/repertorio/[cancionId]/datos';
 import { cargar as seguimiento } from '@/app/mi/equipo/[id]/seguimiento/datos';
 import { cargar as persona } from '@/app/mi/equipo/[id]/seguimiento/[miembroId]/datos';
+import { cargar as ninos } from '@/app/mi/equipo/[id]/ninos/datos';
+import { cargar as ninosCronograma } from '@/app/mi/equipo/[id]/ninos/cronograma/datos';
+import { cargar as ninosFamilias } from '@/app/mi/equipo/[id]/ninos/familias/datos';
+import { cargar as ninosPublicacion } from '@/app/mi/equipo/[id]/ninos/publicacion/[publicacionId]/datos';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * Las pantallas de `/mi/equipo` en la app: una ruta para las quince.
+ * Las pantallas de `/mi/equipo` en la app: una ruta para las diecinueve.
  *
  * Cada pantalla tiene su `cargar` en su `datos.ts`, el mismo que usa su página
  * de la web, CON SU GUARDA DENTRO: ser del equipo, que el ministerio sea de su
@@ -51,6 +55,10 @@ const CARGAS: Record<NombrePantallaEquipo, Carga> = {
   cancion,
   seguimiento,
   persona,
+  ninos,
+  ninosCronograma,
+  ninosFamilias,
+  ninosPublicacion,
 } as Record<NombrePantallaEquipo, Carga>;
 
 const PREFIJO = '/api/v1/app/mi/equipo';

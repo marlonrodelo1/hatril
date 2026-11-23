@@ -11,7 +11,7 @@ export const CONFIRMACIONES: Record<string, string> = {
   quitada: 'Vínculo quitado. Si era la única familia del niño, se han borrado su nombre y su año.',
   clase: 'Clase guardada en el cronograma.',
   'clase-borrada': 'Clase borrada del cronograma.',
-  creada: 'Borrador creado. Añade las fotos del drive y publícalo cuando esté listo.',
+  creada: 'Borrador creado. Añade las fotos y publícalo cuando esté listo.',
   editada: 'Cambios guardados.',
   publicada: 'Publicado. Las familias aceptadas ya lo ven en su app.',
   retirada: 'Retirada del tablón: vuelve a ser un borrador y las familias dejan de verla.',

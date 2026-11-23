@@ -19,7 +19,6 @@ import { esGuardHatril } from '@/lib/db/error';
 import { campo, campoObligatorio, campos, casilla } from '@/lib/api/formulario';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import {
-  BUCKETS,
   borrarFicheros,
   comprobarFichero,
   extensionDe,
@@ -330,6 +329,22 @@ const estaPublicacion = (ctx: UserContext, ministerioId: string, publicacionId: 
     eq(ninosPublicaciones.ministerioId, ministerioId),
   );
 
+/**
+ * ¿Es un borrador de ESTE ministerio? Solo a un borrador se le añaden fotos:
+ * añadirlas a una publicación ya publicada las enseñaría a las familias sin
+ * pasar por la casilla de «he mirado las fotos» de `publicar`.
+ */
+async function esBorrador(ctx: UserContext, ministerioId: string, publicacionId: string): Promise<boolean> {
+  const [p] = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ publicadaAt: ninosPublicaciones.publicadaAt })
+      .from(ninosPublicaciones)
+      .where(estaPublicacion(ctx, ministerioId, publicacionId))
+      .limit(1),
+  );
+  return Boolean(p) && p!.publicadaAt === null;
+}
+
 /** Un borrador nuevo. Se publica después, con sus fotos, desde su página. */
 export async function crearPublicacion(ministerioId: string, formData: FormData) {
   const destino = base(ministerioId);
@@ -475,6 +490,9 @@ export async function adjuntarArchivos(ministerioId: string, publicacionId: stri
 
   const ids = z.array(Id).max(40).safeParse(campos(formData, 'archivos'));
   if (!ids.success || ids.data.length === 0) volver(destino, 'Marca al menos una foto o un vídeo del drive.');
+  if (!(await esBorrador(ctx, ministerioId, publicacionId))) {
+    volver(destino, 'Ya está publicada. Para añadir fotos, retírala primero y vuelve a publicarla.');
+  }
 
   await withUser(ctx.user.id, (tx) =>
     tx
@@ -526,15 +544,17 @@ const EsquemaSubida = z.object({
   fecha: Fecha,
   duracionS: z.number().int().positive().max(MAX_DURACION_VIDEO_S).nullable(),
   mimeMiniatura: z.enum(['image/webp', 'image/jpeg']).nullable(),
+  /** Si se sube desde una publicación, entra ya en ella (HT142 mira que sea de este ministerio). */
+  publicacionId: z.string().uuid().nullable().optional(),
 });
 
 export type PreparadaSubida =
   | {
       ok: true;
       id: string;
-      bucket: string;
-      fichero: { ruta: string; token: string };
-      miniatura: { bucket: string; ruta: string; token: string } | null;
+      /** Las URL de subida de un solo uso, enteras: el teléfono hace un PUT a cada una. */
+      fichero: { url: string };
+      miniatura: { url: string } | null;
     }
   | { ok: false; error: string };
 
@@ -544,15 +564,28 @@ export type PreparadaSubida =
  * La llama el componente de subida, no un formulario: devuelve datos en vez de
  * redirigir. Las guardas sí redirigen si no hay permiso, y el navegador sigue
  * esa redirección: no hay nada que subir.
+ *
+ * Recibe un `FormData` y no un objeto aunque no venga de un `<form>`: la app
+ * empaquetada llama a sus actions por `POST /api/v1/app/accion`, que solo deja
+ * pasar texto, números y formularios (`api/v1/app/accion/route.ts`).
  */
-export async function prepararSubida(
-  ministerioId: string,
-  datos: z.input<typeof EsquemaSubida>,
-): Promise<PreparadaSubida> {
+export async function prepararSubida(ministerioId: string, formData: FormData): Promise<PreparadaSubida> {
   if (!Id.safeParse(ministerioId).success) return { ok: false, error: 'No encuentro ese ministerio.' };
   const ctx = await guarda(ministerioId);
 
-  const leido = EsquemaSubida.safeParse(datos);
+  const numero = (nombre: string) => {
+    const v = campo(formData, nombre);
+    return v === undefined ? null : Number(v);
+  };
+  const leido = EsquemaSubida.safeParse({
+    tipo: campo(formData, 'tipo'),
+    mime: campo(formData, 'mime'),
+    bytes: numero('bytes'),
+    fecha: campo(formData, 'fecha'),
+    duracionS: numero('duracionS'),
+    mimeMiniatura: campo(formData, 'mimeMiniatura') ?? null,
+    publicacionId: campo(formData, 'publicacionId') ?? null,
+  });
   if (!leido.success) return { ok: false, error: 'Ese archivo no se puede subir.' };
   const d = leido.data;
 
@@ -571,6 +604,9 @@ export async function prepararSubida(
   if (d.fecha > hoyEnLaIglesia(ctx.iglesia.timezone)) {
     return { ok: false, error: 'Esa fecha todavía no ha llegado.' };
   }
+  if (d.publicacionId && !(await esBorrador(ctx, ministerioId, d.publicacionId))) {
+    return { ok: false, error: 'Ya está publicada. Para añadir fotos, retírala primero y vuelve a publicarla.' };
+  }
 
   const extension = extensionDe(d.mime)!;
   const { ruta, miniatura: base } = rutaNueva(ctx.iglesia.id, ministerioId, d.fecha, extension);
@@ -578,22 +614,30 @@ export async function prepararSubida(
     ? base.replace(/\.min\.webp$/, `.min.${extensionDe(d.mimeMiniatura)}`)
     : null;
 
-  const [fila] = await withUser(ctx.user.id, (tx) =>
-    tx
-      .insert(ninosArchivos)
-      .values({
-        iglesiaId: ctx.iglesia.id,
-        ministerioId,
-        tipo: d.tipo,
-        ruta,
-        miniaturaRuta: rutaMiniatura,
-        bytes: d.bytes,
-        duracionS: esVideo ? d.duracionS : null,
-        fecha: d.fecha,
-        subidoPorMiembroId: ctx.miembroId,
-      })
-      .returning({ id: ninosArchivos.id }),
-  );
+  let fila: { id: string } | undefined;
+  try {
+    [fila] = await withUser(ctx.user.id, (tx) =>
+      tx
+        .insert(ninosArchivos)
+        .values({
+          iglesiaId: ctx.iglesia.id,
+          ministerioId,
+          tipo: d.tipo,
+          ruta,
+          miniaturaRuta: rutaMiniatura,
+          bytes: d.bytes,
+          duracionS: esVideo ? d.duracionS : null,
+          fecha: d.fecha,
+          publicacionId: d.publicacionId ?? null,
+          subidoPorMiembroId: ctx.miembroId,
+        })
+        .returning({ id: ninosArchivos.id }),
+    );
+  } catch (err) {
+    // La publicación de la que se sube no es de este ministerio, o ya no existe.
+    if (esGuardHatril(err, 'HT142')) return { ok: false, error: 'Esa publicación ya no existe.' };
+    throw err;
+  }
 
   const firmas = await firmarSubida(d.tipo, ruta, rutaMiniatura);
   if (!firmas) {
@@ -604,9 +648,8 @@ export async function prepararSubida(
   return {
     ok: true,
     id: fila!.id,
-    bucket: BUCKETS[d.tipo],
-    fichero: firmas.fichero,
-    miniatura: firmas.miniatura ? { bucket: BUCKETS.foto, ...firmas.miniatura } : null,
+    fichero: { url: firmas.fichero.url },
+    miniatura: firmas.miniatura ? { url: firmas.miniatura.url } : null,
   };
 }
 

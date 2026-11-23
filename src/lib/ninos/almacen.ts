@@ -66,7 +66,8 @@ export function rutaNueva(
   return { ruta: `${base}.${extension}`, miniatura: `${base}.min.webp` };
 }
 
-export type SubidaFirmada = { ruta: string; token: string };
+/** `url` es la de subida de un solo uso, entera: el teléfono hace un PUT a ella. */
+export type SubidaFirmada = { ruta: string; token: string; url: string };
 
 /**
  * Las URL de subida de un solo uso: la del fichero y, si va, la de su miniatura.
@@ -86,10 +87,10 @@ export async function firmarSubida(
   if (miniatura) {
     const r = await admin.storage.from(BUCKET_MINIATURAS).createSignedUploadUrl(miniatura);
     if (r.error || !r.data) return null;
-    m = { ruta: miniatura, token: r.data.token };
+    m = { ruta: miniatura, token: r.data.token, url: r.data.signedUrl };
   }
 
-  return { fichero: { ruta, token: f.data.token }, miniatura: m };
+  return { fichero: { ruta, token: f.data.token, url: f.data.signedUrl }, miniatura: m };
 }
 
 /**
