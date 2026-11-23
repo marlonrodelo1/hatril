@@ -31,7 +31,7 @@ Environment**, porque se leen en cada petición. Cómo se sacan, en
 
 ---
 
-## La próxima versión de la app: iOS build 8 y Android versionCode 4
+## La próxima versión de la app: iOS build 9 y Android versionCode 4
 
 En las tiendas está lo del 23-nov a las 12:24 (`69e488c`): Android versionCode
 3 e iOS build 5, con Niños en la app y la portada de Equipo arreglada. Los
@@ -51,7 +51,10 @@ Antes de compilar:
 
 - **Android**: subir `versionCode` a 4 en `android/app/build.gradle`. Todavía
   está en 3.
-- **iOS**: ya está en 8 (`419fea0`).
+- **iOS**: ya está en 9 (23-nov, `npm run app:version -- build ios`; el 8
+  ya lo tenía App Store Connect, según Marlon).
+- **Espera a células** (decisión de Marlon, 23-nov): la versión sale cuando
+  células esté en `main`.
 - **Google Maps**: hecho. Variables en Dokploy y web desplegada (23-nov),
   comprobado en hatril.com.
 
