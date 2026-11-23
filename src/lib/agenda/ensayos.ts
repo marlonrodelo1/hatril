@@ -228,19 +228,6 @@ export async function reunionParaMiembro(
   };
 }
 
-/**
- * «viernes 16, 19:30», que es como se dice un ensayo en voz alta.
- *
- * Sin el mes: dentro de la semana del turno el número del día no se confunde
- * con nada, y la línea cabe en un móvil.
- */
-export function diaYHora(fecha: string, hora: string | null): string {
-  // Partida a mano, como `formatearFechaLarga`: `new Date('2026-10-16')` es
-  // medianoche UTC, y en un huso por detrás se pinta el día anterior.
-  const [a, m, d] = fecha.split('-').map(Number);
-  const dia = new Date(a!, m! - 1, d!).toLocaleDateString('es', {
-    weekday: 'long',
-    day: 'numeric',
-  });
-  return hora ? `${dia}, ${hora}` : dia;
-}
+// `diaYHora` vive en `./horarios`, sin `server-only`: la pinta también la
+// vista del turno que comparten la web y la app empaquetada.
+export { diaYHora } from './horarios';

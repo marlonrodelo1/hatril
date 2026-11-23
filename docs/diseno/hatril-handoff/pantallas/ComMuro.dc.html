@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Comunidad · El muro</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,h3,p{margin:0}
+a{color:#92442A}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ib{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:#3D3D3A;border-radius:999px;cursor:pointer;position:relative;text-decoration:none}
+.av{border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+.post{background:#FFFFFF;border-top:1px solid #E0DFDB;border-bottom:1px solid #E0DFDB}
+.ph{display:flex;align-items:center;gap:10px;padding:12px 4px 0 16px}
+.who{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}
+.nm{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:700}
+.role{font-size:11px;font-weight:700;color:#92442A;background:#F5E7DF;border-radius:999px;padding:2px 8px}
+.when{font-size:12px;color:#67665F}
+.txt{font-size:16px;line-height:1.5;padding:10px 16px 0}
+.pics{display:grid;gap:2px;margin-top:12px}
+.pics svg{display:block;width:100%;height:100%}
+.acts{display:flex;gap:2px;padding:4px 8px 4px}
+.act{display:flex;align-items:center;gap:6px;height:44px;padding:0 10px;border:0;background:transparent;font-family:inherit;font-size:14px;font-weight:600;color:#67665F;border-radius:8px;cursor:pointer;text-decoration:none}
+.act:active{background:#F0EEE6}
+.act .n{color:#67665F}
+.act.on svg{color:#B15435;fill:#B15435;animation:beat 320ms cubic-bezier(.2,.8,.2,1)}
+@keyframes beat{0%{transform:scale(1)}40%{transform:scale(1.28)}100%{transform:scale(1)}}
+.bar{position:absolute;left:0;right:0;bottom:0;padding:6px 8px 30px;background:rgba(250,249,245,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #E0DFDB;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:12px;font-size:11px;font-weight:600;color:#67665F;text-decoration:none}
+.tab.on{background:#F5E7DF;color:#92442A}
+@media (prefers-reduced-motion: reduce){.act.on svg{animation:none}}
+</style>
+</helmet>
+<div style="width: 375px; height: 2440px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; padding-top: 47px; display: flex; flex-direction: column">
+
+  <header style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px">
+    <span style="width: 36px; height: 36px; border-radius: 8px; background: #F5E7DF; color: #92442A; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center">IB</span>
+    <div style="flex: 1; display: flex; flex-direction: column">
+      <h1 style="font-size: 18px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2">Comunidad</h1>
+      <span style="font-size: 12px; color: #67665F">Iglesia Betania</span>
+    </div>
+    <a href="#" class="ib" aria-label="Avisos, 3 sin leer">
+      <svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span style="position: absolute; top: 6px; right: 5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #B15435; color: #FFFFFF; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid #FAF9F5">3</span>
+    </a>
+    <button class="ib" aria-label="Tu cuenta"><span class="av" style="width: 32px; height: 32px; background: #E3E8EC; color: #2F4A5C; font-size: 12px">LH</span></button>
+  </header>
+
+  <section aria-label="Portada del día" style="margin: 8px 12px 0; border: 1px solid #E0DFDB; border-radius: 12px; overflow: hidden; background: #FFFFFF">
+    <div style="position: relative; height: 300px">
+      <svg viewBox="0 0 351 300" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto del amanecer sobre el Teide" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block">
+        <rect width="351" height="300" fill="#D9C4A8"/>
+        <rect width="351" height="120" fill="#E8D6BD"/>
+        <circle cx="250" cy="118" r="30" fill="#F4E6CF"/>
+        <path d="M0 175 L70 150 L120 160 L200 70 L238 100 L262 92 L351 160 V300 H0 Z" fill="#8F7E6B"/>
+        <path d="M188 84 L200 70 L214 86 L206 84 L200 90 L194 84 Z" fill="#EFE7DA"/>
+        <path d="M0 210 L80 190 L150 205 L240 185 L351 200 V300 H0 Z" fill="#6F6253"/>
+        <path d="M0 250 C80 236 180 262 351 244 V300 H0 Z" fill="#59503F"/>
+      </svg>
+      <div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 62%; background: linear-gradient(180deg, rgba(20,20,19,0) 0%, rgba(20,20,19,0.55) 55%, rgba(20,20,19,0.78) 100%)"></div>
+      <span style="position: absolute; top: 12px; left: 12px; font-size: 12px; font-weight: 700; color: #141413; background: rgba(255,255,255,0.88); border-radius: 999px; padding: 5px 10px">Viernes 30 de octubre</span>
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 18px; display: flex; flex-direction: column; gap: 8px; color: #FFFFFF; text-shadow: 0 1px 12px rgba(0,0,0,0.35)">
+        <p style="font-size: 21px; line-height: 1.32; font-weight: 700; letter-spacing: -0.01em">«Vengan a mí todos los que están cansados y agobiados, y yo les daré descanso.»</p>
+        <span style="font-size: 13px; font-weight: 600; opacity: 0.92">Mateo 11:28</span>
+      </div>
+    </div>
+    <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 16px 14px 16px 18px; color: #141413; text-decoration: none; border-bottom: 1px solid #E0DFDB">
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+        <span style="font-size: 12px; font-weight: 700; color: #92442A">Devocional de hoy · Ana Díaz</span>
+        <span style="font-size: 18px; font-weight: 800; letter-spacing: -0.015em">Descansar sin culpa</span>
+        <span style="font-size: 14px; line-height: 1.45; color: #67665F">Hay semanas en las que llegamos al domingo con la batería en rojo. Jesús no nos pide más fuerza…</span>
+      </span>
+      <svg class="ic" width="20" height="20" viewBox="0 0 24 24" style="color: #141413"><path d="m9 18 6-6-6-6"/></svg>
+    </a>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 12px 8px 12px 14px">
+      <span class="av" style="width: 36px; height: 36px; background: #E3E8EC; color: #2F4A5C; font-size: 12px">LH</span>
+      <a href="ComPublicar.dc.html" style="flex: 1; height: 44px; border-radius: 999px; background: #F5F4ED; border: 1px solid #E0DFDB; display: flex; align-items: center; padding: 0 16px; font-size: 15px; color: #67665F; text-decoration: none">¿Qué quieres compartir?</a>
+      <a href="ComPublicar.dc.html" class="ib" aria-label="Publicar una foto"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></a>
+    </div>
+  </section>
+
+  <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 16px">
+
+    <article class="post">
+      <div class="ph">
+        <span class="av" style="width: 40px; height: 40px; background: #E7E4DB; color: #3D3D3A; font-size: 13px">AR</span>
+        <div class="who"><span class="nm">Andrés Rivas <span class="role">Pastor</span></span><span class="when">hace 2 h</span></div>
+        <a href="ComMenu.dc.html" class="ib" aria-label="Opciones"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></a>
+      </div>
+      <p class="txt">Gracias a todos los que vinisteis ayer a pintar la sala de los niños. Ha quedado preciosa. El domingo la estrenamos.</p>
+      <div class="acts">
+        <button class="act {{ k1 }}" onClick="{{ t1 }}" aria-pressed="{{ p1 }}"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg><span class="n">{{ c1 }}</span></button>
+        <a href="ComComentarios.dc.html" class="act"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg><span class="n">8</span></a>
+      </div>
+    </article>
+
+    <article class="post">
+      <div class="ph">
+        <span class="av" style="width: 40px; height: 40px; background: #F5E7DF; color: #92442A; font-size: 13px">LP</span>
+        <div class="who"><span class="nm">Lucía Pérez</span><span class="when">ayer</span></div>
+        <a href="ComMenu.dc.html" class="ib" aria-label="Opciones"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></a>
+      </div>
+      <p class="txt" style="display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden">Os pido oración por mi padre. Mañana le operan de la cadera en el Hospital Universitario y está más nervioso de lo que dice. Lleva meses sin poder caminar bien y ha sido duro para él dejar de ir al huerto, que es lo que más le gusta. Si alguien puede acompañar a mi madre por la tarde, se lo agradecería muchísimo.</p>
+      <button style="margin: 2px 0 0 8px; height: 36px; padding: 0 8px; border: 0; background: transparent; font-family: inherit; font-size: 15px; font-weight: 700; color: #141413; cursor: pointer">Ver más</button>
+      <div class="acts">
+        <button class="act {{ k2 }}" onClick="{{ t2 }}" aria-pressed="{{ p2 }}"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg><span class="n">{{ c2 }}</span></button>
+        <a href="ComComentarios.dc.html" class="act"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg><span class="n">5</span></a>
+      </div>
+    </article>
+
+    <article class="post">
+      <div class="ph">
+        <span class="av" style="width: 40px; height: 40px; background: #E6ECDE; color: #245C0E; font-size: 13px">SG</span>
+        <div class="who"><span class="nm">Sara Gil <span class="role">Líder de Alabanza</span></span><span class="when">ayer</span></div>
+        <a href="ComMenu.dc.html" class="ib" aria-label="Opciones"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></a>
+      </div>
+      <p class="txt">Así quedó el ensayo del jueves. El domingo, canción nueva.</p>
+      <div class="pics" style="grid-template-columns: 1fr; height: 281px">
+        <svg viewBox="0 0 375 281" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto del ensayo"><rect width="375" height="281" fill="#D6CCBC"/><rect x="0" y="190" width="375" height="91" fill="#A8957C"/><rect x="40" y="40" width="90" height="120" fill="#EDE5D7"/><rect x="250" y="70" width="14" height="130" fill="#5B4D3E"/><circle cx="257" cy="64" r="12" fill="#5B4D3E"/><rect x="150" y="150" width="120" height="44" rx="4" fill="#4A4137"/><rect x="156" y="156" width="108" height="10" fill="#EDE5D7"/></svg>
+      </div>
+      <div class="acts">
+        <button class="act {{ k3 }}" onClick="{{ t3 }}" aria-pressed="{{ p3 }}"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg><span class="n">{{ c3 }}</span></button>
+        <a href="ComComentarios.dc.html" class="act"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg><span class="n">4</span></a>
+      </div>
+    </article>
+
+    <article class="post">
+      <div class="ph">
+        <span class="av" style="width: 40px; height: 40px; background: #F3E9D3; color: #734500; font-size: 13px">DL</span>
+        <div class="who"><span class="nm">David León <span class="role">Líder de Jóvenes</span></span><span class="when">martes</span></div>
+        <a href="ComMenu.dc.html" class="ib" aria-label="Opciones"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></a>
+      </div>
+      <p class="txt">Limpieza de la playa de Bajamar: 14 bolsas. Sois unos cracks.</p>
+      <div class="pics" style="grid-template-columns: repeat(2, minmax(0, 1fr)); height: 186px">
+        <svg viewBox="0 0 186 186" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto de la playa"><rect width="186" height="186" fill="#C9D3D2"/><rect y="90" width="186" height="40" fill="#7F949A"/><rect y="130" width="186" height="56" fill="#D8C7A6"/><circle cx="140" cy="40" r="16" fill="#EFE7DA"/></svg>
+        <svg viewBox="0 0 186 186" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto de las bolsas recogidas"><rect width="186" height="186" fill="#D8C7A6"/><circle cx="60" cy="120" r="28" fill="#4A4137"/><circle cx="105" cy="128" r="24" fill="#5B4D3E"/><circle cx="140" cy="118" r="26" fill="#4A4137"/><rect y="0" width="186" height="60" fill="#C9D3D2"/></svg>
+      </div>
+      <div class="acts">
+        <button class="act {{ k4 }}" onClick="{{ t4 }}" aria-pressed="{{ p4 }}"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg><span class="n">{{ c4 }}</span></button>
+        <a href="ComComentarios.dc.html" class="act"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg><span class="n">11</span></a>
+      </div>
+    </article>
+
+    <article class="post">
+      <div class="ph">
+        <span class="av" style="width: 40px; height: 40px; background: #ECE3EE; color: #5B3A66; font-size: 13px">CR</span>
+        <div class="who"><span class="nm">Carmen Ruiz</span><span class="when">domingo</span></div>
+        <a href="ComMenu.dc.html" class="ib" aria-label="Opciones"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></a>
+      </div>
+      <p class="txt">La comida de hermandad, en tres fotos.</p>
+      <div class="pics" style="grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; height: 250px">
+        <svg viewBox="0 0 248 250" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto de la mesa" style="grid-row: span 2"><rect width="248" height="250" fill="#CDB79A"/><circle cx="70" cy="90" r="36" fill="#F1E9DC"/><circle cx="70" cy="90" r="18" fill="#C47A4F"/><circle cx="170" cy="150" r="40" fill="#F1E9DC"/><circle cx="170" cy="150" r="20" fill="#8F9A6B"/><rect x="30" y="190" width="70" height="10" rx="5" fill="#8C7556"/></svg>
+        <svg viewBox="0 0 124 124" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto de la cocina"><rect width="124" height="124" fill="#E3D6C1"/><rect x="20" y="50" width="84" height="54" rx="6" fill="#8C7556"/><circle cx="62" cy="40" r="14" fill="#C47A4F"/></svg>
+        <svg viewBox="0 0 124 124" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto del postre"><rect width="124" height="124" fill="#D9C4A8"/><circle cx="62" cy="66" r="34" fill="#F1E9DC"/><circle cx="62" cy="66" r="20" fill="#9C5B3C"/></svg>
+      </div>
+      <div class="acts">
+        <button class="act {{ k5 }}" onClick="{{ t5 }}" aria-pressed="{{ p5 }}"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg><span class="n">{{ c5 }}</span></button>
+        <a href="ComComentarios.dc.html" class="act"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg><span class="n">2</span></a>
+      </div>
+    </article>
+
+    <article class="post">
+      <div class="ph">
+        <span class="av" style="width: 40px; height: 40px; background: #E3E8EC; color: #2F4A5C; font-size: 13px">RM</span>
+        <div class="who"><span class="nm">Rosa Medina <span class="role">Líder de Familias</span></span><span class="when">hace 5 días</span></div>
+        <a href="ComMenu.dc.html" class="ib" aria-label="Opciones"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></a>
+      </div>
+      <p class="txt">Excursión de familias al Parque de La Vega. Gracias a los que trajisteis bocadillos de sobra.</p>
+      <div class="pics" style="grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); height: 375px">
+        <svg viewBox="0 0 186 186" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto del parque"><rect width="186" height="186" fill="#B8C0A2"/><circle cx="50" cy="70" r="34" fill="#7E8C67"/><circle cx="130" cy="60" r="28" fill="#8E9B76"/><rect y="130" width="186" height="56" fill="#A3AC88"/></svg>
+        <svg viewBox="0 0 186 186" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto del camino"><rect width="186" height="186" fill="#C7CCB1"/><path d="M80 186 L100 60 L110 60 L120 186 Z" fill="#E3D6C1"/><circle cx="40" cy="80" r="30" fill="#7E8C67"/><circle cx="150" cy="90" r="30" fill="#7E8C67"/></svg>
+        <svg viewBox="0 0 186 186" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto del picnic"><rect width="186" height="186" fill="#A3AC88"/><rect x="30" y="70" width="126" height="80" fill="#E8D6BD"/><circle cx="70" cy="100" r="12" fill="#C47A4F"/><circle cx="110" cy="115" r="12" fill="#8F7E6B"/></svg>
+        <svg viewBox="0 0 186 186" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto del atardecer"><rect width="186" height="186" fill="#E8D6BD"/><circle cx="93" cy="110" r="30" fill="#F4E6CF"/><rect y="120" width="186" height="66" fill="#7E8C67"/></svg>
+      </div>
+      <div class="acts">
+        <button class="act {{ k6 }}" onClick="{{ t6 }}" aria-pressed="{{ p6 }}"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg><span class="n">{{ c6 }}</span></button>
+        <a href="ComComentarios.dc.html" class="act"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg><span class="n">7</span></a>
+      </div>
+    </article>
+  </div>
+
+  <p style="display: flex; gap: 10px; align-items: flex-start; padding: 20px 24px 0; font-size: 13px; line-height: 1.5; color: #67665F">
+    <svg class="ic" width="16" height="16" viewBox="0 0 24 24" style="margin-top: 2px"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <span>Lo que se publica aquí no sale en la web de la iglesia ni lo ve nadie de fuera. Si subes una foto donde salen otras personas, pídeles permiso antes.</span>
+  </p>
+  <div style="flex: 1"></div>
+
+  <nav class="bar" aria-label="Principal">
+    <a href="#" class="tab on" aria-current="page"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Comunidad</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Devocional</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Agenda</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>Biblia</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>Equipo</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":2440}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { l1: true, l2: false, l3: true, l4: false, l5: false, l6: false };
+  }
+  renderVals() {
+    const base = { l1: 33, l2: 19, l3: 20, l4: 41, l5: 12, l6: 26 };
+    const out = {};
+    [1, 2, 3, 4, 5, 6].forEach((i) => {
+      const k = 'l' + i;
+      const on = this.state[k];
+      out['k' + i] = on ? 'on' : '';
+      out['p' + i] = on ? 'true' : 'false';
+      out['c' + i] = base[k] + (on ? 1 : 0);
+      out['t' + i] = () => this.setState({ [k]: !this.state[k] });
+    });
+    return out;
+  }
+}
+</script>
+</body>
+</html>

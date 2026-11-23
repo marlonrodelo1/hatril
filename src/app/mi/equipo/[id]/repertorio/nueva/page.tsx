@@ -1,10 +1,7 @@
 import type { Metadata } from 'next';
 
-import { requireMinisterioEnLaApp } from '@/lib/ministerios/en-la-app/guarda';
-import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
-import { MarcoEquipo } from '../../../_components/marco';
-import { FormularioCancion } from '../_components/formulario';
-import { crearCancion } from '../actions';
+import { VistaCancionNueva } from './vista';
+import { cargar } from './datos';
 
 export const metadata: Metadata = { title: 'Apuntar una canción' };
 
@@ -18,17 +15,6 @@ export default async function NuevaCancionEnLaAppPage({
 }) {
   const { id } = await params;
   const { error } = await searchParams;
-  const { ctx, ministerio } = await requireMinisterioEnLaApp(id, 'repertorio');
-
-  return (
-    <MarcoEquipo
-      ctx={ctx}
-      titulo="Apuntar una canción"
-      subtitulo={ministerio.nombre}
-      volver={rutaApp(id, 'repertorio')}
-      error={error}
-    >
-      <FormularioCancion accion={crearCancion.bind(null, id)} texto="Apuntarla" />
-    </MarcoEquipo>
-  );
+  const datos = await cargar({ id, error });
+  return <VistaCancionNueva {...datos} />;
 }

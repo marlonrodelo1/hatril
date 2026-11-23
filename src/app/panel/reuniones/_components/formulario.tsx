@@ -1,11 +1,10 @@
-import Link from 'next/link';
 
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
 import { BotonEnviar } from '../../modulos/_components/boton-enviar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ReunionDetalle } from '@/lib/asistencia/consultas';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 /**
  * Alta y edición de una reunión de la congregación.
@@ -198,9 +197,9 @@ export function FormularioReunion({
             (ver el cerrojo de la agenda), pero lo que no se envía no hay que
             aguantarlo. */}
         <BotonEnviar>{reunion ? 'Guardar los cambios' : 'Apuntar la reunión'}</BotonEnviar>
-        <Button variant="ghost" render={<Link href={cancelarHref} />}>
+        <BotonEnlace href={cancelarHref} variant="ghost">
           Cancelar
-        </Button>
+        </BotonEnlace>
       </div>
     </form>
   );

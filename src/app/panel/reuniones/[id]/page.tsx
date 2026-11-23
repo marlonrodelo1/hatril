@@ -14,6 +14,7 @@ import { CabeceraPanel } from '../../_components/cabecera';
 import { Contenedor } from '../../_components/contenedor';
 import { borrarReunion, guardarLista } from '../actions';
 import { CONFIRMACIONES } from '../constantes';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 /*
  * Título fijo y no el de la reunión, por lo mismo que en `ministerios/[id]`:
@@ -55,13 +56,11 @@ export default async function ReunionPage({
         titulo={reunion.titulo}
         volver={{ href: '/panel/reuniones', texto: 'Reuniones' }}
       >
-        <Button
-          variant="outline"
-          render={<Link href={`/panel/reuniones/${id}/editar`} />}
-        >
+        <BotonEnlace href={`/panel/reuniones/${id}/editar`}
+          variant="outline">
           <Pencil strokeWidth={1.8} />
           Editar
-        </Button>
+        </BotonEnlace>
       </CabeceraPanel>
 
       <Contenedor>

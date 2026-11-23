@@ -1,25 +1,46 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { ChevronLeft, HouseHeart } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { ChevronLeft } from 'lucide-react';
 
 import { iglesiaParaSolicitar } from '@/lib/iglesias/directorio';
 import { solicitudDeUsuario } from '@/lib/solicitudes/consultas';
 import { getCurrentUserContext } from '@/lib/auth/user-context';
 import { createClient } from '@/lib/supabase/server';
-import { iniciales } from '@/lib/format/iniciales';
-import { solicitarIngreso, sumarInvitacionASolicitud } from '../actions';
-import { Aviso } from '@/components/aviso';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS } from '@/lib/rgpd/consentimiento';
-import { CasillaAsistencia } from '@/components/casilla-asistencia';
 import { grupoDeLaInvitacion, solicitudPendienteEn } from '@/lib/grupos/invitacion';
 import { misGrupos } from '@/lib/grupos/consultas';
+import { crearCuentaYSolicitar, solicitarIngreso, sumarInvitacionASolicitud } from '../actions';
+import { PasosSolicitud } from './_components/pasos-solicitud';
+import { AccesoSocial } from '@/app/(auth)/_components/acceso-social';
+import { Permisos } from './_components/permisos';
+import { Button, buttonVariants } from '@/components/ui/button';
 
-export const metadata: Metadata = { title: 'Pedir unirme' };
+export const metadata: Metadata = { title: 'Pedir entrar' };
 
+/**
+ * Pedir entrar en una iglesia.
+ *
+ * Sin sesión, el formulario lleva también la cuenta —correo y contraseña— y se
+ * envía todo de una vez (`crearCuentaYSolicitar`). Con sesión, solo lo de la
+ * solicitud. Es la pantalla «Cuenta» del diseño de la bienvenida: la cuenta se
+ * pide aquí, al final, y no antes de dejar mirar.
+ *
+ * Desde el 17-nov va en pasos (pieza «Unirse» del rediseño): «Tus datos», «Tu
+ * contraseña» y «Los permisos». Pide lo mismo que antes, en el mismo
+ * formulario y a la misma action; el porqué y cómo funciona sin JavaScript,
+ * en `_components/pasos-solicitud.tsx`.
+ *
+ * Lo obligatorio no lleva asterisco; lo opcional dice «opcional».
+ *
+ * EL ENLACE DE UNA CÉLULA
+ * -----------------------
+ * Trae `?grupo=<código>`. Si no vale —cerrada, de otra iglesia, tecleado mal—
+ * se sigue como una solicitud normal: lo que se viene a hacer es entrar en la
+ * iglesia, y eso no depende del grupo. Si vale, el formulario lo lleva, y dos
+ * casos que sin él se mandaban a `/mi` sin decir nada tienen su pantalla:
+ * quien ya es de esta iglesia, y quien ya pidió entrar y espera.
+ */
 export default async function SolicitarPage({
   params,
   searchParams,
@@ -33,11 +54,8 @@ export default async function SolicitarPage({
   const iglesia = await iglesiaParaSolicitar(slug);
   if (!iglesia) notFound();
 
-  // El enlace de invitación de una célula trae su código. Si no vale —cerrada,
-  // de otra iglesia, tecleado mal— se sigue como una solicitud normal: lo que
-  // se viene a hacer es entrar en la iglesia, y eso no depende del grupo.
   const grupo = await grupoDeLaInvitacion(iglesia.id, codigo);
-  // Para no perderlo al ir a crear la cuenta o a identificarse y volver.
+  // Para no perder la invitación al ir a identificarse y volver.
   const aqui = `/solicitar/${slug}${grupo ? `?grupo=${grupo.codigo}` : ''}`;
 
   const supabase = await createClient();
@@ -46,284 +64,116 @@ export default async function SolicitarPage({
   } = await supabase.auth.getUser();
 
   // Con sesión y con iglesia activa no hay nada que solicitar: esta persona ya
-  // está dentro de alguna congregación.
+  // está dentro de alguna congregación. Y con una solicitud pendiente, a verla.
   //
   // SALVO SI TRAE LA INVITACIÓN DE UN GRUPO DE AQUÍ
   // -----------------------------------------------
   // El enlace de una célula acaba en el grupo de WhatsApp de la célula, y casi
-  // todos los que lo abren ya son de la iglesia. Antes se les mandaba al panel
-  // sin decir nada, y el líder creía que habían entrado. Ahora se les dice la
-  // verdad: el enlace es para quien todavía no es de la iglesia, y a ellos los
-  // suma quien lleva la red. Y a quien ya pidió entrar y espera, se le ofrece
-  // que su solicitud lleve también esta invitación.
-  let yaEsDeAqui = false;
-  // Y si ya va a ese grupo, tampoco se le manda a pedírselo a nadie: el enlace
-  // llega igual a quien está dentro, que es casi todo el grupo de WhatsApp.
-  let yaVa = false;
-  let pendiente: Awaited<ReturnType<typeof solicitudPendienteEn>> = null;
+  // todos los que lo abren ya son de la iglesia. Mandarles a `/mi` sin decir
+  // nada hacía creer al líder que habían entrado. Y a quien ya pidió entrar y
+  // espera se le ofrece que su solicitud lleve también esta invitación.
   if (user) {
     const ctx = await getCurrentUserContext();
     if (ctx) {
-      if (grupo && ctx.iglesia.id === iglesia.id) {
-        yaEsDeAqui = true;
-        yaVa = (await misGrupos(ctx)).some((g) => g.grupoId === grupo.id);
-      } else redirect('/panel/hoy');
-    } else {
-      if (grupo) pendiente = await solicitudPendienteEn(user.id, iglesia.id);
-      if (pendiente?.conInvitacion) redirect('/mi');
-      if (!pendiente) {
-        const solicitud = await solicitudDeUsuario(user.id);
-        if (solicitud) redirect('/mi');
-      }
+      if (!grupo || ctx.iglesia.id !== iglesia.id) redirect('/mi');
+      // Si ya va a ese grupo, tampoco se le manda a pedírselo a nadie: el enlace
+      // llega igual a quien está dentro, que es casi todo el grupo de WhatsApp.
+      const yaVa = (await misGrupos(ctx)).some((g) => g.grupoId === grupo.id);
+      return (
+        <Marco slug={slug} titulo={yaVa ? `Ya vas a ${grupo.nombre}` : `Ya eres de ${iglesia.nombre}`}>
+          {yaVa ? (
+            <p className="text-pretty text-body text-muted-foreground">
+              Este enlace es para quien todavía no es de la iglesia. Tú ya estás
+              dentro: lo tuyo de {grupo.nombre} lo ves en la app.
+            </p>
+          ) : (
+            <p className="text-pretty text-body text-muted-foreground">
+              Este enlace es para quien todavía no es de la iglesia. Para entrar en{' '}
+              <strong className="font-semibold text-foreground">{grupo.nombre}</strong>,
+              pídeselo a quien lleva su red: te suma en un momento desde el panel.
+            </p>
+          )}
+          {/* «Tu célula» vive en la cuenta, no en el inicio. */}
+          <Link href={yaVa ? '/mi/cuenta' : '/mi'} className={buttonVariants({ variant: 'outline' })}>
+            Ir a la app
+          </Link>
+        </Marco>
+      );
     }
+
+    const pendiente = grupo ? await solicitudPendienteEn(user.id, iglesia.id) : null;
+    if (pendiente && grupo) {
+      if (pendiente.conInvitacion) redirect('/mi');
+      return (
+        <Marco slug={slug} titulo={`Ya pediste unirte a ${iglesia.nombre}`}>
+          <form action={sumarInvitacionASolicitud} className="flex flex-col items-start gap-4">
+            <input type="hidden" name="slug" value={slug} />
+            <input type="hidden" name="grupo" value={grupo.codigo} />
+            <p className="text-pretty text-body text-muted-foreground">
+              Tu solicitud espera respuesta. Si quieres, llevará también la invitación
+              de <strong className="font-semibold text-foreground">{grupo.nombre}</strong>,
+              y al aprobarla entrarás en ese grupo si sigue abierto y con este enlace.
+              Quien lo lleva verá tu nombre y tu teléfono, para poder llamarte.
+            </p>
+            <Button type="submit">Sí, entrar también en {grupo.nombre}</Button>
+          </form>
+        </Marco>
+      );
+    }
+
+    const solicitud = await solicitudDeUsuario(user.id);
+    if (solicitud?.estado === 'pendiente') redirect('/mi');
   }
 
-  const nombreSugerido =
-    (user?.user_metadata?.nombre as string | undefined) ?? '';
+  // La ficha cuenta por qué no se puede: aquí no se repite.
+  if (!iglesia.aceptaSolicitudes) redirect(`/iglesia/${slug}`);
+
+  const nombreSugerido = (user?.user_metadata?.nombre as string | undefined) ?? '';
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-[560px] items-center gap-4 px-5 py-3.5">
+    <div className="flex min-h-dvh flex-col bg-background pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+      {/* `key` con el error: si la action vuelve con uno, los pasos empiezan
+          de cero, como el formulario que React acaba de vaciar. */}
+      <PasosSolicitud
+        key={error ?? ''}
+        slug={slug}
+        nombreIglesia={iglesia.nombre}
+        paisIglesia={iglesia.pais}
+        conSesion={Boolean(user)}
+        nombreSugerido={nombreSugerido}
+        error={error}
+        accion={user ? solicitarIngreso : crearCuentaYSolicitar}
+        permisos={<Permisos />}
+        invitacion={grupo ? { codigo: grupo.codigo, nombre: grupo.nombre } : undefined}
+        accesoRapido={user ? undefined : <AccesoSocial next={aqui} vuelta="/acceso" />}
+      />
+    </div>
+  );
+}
+
+/**
+ * El marco de las dos pantallas de la invitación que no son el formulario:
+ * la misma cabecera que los pasos, con la flecha a la ficha de la iglesia.
+ */
+function Marco({ slug, titulo, children }: { slug: string; titulo: string; children: ReactNode }) {
+  return (
+    <div className="flex min-h-dvh flex-col bg-background pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+      <header className="sticky top-0 z-10 border-b border-border bg-surface pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex h-14 w-full max-w-[560px] items-center gap-1 px-2">
           <Link
-            href="/iglesias"
-            className="inline-flex items-center gap-1 text-[13.5px] font-medium text-muted-foreground no-underline hover:text-foreground hover:no-underline"
+            href={`/iglesia/${slug}`}
+            aria-label="Volver a la ficha de la iglesia"
+            className="flex size-11 flex-none items-center justify-center rounded-full text-foreground no-underline outline-none hover:bg-surface-active hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/20"
           >
-            <ChevronLeft className="size-4" strokeWidth={1.8} />
-            Directorio
+            <ChevronLeft className="size-5" strokeWidth={1.8} />
           </Link>
         </div>
       </header>
-
-      <main className="mx-auto flex w-full max-w-[560px] flex-col gap-7 px-5 py-10">
-        <div className="flex items-center gap-4">
-          <span className="flex size-14 flex-none items-center justify-center rounded-xl bg-accent text-[17px] font-bold text-accent-foreground">
-            {iniciales(iglesia.nombre)}
-          </span>
-          <div className="flex min-w-0 flex-col gap-1">
-            <h1 className="text-[24px] font-bold leading-tight tracking-[-0.025em]">
-              {iglesia.nombre}
-            </h1>
-            {iglesia.ciudad && (
-              <span className="text-[14px] text-muted-foreground">
-                {iglesia.ciudad}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {error && <Aviso>{error}</Aviso>}
-
-        {grupo && iglesia.aceptaSolicitudes && !yaEsDeAqui && !pendiente && (
-          <p className="flex items-start gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-[14px] leading-relaxed">
-            <HouseHeart className="mt-0.5 size-5 flex-none text-muted-foreground" strokeWidth={1.8} aria-hidden />
-            <span>
-              {/* Las condiciones son las de la aprobación (`motivoDeLaInvitacion`):
-                  prometer el grupo sin más era prometer de más. */}
-              Vienes con la invitación de <strong className="font-semibold">{grupo.nombre}</strong>.
-              Cuando {iglesia.nombre} apruebe tu solicitud verás lo de toda la iglesia, y
-              quedarás en ese grupo si para entonces sigue abierto y con este enlace.
-            </span>
-          </p>
-        )}
-
-        {yaEsDeAqui && grupo ? (
-          <div className="flex flex-col items-start gap-4 rounded-xl border border-border bg-surface p-5">
-            <div className="flex flex-col gap-1.5">
-              <h2 className="t-subtitulo">
-                {yaVa ? `Ya vas a ${grupo.nombre}` : `Ya eres de ${iglesia.nombre}`}
-              </h2>
-              {yaVa ? (
-                <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
-                  Este enlace es para quien todavía no es de la iglesia. Tú ya estás
-                  dentro: lo tuyo de {grupo.nombre} lo ves en la app.
-                </p>
-              ) : (
-                <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
-                  Este enlace es para quien todavía no es de la iglesia. Para entrar en{' '}
-                  <strong className="font-semibold text-foreground">{grupo.nombre}</strong>,
-                  pídeselo a quien lleva su red: te suma en un momento desde el panel.
-                </p>
-              )}
-            </div>
-            {/* «Tu célula» vive en la cuenta, no en el inicio. */}
-            <Link href={yaVa ? '/mi/cuenta' : '/mi'} className={buttonVariants({ variant: 'outline' })}>
-              Ir a la app
-            </Link>
-          </div>
-        ) : pendiente && grupo ? (
-          <form
-            action={sumarInvitacionASolicitud}
-            className="flex flex-col items-start gap-4 rounded-xl border border-border bg-surface p-5"
-          >
-            <input type="hidden" name="slug" value={slug} />
-            <input type="hidden" name="grupo" value={grupo.codigo} />
-            <div className="flex flex-col gap-1.5">
-              <h2 className="t-subtitulo">Ya pediste unirte a {iglesia.nombre}</h2>
-              <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
-                Tu solicitud espera respuesta. Si quieres, llevará también la
-                invitación de{' '}
-                <strong className="font-semibold text-foreground">{grupo.nombre}</strong>,
-                y al aprobarla entrarás en ese grupo si sigue abierto y con este
-                enlace.
-              </p>
-            </div>
-            <Button type="submit">Sí, entrar también en {grupo.nombre}</Button>
-          </form>
-        ) : !iglesia.aceptaSolicitudes ? (
-          <Aviso>
-            Esta iglesia no está aceptando solicitudes ahora mismo. Ponte en
-            contacto con ellos directamente y te dirán cómo unirte.
-          </Aviso>
-        ) : !user ? (
-          /*
-           * Sin sesión no se puede solicitar. Es lo que impide que lluevan
-           * solicitudes falsas y lo que da a la iglesia una persona real a la
-           * que aprobar.
-           *
-           * Se ofrecen las dos puertas por separado, y con la advertencia de
-           * cuál NO es la suya: `/registro` crea una iglesia entera, y quien
-           * quiere unirse a la suya acabaría fundando una vacía sin darse
-           * cuenta.
-           */
-          <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5">
-            <div className="flex flex-col gap-1.5">
-              <h2 className="t-subtitulo">Necesitas una cuenta</h2>
-              <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
-                Es gratis y solo sirve para que {iglesia.nombre} sepa quién eres
-                al aprobar tu solicitud.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2.5">
-              <Button
-                render={
-                  <Link
-                    href={`/crear-cuenta?next=${encodeURIComponent(aqui)}`}
-                  />
-                }
-              >
-                Crear mi cuenta
-              </Button>
-              <Button
-                variant="outline"
-                render={
-                  <Link
-                    href={`/acceso?next=${encodeURIComponent(aqui)}`}
-                  />
-                }
-              >
-                Ya tengo cuenta
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form
-            action={solicitarIngreso}
-            className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5"
-          >
-            <input type="hidden" name="slug" value={slug} />
-            {grupo && <input type="hidden" name="grupo" value={grupo.codigo} />}
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="nombre">Cómo te llamas</Label>
-              <Input
-                id="nombre"
-                name="nombre"
-                required
-                autoFocus
-                maxLength={120}
-                defaultValue={nombreSugerido}
-                placeholder="Nombre y apellidos"
-              />
-              <p className="t-label text-muted-foreground">
-                Como te conocen en la iglesia, para que sepan quién eres.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="telefono">
-                Teléfono
-                <span className="ml-1.5 font-normal text-muted-foreground">
-                  (opcional)
-                </span>
-              </Label>
-              <Input id="telefono" name="telefono" type="tel" maxLength={40} />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="mensaje">
-                Cuéntales algo
-                <span className="ml-1.5 font-normal text-muted-foreground">
-                  (opcional)
-                </span>
-              </Label>
-              <textarea
-                id="mensaje"
-                name="mensaje"
-                rows={3}
-                maxLength={600}
-                placeholder="Vengo los domingos desde marzo, me presentó Marta."
-                className="rounded-lg border border-input bg-surface-alt px-3 py-2.5 text-[15px] leading-relaxed outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
-              />
-            </div>
-
-            {/* El mismo consentimiento del art. 9 que en el alta de iglesia:
-                vincularse a una congregación es lo que revela la confesión
-                religiosa, y da igual por qué puerta se entre. Con los estados
-                de la de asistencia y el enlace oscuro al marcarla, por el
-                contraste: ver `/registro`. */}
-            <label className="group/consentimiento flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5 hover:bg-surface-active has-checked:border-primary has-checked:bg-accent">
-              {/* `aria-label` con el texto exacto: sin él se anunciaba «on».
-                  Ver la misma casilla en `/registro`. */}
-              <input
-                type="checkbox"
-                name="consentimiento"
-                required
-                aria-label={TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS}
-                className="mt-0.5"
-              />
-              <span className="text-[13.5px] leading-snug text-muted-foreground">
-                {TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS}{' '}
-                <Link href="/privacidad" target="_blank" className="font-semibold group-hover/consentimiento:text-accent-foreground group-has-checked/consentimiento:text-accent-foreground">
-                  Leer la política de privacidad
-                </Link>
-                .
-              </span>
-            </label>
-
-            {/*
-             * La casilla de `/acepta`, y NO otra parecida: la versión que se
-             * guarda con la solicitud es la de ese texto. Hace falta aquí
-             * porque sin ella aprobar dejaba a la persona con la política
-             * vigente aceptada y sin esta casilla, que es justo lo que
-             * `miembrosSinPermisoDeAsistencia` lee como «dijo que no».
-             *
-             * La consecuencia es la de `/acepta`, dicha para quien todavía no
-             * está dentro: la iglesia puede tenerle ya en su fichero con
-             * asistencias apuntadas, y al unir la solicitud con esa ficha se
-             * borran si esto queda sin marcar.
-             */}
-            <CasillaAsistencia
-              consecuencia={
-                <>
-                  Puedes unirte igual sin marcarla. Entonces no sales en las
-                  listas de asistencia ni de seguimiento de la iglesia, y si ya
-                  tenían algo apuntado de ti en ellas, se borra.
-                </>
-              }
-            />
-
-            <Button type="submit" className="mt-1 w-fit">
-              Enviar la solicitud
-            </Button>
-
-            <p className="text-[13px] leading-snug text-muted-foreground">
-              Hasta que alguien de la iglesia lo apruebe no verás nada de la
-              congregación, y ellos solo verán lo que has escrito aquí.
-            </p>
-          </form>
-        )}
+      <main className="mx-auto flex w-full max-w-[560px] flex-col gap-5 px-5 pt-5">
+        <section className="flex flex-col items-start gap-4 rounded-xl border border-border bg-surface p-5">
+          <h1 className="t-subtitulo">{titulo}</h1>
+          {children}
+        </section>
       </main>
     </div>
   );

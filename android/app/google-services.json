@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "426927529209",
+    "project_id": "hatril-3ac0c",
+    "storage_bucket": "hatril-3ac0c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:426927529209:android:03cf6e79b1ec9bf4d7d628",
+        "android_client_info": {
+          "package_name": "app.hatril"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_TNvNUcOxUNrLU40F2jOTrLoIRMjzTjA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

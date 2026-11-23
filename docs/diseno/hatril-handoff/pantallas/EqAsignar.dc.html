@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Equipo · Poner a alguien en un puesto</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.av{border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+.pp{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:10px 20px;border:0;border-top:1px solid #E0DFDB;background:transparent;font-family:inherit;text-align:left;cursor:pointer;color:#141413}
+.rd{width:22px;height:22px;border-radius:999px;border:1.5px solid #67665F;display:flex;align-items:center;justify-content:center;flex:none}
+.rd i{display:block;width:12px;height:12px;border-radius:999px;background:#3D3D3A}
+.n{font-size:15px;font-weight:700}
+.m{font-size:13px;color:#67665F}
+.w{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;border-radius:999px;padding:2px 8px;margin-top:3px;align-self:flex-start}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413">
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(20,20,19,0.42)"></div>
+  <section role="dialog" aria-label="Segunda voz, domingo 1" style="position: absolute; left: 0; right: 0; bottom: 0; height: 700px; background: #FFFFFF; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; padding-bottom: 34px">
+    <div style="display: flex; justify-content: center; padding-top: 8px"><span style="width: 36px; height: 4px; border-radius: 999px; background: #E0DFDB"></span></div>
+    <div style="padding: 12px 20px 12px; display: flex; flex-direction: column; gap: 4px">
+      <h2 style="font-size: 20px; font-weight: 800; letter-spacing: -0.02em">Segunda voz · domingo 1</h2>
+      <p style="font-size: 14px; color: #67665F">Primero, quien menos ha servido este mes.</p>
+    </div>
+
+    <div role="radiogroup" aria-label="Personas" style="border-bottom: 1px solid #E0DFDB">
+      <sc-for list="{{ gente }}" as="p" hint-placeholder-count="5">
+        <button class="pp" role="radio" aria-checked="{{ p.aria }}" onClick="{{ p.pick }}" style="{{ p.rowStyle }}">
+          <span class="rd"><sc-if value="{{ p.on }}" hint-placeholder-val="{{ false }}"><i></i></sc-if></span>
+          <span class="av" style="{{ p.avStyle }}">{{ p.ini }}</span>
+          <span style="flex: 1; display: flex; flex-direction: column"><span class="n">{{ p.n }}</span><span class="m">{{ p.m }}</span>
+            <sc-if value="{{ p.hayAviso }}" hint-placeholder-val="{{ false }}"><span class="w" style="{{ p.avisoStyle }}">{{ p.aviso }}</span></sc-if>
+          </span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="flex: 1"></div>
+    <div style="padding: 16px 16px 0; display: flex; flex-direction: column; gap: 8px">
+      <a href="EqCuadrante.dc.html" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 8px; background: #B15435; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none">{{ boton }}</a>
+      <p style="font-size: 12px; color: #67665F; text-align: center">Le llegará un aviso para que conteste.</p>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: 0 }; }
+  renderVals() {
+    const L = [
+      ['MR', 'Marta Ruiz', 'Ningún turno este mes', null, '#F5E7DF', '#92442A'],
+      ['ER', 'Elena Ruiz', '1 turno este mes', null, '#E6ECDE', '#245C0E'],
+      ['AD', 'Ana Díaz', '1 turno este mes', ['Ese día ya sirve en Niños', 'aviso'], '#ECE3EE', '#5B3A66'],
+      ['CP', 'Carlos Pérez', '2 turnos este mes', ['Dijo «no puedo» el domingo 25', 'neutra'], '#E3E8EC', '#2F4A5C'],
+      ['SG', 'Sara Gil', '4 turnos este mes · ya es voz principal', null, '#E6ECDE', '#245C0E']
+    ];
+    const gente = L.map((x, i) => {
+      const on = this.state.sel === i;
+      return {
+        ini: x[0], n: x[1], m: x[2], on, aria: on ? 'true' : 'false',
+        hayAviso: !!x[3], aviso: x[3] ? x[3][0] : '',
+        avisoStyle: x[3] && x[3][1] === 'aviso' ? { background: '#F3E9D3', color: '#734500' } : { background: '#F0EEE6', color: '#5E5D58' },
+        avStyle: { width: '36px', height: '36px', background: x[4], color: x[5], fontSize: '12px' },
+        rowStyle: on ? { background: '#F5E7DF' } : {},
+        pick: () => this.setState({ sel: i })
+      };
+    });
+    return { gente, boton: 'Poner a ' + L[this.state.sel][1].split(' ')[0] };
+  }
+}
+</script>
+</body>
+</html>

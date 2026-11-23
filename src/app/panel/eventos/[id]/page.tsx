@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import {
@@ -31,6 +30,7 @@ import {
   marcarPagada,
 } from '../actions';
 import { CONFIRMACIONES } from '../constantes';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = {
   title: 'Evento',
@@ -115,14 +115,12 @@ export default async function EventoPage({
                   botones de estado de la otra columna: solo existe cuando hay
                   filas, y al lado del recuento se entiende sin leer nada. */}
               {lista.length > 0 && (
-                <Button
+                <BotonEnlace nativo href={`/panel/eventos/${id}/exportar`}
                   variant="outline"
-                  size="sm"
-                  render={<a href={`/panel/eventos/${id}/exportar`} />}
-                >
+                  size="sm">
                   <Download strokeWidth={1.8} />
                   Descargar CSV
-                </Button>
+                </BotonEnlace>
               )}
             </div>
 
@@ -299,28 +297,20 @@ export default async function EventoPage({
                 </form>
 
                 {e.publicado && ctx.iglesia.webPublica && (
-                  <Button
-                    variant="ghost"
-                    render={
-                      <a
-                        href={`/i/${ctx.iglesia.slug}/eventos/${id}`}
+                  <BotonEnlace nativo href={`/i/${ctx.iglesia.slug}/eventos/${id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                      />
-                    }
-                  >
+                    variant="ghost">
                     <ExternalLink strokeWidth={1.8} />
                     Ver la página
-                  </Button>
+                  </BotonEnlace>
                 )}
 
-                <Button
-                  variant="ghost"
-                  render={<Link href={`/panel/eventos/${id}/editar`} />}
-                >
+                <BotonEnlace href={`/panel/eventos/${id}/editar`}
+                  variant="ghost">
                   <Pencil strokeWidth={1.8} />
                   Editar
-                </Button>
+                </BotonEnlace>
               </div>
 
               {e.publicado && !ctx.iglesia.webPublica && (

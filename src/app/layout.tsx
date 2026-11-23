@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { AppNativa } from '@/components/app-nativa';
+import { PushNativo } from '@/components/push-nativo';
 import './globals.css';
 
 /**
@@ -52,11 +53,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${jakarta.variable} h-full`}>
+    // `data-scroll-behavior`: `globals.css` pone el desplazamiento suave para
+    // las anclas de la web de cada iglesia, y desde Next 16 eso también hacía
+    // deslizarse cada cambio de página hasta arriba (y un aviso en consola).
+    // Con el atributo, Next lo quita durante la navegación y las anclas siguen
+    // suaves. Ver «Scroll Behavior Override» en la guía de la versión 16.
+    <html lang="es" data-scroll-behavior="smooth" className={`${jakarta.variable} h-full`}>
       <body className="min-h-full flex flex-col">
         {children}
         {/* Botón atrás, barra de estado y arranque; fuera de la app, nada. */}
         <AppNativa />
+        {/* Las push: permiso con sesión, oyentes siempre. Fuera de la app, nada. */}
+        <PushNativo />
       </body>
     </html>
   );

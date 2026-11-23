@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { Plus, SearchX, UserPlus } from 'lucide-react';
+import { ChevronRight, Plus, SearchX, UserPlus } from 'lucide-react';
 
 import { requirePanel } from '@/lib/auth/guard-panel';
 import { puede, esPastor } from '@/lib/auth/permisos';
@@ -13,7 +13,9 @@ import {
 } from '@/lib/miembros/consultas';
 import { ESTADOS, type EstadoMiembro } from '@/lib/miembros/estados';
 import { iniciales } from '@/lib/format/iniciales';
-import { Button } from '@/components/ui/button';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
+import { EstadoVacio as Vacio } from '@/components/ui/estado-vacio';
+import { Insignia } from '@/components/ui/insignia';
 import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
 import { FiltrosMiembros, BuscadorMiembros } from './_components/filtros';
@@ -78,13 +80,10 @@ export default async function MiembrosPage({
         <BuscadorMiembros />
 
         {puedeCrear && (
-          <Button
-            render={<Link href="/panel/miembros/nuevo" />}
-            className="flex-none"
-          >
+          <BotonEnlace href="/panel/miembros/nuevo" className="flex-none">
             <Plus strokeWidth={1.9} />
             Añadir miembro
-          </Button>
+          </BotonEnlace>
         )}
       </CabeceraPanel>
 
@@ -115,11 +114,22 @@ export default async function MiembrosPage({
                 .join(' ');
 
               return (
+                /*
+                 * EN EL MÓVIL, UNA FILA Y NO UNA TABLA APILADA (base común, 17-nov)
+                 *
+                 * Antes cada columna caía debajo de la anterior sin su etiqueta:
+                 * un guion, otro guion, un teléfono y una fecha sueltos, y cada
+                 * persona ocupaba media pantalla (inventario, M4). Ahora en el
+                 * móvil la fila es la de todas las listas: cara, nombre, sus
+                 * ministerios debajo y el estado a la derecha. El teléfono y el
+                 * alta se quitan en vez de apilarse; están en la ficha, a un
+                 * toque.
+                 */
                 <Link
                   key={m.id}
                   href={`?${new URLSearchParams({ ...limpiar(sp), ficha: m.id })}`}
                   scroll={false}
-                  className="grid grid-cols-1 items-center gap-2 border-b border-border px-5 py-3.5 text-foreground no-underline last:border-b-0 hover:bg-surface hover:no-underline md:grid-cols-[2.1fr_1fr_1.5fr_1.1fr_.9fr] md:gap-3.5"
+                  className="group grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-border px-4 py-3 text-foreground no-underline transition-colors duration-150 last:border-b-0 hover:bg-surface hover:text-foreground hover:no-underline md:grid-cols-[2.1fr_1fr_1.5fr_1.1fr_.9fr] md:gap-3.5 md:px-5 md:py-3.5"
                 >
                   <div className="flex min-w-0 items-center gap-[11px]">
                     <span
@@ -131,21 +141,28 @@ export default async function MiembrosPage({
                       <span className="truncate text-[15px] font-semibold">
                         {nombreCompleto}
                       </span>
-                      <span className="truncate text-[12.5px] text-muted-foreground">
+                      <span className="hidden truncate text-[12.5px] text-muted-foreground md:block">
                         {m.email ?? 'Sin correo'}
+                      </span>
+                      <span className="truncate text-[12.5px] text-muted-foreground md:hidden">
+                        {m.ministerios.length > 0
+                          ? m.ministerios.map((min) => min.nombre).join(' · ')
+                          : (m.telefono ?? m.email ?? 'Sin ministerio')}
                       </span>
                     </div>
                   </div>
 
-                  <span className="flex md:block">
-                    <span
-                      className={`rounded-full px-2.5 py-[5px] text-[12px] font-semibold ${estilo.badge}`}
-                    >
-                      {estilo.etiqueta}
-                    </span>
+                  <span className="flex">
+                    <Insignia tono={estilo.tono}>{estilo.etiqueta}</Insignia>
                   </span>
 
-                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <ChevronRight
+                    aria-hidden
+                    className="size-4 text-muted-foreground transition-transform duration-240 ease-hatril group-hover:translate-x-[3px] motion-reduce:transition-none md:hidden"
+                    strokeWidth={1.8}
+                  />
+
+                  <div className="hidden min-w-0 flex-wrap items-center gap-1.5 md:flex">
                     {m.ministerios.length === 0 ? (
                       <span className="text-[14px] text-muted-foreground">—</span>
                     ) : (
@@ -167,11 +184,11 @@ export default async function MiembrosPage({
                     )}
                   </div>
 
-                  <span className="whitespace-nowrap text-[14px]">
+                  <span className="hidden whitespace-nowrap text-[14px] md:block">
                     {m.telefono ?? '—'}
                   </span>
 
-                  <span className="whitespace-nowrap text-[14px] text-muted-foreground">
+                  <span className="hidden whitespace-nowrap text-[14px] text-muted-foreground md:block">
                     {formatearFecha(m.fechaIngreso)}
                   </span>
                 </Link>
@@ -225,41 +242,31 @@ function EstadoVacio({
   // Dos vacíos distintos. «No hay resultados» cuando el fichero está vacío deja
   // al pastor sin saber qué hacer justo el primer día, que es cuando más
   // ayuda necesita.
-  const Icono = hayFiltros ? SearchX : UserPlus;
-
   return (
-    <div className="flex flex-col items-center gap-3.5 px-6 py-16 text-center">
-      <span className="flex size-13 items-center justify-center rounded-full bg-muted text-muted-foreground">
-        <Icono className="size-6" strokeWidth={1.5} />
-      </span>
-
-      <div className="flex max-w-[380px] flex-col gap-1.5">
-        <span className="text-[18px] font-bold tracking-[-0.02em]">
-          {hayFiltros ? 'Aquí no aparece nadie' : 'Empieza por tu congregación'}
-        </span>
-        <span className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
-          {hayFiltros
-            ? 'Con esos filtros no hay ninguna persona. Prueba a quitar alguno o a buscar por otro nombre.'
-            : 'Añade a las personas que ya vienen a la iglesia. Puedes empezar por unas pocas e ir completando con el tiempo.'}
-        </span>
-      </div>
-
-      {hayFiltros ? (
-        <Button variant="outline" render={<Link href="?" />}>
-          Quitar los filtros
-        </Button>
-      ) : (
-        puedeCrear && (
-          // `outline` porque «Añadir miembro» ya está en la cabecera, en
-          // naranja y llevando al mismo sitio. Dos botones idénticos apuntando
-          // al mismo formulario hacen dudar de si son lo mismo. La pantalla
-          // hermana de Ministerios ya lo había resuelto así.
-          <Button variant="outline" render={<Link href="/panel/miembros/nuevo" />}>
-            <Plus strokeWidth={1.9} />
-            Añadir la primera persona
-          </Button>
+    <Vacio
+      Icono={hayFiltros ? SearchX : UserPlus}
+      titulo={hayFiltros ? 'Aquí no aparece nadie' : 'Empieza por tu congregación'}
+      accion={
+        hayFiltros ? (
+          <BotonEnlace href="?" variant="outline">
+            Quitar los filtros
+          </BotonEnlace>
+        ) : (
+          puedeCrear && (
+            // `outline` porque «Añadir miembro» ya está en la cabecera, en
+            // naranja y llevando al mismo sitio. Dos botones idénticos
+            // apuntando al mismo formulario hacen dudar de si son lo mismo.
+            <BotonEnlace href="/panel/miembros/nuevo" variant="outline">
+              <Plus strokeWidth={1.9} />
+              Añadir la primera persona
+            </BotonEnlace>
+          )
         )
-      )}
-    </div>
+      }
+    >
+      {hayFiltros
+        ? 'Con esos filtros no hay ninguna persona. Prueba a quitar alguno o a buscar por otro nombre.'
+        : 'Añade a las personas que ya vienen a la iglesia. Puedes empezar por unas pocas e ir completando con el tiempo.'}
+    </Vacio>
   );
 }

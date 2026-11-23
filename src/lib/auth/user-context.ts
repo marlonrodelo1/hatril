@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { cache } from 'react';
+import { cachePorPeticion } from '@/lib/peticion';
 import { and, asc, eq } from 'drizzle-orm';
 import type { User } from '@supabase/supabase-js';
 
@@ -11,7 +11,7 @@ import {
   ministerioMiembros,
   ministerios,
 } from '@/lib/db/schema';
-import { createClient } from '@/lib/supabase/server';
+import { usuarioActual } from '@/lib/auth/usuario';
 import {
   resolverPermisos,
   type MapaPermisos,
@@ -104,7 +104,13 @@ export type UserContext = {
    * obligarle a traer nombres y colores para decidir un permiso mezclaría qué
    * se puede con qué se pinta.
    */
-  ministeriosQueLlevo: { id: string; nombre: string; colorHex: string }[];
+  ministeriosQueLlevo: {
+    id: string;
+    nombre: string;
+    colorHex: string;
+    /** Para el menú de la cuenta: «Colíder de Acción social» (`rolParaMostrar`). */
+    rol: 'responsable' | 'colider';
+  }[];
 };
 
 /**
@@ -126,12 +132,14 @@ export type UserContext = {
  * Ojo con el matiz: `cache()` deduplica DENTRO de un render de servidor, nunca
  * entre peticiones ni entre personas. No es un caché de datos, no hay nada que
  * invalidar, y no puede devolverle a alguien el contexto de otro.
+ *
+ * Y en un route handler `cache()` no deduplica nada: allí lo hace
+ * `cachePorPeticion`, con la memoria que abre `endpointApp()` para cada
+ * petición de la app (`src/lib/peticion.ts`). Fuera de ella es `cache()` sin más.
  */
-export const getCurrentUserContext = cache(async function getCurrentUserContext(): Promise<UserContext | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export const getCurrentUserContext = cachePorPeticion(async function getCurrentUserContext(): Promise<UserContext | null> {
+  // La misma validación que el resto del render, sin repetir el viaje a Auth.
+  const user = await usuarioActual();
 
   if (!user) return null;
 
@@ -264,6 +272,9 @@ export const getCurrentUserContext = cache(async function getCurrentUserContext(
       id: m.ministerioId,
       nombre: m.nombre,
       colorHex: m.colorHex,
+      // `lidera` ya dejó fuera a los voluntarios, pero el filtro no estrecha el
+      // tipo: así no hace falta un `as`.
+      rol: m.rolEquipo === 'responsable' ? 'responsable' : 'colider',
     })),
   };
 });

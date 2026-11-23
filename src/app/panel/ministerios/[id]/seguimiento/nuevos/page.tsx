@@ -17,12 +17,12 @@ import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { ESTADOS } from '@/lib/miembros/estados';
 import { iniciales } from '@/lib/format/iniciales';
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
 import { CabeceraPanel } from '../../../../_components/cabecera';
 import { Contenedor } from '../../../../_components/contenedor';
 import { PestanasMinisterio } from '../../_components/pestanas';
 import { VistasSeguimiento } from '../_components/vistas';
 import { CONFIRMACIONES } from '../constantes';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Nuevos' };
 
@@ -85,10 +85,10 @@ export default async function NuevosPage({
         subtitulo={`Quién ha llegado en los últimos ${DIAS_EN_NUEVOS} días, y si vuelve`}
         volver={{ href: '/panel/ministerios', texto: 'Ministerios' }}
       >
-        <Button render={<Link href={`${base}/nuevos/alta`} />}>
+        <BotonEnlace href={`${base}/nuevos/alta`}>
           <UserPlus strokeWidth={1.8} />
           Apuntar a alguien nuevo
-        </Button>
+        </BotonEnlace>
       </CabeceraPanel>
 
       <Contenedor>
@@ -153,13 +153,11 @@ export default async function NuevosPage({
               menos de {DIAS_EN_NUEVOS} días. Cuando alguien venga por primera
               vez, apúntalo con su teléfono y verás aquí si vuelve.
             </p>
-            <Button
-              variant="outline"
-              render={<Link href={`${base}/nuevos/alta`} />}
-            >
+            <BotonEnlace href={`${base}/nuevos/alta`}
+              variant="outline">
               <UserPlus strokeWidth={1.8} />
               Apuntar a la primera persona
-            </Button>
+            </BotonEnlace>
           </div>
         ) : (
           <>

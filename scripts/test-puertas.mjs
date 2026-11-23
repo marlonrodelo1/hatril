@@ -8,7 +8,7 @@
  * -------------------------------------------
  * `npm run dev` en http://localhost:3000 (o la URL de PUERTAS_URL). El test
  * habla con la aplicación de verdad por HTTP, con la sesión de cada cuenta de
- * la demo; sin servidor no hay nada que probar y sale con código 2. Tiene que
+ * la iglesia de prueba; sin servidor no hay nada que probar y sale con código 2. Tiene que
  * ser el de DESARROLLO: la comprobación de «la página cortó ella sola» lee los
  * metadatos de segmento que Next solo pone en el payload en desarrollo (ver
  * «Qué mira» más abajo).
@@ -32,11 +32,14 @@
  *
  * QUÉ HACE
  * --------
- * 1. Lee de la base de demo, en una transacción `read only`, los ids reales de
- *    Betania (Alabanza, Consolidación, Acción social, la Radio si está, una
- *    reunión, un turno, una canción, un beneficiario…) y los datos que sirven
- *    de testigo: nombres y teléfonos de personas, correos, direcciones, notas,
- *    beneficiarios, inscritos, canciones, conceptos e importes. No escribe nada.
+ * 1. Monta dos iglesias de usar y tirar con sus cuentas (`scripts/pruebas/demo.mjs`)
+ *    y las borra al terminar, también si falla. Hasta el 20-nov-2026 usaba la
+ *    demo fija de Betania, que se borró. De la iglesia propia, Betel, lee en una
+ *    transacción `read only` los ids (Alabanza, Consolidación, Acción social, la
+ *    Radio, una reunión, un turno, una canción, un beneficiario…) y los datos
+ *    que sirven de testigo: nombres y teléfonos de personas, correos,
+ *    direcciones, notas, beneficiarios, inscritos, canciones, conceptos e
+ *    importes.
  * 2. Abre sesión sin contraseña para cada cuenta: `generateLink` con la clave
  *    de servicio y `verifyOtp` con la publicable, y monta la cookie de
  *    `@supabase/ssr` a mano. Al terminar revoca cada sesión.
@@ -53,8 +56,9 @@
  * Lo que la cuenta denegada ya ve en su propio panel (su nombre en la cabecera,
  * sus avisos) se descuenta: se mide con su respuesta a `/panel/cuenta/contrasena`.
  *
- * Y como una página con la demo vacía no trae testigos —hoy no hay movimientos
- * de caja ni inscritos en eventos—, se mira además QUIÉN cortó: el payload de
+ * Y como una página sin datos no trae testigos —la iglesia de prueba tiene lo
+ * justo, y una pantalla nueva puede no enseñar nada de ello—, se mira además
+ * QUIÉN cortó: el payload de
  * desarrollo marca el segmento de la página con su `pagePath`, y la fila de ese
  * segmento tiene que ser el error de `redirect()` o `notFound()` de la PROPIA
  * página, con el destino que toca. Si solo corta el layout, la fila de la
@@ -99,6 +103,8 @@ import { fileURLToPath } from 'node:url';
 import postgres from 'postgres';
 import { createClient } from '@supabase/supabase-js';
 
+import { conDemo } from './pruebas/demo.mjs';
+
 const BASE = (process.env.PUERTAS_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const CLAVE_PUBLICABLE =
@@ -122,18 +128,23 @@ for (const [nombre, valor] of Object.entries({
   }
 }
 
-// Las cuentas de `scripts/seed-demo.sql` y `seed-base-comun.sql`.
-const PASTOR = 'pastor@hatril.test'; // pastor de Betania: lo puede todo
-const SECRETARIA = 'secretaria@hatril.test'; // fichero, eventos y asistencia; nada de pastor ni de caja
-const LIDER = 'lider@hatril.test'; // responsable de Alabanza; sin ver_seguimiento
-const COLIDER = 'colider@hatril.test'; // miembro, colíder de Acción social y Radio
-const CONSOLIDACION = 'consolidacion@hatril.test'; // miembro con ver_seguimiento, responsable de Consolidación
-const MIEMBRO = 'miembro@hatril.test'; // miembro raso: voluntario en Alabanza, sin panel
-const ENLACE = 'enlace@hatril.test'; // miembro raso: voluntario en Acción social, sin panel
-const SION = 'pastor.sion@hatril.test'; // pastor de OTRA iglesia, con la suscripción bloqueada
+// Las cuentas de la iglesia de prueba. Los correos cambian en cada ejecución
+// (`<papel>.<run>@pruebas.hatril.test`), así que se rellenan en `probar()`.
+let PASTOR; // pastor de Betel: lo puede todo
+let SECRETARIA; // fichero, eventos y asistencia; nada de pastor ni de caja
+let LIDER; // responsable de Alabanza; sin ver_seguimiento
+let COLIDER; // miembro, colíder de Acción social y Radio
+let CONSOLIDACION; // miembro con ver_seguimiento, responsable de Consolidación
+let MIEMBRO; // miembro raso: voluntario en Alabanza, sin panel
+let ENLACE; // miembro raso: voluntario en Acción social, sin panel
+let SION; // pastor de OTRA iglesia, con la suscripción bloqueada
+// Solo en las rutas de Niños: en las demás no tienen caso y no se piden.
+let MAESTRA; // miembro, responsable de Niños: acepta familias
+let AUXILIAR; // miembro, colíder de Niños: maestro, no acepta familias
+let MADRE; // miembro raso, madre aceptada de un niño: el tablón lo ve en la app, no aquí
 
-const CUENTAS = [PASTOR, SECRETARIA, LIDER, COLIDER, CONSOLIDACION, MIEMBRO, ENLACE, SION];
-const IMPRESCINDIBLES = [PASTOR, MIEMBRO];
+let CUENTAS = [];
+let IMPRESCINDIBLES = [];
 
 // La página a la que todas las cuentas del equipo llegan sin consultar nada de
 // nadie: lo que traiga es el marco del panel de esa cuenta.
@@ -151,26 +162,27 @@ const FUERA_DEL_PANEL = [
   'mi/equipo/[id]/grupos/page.tsx',
   'mi/equipo/[id]/grupos/[grupoId]/page.tsx',
   'mi/equipo/[id]/grupos/[grupoId]/temas/page.tsx',
+  // Niños desde la app (N5): nombres de niños, de sus familias y fotos.
+  'mi/equipo/[id]/ninos/page.tsx',
+  'mi/equipo/[id]/ninos/cronograma/page.tsx',
+  'mi/equipo/[id]/ninos/familias/page.tsx',
+  'mi/equipo/[id]/ninos/publicacion/[publicacionId]/page.tsx',
 ];
 
 // ============================================
-// 1. La base de demo, en solo lectura
+// 1. La iglesia de prueba, en solo lectura
 // ============================================
 
-async function leerDemo() {
+async function leerDemo(B) {
   const sql = postgres(DATABASE_URL, { prepare: false, ssl: 'require', max: 1 });
   try {
     return await sql.begin('read only', async (sql) => {
-      const [iglesia] = await sql`select id from iglesias where slug = 'betania'`;
-      if (!iglesia) throw new Error('No está la iglesia «betania»: falta la semilla de la demo.');
-      const B = iglesia.id;
-
       const mins = await sql`
         select id, nombre from ministerios
          where iglesia_id = ${B} and nombre in ('Alabanza', 'Consolidación', 'Acción social')`;
       const min = Object.fromEntries(mins.map((m) => [m.nombre, m.id]));
       for (const n of ['Alabanza', 'Consolidación', 'Acción social']) {
-        if (!min[n]) throw new Error(`No está el ministerio «${n}» en Betania.`);
+        if (!min[n]) throw new Error(`No está el ministerio «${n}» en la iglesia de prueba.`);
       }
 
       const uno = async (q) => (await q)[0]?.id ?? null;
@@ -179,8 +191,8 @@ async function leerDemo() {
         alabanza: min['Alabanza'],
         consolidacion: min['Consolidación'],
         accionSocial: min['Acción social'],
-        // De `seed-radio.sql`, que va aparte de la demo: si falta, la emisora
-        // queda cubierta solo con su caso de herramienta apagada.
+        // La iglesia de prueba la trae con la emisora encendida. Si un día no,
+        // la emisora queda cubierta solo con su caso de herramienta apagada.
         radio: await uno(sql`
           select id from ministerios
            where iglesia_id = ${B} and tipo = 'radio'
@@ -217,7 +229,7 @@ async function leerDemo() {
         fondoAccionSocial: await uno(sql`
           select id from fondos
            where ministerio_id = ${min['Acción social']} and activo limit 1`),
-        // De `seed-celulas.sql`: la red y sus dos células. Sin ellas, los casos
+        // De `demo.mjs`: la red y sus dos células. Sin ellas, los casos
         // de las células no se generan y el test lo dice al final.
         celulas: await uno(sql`
           select id from ministerios
@@ -229,6 +241,24 @@ async function leerDemo() {
         prado: await uno(sql`
           select g.id from grupos g join ministerios m on m.id = g.ministerio_id
            where g.iglesia_id = ${B} and m.tipo = 'celulas' and g.nombre = 'El Prado' and g.activo limit 1`),
+        // Niños, con el tablón de familias encendido, y una publicación y una
+        // clase del cronograma para sus páginas de detalle.
+        ninos: await uno(sql`
+          select id from ministerios
+           where iglesia_id = ${B} and tipo = 'ninos'
+             and coalesce((modulos -> 'ninos' ->> 'activo')::boolean, false)
+           order by orden, nombre limit 1`),
+        publicacionNinos: await uno(sql`
+          select id from ninos_publicaciones where iglesia_id = ${B}
+           order by (publicada_at is not null) desc, fecha desc limit 1`),
+        claseNinos: await uno(sql`
+          select id from ninos_cronograma where iglesia_id = ${B} order by fecha limit 1`),
+        // El mes de un archivo del drive, para la descarga en ZIP.
+        mesNinos: (
+          await sql`
+            select to_char(fecha, 'YYYY-MM') as mes from ninos_archivos
+             where iglesia_id = ${B} and confirmado_at is not null limit 1`
+        )[0]?.mes ?? null,
         evento: await uno(sql`
           select e.id from eventos e left join evento_inscripciones i on i.evento_id = e.id
            where e.iglesia_id = ${B}
@@ -347,6 +377,19 @@ async function leerDemo() {
           ids.deElPrado.push(s.tema);
         }
         ids.deElPrado = ids.deElPrado.filter((v) => typeof v === 'string' && v.trim().length >= 3);
+      }
+      // Niños: nombres de niños, lo que se cuenta en el tablón y el cronograma.
+      for (const n of await sql`
+        select nombre from ninos where iglesia_id = ${B}
+        union select nombre from ninos_solicitudes where iglesia_id = ${B}`) {
+        anadir(n.nombre, 'niño');
+      }
+      for (const c of await sql`select tema, puntos from ninos_cronograma where iglesia_id = ${B}`) {
+        anadir(c.tema, 'clase de niños');
+        anadir(c.puntos, 'clase de niños');
+      }
+      for (const t of await sql`select texto from ninos_publicaciones where iglesia_id = ${B}`) {
+        anadir(t.texto, 'tablón de niños');
       }
 
       // Sin repetidos: dos personas con los mismos apellidos son un testigo.
@@ -508,7 +551,7 @@ function ajenosEn(texto, lista) {
  *   'oculta'       la página da notFound() porque esta cuenta no puede verla
  *                  (la app, `/mi/equipo`): el 404 de '404' y, además, ninguno
  *                  de los testigos del pastor
- *   'csv' / 403    para los route.ts
+ *   'csv' / 403 / 307   para los route.ts (307: devuelve a una página)
  *
  * Por defecto: el pastor pinta, el miembro raso va a /mi y el pastor de Sion,
  * con su suscripción bloqueada, a /suscripcion antes de que nada se consulte.
@@ -577,8 +620,8 @@ function rutas(ids) {
   pagina('/panel/finanzas/informe', '/panel/finanzas/informe', 'panel/finanzas/informe/page.tsx', CAJA);
   pagina('/panel/finanzas/movimientos', '/panel/finanzas/movimientos', 'panel/finanzas/movimientos/page.tsx', CAJA);
   pagina('/panel/finanzas/movimientos/nuevo', '/panel/finanzas/movimientos/nuevo', 'panel/finanzas/movimientos/nuevo/page.tsx', CAJA);
-  // La demo no tiene movimientos: con un uuid que no existe, el pastor llega al
-  // notFound() de la página, y los demás tienen que quedarse antes, en la guarda.
+  // Sin movimientos, con un uuid que no existe: el pastor llega al notFound()
+  // de la página, y los demás tienen que quedarse antes, en la guarda.
   pagina(
     ids.movimiento ? '/panel/finanzas/movimientos/<movimiento>' : '/panel/finanzas/movimientos/<uuid sin movimiento>',
     `/panel/finanzas/movimientos/${ids.movimiento ?? '00000000-0000-4000-8000-000000000000'}`,
@@ -586,8 +629,20 @@ function rutas(ids) {
     { ...CAJA, [PASTOR]: ids.movimiento ? 'pinta' : '404' },
   );
   pagina('/panel/finanzas/ajustes', '/panel/finanzas/ajustes', 'panel/finanzas/ajustes/page.tsx', CAJA);
+  // Ofrendas en línea (Stripe Connect), con la puerta de la caja.
+  pagina('/panel/finanzas/en-linea', '/panel/finanzas/en-linea', 'panel/finanzas/en-linea/page.tsx', CAJA);
+  // Retomar el alta en Stripe. Es un GET y NO crea cuentas (ver la cabecera
+  // del route.ts): sin cuenta, o fuera de España —la iglesia de prueba está en
+  // Colombia—, el pastor vuelve a la página con un 307. Así esto nunca llega a
+  // hablar con Stripe.
+  ruta('/panel/finanzas/en-linea/conectar', '/panel/finanzas/en-linea/conectar', 'panel/finanzas/en-linea/conectar/route.ts', {
+    [PASTOR]: 307,
+    [SECRETARIA]: 403,
+    [LIDER]: 403,
+    [COLIDER]: 403,
+  });
   // El arqueo del culto, con la misma puerta que la caja. Con Finanzas apagada
-  // darían 404 a todos; la demo la tiene encendida (clave ausente).
+  // darían 404 a todos; la iglesia de prueba la tiene encendida (clave ausente).
   pagina('/panel/finanzas/arqueos', '/panel/finanzas/arqueos', 'panel/finanzas/arqueos/page.tsx', CAJA);
   pagina('/panel/finanzas/arqueos/nuevo', '/panel/finanzas/arqueos/nuevo', 'panel/finanzas/arqueos/nuevo/page.tsx', CAJA);
   ruta('/panel/finanzas/exportar', '/panel/finanzas/exportar?desde=2000-01-01&hasta=2100-12-31', 'panel/finanzas/exportar/route.ts', {
@@ -726,6 +781,79 @@ function rutas(ids) {
     },
   );
 
+  // --- Niños: el tablón de familias, desde dentro como el reparto ---
+  // La responsable y la colíder de Niños lo abren; secretaría (con
+  // `gestionar_ministerios`), los líderes de otros equipos y Sara, colíder de
+  // OTROS ministerios, rebotan. La madre no tiene panel: lo suyo va en la app.
+  if (ids.ninos) {
+    const NINOS = {
+      [MAESTRA]: 'pinta',
+      [AUXILIAR]: 'pinta',
+      [COLIDER]: 'min',
+      [LIDER]: 'min',
+      [SECRETARIA]: 'min',
+      [CONSOLIDACION]: 'min',
+      [ENLACE]: '/mi',
+      [MADRE]: '/mi',
+    };
+    const N = `${M}/${ids.ninos}/ninos`;
+    pagina('…<Niños>/ninos', N, 'panel/ministerios/[id]/ninos/page.tsx', NINOS);
+    pagina('…<Niños>/ninos/cronograma', `${N}/cronograma`, 'panel/ministerios/[id]/ninos/cronograma/page.tsx', NINOS);
+    if (ids.claseNinos) {
+      pagina('…<Niños>/ninos/cronograma/<clase>', `${N}/cronograma/${ids.claseNinos}`, 'panel/ministerios/[id]/ninos/cronograma/[entradaId]/page.tsx', NINOS);
+    }
+    pagina('…<Niños>/ninos/drive', `${N}/drive`, 'panel/ministerios/[id]/ninos/drive/page.tsx', NINOS);
+    pagina('…<Niños>/ninos/familias', `${N}/familias`, 'panel/ministerios/[id]/ninos/familias/page.tsx', NINOS);
+    if (ids.publicacionNinos) {
+      pagina('…<Niños>/ninos/publicacion/<publicación>', `${N}/publicacion/${ids.publicacionNinos}`, 'panel/ministerios/[id]/ninos/publicacion/[publicacionId]/page.tsx', NINOS);
+    }
+
+    // Lo mismo desde la app (N5), con la puerta del adaptador: la responsable
+    // y el maestro entran; a todos los demás la zona les da 404 de la PROPIA
+    // página, sin rebote, como el fondo. La madre tampoco: lo suyo es «Mis
+    // hijos», no la herramienta de los maestros.
+    const NINOS_APP = {
+      [MAESTRA]: 'pinta',
+      [AUXILIAR]: 'pinta',
+      [MIEMBRO]: 'oculta',
+      [COLIDER]: 'oculta',
+      [LIDER]: 'oculta',
+      [SECRETARIA]: 'oculta',
+      [CONSOLIDACION]: 'oculta',
+      [ENLACE]: 'oculta',
+      [MADRE]: 'oculta',
+    };
+    const NA = `/mi/equipo/${ids.ninos}/ninos`;
+    pagina('/mi/equipo/<Niños>/ninos', NA, 'mi/equipo/[id]/ninos/page.tsx', NINOS_APP);
+    pagina('/mi/equipo/<Niños>/ninos/cronograma', `${NA}/cronograma`, 'mi/equipo/[id]/ninos/cronograma/page.tsx', NINOS_APP);
+    pagina('/mi/equipo/<Niños>/ninos/familias', `${NA}/familias`, 'mi/equipo/[id]/ninos/familias/page.tsx', NINOS_APP);
+    if (ids.publicacionNinos) {
+      pagina('/mi/equipo/<Niños>/ninos/publicacion/<publicación>', `${NA}/publicacion/${ids.publicacionNinos}`, 'mi/equipo/[id]/ninos/publicacion/[publicacionId]/page.tsx', NINOS_APP);
+    }
+    // Descargar el mes: la responsable y el pastor, no los maestros. A quien
+    // no lleva Niños, 403 (es un route.ts: nada de redirigir).
+    if (ids.mesNinos) {
+      ruta('…<Niños>/ninos/drive/exportar', `${N}/drive/exportar?mes=${ids.mesNinos}`, 'panel/ministerios/[id]/ninos/drive/exportar/route.ts', {
+        [PASTOR]: 'zip',
+        [MAESTRA]: 'zip',
+        [AUXILIAR]: 403,
+        [COLIDER]: 403,
+        [LIDER]: 403,
+        [SECRETARIA]: 403,
+        [CONSOLIDACION]: 403,
+        [ENLACE]: 403,
+        [MADRE]: 403,
+      });
+    }
+  }
+  // El tablón está APAGADO en Alabanza: quien la lleva llega al 404.
+  pagina('…<Alabanza>/ninos (apagado)', `${A}/ninos`, 'panel/ministerios/[id]/ninos/page.tsx', {
+    [PASTOR]: '404',
+    [LIDER]: '404',
+    [COLIDER]: 'min',
+    [SECRETARIA]: 'min',
+  });
+
   // Turnos está APAGADO en Acción social: ni el pastor ni el colíder la tienen.
   pagina('…<Acción social>/turnos (apagado)', `${S}/turnos`, 'panel/ministerios/[id]/turnos/page.tsx', {
     [PASTOR]: '404',
@@ -858,7 +986,9 @@ const DESCRIPCION = {
   404: 'la página da 404',
   oculta: 'la página da 404 (no puede verla)',
   csv: '200 text/csv',
+  zip: '200 application/zip',
   403: '403',
+  307: '307 (vuelve a su página)',
 };
 
 function describirSegmento(s) {
@@ -911,7 +1041,7 @@ async function comprobarPagina(def, sesiones, testigos, marco) {
   for (const cuenta of orden) {
     const esperado = def.casos[cuenta];
     if (!medidas[cuenta]) {
-      resultados.push({ ruta: def.etiqueta, cuenta, esperado: DESCRIPCION[esperado], obtenido: 'cuenta no disponible en la demo', ok: false });
+      resultados.push({ ruta: def.etiqueta, cuenta, esperado: DESCRIPCION[esperado], obtenido: 'cuenta no disponible en la iglesia de prueba', ok: false });
       continue;
     }
     const { normal, rsc, segRsc, segHtml, vistos, ajenos } = medidas[cuenta];
@@ -924,9 +1054,16 @@ async function comprobarPagina(def, sesiones, testigos, marco) {
     if (deOtros && ajenos.length) problemas.push(`ENSEÑA lo que no es suyo: ${ajenos.join(', ')}`);
     const resumenAjenos = deOtros ? ` · ${ajenos.length}/${deOtros.length} de lo ajeno` : '';
 
+    // Bajo `src/app/mi` hay un `loading.tsx` desde el 19-nov: la respuesta sale
+    // en streaming, y el código HTTP se manda con el esqueleto, ANTES de que
+    // la página corte. Un notFound() o un redirect() de la página llegan con
+    // 200. El corte se sigue viendo donde de verdad importa, en el segmento de
+    // la propia página (RSC y HTML), y los testigos se miran igual.
+    const enStreaming = def.url.startsWith('/mi/');
+
     if (esperado === 'pinta' || esperado === '404' || esperado === 'oculta') {
       const estado = esperado === 'pinta' ? 'pinta' : '404';
-      const statusEsperado = esperado === 'pinta' ? 200 : 404;
+      const statusEsperado = esperado === 'pinta' || enStreaming ? 200 : 404;
       if (normal.status !== statusEsperado) problemas.push(`HTML ${normal.status}${normal.location ? '→' + normal.location : ''}`);
       if (rsc.status !== 200) problemas.push(`RSC ${rsc.status}`);
       if (segRsc.estado !== estado) problemas.push(`RSC ${describirSegmento(segRsc)}`);
@@ -965,7 +1102,10 @@ async function comprobarPagina(def, sesiones, testigos, marco) {
       if (segHtml.estado !== 'sin-metadatos' && (segHtml.estado !== 'redirige' || !casaDestino(esperado, segHtml.destino))) {
         problemas.push(`HTML ${describirSegmento(segHtml)}`);
       }
-      if (!(normal.status === 307 && casaDestino(esperado, normal.location.replace(BASE, '')))) {
+      const cortaPorHttp = enStreaming
+        ? normal.status === 200
+        : normal.status === 307 && casaDestino(esperado, normal.location.replace(BASE, ''));
+      if (!cortaPorHttp) {
         problemas.push(`HTML ${normal.status}${normal.location ? '→' + normal.location : ''}`);
       }
       // La fila que se ha mirado tiene que ser la de ESTA página, no otra.
@@ -992,7 +1132,7 @@ async function comprobarRouteTs(def, sesiones, testigos) {
     const esperado = def.casos[cuenta];
     const sesion = sesiones[cuenta];
     if (!sesion) {
-      resultados.push({ ruta: def.etiqueta, cuenta, esperado: DESCRIPCION[esperado], obtenido: 'cuenta no disponible en la demo', ok: false });
+      resultados.push({ ruta: def.etiqueta, cuenta, esperado: DESCRIPCION[esperado], obtenido: 'cuenta no disponible en la iglesia de prueba', ok: false });
       continue;
     }
     // Un route.ts no distingue RSC, pero se pide igual: es lo que haría el router.
@@ -1002,9 +1142,10 @@ async function comprobarRouteTs(def, sesiones, testigos) {
 
     const problemas = [];
     let resumen = '';
-    if (esperado === 'csv') {
+    if (esperado === 'csv' || esperado === 'zip') {
+      const tipo = esperado === 'csv' ? 'text/csv' : 'application/zip';
       for (const r of respuestas) {
-        if (r.status !== 200 || !r.tipo.startsWith('text/csv')) problemas.push(`${r.status} ${r.tipo}`);
+        if (r.status !== 200 || !r.tipo.startsWith(tipo)) problemas.push(`${r.status} ${r.tipo}`);
       }
       if (cuenta === PASTOR) referencia = vistos;
       const filas = respuestas[0].cuerpo.split('\r\n').length;
@@ -1015,8 +1156,10 @@ async function comprobarRouteTs(def, sesiones, testigos) {
       }
       // No es una fuga, pero quien lo recibe ve una página en blanco. Pasa con
       // una `Response` creada una vez a nivel de módulo: su cuerpo solo se lee
-      // una vez por proceso.
-      const vacias = respuestas.filter((r) => r.status === esperado && r.cuerpo.trim() === '').length;
+      // una vez por proceso. Una redirección sin cuerpo es lo normal: el
+      // navegador no lo enseña.
+      const vacias =
+        esperado === 307 ? 0 : respuestas.filter((r) => r.status === esperado && r.cuerpo.trim() === '').length;
       if (vacias) avisos.push(`${def.etiqueta} · ${cuenta}: ${esperado} con el cuerpo vacío (${vacias} de 2)`);
       const fugas = [...vistos].filter((v) => referencia.has(v));
       if (fugas.length) problemas.push(`FUGA de ${fugas.length} testigos`);
@@ -1058,10 +1201,30 @@ async function main() {
     process.exit(2);
   }
 
-  const { ids, testigos } = await leerDemo();
-  console.log(`Base de demo leída en solo lectura: ${testigos.length} testigos.`);
-  if (!ids.movimiento) console.log('  · Betania no tiene movimientos de caja: las páginas de finanzas no traen importes que comparar.');
-  if (!ids.radio) console.log('  · Betania no tiene Radio con la emisora encendida (scripts/seed-radio.sql): la emisora solo se prueba apagada.');
+  // Sin publicar: estas pantallas son del panel y no cambian por salir en el
+  // buscador, y así Betel no aparece en hatril.com mientras corre.
+  await conDemo({ cuentas: true, publicada: false }, probar);
+}
+
+async function probar(demo) {
+  ({
+    pastor: PASTOR,
+    secretaria: SECRETARIA,
+    lider: LIDER,
+    colider: COLIDER,
+    consolidacion: CONSOLIDACION,
+    miembro: MIEMBRO,
+    enlace: ENLACE,
+    sion: SION,
+    maestra: MAESTRA,
+    auxiliar: AUXILIAR,
+    madre: MADRE,
+  } = demo.cuentas);
+  CUENTAS = [PASTOR, SECRETARIA, LIDER, COLIDER, CONSOLIDACION, MIEMBRO, ENLACE, SION, MAESTRA, AUXILIAR, MADRE];
+  IMPRESCINDIBLES = [PASTOR, MIEMBRO];
+
+  const { ids, testigos } = await leerDemo(demo.betel.id);
+  console.log(`Iglesia de prueba leída en solo lectura: ${testigos.length} testigos.`);
 
   const abiertas = {};
   for (const email of CUENTAS) {
@@ -1118,7 +1281,7 @@ async function main() {
         rutaAnterior = r.ruta;
       }
       console.log(
-        `  ${r.ok ? 'ok   ' : 'FALLO'} ${r.cuenta.padEnd(26)} espera ${r.esperado.padEnd(42)} ${r.obtenido}`,
+        `  ${r.ok ? 'ok   ' : 'FALLO'} ${r.cuenta.padEnd(44)} espera ${r.esperado.padEnd(42)} ${r.obtenido}`,
       );
     }
 
@@ -1136,7 +1299,8 @@ async function main() {
     }
 
     if (CONTROL) {
-      const QUIEN_PUEDE = new Set([DESCRIPCION.pinta, DESCRIPCION[404], DESCRIPCION.csv]);
+      // Lo que espera quien SÍ puede; el 307 es el del pastor al retomar el alta.
+      const QUIEN_PUEDE = new Set([DESCRIPCION.pinta, DESCRIPCION[404], DESCRIPCION.csv, DESCRIPCION[307]]);
       const denegados = resultados.filter((r) => !QUIEN_PUEDE.has(r.esperado));
       const sinDetectar = denegados.filter((r) => r.ok);
       const conFuga = denegados.filter((r) => r.obtenido.includes('FUGA'));

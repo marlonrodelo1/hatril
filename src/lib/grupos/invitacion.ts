@@ -5,10 +5,12 @@ import { and, eq } from 'drizzle-orm';
 import { dbAdmin } from '@/lib/db';
 import {
   grupos,
+  iglesias,
   ministerios,
   solicitudesIngreso,
   solicitudInvitaciones,
 } from '@/lib/db/schema';
+import { esGuardHatril } from '@/lib/db/error';
 import { tieneModulo } from '@/lib/ministerios/modulos';
 import { leerCodigo } from './codigo';
 
@@ -81,4 +83,57 @@ export async function solicitudPendienteEn(
     .limit(1);
 
   return fila ? { id: fila.id, conInvitacion: fila.invitacion !== null } : null;
+}
+
+/**
+ * Quien ya había pedido entrar sin enlace abre el de una célula: que su
+ * solicitud pendiente lleve también esa invitación.
+ *
+ * Sin esto, el enlace no le hacía nada —`/solicitar` le mandaba a `/mi`— y la
+ * célula que le invitó se perdía sin que nadie lo supiera. Solo para una
+ * solicitud PENDIENTE de ESTA iglesia y de ESTA cuenta, sin invitación ya, y
+ * con un código que valga hoy: lo vuelve a resolver todo aquí, no se fía del
+ * formulario. Por `dbAdmin`, como el resto de `/solicitar`: mientras espera,
+ * la cuenta no ve nada de la iglesia.
+ *
+ * `nada` cuando no hay a qué sumarla; quien llama manda a `/mi`, que dice
+ * cómo quedó.
+ */
+export async function sumarInvitacion(
+  authUserId: string,
+  slug: string,
+  codigo: string,
+): Promise<'sumada' | 'nada'> {
+  const [iglesia] = await dbAdmin
+    .select({ id: iglesias.id })
+    .from(iglesias)
+    .where(and(eq(iglesias.slug, slug), eq(iglesias.activa, true)))
+    .limit(1);
+  if (!iglesia) return 'nada';
+
+  const [grupo, solicitud] = await Promise.all([
+    grupoDeLaInvitacion(iglesia.id, codigo),
+    solicitudPendienteEn(authUserId, iglesia.id),
+  ]);
+  if (!grupo || !solicitud || solicitud.conInvitacion) return 'nada';
+
+  // Dos pestañas a la vez: la segunda choca con la clave primaria y no pasa
+  // nada, la invitación ya está.
+  try {
+    await dbAdmin
+      .insert(solicitudInvitaciones)
+      .values({
+        solicitudId: solicitud.id,
+        iglesiaId: iglesia.id,
+        grupoId: grupo.id,
+        codigo: grupo.codigo,
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    // Se aprobó o se rechazó entre la lectura de arriba y aquí: la base ya no
+    // la deja colgar de una solicitud resuelta (HT132, `0050`).
+    if (esGuardHatril(err, 'HT132')) return 'nada';
+    throw err;
+  }
+  return 'sumada';
 }

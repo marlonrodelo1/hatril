@@ -152,6 +152,7 @@ export async function aprobarSolicitud(
           nombre: solicitudesIngreso.nombre,
           email: solicitudesIngreso.email,
           telefono: solicitudesIngreso.telefono,
+          direccion: solicitudesIngreso.direccion,
           aceptaAsistencia: solicitudesIngreso.aceptaAsistencia,
           versionTexto: solicitudesIngreso.versionTexto,
         })
@@ -240,6 +241,7 @@ export async function aprobarSolicitud(
             nombre: solicitud.nombre,
             email: solicitud.email,
             telefono: solicitud.telefono,
+            direccion: solicitud.direccion,
             estado: 'nuevo',
             fechaIngreso: new Date().toISOString().slice(0, 10),
           })

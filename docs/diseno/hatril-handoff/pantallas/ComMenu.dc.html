@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Comunidad · Menú de una publicación</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.opt{display:flex;align-items:center;gap:14px;min-height:64px;padding:10px 20px;color:#141413;text-decoration:none;border-top:1px solid #E0DFDB}
+.opt:active{background:#F0EEE6}
+.opt .i{width:40px;height:40px;border-radius:999px;background:#F5F4ED;color:#3D3D3A;display:flex;align-items:center;justify-content:center;flex:none}
+.opt b{font-size:16px;font-weight:700}
+.opt small{font-size:13px;color:#67665F;line-height:1.35}
+.opt.peligro b{color:#B53333}
+.opt.peligro .i{background:#F3E5E2;color:#B53333}
+.sheet{animation:up 300ms cubic-bezier(.2,.8,.2,1) both}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.sheet{animation:none}}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413">
+  <div aria-hidden="true" style="padding-top: 110px">
+    <div style="background: #FFFFFF; border-top: 1px solid #E0DFDB; border-bottom: 1px solid #E0DFDB; padding: 12px 16px">
+      <div style="display: flex; gap: 10px; align-items: center"><span style="width: 40px; height: 40px; border-radius: 999px; background: #F3E9D3"></span><span style="font-size: 15px; font-weight: 700">{{ autor }}</span></div>
+      <p style="font-size: 16px; line-height: 1.5; padding-top: 10px">{{ texto }}</p>
+      <div style="height: 186px; margin: 12px -16px 0; background: #C9D3D2"></div>
+    </div>
+  </div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(20,20,19,0.42)"></div>
+
+  <section class="sheet" role="dialog" aria-label="Opciones de la publicación" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 16px 16px 0 0; padding-bottom: 34px">
+    <div style="display: flex; justify-content: center; padding: 8px 0 6px"><span style="width: 36px; height: 4px; border-radius: 999px; background: #E0DFDB"></span></div>
+    <p style="padding: 6px 20px 14px; font-size: 13px; font-weight: 600; color: #67665F">{{ cabecera }}</p>
+
+    <sc-if value="{{ esTuya }}" hint-placeholder-val="{{ false }}">
+      <a href="ComBorrar.dc.html" class="opt peligro">
+        <span class="i"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><b>Borrar publicación</b><small>Se borran también sus fotos y comentarios.</small></span>
+      </a>
+    </sc-if>
+
+    <sc-if value="{{ esPastor }}" hint-placeholder-val="{{ false }}">
+      <a href="ComBorrar.dc.html" class="opt peligro">
+        <span class="i"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><b>Borrar como moderador</b><small>Desaparece para todos. Le avisaremos a David.</small></span>
+      </a>
+    </sc-if>
+
+    <sc-if value="{{ esOtra }}" hint-placeholder-val="{{ true }}">
+      <a href="ComDenunciar.dc.html" class="opt">
+        <span class="i"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><b>Denunciar</b><small>Se lo enviamos al pastor para que lo revise.</small></span>
+      </a>
+    </sc-if>
+
+    <sc-if value="{{ puedeBloquear }}" hint-placeholder-val="{{ true }}">
+      <a href="ComBloquear.dc.html" class="opt">
+        <span class="i"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" x2="22" y1="8" y2="13"/><line x1="22" x2="17" y1="8" y2="13"/></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><b>Bloquear a David León</b><small>Dejarás de ver lo que publica. No se entera.</small></span>
+      </a>
+    </sc-if>
+
+    <div style="padding: 12px 16px 0; border-top: 1px solid #E0DFDB">
+      <a href="ComMuro.dc.html" style="display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 8px; border: 1px solid #E0DFDB; font-size: 16px; font-weight: 600; color: #141413; text-decoration: none">Cancelar</a>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"quien":{"editor":"enum","options":["otra persona","tuya","pastor o moderador"],"default":"otra persona"},"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const q = this.props.quien ?? 'otra persona';
+    const tuya = q === 'tuya';
+    const pastor = q === 'pastor o moderador';
+    return {
+      esTuya: tuya,
+      esPastor: pastor,
+      esOtra: q === 'otra persona',
+      puedeBloquear: !tuya,
+      autor: tuya ? 'Lucía Hernández (tú)' : 'David León',
+      texto: tuya ? 'Qué bonito fue el bautismo del domingo.' : 'Limpieza de la playa de Bajamar: 14 bolsas.',
+      cabecera: tuya ? 'Tu publicación' : 'Publicación de David León'
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,9 +1,12 @@
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, HandHeart } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
 import { getCurrentUserContext } from '@/lib/auth/user-context';
-import { esDelEquipo, esPastor, ETIQUETAS_ROLES } from '@/lib/auth/permisos';
+import { estadoDeDar } from '@/lib/donativos/consultas';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { esDelEquipo, esPastor, rolParaMostrar } from '@/lib/auth/permisos';
 import { listarNotificaciones } from '@/lib/notificaciones/consultas';
 import { paraLaCampana } from '@/lib/notificaciones/campana';
 import { nombreDeLaCuenta } from '@/lib/auth/nombre';
@@ -12,6 +15,7 @@ import { MarcaIglesia } from '@/app/panel/_components/marca-iglesia';
 import { Campana } from '@/components/campana';
 import { Logo } from '@/components/marca/logo';
 import { MenuCuenta } from '@/components/menu-cuenta';
+import { EnlaceADar } from './enlace-a-dar';
 
 /**
  * La cabecera de cualquier pantalla del área del miembro.
@@ -119,8 +123,43 @@ export async function CabeceraMiembro({
    * aspecto de siempre, el del panel: ya no hay fondo de color que les obligue
    * a vestirse de blanco.
    */
+  /*
+   * EL TÍTULO, SIEMPRE ARRIBA EN LA BARRA (19-nov)
+   *
+   * Desde el 17-nov las pantallas de primer nivel llevaban el título grande
+   * debajo de la cabecera, que al bajar se recogía en la barra (el patrón de
+   * iOS). Marlon lo vio en el iPhone: el título grande «está de más», y la
+   * pantalla tiene que verse como cuando ya está recogido —logo, «Comunidad» y
+   * la iglesia arriba, y debajo directamente la portada—. Así que el título va
+   * siempre en la barra, y es él el `<h1>`. Se fue con él `VigiaTitulo`, el
+   * observador que decidía cuándo se recogía.
+   *
+   * `primerNivel` se queda para «Dar», que sigue saliendo solo en las pantallas
+   * de la barra de abajo y en Mi cuenta.
+   */
+  const primerNivel = !volver && !marca;
+
+  /*
+   * «DAR», EN LAS PESTAÑAS (diezmos y ofrendas, 18-nov)
+   *
+   * Solo en las pantallas de primer nivel —las de la barra de abajo y Mi
+   * cuenta—, que es lo aprobado: «sale igual en todas las pestañas». En las de
+   * detalle, con su flecha y el título arriba, no cabría junto a un título
+   * largo y no es el sitio desde el que se va a dar.
+   *
+   * Y solo si la iglesia tiene a dónde: un botón que lleva a «tu iglesia no ha
+   * configurado esto» le pasa el problema a quien no puede resolverlo, que es
+   * lo mismo que ya decidía si salía la cuenta en Mi cuenta. Con tarjeta va a
+   * la página de dar; solo con transferencia, a la cuenta del banco de Mi
+   * cuenta, que es lo único que hay.
+   */
+  const dar = primerNivel && ctx ? await estadoDeDar(ctx.iglesia.id) : null;
+
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-background supports-backdrop-filter:bg-background/85 supports-backdrop-filter:backdrop-blur-xl">
+    <header
+      data-cabecera-miembro=""
+      className="group/cabecera sticky top-0 z-20 border-b border-border bg-background supports-backdrop-filter:bg-background/85 supports-backdrop-filter:backdrop-blur-xl"
+    >
       <div className="mx-auto flex max-w-[620px] items-center gap-3 px-4 py-3 sm:px-5">
         {volver && (
           <Link
@@ -140,9 +179,9 @@ export async function CabeceraMiembro({
           <Logo variante="logotipo" tamano={22} />
         ) : (
           <span className="flex min-w-0 flex-col">
-            <span className="truncate text-[15.5px] font-extrabold leading-tight tracking-[-0.02em]">
+            <h1 className="truncate text-[15.5px] font-extrabold leading-tight tracking-[-0.02em]">
               {titulo}
-            </span>
+            </h1>
             {subtitulo && (
               <span className="truncate text-[12.5px] leading-tight text-muted-foreground">
                 {subtitulo}
@@ -151,29 +190,103 @@ export async function CabeceraMiembro({
           </span>
         )}
 
-        <span className="flex-1" />
+        {/*
+         * Lo de la derecha, junto y empujado con `ml-auto`. Antes un `<span
+         * class="flex-1">` hacía de muelle, y como hijo de la fila se llevaba
+         * su hueco de 12 px a cada lado aunque midiera cero. Con «Dar» al lado
+         * de la campana hacía falta ese sitio para el título que se recoge: con
+         * el muelle y huecos de 12, a 390 px «Devocional» se quedaba en «De…».
+         * Entre botones de 36 px, 8 de hueco siguen sin juntar los dedos.
+         */}
+        <div className="ml-auto flex flex-none items-center gap-2">
+          {children}
 
-        {children}
+          {ctx && dar && (dar.conTarjeta || dar.conTransferencia) && (
+            <BotonDar
+              slug={ctx.iglesia.slug}
+              conTarjeta={dar.conTarjeta}
+              compacto={Boolean(children)}
+            />
+          )}
 
-        {campana && (
-          <Campana avisos={paraLaCampana(avisos)} sinLeer={pendientes} />
-        )}
+          {campana && (
+            <Campana avisos={paraLaCampana(avisos)} sinLeer={pendientes} />
+          )}
 
-        <MenuCuenta
-          nombre={nombre}
-          correo={user.email ?? ''}
-          fotoUrl={miFoto}
-          rol={ctx ? ETIQUETAS_ROLES[ctx.rol].titulo : undefined}
-          esPastor={ctx !== null && esPastor(ctx)}
-          // Pastor, secretaría, tesorería o líder: gente que tiene panel al que
-          // volver. El miembro raso no, y ofrecérselo sería un enlace que le
-          // rebota.
-          alPanel={ctx !== null && esDelEquipo(ctx)}
-          // Sin iglesia, las tres opciones del menú viven detrás de
-          // `requireIglesia()` y devolverían a esta misma persona a `/mi`.
-          soloSalir={ctx === null}
-        />
+          <MenuCuenta
+            nombre={nombre}
+            correo={user.email ?? ''}
+            fotoUrl={miFoto}
+            rol={ctx ? rolParaMostrar(ctx) : undefined}
+            esPastor={ctx !== null && esPastor(ctx)}
+            // Pastor, secretaría, tesorería o líder: gente que tiene panel al que
+            // volver. El miembro raso no, y ofrecérselo sería un enlace que le
+            // rebota.
+            alPanel={ctx !== null && esDelEquipo(ctx)}
+            // Aquí la cuenta es la del miembro: `/mi/cuenta`, y no la del panel,
+            // que al miembro raso le rebota (ver `MenuCuenta`).
+            miCuenta
+            // Sin iglesia, las tres opciones del menú viven detrás de
+            // `requireIglesia()` y devolverían a esta misma persona a `/mi`.
+            soloSalir={ctx === null}
+          />
+        </div>
       </div>
     </header>
+  );
+}
+
+/**
+ * El botón «Dar» de la cabecera.
+ *
+ * Con la palabra y no solo el icono: una mano con un corazón, sola, se lee
+ * como «me gusta». De contorno, alto 36 y esquinas de 8 px como el resto de
+ * botones, y nunca naranja: fijo en la cabecera de todas las pestañas,
+ * competiría con el botón principal de cada pantalla.
+ *
+ * `compacto`, en las pantallas que ya traen sus propias acciones arriba (el
+ * A−/A+ del devocional): ahí, en el móvil, va solo el icono. Medido a 390 px,
+ * con la palabra «Devocional» se quedaba en «De…»; con el icono cabe entero.
+ * La palabra pasa a `sr-only`, que es el nombre que anuncia el lector de
+ * pantalla (lo mismo que un `aria-label="Dar"`, sin escribirla dos veces). En
+ * las demás pestañas cabe con la palabra hasta a 360 px.
+ */
+function BotonDar({
+  slug,
+  conTarjeta,
+  compacto,
+}: {
+  slug: string;
+  conTarjeta: boolean;
+  compacto: boolean;
+}) {
+  // `cn` y no `clsx`: hay que QUITAR el relleno y el hueco del `sm` de serie
+  // (14 y 8 px), no sumarles otro. Un punto más prietos porque es la pieza que
+  // más sitio le quita al título.
+  const clases = cn(
+    buttonVariants({ variant: 'outline', size: 'sm' }),
+    'gap-1.5 px-3',
+    compacto && 'max-sm:w-9 max-sm:px-0',
+  );
+  const cuerpo = (
+    <>
+      <HandHeart className="size-4" strokeWidth={1.8} aria-hidden />
+      <span className={compacto ? 'max-sm:sr-only' : undefined}>Dar</span>
+    </>
+  );
+
+  // Solo con transferencia no hay página de dar a la que ir: lleva a la
+  // cuenta del banco de Mi cuenta, que no es cobrar y se queda en la app.
+  if (!conTarjeta) {
+    return (
+      <Link href="/mi/cuenta#ofrendar" className={clases}>
+        {cuerpo}
+      </Link>
+    );
+  }
+  return (
+    <EnlaceADar href={`/i/${slug}/dar`} className={clases}>
+      {cuerpo}
+    </EnlaceADar>
   );
 }

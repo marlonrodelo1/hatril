@@ -12,6 +12,7 @@ import {
 import { esPastor, puede, type ContextoPermisos } from '@/lib/auth/permisos';
 import { withUser } from '@/lib/db';
 import {
+  iglesiaUsuarios,
   miembros,
   ministerioMiembros,
   ministerios,
@@ -19,13 +20,14 @@ import {
 } from '@/lib/db/schema';
 import { esGuardHatril, isUniqueViolation } from '@/lib/db/error';
 import { COLORES_MINISTERIO } from '@/lib/ministerios/colores';
-import { componerModulos } from '@/lib/ministerios/modulos';
+import { componerModulos, tieneModulo } from '@/lib/ministerios/modulos';
+import { VERSION_TEXTOS_NINOS } from '@/lib/rgpd/consentimiento';
 import { TIPOS_MINISTERIO, modulosDelTipo } from '@/lib/ministerios/tipos';
 import {
   borrarImagenAnterior,
   subirImagenIglesia,
 } from '@/lib/iglesias/imagenes';
-import { campo, campoObligatorio, campos } from '@/lib/api/formulario';
+import { campo, campoObligatorio, campos, casilla } from '@/lib/api/formulario';
 
 const HEX_VALIDOS = COLORES_MINISTERIO.map((c) => c.hex) as [string, ...string[]];
 
@@ -358,8 +360,10 @@ export async function editarMinisterio(
     eq(ministerios.iglesiaId, ctx.iglesia.id),
   );
 
+  let rechazo: string | null = null;
+
   try {
-    await withUser(ctx.user.id, async (tx) => {
+    rechazo = await withUser(ctx.user.id, async (tx) => {
       // El líder acotado: `tipo` y `modulos` fuera del SET, y lo que traiga el
       // FormData para ellos se ignora sin mirarlo —el formulario que no los
       // pinta no es lo que impide mandarlos—. Una columna que el UPDATE no
@@ -367,7 +371,7 @@ export async function editarMinisterio(
       // leerla y reescribirla por donde se perdería un cambio del pastor.
       if (!estructura) {
         await tx.update(ministerios).set(contenido).where(esteMinisterio);
-        return;
+        return null;
       }
 
       // Leer y escribir en la MISMA transacción. `componerModulos()` conserva la
@@ -381,14 +385,40 @@ export async function editarMinisterio(
         .where(esteMinisterio)
         .limit(1);
 
+      const modulos = componerModulos(actual?.modulos, estructura.marcados);
+
+      // EL TABLÓN DE FAMILIAS NO SE ENCIENDE CON UNA CASILLA A SECAS. Compromete
+      // a la iglesia —comprobar en persona a cada padre, el certificado de los
+      // maestros—, así que lo enciende el pastor y no `gestionar_ministerios`,
+      // y aceptando el compromiso. Se guarda quién, cuándo y con qué versión
+      // del texto. Apagarlo no pide nada: es retirar, no comprometerse.
+      if (modulos.ninos?.activo && !tieneModulo(actual?.modulos, 'ninos')) {
+        if (!esPastor(ctx)) {
+          return 'El tablón de familias lo enciende el pastor, porque compromete a la iglesia.';
+        }
+        if (!casilla(formData, 'compromiso_ninos')) {
+          return 'Para encender el tablón de familias, marca que aceptas el compromiso de la iglesia.';
+        }
+        modulos.ninos = {
+          ...modulos.ninos,
+          compromiso: {
+            aceptado_por_miembro_id: ctx.miembroId,
+            aceptado_por_usuario_id: ctx.user.id,
+            aceptado_at: new Date().toISOString(),
+            version: VERSION_TEXTOS_NINOS,
+          },
+        };
+      }
+
       await tx
         .update(ministerios)
         .set({
           ...contenido,
           tipo: estructura.tipo,
-          modulos: componerModulos(actual?.modulos, estructura.marcados),
+          modulos,
         })
         .where(esteMinisterio);
+      return null;
     });
   } catch (err) {
     if (isUniqueViolation(err)) {
@@ -399,6 +429,8 @@ export async function editarMinisterio(
     }
     throw err;
   }
+
+  if (rechazo) redirect(volver + encodeURIComponent(rechazo));
 
   revalidatePath('/panel/ministerios');
   redirect(`/panel/ministerios/${ministerioId}`);
@@ -694,6 +726,36 @@ export async function cambiarRolEnEquipo(
         // esto le llegaría «no puedes nombrarte líder», que no es lo que pidió.
         if (nuevo === 'responsable' && mando.actor === 'responsable') {
           return 'El relevo de tu propio puesto de responsable tiene que hacerlo el pastor.';
+        }
+      }
+
+      // EN UN MINISTERIO CON TABLÓN DE FAMILIAS, LOS QUE LO LLEVAN TIENEN CUENTA.
+      // Lo pidió la líder de Niños: los maestros son colíderes, y tienen que
+      // tener la app y ser de esta iglesia. Una ficha sin cuenta no puede
+      // entrar a nada, así que no es un agujero: es nombrar a alguien que no
+      // podrá ver ni el cronograma ni el tablón, y no enterarse hasta el
+      // domingo. Se mira la membresía ACTIVA, como `lidera_ministerio()`.
+      if (nuevo !== 'voluntario') {
+        const [min] = await tx
+          .select({ modulos: ministerios.modulos })
+          .from(ministerios)
+          .where(and(eq(ministerios.id, ministerioId), eq(ministerios.iglesiaId, ctx.iglesia.id)))
+          .limit(1);
+        if (tieneModulo(min?.modulos, 'ninos')) {
+          const [cuenta] = await tx
+            .select({ miembroId: iglesiaUsuarios.miembroId })
+            .from(iglesiaUsuarios)
+            .where(
+              and(
+                eq(iglesiaUsuarios.iglesiaId, ctx.iglesia.id),
+                eq(iglesiaUsuarios.miembroId, miembroId),
+                eq(iglesiaUsuarios.estado, 'activo'),
+              ),
+            )
+            .limit(1);
+          if (!cuenta) {
+            return 'Para llevar este ministerio hace falta tener la app: esta persona no tiene cuenta en la iglesia todavía. Pídele que entre y pida unirse.';
+          }
         }
       }
 

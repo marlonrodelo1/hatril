@@ -29,8 +29,29 @@ fusionar.
 
 ## Cola con migración (de una en una)
 
-La siguiente migración es la **0046** y el siguiente código de trigger,
-**HT132**. Células está en marcha (21-oct) y es la única sesión con migración.
+**Al 21-nov, la siguiente migración es la 0063 y el siguiente código de
+trigger, HT145.** Las últimas: donativos (`0055`-`0056`, HT140; la HT138 y
+la HT139 no las usa nadie), los teléfonos de las push (`0057`-`0058`, HT141)
+y el ministerio de Niños (`0059`-`0062`, HT142-HT144). Las tres, aplicadas en
+la base.
+
+Lo de abajo es la historia de cómo se llegó aquí. Células está en marcha
+(21-oct) y se llevó las **0046-0051** y los códigos hasta **HT134**, ya
+aplicadas en la base aunque solo estén en su rama.
+
+**Una se coló fuera de la cola**: el registro del super admin (29-oct) tomó la
+**0052** y **HT135** en `main`, detrás de células y en el orden en que la base
+las recibió, porque esperar a que células se fusionara dejaba `/admin`
+cambiando contraseñas sin rastro. Quien fusione células tiene que coser el
+journal y el snapshot de la `0052`; los pasos están en la cabecera de esa
+migración.
+
+**Y otra detrás**: denunciar, bloquear y borrar la cuenta (30-oct) tomó la
+**0053** y **HT136-HT137**, porque bloqueaban publicar la app en las tiendas,
+y la bienvenida de la app la **0054** (coordenadas de la iglesia y dirección en
+la solicitud, sin triggers).
+Su snapshot sale del de la `0052`, así que al fusionar células hay que coserlo
+igual: su `prevId` pasa a ser el de la `0052` ya cosida.
 
 1. ~~Contabilidad completa~~: hecha y fusionada el 21-oct.
 2. **Células** — en marcha. Con la pieza genérica de grupos (`grupos`, `grupo_miembros`):

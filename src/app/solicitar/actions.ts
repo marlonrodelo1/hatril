@@ -2,31 +2,30 @@
 
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { and, eq } from 'drizzle-orm';
+
 import { z } from 'zod';
 
 import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { dbAdmin } from '@/lib/db';
-import {
-  iglesiaUsuarios,
-  solicitudesIngreso,
-  solicitudInvitaciones,
-  iglesias,
-} from '@/lib/db/schema';
-import { esGuardHatril, isUniqueViolation } from '@/lib/db/error';
-import { checkRateLimit, getClientIp } from '@/lib/api/rate-limit';
-import { validarPassword, traducirErrorAuth } from '@/lib/auth/password';
-import { normalizarTelefono } from '@/lib/telefono/normalizar';
-import { campo, campoObligatorio, casilla } from '@/lib/api/formulario';
+import { getClientIp } from '@/lib/api/rate-limit';
+import { campo, campoObligatorio } from '@/lib/api/formulario';
 import { destinoSeguro } from '@/lib/url/destino-seguro';
-import { VERSION_POLITICA_PRIVACIDAD } from '@/lib/rgpd/consentimiento';
+import { usuarioActual } from '@/lib/auth/usuario';
 import {
-  cuentasQueAprueban,
-  emitirNotificaciones,
-} from '@/lib/notificaciones/emitir';
-import { grupoDeLaInvitacion, solicitudPendienteEn } from '@/lib/grupos/invitacion';
+  EsquemaCuentaPersonal,
+  EsquemaCuentaYSolicitud,
+  MENSAJE_CORREO_CON_CUENTA,
+  EsquemaSolicitud,
+  leerSolicitud,
+  type DatosSolicitud,
+} from '@/lib/app-api/solicitud';
+import {
+  cancelarSolicitudDe,
+  crearCuentaPersonal as crearCuenta,
+  registrarSolicitud as registrar,
+  rutaDeSolicitud,
+} from '@/lib/solicitudes/alta';
 import { leerCodigo } from '@/lib/grupos/codigo';
+import { sumarInvitacion } from '@/lib/grupos/invitacion';
 
 /**
  * Crear cuenta personal y pedir entrar en una iglesia.
@@ -40,11 +39,17 @@ import { leerCodigo } from '@/lib/grupos/codigo';
  * Si fueran el mismo formulario, cada miembro de una congregación acabaría
  * fundando su propia iglesia vacía al intentar unirse a la suya.
  *
- * `dbAdmin` en todo el fichero, y por el mismo motivo que en el alta de
- * iglesia: quien solicita no pertenece a ninguna todavía, así que las policies
- * de `hatril_app` no le dejan ver ni la iglesia a la que quiere entrar. La
- * comprobación de que la iglesia acepta solicitudes se hace aquí a mano,
- * duplicando la que ya está en la policy de INSERT.
+ * LA LÓGICA VIVE EN `src/lib/solicitudes/alta.ts` (20-nov)
+ * --------------------------------------------------------
+ * Para que la app empaquetada la use sin copiarla. Aquí queda lo que es de la
+ * web: leer el formulario, abrir la sesión con su cookie y redirigir.
+ *
+ * LA CUENTA SE PIDE AL FINAL, Y EN EL MISMO FORMULARIO
+ * ---------------------------------------------------
+ * Desde la bienvenida de la app (30-oct), quien no tiene cuenta la crea en la
+ * propia solicitud: `crearCuentaYSolicitar`. Antes eran dos pantallas —crear la
+ * cuenta y volver a la solicitud—, y en la segunda se perdía gente. La de
+ * `crearCuentaPersonal` sigue para `/crear-cuenta`.
  */
 
 /**
@@ -62,167 +67,77 @@ function volverCon(ruta: string, error: string, next?: string): never {
   redirect(`${ruta}${separador}error=${encodeURIComponent(error)}${extra}`);
 }
 
-const EsquemaSolicitud = z.object({
-  slug: z.string().trim().min(1),
-  nombre: z.string().trim().min(2, 'Escribe tu nombre.').max(120),
-  telefono: z.string().trim().max(40).optional().or(z.literal('')),
-  mensaje: z.string().trim().max(600).optional().or(z.literal('')),
-  consentimiento: z.literal(true, {
-    message: 'Tienes que aceptar para poder enviar la solicitud.',
-  }),
-  // Opcional de verdad: sin marcar también se puede entrar. Por eso es un
-  // booleano y no un `literal(true)` como la de arriba.
-  asistencia: z.boolean(),
-});
+async function ipDeLaPeticion(): Promise<string> {
+  return getClientIp(new Request('https://hatril', { headers: await headers() }));
+}
 
 export async function solicitarIngreso(formData: FormData) {
-  const parsed = EsquemaSolicitud.safeParse({
-    slug: campoObligatorio(formData, 'slug'),
-    nombre: campoObligatorio(formData, 'nombre'),
-    telefono: campo(formData, 'telefono'),
-    mensaje: campo(formData, 'mensaje'),
-    consentimiento: casilla(formData, 'consentimiento'),
-    asistencia: casilla(formData, 'asistencia'),
-  });
-
+  const parsed = EsquemaSolicitud.safeParse(leerSolicitud(formData));
   const slug = String(formData.get('slug') ?? '');
-  // El código de la célula que invita, si lo hay. Se vuelve a resolver aquí y
-  // no se fía del formulario: un id de grupo en un campo oculto se cambia a
-  // mano, un código que no casa con esta iglesia no encuentra nada.
-  const codigo = leerCodigo(campo(formData, 'grupo'));
-  const volverA = `/solicitar/${slug}${codigo ? `?grupo=${codigo}` : ''}`;
+  // La vuelta conserva el código de la célula que invita, si lo hay.
+  const volverA = rutaDeSolicitud(slug, leerCodigo(campo(formData, 'grupo')));
 
   if (!parsed.success) {
     volverCon(volverA, parsed.error.issues[0]!.message);
   }
 
-  const d = parsed.data;
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await usuarioActual();
   if (!user) {
     redirect(`/acceso?next=${encodeURIComponent(volverA)}`);
   }
 
-  const [iglesia] = await dbAdmin
-    .select({
-      id: iglesias.id,
-      nombre: iglesias.nombre,
-      aceptaSolicitudes: iglesias.aceptaSolicitudes,
-      pais: iglesias.pais,
-    })
-    .from(iglesias)
-    .where(and(eq(iglesias.slug, d.slug), eq(iglesias.activa, true)))
-    .limit(1);
+  await registrarYVolver(user, parsed.data);
+}
 
-  if (!iglesia) {
-    volverCon('/iglesias', 'No encontramos esa iglesia.');
-  }
+/**
+ * Crear la cuenta y pedir entrar, de una vez.
+ *
+ * El orden importa: primero se valida TODO —también lo de la solicitud—, y solo
+ * entonces se crea la cuenta. Al revés, un teléfono vacío dejaría creada una
+ * cuenta sin solicitud, y la persona volvería al formulario con un correo que
+ * ya «tiene cuenta» sin haber terminado nada.
+ */
+export async function crearCuentaYSolicitar(formData: FormData) {
+  const slug = String(formData.get('slug') ?? '');
+  const volverA = rutaDeSolicitud(slug, leerCodigo(campo(formData, 'grupo')));
+  const volver: (error: string) => never = (error) => volverCon(volverA, error);
 
-  if (!iglesia.aceptaSolicitudes) {
-    volverCon(
-      volverA,
-      'Esta iglesia no está aceptando solicitudes ahora mismo. Ponte en contacto con ellos directamente.',
+  const parsed = EsquemaCuentaYSolicitud.safeParse({
+    ...leerSolicitud(formData),
+    email: campoObligatorio(formData, 'email'),
+    password: String(formData.get('password') ?? ''),
+  });
+  if (!parsed.success) volver(parsed.error.issues[0]!.message);
+
+  const { email, password, ...solicitud } = parsed.data;
+
+  const creada = await crearCuenta({ nombre: solicitud.nombre, email, password }, await ipDeLaPeticion());
+  if (!creada.ok) {
+    volver(
+      creada.yaExiste
+        ? MENSAJE_CORREO_CON_CUENTA
+        : creada.error,
     );
   }
 
-  const grupo = await grupoDeLaInvitacion(iglesia.id, codigo);
-
-  let solicitudId: string | null = null;
-
-  try {
-    await dbAdmin.transaction(async (tx) => {
-      const [creada] = await tx
-        .insert(solicitudesIngreso)
-        .values({
-          iglesiaId: iglesia.id,
-          authUserId: user.id,
-          nombre: d.nombre,
-          email: user.email ?? null,
-          // Con el país de la iglesia, no 'CO' fijo: un «612 345 678» de
-          // Tenerife no encaja en la regla colombiana, se guardaba sin +34 y
-          // la ficha aprobada se quedaba sin botón de WhatsApp.
-          telefono: normalizarTelefono(d.telefono || null, iglesia.pais),
-          mensaje: d.mensaje || null,
-          // Las dos, siempre. NULL en cualquiera significa «no consta» y aprobar
-          // lo trata como tal: ver las columnas en el schema.
-          aceptaAsistencia: d.asistencia,
-          versionTexto: VERSION_POLITICA_PRIVACIDAD,
-        })
-        .returning({ id: solicitudesIngreso.id });
-
-      solicitudId = creada!.id;
-
-      // La invitación, en su tabla y con el código con que llegó: la lee solo
-      // el pastor y se borra al resolver la solicitud (`0049`).
-      if (grupo) {
-        await tx.insert(solicitudInvitaciones).values({
-          solicitudId: creada!.id,
-          iglesiaId: iglesia.id,
-          grupoId: grupo.id,
-          codigo: grupo.codigo,
-        });
-      }
-
-      /*
-       * La membresía se crea YA, en estado 'pendiente'.
-       *
-       * Podría crearse solo al aprobar, pero entonces habría dos sitios
-       * distintos donde vive «esta persona tiene algo que ver con esta
-       * iglesia», y aprobar tendría que crear la fila desde cero. Con la fila
-       * puesta desde el principio, aprobar es cambiar un estado.
-       *
-       * Y no abre nada: `pertenece_a_iglesia()` exige `estado = 'activo'`, así
-       * que mientras esté pendiente esta persona no ve absolutamente nada de la
-       * congregación. Es el requisito del art. 9, y está en la base de datos y
-       * no en la aplicación.
-       */
-      await tx.insert(iglesiaUsuarios).values({
-        iglesiaId: iglesia.id,
-        authUserId: user.id,
-        rol: 'miembro',
-        estado: 'pendiente',
-      });
-    });
-  } catch (err) {
-    // Choca contra `uq_solicitudes_pendiente_por_persona` o contra el unique
-    // de membresía: ya hay una solicitud viva, o ya pertenece a esa iglesia.
-    if (isUniqueViolation(err)) {
-      redirect('/mi');
-    }
-    throw err;
+  const supabase = await createClient();
+  const { error: errorSesion } = await supabase.auth.signInWithPassword({ email, password });
+  if (errorSesion) {
+    volverCon('/acceso', 'Tu cuenta ya está creada. Entra con tu correo.', volverA);
   }
 
-  /*
-   * El aviso, DESPUÉS del `try` y nunca dentro.
-   *
-   * Dentro habría avisado también cuando la transacción se cae por duplicado
-   * —alguien que pulsa dos veces, o que ya había solicitado— y el equipo
-   * recibiría un aviso de una solicitud que no llegó a existir.
-   *
-   * Y va a todo el que pueda aprobarlas, no solo al pastor: en una iglesia con
-   * secretaria es ella quien mira esta bandeja.
-   */
-  const destinatarios = await cuentasQueAprueban(iglesia.id);
+  await registrarYVolver(creada.user, solicitud);
+}
 
-  await emitirNotificaciones(
-    destinatarios.map((destinatario) => ({
-      iglesiaId: iglesia.id,
-      destinatarioAuthUserId: destinatario,
-      tipo: 'solicitud_recibida' as const,
-      datos: {
-        quien: d.nombre,
-        ...(solicitudId ? { solicitudId } : {}),
-        ...(d.mensaje ? { mensaje: d.mensaje } : {}),
-      },
-      enlace: '/panel/solicitudes',
-    })),
-  );
-
-  redirect('/mi?enviada=1');
+/** La solicitud, y a dónde va la web según lo que haya pasado. */
+async function registrarYVolver(
+  user: Parameters<typeof registrar>[0],
+  d: DatosSolicitud,
+): Promise<never> {
+  const r = await registrar(user, d);
+  if (!r.ok) volverCon(r.ir, r.error);
+  // Ya tenía iglesia o solicitud: `/mi` le cuenta en qué punto está.
+  redirect(r.resultado === 'enviada' ? '/mi?enviada=1' : '/mi');
 }
 
 const EsquemaSumarInvitacion = z.object({
@@ -231,15 +146,9 @@ const EsquemaSumarInvitacion = z.object({
 });
 
 /**
- * Quien ya había pedido entrar sin enlace abre el de una célula: que su
- * solicitud pendiente lleve también esa invitación.
- *
- * Sin esto, el enlace no le hacía nada —`/solicitar` le mandaba a `/mi`— y la
- * célula que le invitó se perdía sin que nadie lo supiera. Solo para una
- * solicitud PENDIENTE de ESTA iglesia y de ESTA cuenta, sin invitación ya, y
- * con un código que valga hoy: lo vuelve a resolver todo aquí, no se fía del
- * formulario. Por `dbAdmin`, como el resto de `/solicitar`: mientras espera,
- * la cuenta no ve nada de la iglesia.
+ * Quien ya había pedido entrar sin enlace abre el de una célula y pulsa «Sí,
+ * entrar también en…»: su solicitud pendiente lleva esa invitación. La lógica
+ * y sus porqués, en `sumarInvitacion` (`src/lib/grupos/invitacion.ts`).
  */
 export async function sumarInvitacionASolicitud(formData: FormData) {
   const parsed = EsquemaSumarInvitacion.safeParse({
@@ -252,124 +161,48 @@ export async function sumarInvitacionASolicitud(formData: FormData) {
   if (!parsed.success || !codigo) redirect('/mi');
   const { slug } = parsed.data;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await usuarioActual();
   if (!user) {
-    redirect(`/acceso?next=${encodeURIComponent(`/solicitar/${slug}?grupo=${codigo}`)}`);
+    redirect(`/acceso?next=${encodeURIComponent(rutaDeSolicitud(slug, codigo))}`);
   }
 
-  const [iglesia] = await dbAdmin
-    .select({ id: iglesias.id })
-    .from(iglesias)
-    .where(and(eq(iglesias.slug, slug), eq(iglesias.activa, true)))
-    .limit(1);
-  if (!iglesia) redirect('/mi');
-
-  const [grupo, solicitud] = await Promise.all([
-    grupoDeLaInvitacion(iglesia.id, codigo),
-    solicitudPendienteEn(user.id, iglesia.id),
-  ]);
-  if (!grupo || !solicitud || solicitud.conInvitacion) redirect('/mi');
-
-  // Dos pestañas a la vez: la segunda choca con la clave primaria y no pasa
-  // nada, la invitación ya está.
-  try {
-    await dbAdmin
-      .insert(solicitudInvitaciones)
-      .values({
-        solicitudId: solicitud.id,
-        iglesiaId: iglesia.id,
-        grupoId: grupo.id,
-        codigo: grupo.codigo,
-      })
-      .onConflictDoNothing();
-  } catch (err) {
-    // Se aprobó o se rechazó entre la lectura de arriba y aquí: la base ya no
-    // la deja colgar de una solicitud resuelta (HT132, `0050`). No queda nada a
-    // lo que sumarla, y `/mi` dice cómo quedó.
-    if (esGuardHatril(err, 'HT132')) redirect('/mi');
-    throw err;
-  }
-
-  redirect('/mi?invitacion=1');
+  const hecho = await sumarInvitacion(user.id, slug, codigo);
+  redirect(hecho === 'sumada' ? '/mi?invitacion=1' : '/mi');
 }
 
-// ============================================================================
-// Cuenta personal, sin iglesia
-// ============================================================================
+/** Cancelar la solicitud propia mientras está pendiente. */
+export async function cancelarSolicitud() {
+  const user = await usuarioActual();
+  if (!user) redirect('/acceso');
 
-const EsquemaCuenta = z.object({
-  nombre: z.string().trim().min(2, 'Escribe tu nombre.').max(120),
-  email: z.string().trim().toLowerCase().email('Ese correo no parece válido.'),
-  password: z.string(),
-  next: z.string().optional(),
-});
+  await cancelarSolicitudDe(user.id);
+
+  redirect('/mi?cancelada=1');
+}
 
 export async function crearCuentaPersonal(formData: FormData) {
-  const parsed = EsquemaCuenta.safeParse({
+  const next = campo(formData, 'next');
+  const parsed = EsquemaCuentaPersonal.safeParse({
     nombre: campoObligatorio(formData, 'nombre'),
     email: campoObligatorio(formData, 'email'),
     password: String(formData.get('password') ?? ''),
-    next: campo(formData, 'next'),
   });
 
   if (!parsed.success) {
-    volverCon(
-      '/crear-cuenta',
-      parsed.error.issues[0]!.message,
-      campo(formData, 'next'),
-    );
+    volverCon('/crear-cuenta', parsed.error.issues[0]!.message, next);
   }
 
-  const { nombre, email, password, next } = parsed.data;
+  const { email, password } = parsed.data;
 
-  const errorPassword = validarPassword(password);
-  if (errorPassword) volverCon('/crear-cuenta', errorPassword, next);
-
-  const cabeceras = await headers();
-  const ip = getClientIp(new Request('https://hatril', { headers: cabeceras }));
-  const limite = await checkRateLimit('ip', `cuenta:${ip}`, 10);
-
-  if (!limite.ok) {
-    volverCon(
-      '/crear-cuenta',
-      'Se han creado demasiadas cuentas desde esta conexión hoy. Inténtalo mañana.',
-      next,
-    );
-  }
-
-  const admin = createAdminClient();
-
-  const { data: creado, error: errorAuth } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { nombre },
-  });
-
-  if (errorAuth || !creado.user) {
-    volverCon(
-      '/crear-cuenta',
-      traducirErrorAuth(errorAuth?.message ?? ''),
-      next,
-    );
-  }
+  const creada = await crearCuenta(parsed.data, await ipDeLaPeticion());
+  if (!creada.ok) volverCon('/crear-cuenta', creada.error, next);
 
   const supabase = await createClient();
-  const { error: errorSesion } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { error: errorSesion } = await supabase.auth.signInWithPassword({ email, password });
 
   if (errorSesion) {
     volverCon('/acceso', 'Tu cuenta ya está creada. Entra con tu correo.', next);
   }
 
-  // Aquí no hay nada que deshacer si algo falla después: a diferencia del alta
-  // de iglesia, esta cuenta suelta es útil por sí misma.
-  const destino = destinoSeguro(next) ?? '/mi';
-
-  redirect(destino);
+  redirect(destinoSeguro(next) ?? '/mi');
 }

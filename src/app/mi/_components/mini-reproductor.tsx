@@ -10,6 +10,7 @@ import { ProgramacionSemanal } from '@/components/radio/programacion';
 import { useAhora } from '@/components/radio/use-ahora';
 import { useSenal } from '@/components/radio/use-senal';
 import { Button } from '@/components/ui/button';
+import { Insignia } from '@/components/ui/insignia';
 
 /**
  * La radio de la iglesia, en una línea encima de las pestañas.
@@ -66,16 +67,22 @@ export function MiniReproductor({
     <>
       <div
         className={
-          // Justo encima de la barra: su `bottom` más su alto (65 px en móvil a
-          // 375, 52 en escritorio, medidos) más un hueco de 6. Si la barra cambia de alto, esto
-          // se queda montado encima: medirlas juntas al tocar una, y con ellas
-          // el hueco de abajo de `mi/layout.tsx`, que cuenta con las dos.
-          'fixed inset-x-3 z-30 flex items-center gap-2.5 rounded-2xl border border-border py-1.5 pl-1.5 pr-1 ' +
-          'bottom-[calc(0.75rem+env(safe-area-inset-bottom)+71px)] ' +
+          /*
+           * PEGADA ENCIMA DE LA BARRA, EN UNA SOLA PIEZA (zona 2, 17-nov)
+           *
+           * Eran dos pastillas flotantes, una encima de la otra con un hueco en
+           * medio. En el móvil la radio va ahora de lado a lado y sin hueco,
+           * justo encima de la barra (que publica lo que ocupa en
+           * `--alto-barra-mi`, ver `barra-inferior.tsx`): se leen como un solo
+           * bloque, con una raya entre la radio y las pestañas. En escritorio
+           * sigue flotando encima de la pastilla centrada.
+           */
+          'fixed inset-x-0 z-30 flex items-center gap-2.5 border-t border-border py-1.5 pl-2.5 pr-2 ' +
+          'bottom-[var(--alto-barra-mi,70px)] ' +
           // El mismo cristal que la barra, con su misma guarda: ver allí por qué
           // es 0.92 y no menos.
           'bg-surface supports-backdrop-filter:bg-surface/92 supports-backdrop-filter:backdrop-blur-2xl supports-backdrop-filter:backdrop-saturate-150 ' +
-          'md:inset-x-auto md:bottom-[calc(1.25rem+58px)] md:left-1/2 md:w-[420px] md:-translate-x-1/2'
+          'md:inset-x-auto md:bottom-[calc(var(--alto-barra-mi,72px)+6px)] md:left-1/2 md:w-[420px] md:-translate-x-1/2 md:rounded-2xl md:border md:py-1.5 md:pl-1.5 md:pr-1'
         }
       >
         {/* Sin `crossOrigin` y con `preload="none"`: ver `use-senal.ts`. */}
@@ -109,10 +116,28 @@ export function MiniReproductor({
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg py-0.5 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/20"
         >
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-[13.5px] font-bold leading-tight">
-              {ahora ? `${ahora.nombre} · ${nombre}` : `${nombre} · En directo`}
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-[13.5px] font-bold leading-tight">
+                {nombre}
+              </span>
+              {/* El único punto que late en toda la app: lo que está en
+                  directo, y solo mientras suena. */}
+              {estado === 'sonando' && (
+                <Insignia tono="peligro" vivo>
+                  En directo
+                </Insignia>
+              )}
             </span>
 
+            {/*
+             * LO QUE SUENA, ANTES QUE EL SERVIDOR (zona 2, 17-nov)
+             *
+             * La segunda línea decía «Al escuchar te conectas a icecast…» hasta
+             * el primer toque, y Marlon aprobó que diga lo que suena ahora. El
+             * aviso de a dónde se conecta no se pierde: va entero en la hoja de
+             * la programación (la IP, que Hatril no apunta quién escucha y el
+             * consumo), y aquí sigue saliendo cuando no hay programa que decir.
+             */}
             <span className="flex min-w-0 items-center gap-1 text-[12px] leading-tight text-muted-foreground">
               {estado === 'error' && error ? (
                 <>
@@ -125,6 +150,8 @@ export function MiniReproductor({
                 </>
               ) : estado === 'conectando' ? (
                 <span className="truncate">Conectando con {servidor}…</span>
+              ) : ahora ? (
+                <span className="truncate">Ahora: {ahora.nombre}</span>
               ) : !yaPulso ? (
                 <span className="truncate">Al escuchar te conectas a {servidor}</span>
               ) : luego ? (

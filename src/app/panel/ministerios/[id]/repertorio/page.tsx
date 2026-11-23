@@ -12,6 +12,7 @@ import { CabeceraPanel } from '../../../_components/cabecera';
 import { Contenedor } from '../../../_components/contenedor';
 import { PestanasMinisterio } from '../_components/pestanas';
 import { CONFIRMACIONES } from './constantes';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Repertorio' };
 
@@ -64,10 +65,10 @@ export default async function RepertorioPage({
         subtitulo="Las canciones del equipo y cuándo sonó cada una"
         volver={{ href: '/panel/ministerios', texto: 'Ministerios' }}
       >
-        <Button render={<Link href={`${base}/nueva`} />}>
+        <BotonEnlace href={`${base}/nueva`}>
           <Plus strokeWidth={1.8} />
           Añadir canción
-        </Button>
+        </BotonEnlace>
       </CabeceraPanel>
 
       <Contenedor>

@@ -94,7 +94,9 @@ export async function tarjetasDeLaPortada(
       const resumen = r.status === 'fulfilled' ? r.value : null;
 
       return {
-        modulo,
+        // Solo lo que se pinta: el módulo del catálogo trae además su `Icono`,
+        // que en la app llegaría por JSON como un objeto (`iconos.ts`).
+        modulo: { id: modulo.id, nombre: modulo.nombre },
         enlace:
           modo === 'participante'
             ? (resumen?.enlace ?? null)

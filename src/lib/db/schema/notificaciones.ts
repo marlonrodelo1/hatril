@@ -44,6 +44,28 @@ export const tipoNotificacionEnum = pgEnum('tipo_notificacion_enum', [
   'turno_asignado',
   /** Alguien del equipo ha dicho que no puede. Va a quien lleva el equipo. */
   'turno_no_puede',
+  /** Han denunciado algo del muro. Va a quien modera la comunidad. */
+  'denuncia_en_comunidad',
+  /**
+   * Quien modera ha quitado una publicación o un comentario tuyo. Sin decir
+   * quién: la denuncia es anónima, y nombrar al moderador invita a discutirlo
+   * con él en vez de con la congregación.
+   */
+  'contenido_retirado',
+  /**
+   * Niños: dentro de 30 días se borran las fotos y los vídeos de un mes del
+   * drive. Va a la responsable del ministerio (o al pastor si no la hay), para
+   * que los descargue antes si los quiere conservar (`plan-ninos.md` §5).
+   */
+  'ninos_caducan',
+  /** Niños: una madre, un padre o un tutor pide ver lo de su hijo. Va a la responsable. */
+  'ninos_solicitud',
+  /** Niños: la responsable te ha aceptado; ya ves el tablón. Va a la familia. */
+  'ninos_aceptada',
+  /** Niños: hay una publicación nueva en el tablón. Va a las familias que la pueden ver. */
+  'ninos_publicacion',
+  /** Niños: una familia ha retirado el permiso de fotos. Va a la responsable, para que quite las suyas. */
+  'ninos_sin_fotos',
 ]);
 
 export const notificaciones = pgTable(

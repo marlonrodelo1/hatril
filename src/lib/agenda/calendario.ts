@@ -235,13 +235,6 @@ function horaDe(d: Date): string {
   ].join(':');
 }
 
-/** Agrupa por día, que es como lo pinta el calendario. */
-export function porDia(lista: Ocurrencia[]): Map<string, Ocurrencia[]> {
-  const mapa = new Map<string, Ocurrencia[]>();
-  for (const o of lista) {
-    const dia = mapa.get(o.fecha);
-    if (dia) dia.push(o);
-    else mapa.set(o.fecha, [o]);
-  }
-  return mapa;
-}
+// `porDia` vive en `./horarios`, sin `server-only`: la usa también la vista de
+// la agenda que comparten la web y la app empaquetada.
+export { porDia } from './horarios';

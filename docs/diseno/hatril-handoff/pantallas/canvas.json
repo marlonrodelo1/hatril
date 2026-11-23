@@ -1,0 +1,170 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-10-30T12:00:00Z"},
+  "title": "Hatril — Diseño de la app",
+  "launch": {"view": "canvas"},
+  "pages": [
+    {"id": "bienvenida", "name": "Bienvenida"},
+    {"id": "comunidad", "name": "Comunidad"},
+    {"id": "app", "name": "App"}
+  ],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 375, "h": 812, "title": "A · Splash", "page": "bienvenida"},
+    "Intro1.dc.html": {"x": 455, "y": 0, "w": 375, "h": 812, "title": "B1 · Presentación: el muro", "is_interactive": true, "page": "bienvenida"},
+    "Intro2.dc.html": {"x": 910, "y": 0, "w": 375, "h": 812, "title": "B2 · Presentación: agenda y turnos", "is_interactive": true, "page": "bienvenida"},
+    "Intro3.dc.html": {"x": 1365, "y": 0, "w": 375, "h": 812, "title": "B3 · Presentación: devocional", "is_interactive": true, "page": "bienvenida"},
+    "Movimiento.dc.html": {"x": 1820, "y": 0, "w": 760, "h": 812, "title": "B · Movimiento y reducir movimiento", "page": "bienvenida"},
+
+    "Pregunta.dc.html": {"x": 0, "y": 1250, "w": 375, "h": 812, "title": "C · La pregunta", "is_interactive": true, "page": "bienvenida"},
+    "Ubicacion.dc.html": {"x": 455, "y": 1250, "w": 375, "h": 812, "title": "D1 · Antes del permiso", "is_interactive": true, "page": "bienvenida"},
+    "Mapa.dc.html": {"x": 910, "y": 1250, "w": 375, "h": 812, "title": "D2–3 · Mapa, radio y lista", "is_interactive": true, "page": "bienvenida"},
+    "MapaPin.dc.html": {"x": 1365, "y": 1250, "w": 375, "h": 812, "title": "D4 · Pin tocado", "is_interactive": true, "page": "bienvenida"},
+    "MapaVacio.dc.html": {"x": 1820, "y": 1250, "w": 375, "h": 812, "title": "D5 · Estado vacío", "page": "bienvenida"},
+    "Ciudad.dc.html": {"x": 2275, "y": 1250, "w": 375, "h": 812, "title": "D6 · Sin ubicación: por ciudad", "page": "bienvenida"},
+    "EstiloMapa.dc.html": {"x": 2730, "y": 1250, "w": 760, "h": 812, "title": "D · Estilo del mapa", "page": "bienvenida"},
+
+    "Buscar.dc.html": {"x": 0, "y": 2482, "w": 375, "h": 812, "title": "E1 · Buscar por nombre", "is_interactive": true, "page": "bienvenida"},
+    "BuscarVacio.dc.html": {"x": 455, "y": 2482, "w": 375, "h": 812, "title": "E2 · Sin resultados", "is_interactive": true, "page": "bienvenida"},
+    "Ficha.dc.html": {"x": 910, "y": 2482, "w": 375, "h": 1060, "title": "F1 · Ficha de la iglesia", "is_interactive": true, "page": "bienvenida"},
+    "FichaEnPersona.dc.html": {"x": 1365, "y": 2482, "w": 375, "h": 812, "title": "F2 · Altas en persona", "page": "bienvenida"},
+    "FichaOtraIglesia.dc.html": {"x": 1820, "y": 2482, "w": 375, "h": 812, "title": "F3 · Ya es de otra iglesia / pendiente", "page": "bienvenida"},
+
+    "Cuenta.dc.html": {"x": 0, "y": 3962, "w": 375, "h": 1560, "title": "G1 · Crear la cuenta", "is_interactive": true, "page": "bienvenida"},
+    "CuentaEntrar.dc.html": {"x": 455, "y": 3962, "w": 375, "h": 812, "title": "G2 · Ya tiene cuenta", "is_interactive": true, "page": "bienvenida"},
+    "Enviada.dc.html": {"x": 910, "y": 3962, "w": 375, "h": 812, "title": "H · Solicitud enviada", "is_interactive": true, "page": "bienvenida"},
+
+    "Tour1.dc.html": {"x": 0, "y": 5942, "w": 375, "h": 812, "title": "I1 · Recorrido: bienvenida", "is_interactive": true, "page": "bienvenida"},
+    "Tour2.dc.html": {"x": 455, "y": 5942, "w": 375, "h": 812, "title": "I2 · Recorrido: pastores", "is_interactive": true, "page": "bienvenida"},
+    "Tour3.dc.html": {"x": 910, "y": 5942, "w": 375, "h": 812, "title": "I3 · Recorrido: ministerios y líderes", "is_interactive": true, "page": "bienvenida"},
+    "Tour4.dc.html": {"x": 1365, "y": 5942, "w": 375, "h": 812, "title": "I4 · Recorrido: cultos", "is_interactive": true, "page": "bienvenida"},
+    "Tour5.dc.html": {"x": 1820, "y": 5942, "w": 375, "h": 812, "title": "I5 · Recorrido: comunidad", "is_interactive": true, "page": "bienvenida"},
+    "Tour6.dc.html": {"x": 2275, "y": 5942, "w": 375, "h": 812, "title": "I6 · Recorrido: te esperamos", "is_interactive": true, "page": "bienvenida"},
+
+    "ComMuro.dc.html": {"x": 0, "y": 0, "w": 375, "h": 2440, "title": "A · El muro con contenido", "is_interactive": true, "page": "comunidad"},
+    "ComSinFoto.dc.html": {"x": 455, "y": 0, "w": 375, "h": 812, "title": "A · Portada sin foto", "page": "comunidad"},
+
+    "ComPublicar.dc.html": {"x": 0, "y": 2860, "w": 375, "h": 812, "title": "B1 · Publicar (hoja)", "page": "comunidad"},
+    "ComEnviando.dc.html": {"x": 455, "y": 2860, "w": 375, "h": 812, "title": "B2 · Publicando", "page": "comunidad"},
+    "ComErrorFoto.dc.html": {"x": 910, "y": 2860, "w": 375, "h": 812, "title": "B3 · Foto demasiado grande", "page": "comunidad"},
+
+    "ComComentarios.dc.html": {"x": 0, "y": 4092, "w": 375, "h": 1180, "title": "C1 · Comentarios abiertos", "page": "comunidad"},
+    "ComComentariosOff.dc.html": {"x": 455, "y": 4092, "w": 375, "h": 812, "title": "C2 · Comentarios apagados", "page": "comunidad"},
+
+    "ComMenu.dc.html": {"x": 0, "y": 5692, "w": 375, "h": 812, "title": "D1 · Menú «…» según quién mira", "page": "comunidad"},
+    "ComDenunciar.dc.html": {"x": 455, "y": 5692, "w": 375, "h": 812, "title": "D2 · Denunciar: motivo", "page": "comunidad"},
+    "ComDenunciaOk.dc.html": {"x": 910, "y": 5692, "w": 375, "h": 812, "title": "D3 · Denuncia recibida", "page": "comunidad"},
+    "ComBloquear.dc.html": {"x": 1365, "y": 5692, "w": 375, "h": 812, "title": "D4 · Bloquear a esta persona", "page": "comunidad"},
+    "ComBorrar.dc.html": {"x": 1820, "y": 5692, "w": 375, "h": 812, "title": "D5 · Confirmar borrar", "page": "comunidad"},
+
+    "ComVacio.dc.html": {"x": 0, "y": 6924, "w": 375, "h": 812, "title": "E1 · Muro vacío", "page": "comunidad"},
+    "ComNoPublicar.dc.html": {"x": 455, "y": 6924, "w": 375, "h": 812, "title": "E2 · No puedes publicar", "page": "comunidad"},
+    "ComApagada.dc.html": {"x": 910, "y": 6924, "w": 375, "h": 812, "title": "E3 · Comunidad apagada", "page": "comunidad"},
+
+    "ComEscritorio.dc.html": {"x": 0, "y": 8156, "w": 1280, "h": 1180, "title": "F · Escritorio 1280", "page": "comunidad"},
+
+    "AppBarras.dc.html": {"x": 0, "y": 0, "w": 760, "h": 812, "title": "A1 · Cabecera, barra (4 y 5) y radio", "page": "app"},
+    "AppMenu.dc.html": {"x": 840, "y": 0, "w": 375, "h": 812, "title": "A2 · Menú del avatar", "page": "app"},
+    "AppRadio.dc.html": {"x": 1295, "y": 0, "w": 375, "h": 812, "title": "A3 · Radio: programación de hoy", "page": "app"},
+
+    "DevHoy.dc.html": {"x": 0, "y": 1232, "w": 375, "h": 1560, "title": "B1 · Devocional de hoy y anteriores", "page": "app"},
+    "DevVacio.dc.html": {"x": 455, "y": 1232, "w": 375, "h": 812, "title": "B2 · Sin devocional hoy", "page": "app"},
+
+    "AgSemana.dc.html": {"x": 0, "y": 3212, "w": 375, "h": 1180, "title": "C1 · Agenda: semana", "is_interactive": true, "page": "app"},
+    "AgMes.dc.html": {"x": 455, "y": 3212, "w": 375, "h": 812, "title": "C2 · Agenda: mes y día tocado", "is_interactive": true, "page": "app"},
+    "AgTurno.dc.html": {"x": 910, "y": 3212, "w": 375, "h": 1000, "title": "C3 · Un turno", "is_interactive": true, "page": "app"},
+    "AgEnsayo.dc.html": {"x": 1365, "y": 3212, "w": 375, "h": 900, "title": "C4 · Un ensayo de tu equipo", "page": "app"},
+
+    "BibIndice.dc.html": {"x": 0, "y": 4812, "w": 375, "h": 812, "title": "D1 · Biblia: índice", "page": "app"},
+    "BibCapitulo.dc.html": {"x": 455, "y": 4812, "w": 375, "h": 812, "title": "D2 · Leyendo un capítulo", "page": "app"},
+    "BibCompartir.dc.html": {"x": 910, "y": 4812, "w": 375, "h": 812, "title": "D3 · Compartir un versículo", "page": "app"},
+
+    "AvLista.dc.html": {"x": 0, "y": 6044, "w": 375, "h": 812, "title": "E1 · Avisos", "page": "app"},
+    "AvVacio.dc.html": {"x": 455, "y": 6044, "w": 375, "h": 812, "title": "E2 · Sin avisos", "page": "app"},
+
+    "CtaMiCuenta.dc.html": {"x": 0, "y": 7276, "w": 375, "h": 1500, "title": "F1 · Mi cuenta", "page": "app"},
+    "CtaFoto.dc.html": {"x": 455, "y": 7276, "w": 375, "h": 812, "title": "F2 · Tu foto de perfil", "page": "app"},
+    "CtaBorrar.dc.html": {"x": 910, "y": 7276, "w": 375, "h": 812, "title": "F3 · Borrar mi cuenta", "page": "app"},
+
+    "PEntrar.dc.html": {"x": 0, "y": 9196, "w": 375, "h": 812, "title": "H1 · Entrar", "page": "app"},
+    "PRecuperar.dc.html": {"x": 455, "y": 9196, "w": 375, "h": 812, "title": "H2 · Recuperar la contraseña", "page": "app"},
+    "PNueva.dc.html": {"x": 910, "y": 9196, "w": 375, "h": 812, "title": "H3 · Nueva contraseña", "page": "app"},
+    "PPolitica.dc.html": {"x": 1365, "y": 9196, "w": 375, "h": 812, "title": "H4 · Política nueva", "page": "app"},
+    "PSinAcceso.dc.html": {"x": 1820, "y": 9196, "w": 375, "h": 812, "title": "H5 · Tu iglesia no tiene acceso", "page": "app"},
+    "PSinConexion.dc.html": {"x": 2275, "y": 9196, "w": 375, "h": 812, "title": "H6 · Sin conexión", "page": "app"},
+
+    "EqLista.dc.html": {"x": 0, "y": 10428, "w": 375, "h": 812, "title": "G1 · Tus equipos", "page": "app"},
+    "EqParticipa.dc.html": {"x": 455, "y": 10428, "w": 375, "h": 1100, "title": "G2 · Portada: quien participa", "page": "app"},
+    "EqLleva.dc.html": {"x": 910, "y": 10428, "w": 375, "h": 1300, "title": "G2 · Portada: quien lo lleva", "page": "app"},
+    "EqTurnos.dc.html": {"x": 1365, "y": 10428, "w": 375, "h": 1100, "title": "G3 · Turnos", "page": "app"},
+    "EqPlanificar.dc.html": {"x": 1820, "y": 10428, "w": 375, "h": 900, "title": "G3 · Planificar", "is_interactive": true, "page": "app"},
+    "EqCuadrante.dc.html": {"x": 2275, "y": 10428, "w": 375, "h": 1100, "title": "G3 · Cuadrante de un culto", "page": "app"},
+    "EqAsignar.dc.html": {"x": 2730, "y": 10428, "w": 375, "h": 812, "title": "G3 · Poner a alguien", "page": "app"},
+    "EqAgenda.dc.html": {"x": 3185, "y": 10428, "w": 375, "h": 812, "title": "G4 · Agenda del equipo", "page": "app"},
+
+    "EqNuevaReunion.dc.html": {"x": 0, "y": 12148, "w": 375, "h": 900, "title": "G4 · Apuntar o editar una reunión", "page": "app"},
+    "EqPasarLista.dc.html": {"x": 455, "y": 12148, "w": 375, "h": 900, "title": "G4 · Pasar lista", "is_interactive": true, "page": "app"},
+    "EqRepertorio.dc.html": {"x": 910, "y": 12148, "w": 375, "h": 900, "title": "G5 · Repertorio", "page": "app"},
+    "EqCancion.dc.html": {"x": 1365, "y": 12148, "w": 375, "h": 1000, "title": "G5 · Ficha de una canción", "page": "app"},
+    "EqNuevaCancion.dc.html": {"x": 1820, "y": 12148, "w": 375, "h": 900, "title": "G5 · Apuntar una canción", "page": "app"},
+    "EqSeguimiento.dc.html": {"x": 2275, "y": 12148, "w": 375, "h": 900, "title": "G6 · Seguimiento", "page": "app"},
+    "EqPersona.dc.html": {"x": 2730, "y": 12148, "w": 375, "h": 1000, "title": "G6 · Ficha de la persona", "page": "app"},
+    "EqFondo.dc.html": {"x": 3185, "y": 12148, "w": 375, "h": 900, "title": "G7 · Fondo del ministerio", "page": "app"},
+
+    "AgDia.dc.html": {"x": 0, "y": 13568, "w": 375, "h": 812, "title": "C · Agenda: día", "page": "app"},
+    "BibCapitulos.dc.html": {"x": 455, "y": 13568, "w": 375, "h": 812, "title": "D · Elegir capítulo", "page": "app"},
+    "CtaEditar.dc.html": {"x": 910, "y": 13568, "w": 375, "h": 812, "title": "F · Editar tus datos", "page": "app"},
+    "CtaPassword.dc.html": {"x": 1365, "y": 13568, "w": 375, "h": 812, "title": "F · Cambiar la contraseña", "page": "app"},
+    "CtaBloqueados.dc.html": {"x": 1820, "y": 13568, "w": 375, "h": 812, "title": "F · Personas bloqueadas", "page": "app"},
+    "EqPersonas.dc.html": {"x": 2275, "y": 13568, "w": 375, "h": 1000, "title": "G · Todo el equipo", "page": "app"},
+    "EqReparto.dc.html": {"x": 2730, "y": 13568, "w": 375, "h": 1000, "title": "G · Cómo va el reparto de hoy", "is_interactive": true, "page": "app"}
+  },
+  "order": [
+    "Main.dc.html", "Intro1.dc.html", "Intro2.dc.html", "Intro3.dc.html", "Movimiento.dc.html",
+    "Pregunta.dc.html", "Ubicacion.dc.html", "Mapa.dc.html", "MapaPin.dc.html", "MapaVacio.dc.html", "Ciudad.dc.html", "EstiloMapa.dc.html",
+    "Buscar.dc.html", "BuscarVacio.dc.html", "Ficha.dc.html", "FichaEnPersona.dc.html", "FichaOtraIglesia.dc.html",
+    "Cuenta.dc.html", "CuentaEntrar.dc.html", "Enviada.dc.html",
+    "Tour1.dc.html", "Tour2.dc.html", "Tour3.dc.html", "Tour4.dc.html", "Tour5.dc.html", "Tour6.dc.html",
+    "ComMuro.dc.html", "ComSinFoto.dc.html",
+    "ComPublicar.dc.html", "ComEnviando.dc.html", "ComErrorFoto.dc.html",
+    "ComComentarios.dc.html", "ComComentariosOff.dc.html",
+    "ComMenu.dc.html", "ComDenunciar.dc.html", "ComDenunciaOk.dc.html", "ComBloquear.dc.html", "ComBorrar.dc.html",
+    "ComVacio.dc.html", "ComNoPublicar.dc.html", "ComApagada.dc.html",
+    "ComEscritorio.dc.html",
+    "AppBarras.dc.html", "AppMenu.dc.html", "AppRadio.dc.html",
+    "DevHoy.dc.html", "DevVacio.dc.html",
+    "AgSemana.dc.html", "AgMes.dc.html", "AgTurno.dc.html", "AgEnsayo.dc.html",
+    "BibIndice.dc.html", "BibCapitulo.dc.html", "BibCompartir.dc.html",
+    "AvLista.dc.html", "AvVacio.dc.html",
+    "CtaMiCuenta.dc.html", "CtaFoto.dc.html", "CtaBorrar.dc.html",
+    "PEntrar.dc.html", "PRecuperar.dc.html", "PNueva.dc.html", "PPolitica.dc.html", "PSinAcceso.dc.html", "PSinConexion.dc.html",
+    "EqLista.dc.html", "EqParticipa.dc.html", "EqLleva.dc.html", "EqTurnos.dc.html", "EqPlanificar.dc.html", "EqCuadrante.dc.html", "EqAsignar.dc.html", "EqAgenda.dc.html",
+    "EqNuevaReunion.dc.html", "EqPasarLista.dc.html", "EqRepertorio.dc.html", "EqCancion.dc.html", "EqNuevaCancion.dc.html", "EqSeguimiento.dc.html", "EqPersona.dc.html", "EqFondo.dc.html",
+    "AgDia.dc.html", "BibCapitulos.dc.html", "CtaEditar.dc.html", "CtaPassword.dc.html", "CtaBloqueados.dc.html", "EqPersonas.dc.html", "EqReparto.dc.html"
+  ],
+  "notes": {
+    "t1": {"x": 0, "y": -300, "text": "A–B · Splash y presentación", "kind": "title1", "maxW": 2580, "page": "bienvenida"},
+    "t2": {"x": 0, "y": 950, "text": "C–D · La pregunta y buscar cerca", "kind": "title1", "maxW": 3490, "page": "bienvenida"},
+    "t3": {"x": 0, "y": 2182, "text": "E–F · Buscar por nombre y ficha", "kind": "title1", "maxW": 2195, "page": "bienvenida"},
+    "t4": {"x": 0, "y": 3662, "text": "G–H · Cuenta y solicitud enviada", "kind": "title1", "maxW": 1285, "page": "bienvenida"},
+    "t5": {"x": 0, "y": 5642, "text": "I · Conoce tu iglesia (recorrido)", "kind": "title1", "maxW": 2650, "page": "bienvenida"},
+
+    "c1": {"x": 0, "y": -300, "text": "A · El muro y la portada del día", "kind": "title1", "maxW": 1285, "page": "comunidad"},
+    "c2": {"x": 0, "y": 2560, "text": "B · Publicar", "kind": "title1", "maxW": 1285, "page": "comunidad"},
+    "c3": {"x": 0, "y": 3792, "text": "C · Comentarios", "kind": "title1", "maxW": 1285, "page": "comunidad"},
+    "c4": {"x": 0, "y": 5392, "text": "D · Borrar, denunciar y bloquear", "kind": "title1", "maxW": 2195, "page": "comunidad"},
+    "c5": {"x": 0, "y": 6624, "text": "E · Estados de la comunidad", "kind": "title1", "maxW": 1285, "page": "comunidad"},
+    "c6": {"x": 0, "y": 7856, "text": "F · Escritorio", "kind": "title1", "maxW": 1280, "page": "comunidad"},
+
+    "a1": {"x": 0, "y": -300, "text": "A · El marco de la app", "kind": "title1", "maxW": 1670, "page": "app"},
+    "a2": {"x": 0, "y": 932, "text": "B · Devocional", "kind": "title1", "maxW": 830, "page": "app"},
+    "a3": {"x": 0, "y": 2912, "text": "C · Agenda", "kind": "title1", "maxW": 1740, "page": "app"},
+    "a4": {"x": 0, "y": 4512, "text": "D · Biblia", "kind": "title1", "maxW": 1285, "page": "app"},
+    "a5": {"x": 0, "y": 5744, "text": "E · Avisos", "kind": "title1", "maxW": 830, "page": "app"},
+    "a6": {"x": 0, "y": 6976, "text": "F · Mi cuenta", "kind": "title1", "maxW": 1285, "page": "app"},
+    "a7": {"x": 0, "y": 8896, "text": "H · Pantallas de paso", "kind": "title1", "maxW": 2650, "page": "app"},
+    "a8": {"x": 0, "y": 10128, "text": "G · Equipo: portada y turnos", "kind": "title1", "maxW": 3560, "page": "app"},
+    "a9": {"x": 0, "y": 11848, "text": "G · Equipo: agenda, repertorio, seguimiento y fondo", "kind": "title1", "maxW": 3560, "page": "app"},
+    "a10": {"x": 0, "y": 13268, "text": "Pantallas que faltaban", "kind": "title1", "maxW": 3105, "page": "app"}
+  },
+  "designSystems": []
+}

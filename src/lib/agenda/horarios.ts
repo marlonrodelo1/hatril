@@ -1,4 +1,5 @@
 import type { HorarioSemanal } from '@/lib/db/schema/iglesias';
+import type { Ocurrencia } from './calendario';
 
 /**
  * Los cultos de una iglesia, día a día, a partir de su horario semanal.
@@ -98,4 +99,36 @@ export function cultosEntre(
   }
 
   return salida;
+}
+
+/**
+ * Agrupa por día, que es como lo pinta el calendario. Aquí y no en
+ * `./calendario` (que es solo de servidor) porque la usa también la vista de
+ * la agenda que comparten la web y la app empaquetada.
+ */
+export function porDia(lista: Ocurrencia[]): Map<string, Ocurrencia[]> {
+  const mapa = new Map<string, Ocurrencia[]>();
+  for (const o of lista) {
+    const dia = mapa.get(o.fecha);
+    if (dia) dia.push(o);
+    else mapa.set(o.fecha, [o]);
+  }
+  return mapa;
+}
+
+/**
+ * «viernes 16, 19:30», que es como se dice un ensayo en voz alta.
+ *
+ * Sin el mes: dentro de la semana del turno el número del día no se confunde
+ * con nada, y la línea cabe en un móvil.
+ */
+export function diaYHora(fecha: string, hora: string | null): string {
+  // Partida a mano, como `formatearFechaLarga`: `new Date('2026-10-16')` es
+  // medianoche UTC, y en un huso por detrás se pinta el día anterior.
+  const [a, m, d] = fecha.split('-').map(Number);
+  const dia = new Date(a!, m! - 1, d!).toLocaleDateString('es', {
+    weekday: 'long',
+    day: 'numeric',
+  });
+  return hora ? `${dia}, ${hora}` : dia;
 }

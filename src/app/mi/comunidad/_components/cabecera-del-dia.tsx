@@ -46,12 +46,44 @@ import { BookOpen, ChevronRight, Quote } from 'lucide-react';
  * La guarda `supports-backdrop-filter` se queda para el desenfoque. El degradado
  * no la necesita: es color plano y funciona en cualquier navegador.
  *
- * SIN FOTO NO SE INVENTA NADA
- * ---------------------------
- * Se queda el secundario liso —el carbón de Claude, que antes era el verde de
- * marca— con el texto en blanco encima. Una portada con un hueco gris donde
- * debería ir la imagen se lee como un fallo de carga.
+ * SIN FOTO, EN LA PALETA DE LA MARCA (19-nov)
+ * -------------------------------------------
+ * Era el carbón liso con letra blanca, y a Marlon no le gustaba: «ese color
+ * gris de fondo no me gusta, que pegue con el crema o con el naranja
+ * quemado». Ahora, sin foto, la portada es el naranja suave (`bg-accent`) con
+ * la letra oscura, la etiqueta en el naranja de leer sobre ese fondo
+ * (`text-accent-foreground`) y el compositor en su tarjeta clara. Sin foto no
+ * se inventa ninguna: un hueco donde iría la imagen se lee como un fallo de
+ * carga.
  */
+
+/** Las clases de cada parte, con foto detrás (cristal y blanco) y sin ella. */
+const CON_FOTO = {
+  fondo:
+    'bg-gradient-to-b from-black/25 via-black/45 to-black/80 supports-backdrop-filter:backdrop-blur-[1.5px]',
+  texto: 'text-white drop-shadow-[0_1px_3px_rgb(0_0_0/0.55)]',
+  etiqueta: 'text-white',
+  secundario: 'text-white/90',
+  borde: 'border-white/15',
+  fila: 'hover:bg-white/10',
+  icono: 'bg-white/15 text-white',
+  etiquetaFila: 'text-white/75',
+  extracto: 'text-white/70',
+  flecha: 'text-white/60',
+};
+
+const SIN_FOTO = {
+  fondo: 'bg-accent',
+  texto: 'text-foreground',
+  etiqueta: 'text-accent-foreground',
+  secundario: 'text-accent-foreground',
+  borde: 'border-primary/15',
+  fila: 'hover:bg-accent-soft-active',
+  icono: 'bg-surface text-primary',
+  etiquetaFila: 'text-accent-foreground',
+  extracto: 'text-muted-foreground',
+  flecha: 'text-accent-foreground',
+};
 export function CabeceraDelDia({
   versiculo,
   devocional,
@@ -79,6 +111,7 @@ export function CabeceraDelDia({
   // La foto sale de donde la haya: del versículo o del devocional, que casi
   // siempre son la misma fila.
   const foto = versiculo?.imagenUrl ?? devocional?.imagenUrl ?? null;
+  const t = foto ? CON_FOTO : SIN_FOTO;
 
   return (
     <section className="relative isolate -mx-4 overflow-hidden sm:mx-0 sm:rounded-2xl">
@@ -99,17 +132,10 @@ export function CabeceraDelDia({
         />
       )}
 
-      <div
-        className={
-          'flex flex-col ' +
-          (foto
-            ? 'bg-gradient-to-b from-black/25 via-black/45 to-black/80 supports-backdrop-filter:backdrop-blur-[1.5px]'
-            : 'bg-support')
-        }
-      >
+      <div className={'flex flex-col ' + t.fondo}>
         {versiculo && (
-          <div className="flex flex-col gap-2.5 px-4 py-5 text-white drop-shadow-[0_1px_3px_rgb(0_0_0/0.55)] sm:px-5 sm:py-6">
-            <span className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-white">
+          <div className={'flex flex-col gap-2.5 px-4 py-5 sm:px-5 sm:py-6 ' + t.texto}>
+            <span className={'flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] ' + t.etiqueta}>
               <Quote className="size-[14px]" strokeWidth={2.2} aria-hidden />
               {versiculo.esDeHoy ? 'Versículo de hoy' : 'Versículo'}
             </span>
@@ -121,7 +147,7 @@ export function CabeceraDelDia({
             </p>
 
             {versiculo.referencia && (
-              <span className="text-[13.5px] font-semibold text-white/90">
+              <span className={'text-[13.5px] font-semibold ' + t.secundario}>
                 {versiculo.referencia}
               </span>
             )}
@@ -139,14 +165,17 @@ export function CabeceraDelDia({
            */
           <Link
             href="/mi/devocional"
-            className="flex items-center gap-3 border-t border-white/15 px-4 py-3.5 text-white no-underline drop-shadow-[0_1px_3px_rgb(0_0_0/0.55)] hover:bg-white/10 hover:no-underline sm:px-5"
+            className={
+              'flex items-center gap-3 border-t px-4 py-3.5 no-underline hover:no-underline sm:px-5 ' +
+              `${t.borde} ${t.texto} ${t.fila}`
+            }
           >
-            <span className="flex size-10 flex-none items-center justify-center rounded-lg bg-white/15 text-white">
+            <span className={'flex size-10 flex-none items-center justify-center rounded-lg ' + t.icono}>
               <BookOpen className="size-[18px]" strokeWidth={1.7} />
             </span>
 
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/75">
+              <span className={'text-[11px] font-semibold uppercase tracking-[0.08em] ' + t.etiquetaFila}>
                 {devocional.esDeHoy ? 'Devocional de hoy' : 'Último devocional'}
               </span>
 
@@ -157,13 +186,13 @@ export function CabeceraDelDia({
               {/* Una línea y se corta. El extracto se recorta además en el
                   servidor: un cuerpo de tres mil caracteres viajaría entero al
                   navegador para enseñar cuarenta. */}
-              <span className="truncate text-[13px] leading-snug text-white/70">
+              <span className={'truncate text-[13px] leading-snug ' + t.extracto}>
                 {devocional.cuerpo}
               </span>
             </span>
 
             <ChevronRight
-              className="size-[18px] flex-none text-white/60"
+              className={'size-[18px] flex-none ' + t.flecha}
               strokeWidth={2}
               aria-hidden
             />
@@ -176,9 +205,7 @@ export function CabeceraDelDia({
            * cerrado. `[&_*]` no hace falta: el propio compositor sabe vestirse
            * para esto — ver la prop `sobreFoto` en `publicador.tsx`.
            */
-          <div className="border-t border-white/15 px-4 py-3.5 sm:px-5">
-            {children}
-          </div>
+          <div className={'border-t px-4 py-3.5 sm:px-5 ' + t.borde}>{children}</div>
         )}
       </div>
     </section>

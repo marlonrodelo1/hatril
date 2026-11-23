@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Recorrido · Te esperamos</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:16px;text-decoration:none;border:1px solid transparent}
+.btn-p:active{background:#92442A}
+.mk path{stroke-dasharray:1;stroke-dashoffset:0;animation:draw 900ms cubic-bezier(.4,0,.2,1) both}
+.mk path:nth-child(2){animation-delay:140ms}.mk path:nth-child(3){animation-delay:280ms}
+.rise{animation:rise 460ms cubic-bezier(.2,.8,.2,1) both}
+.d1{animation-delay:500ms}.d2{animation-delay:620ms}.d3{animation-delay:760ms}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.mk path,.rise{animation:none}}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; display: flex; flex-direction: column; padding: 47px 0 34px">
+  <div style="padding: 10px 16px 0; display: flex; flex-direction: column; gap: 6px">
+    <div role="img" aria-label="Paso 6 de 6" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px">
+      <span style="height: 3px; border-radius: 999px; background: #3D3D3A"></span><span style="height: 3px; border-radius: 999px; background: #3D3D3A"></span><span style="height: 3px; border-radius: 999px; background: #3D3D3A"></span><span style="height: 3px; border-radius: 999px; background: #3D3D3A"></span><span style="height: 3px; border-radius: 999px; background: #3D3D3A"></span><span style="height: 3px; border-radius: 999px; background: #3D3D3A"></span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <span style="font-size: 13px; font-weight: 600; color: #67665F">Conoce Iglesia Betania</span>
+      <a href="Enviada.dc.html" aria-label="Cerrar recorrido" style="width: 44px; height: 44px; margin-right: -10px; display: flex; align-items: center; justify-content: center; color: #141413"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></a>
+    </div>
+  </div>
+
+  <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 28px; gap: 14px">
+    <svg class="mk" width="120" height="120" viewBox="0 0 64 64" fill="none" stroke="#B15435" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path pathLength="1" d="M32 20 C26 16 18 16 12 18 L12 31 C18 29 26 29 32 33 C38 29 46 29 52 31 L52 18 C46 16 38 16 32 20 V33"/>
+      <path pathLength="1" d="M9 36 H55 L49 42 H15 Z"/>
+      <path pathLength="1" d="M32 42 V56 M24 57 H40"/>
+    </svg>
+    <h1 class="rise d1" style="font-size: 30px; line-height: 1.12; font-weight: 800; letter-spacing: -0.025em">Te esperamos el domingo a las 11:00</h1>
+    <p class="rise d2" style="font-size: 16px; line-height: 1.5; color: #67665F">Busca a Daniel y Sara en la puerta. Y en cuanto el pastor te acepte, todo esto será también tuyo.</p>
+  </div>
+
+  <div class="rise d3" style="padding: 0 24px; display: flex; flex-direction: column; gap: 10px">
+    <a href="#" class="btn btn-p" style="background: #B15435; color: #FFFFFF">
+      <svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+      Añadir el culto a mi calendario
+    </a>
+    <a href="Enviada.dc.html" class="btn" style="background: #FFFFFF; color: #141413; border-color: #E0DFDB">Volver a mi solicitud</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

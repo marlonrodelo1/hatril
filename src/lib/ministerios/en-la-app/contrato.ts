@@ -1,5 +1,3 @@
-import type { LucideIcon } from 'lucide-react';
-
 import type { ContextoPermisos } from '@/lib/auth/permisos';
 import type { UserContext } from '@/lib/auth/user-context';
 import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
@@ -157,11 +155,15 @@ export type ModuloEnLaApp = {
   ) => Promise<ResumenDeModulo>;
 };
 
-/** Lo que una tarjeta de la portada necesita para pintarse: nombre e icono. */
+/**
+ * Lo que una tarjeta de la portada necesita para pintarse: el id y el nombre.
+ *
+ * Sin el icono, a propósito: la app recibe la tarjeta en JSON, y un componente
+ * no sobrevive al viaje. El icono se busca por el id (`iconos.ts`).
+ */
 export type PiezaDeLaPortada = {
   id: string;
   nombre: string;
-  Icono: LucideIcon;
 };
 
 /**

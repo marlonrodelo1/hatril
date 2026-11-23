@@ -70,5 +70,63 @@ export function textoNotificacion(
         titulo: `${quien} no puede servir en ${datos.ministerio ?? 'el equipo'}`,
         detalle: datos.fecha ? `Hay que cubrir el ${datos.fecha}.` : null,
       };
+
+    // Sin nombre de quien denuncia, ni aquí ni en la pantalla de revisión: la
+    // campana de un moderador la puede ver cualquiera que mire su móvil.
+    case 'denuncia_en_comunidad':
+      return {
+        titulo:
+          datos.que === 'comentario'
+            ? 'Han denunciado un comentario del muro'
+            : 'Han denunciado una publicación del muro',
+        detalle: datos.extracto ?? null,
+      };
+
+    // Sin nombres de niños: solo cuántas fotos y vídeos, y cuándo.
+    case 'ninos_caducan':
+      return {
+        titulo: `El ${datos.fecha ?? 'mes que viene'} se borran las fotos de ${datos.mes ?? 'un mes'}`,
+        detalle:
+          [datos.cuantos, datos.ministerio ? `de ${datos.ministerio}` : null]
+            .filter(Boolean)
+            .join(' ') + '. Si quieres conservarlas, descárgalas antes desde el drive.',
+      };
+
+    // Los de las familias de Niños. Sin el nombre del niño en el título: el
+    // título sale en la pantalla bloqueada del teléfono.
+    case 'ninos_solicitud':
+      return {
+        titulo: `${quien} pide ver lo de su hijo en ${datos.ministerio ?? 'Niños'}`,
+        detalle: 'Acéptalo solo si has comprobado en persona que es su madre, su padre o su tutor.',
+      };
+
+    case 'ninos_aceptada':
+      return {
+        titulo: `Ya ves lo que hacen en ${datos.ministerio ?? 'el ministerio de Niños'}`,
+        detalle: 'Te han aceptado. Las publicaciones nuevas te llegarán aquí.',
+      };
+
+    case 'ninos_publicacion':
+      return {
+        titulo: `Nueva publicación en ${datos.ministerio ?? 'Niños'}`,
+        detalle: datos.fecha ? `Lo que hicieron el ${datos.fecha}.` : null,
+      };
+
+    case 'ninos_sin_fotos':
+      return {
+        titulo: 'Un niño ya no puede salir en fotos',
+        detalle: datos.nino
+          ? `Revisa las publicaciones del último año en las que salga ${datos.nino}.`
+          : 'Revisa las publicaciones del último año.',
+      };
+
+    case 'contenido_retirado':
+      return {
+        titulo:
+          datos.que === 'comentario'
+            ? 'Han quitado un comentario tuyo del muro'
+            : 'Han quitado una publicación tuya del muro',
+        detalle: datos.extracto ?? null,
+      };
   }
 }

@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { Users, Wallet } from 'lucide-react';
 
+import { Pestanas } from '@/components/ui/pestanas';
 import {
   esPastor,
   puede,
@@ -66,6 +66,9 @@ export function PestanasMinisterio({
     ? modulosActivos(ministerio.modulos).filter((m) => {
         if (m.id === 'seguimiento') return veSeguimiento;
         if (m.id === 'reparto' || m.id === 'grupos') return dentro;
+        // `requireNinos`: la misma puerta que el reparto, y por lo mismo. La RLS
+        // de los niños (`0060`) es por relación, y secretaría no está en ella.
+        if (m.id === 'ninos') return dentro;
         return true;
       })
     : [];
@@ -94,33 +97,23 @@ export function PestanasMinisterio({
 
   if (pestanas.length < 2) return null;
 
+  // Qué pestañas salen se decide aquí, en el servidor, con los permisos; cómo
+  // se pintan (el subrayado que viaja) es de `Pestanas`, en el cliente. El
+  // icono va ya dibujado: un componente no puede cruzar esa frontera.
+  //
+  // Siguen deslizándose en el móvil en vez de partirse en dos filas: con cinco
+  // módulos encendidos, dos filas dejan de leerse como pestañas.
   return (
-    <nav
-      aria-label="Secciones del ministerio"
-      // `overflow-x-auto` y no envolver: con cinco módulos encendidos en un
-      // móvil, las pestañas partidas en dos filas dejan de leerse como una fila
-      // de pestañas. Aquí se desliza, que es lo que la gente espera de esto.
-      className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5"
-    >
-      {pestanas.map((p) => {
-        const esActiva = p.id === activa;
-        return (
-          <Link
-            key={p.id}
-            href={p.href}
-            aria-current={esActiva ? 'page' : undefined}
-            className={
-              'inline-flex flex-none items-center gap-2 rounded-lg border px-3.5 py-2 text-[14px] font-semibold no-underline transition-colors hover:no-underline ' +
-              (esActiva
-                ? 'border-primary bg-accent text-accent-foreground'
-                : 'border-border bg-surface text-muted-foreground hover:bg-surface-alt hover:text-foreground')
-            }
-          >
-            <p.Icono className="size-4" strokeWidth={1.9} aria-hidden />
-            {p.etiqueta}
-          </Link>
-        );
-      })}
-    </nav>
+    <Pestanas
+      etiqueta="Secciones del ministerio"
+      clave="ministerio"
+      activa={activa}
+      items={pestanas.map((p) => ({
+        id: p.id,
+        etiqueta: p.etiqueta,
+        href: p.href,
+        icono: <p.Icono className="size-4" strokeWidth={1.9} aria-hidden />,
+      }))}
+    />
   );
 }

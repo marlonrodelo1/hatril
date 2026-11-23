@@ -21,6 +21,22 @@ const nextConfig: NextConfig = {
     root: __dirname,
   },
 
+  /*
+   * Hasta 21 MB por server action: las cuatro fotos de una publicación del
+   * muro, de 5 MB cada una como mucho (`comunidad/limites.ts`), más el texto.
+   *
+   * El defecto de Next es 1 MB, y nadie lo había subido: una foto normal de
+   * móvil (2-5 MB) fallaba al publicarla con «Body exceeded 1 MB limit» antes de
+   * llegar a la action, sin mensaje en castellano. Se vio el 30-oct al hacer la
+   * foto de perfil, que pasa por el mismo camino. Los límites de verdad, por
+   * foto y por tipo, siguen en el código que las recibe.
+   */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '21mb',
+    },
+  },
+
   images: {
     remotePatterns: [
       // Logos y fotos de las iglesias, servidos desde Supabase Storage.
@@ -43,9 +59,16 @@ const nextConfig: NextConfig = {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin',
           },
+          /*
+           * La ubicación, solo para la propia web (`self`): la piden «iglesias
+           * cerca de mí» y el botón de Ajustes que pone el pin de la iglesia.
+           * Con `geolocation=()` el navegador la negaba siempre, sin preguntar.
+           * Cámara y micrófono siguen cerrados: la foto se elige con el
+           * selector de ficheros, que no los necesita.
+           */
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
+            value: 'camera=(), microphone=(), geolocation=(self)',
           },
           {
             key: 'Strict-Transport-Security',

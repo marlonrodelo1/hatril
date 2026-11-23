@@ -176,3 +176,84 @@ export const accionAuditoriaEnum = pgEnum('accion_auditoria_enum', [
   'baja',
   'lectura_sensible',
 ]);
+
+/**
+ * Lo que puede hacer el super admin desde `/admin`, una por palanca.
+ *
+ * Enum y no texto: el registro se lee para responder «¿quién le cambió la
+ * contraseña a esta cuenta?», y esa pregunta no se puede contestar si la misma
+ * acción está apuntada con tres nombres. Una palanca nueva en `/admin` es un
+ * valor nuevo aquí, con su `alter type … add value`.
+ */
+export const accionAdminEnum = pgEnum('accion_admin_enum', [
+  'ampliar_prueba',
+  'suspender_iglesia',
+  'reactivar_iglesia',
+  'sacar_del_directorio',
+  'poner_contrasena',
+]);
+
+export type AccionAdmin = (typeof accionAdminEnum.enumValues)[number];
+
+/**
+ * Por qué se denuncia algo del muro.
+ *
+ * Cinco y no un campo libre: el pastor tiene que poder ver de un vistazo si son
+ * tres personas diciendo lo mismo o tres cosas distintas, y con texto libre cada
+ * una lo escribe a su manera. Lo que no encaje va en `otro`, con el detalle.
+ */
+export const motivoDenunciaEnum = pgEnum('motivo_denuncia_enum', [
+  'ofensivo',
+  'spam',
+  'sin_permiso',
+  'privado',
+  'otro',
+]);
+
+export type MotivoDenuncia = (typeof motivoDenunciaEnum.enumValues)[number];
+
+/**
+ * En qué punto está una denuncia.
+ *
+ * No hay estado «retirada»: si quien modera borra lo denunciado, la denuncia se
+ * va con ello por la clave ajena. Lo único que queda por decidir de una que
+ * sigue viva es si ya se miró y se dejó estar.
+ */
+export const estadoDenunciaEnum = pgEnum('estado_denuncia_enum', [
+  'pendiente',
+  'descartada',
+]);
+
+/**
+ * Qué es del niño quien pide verlo, en el ministerio de Niños.
+ *
+ * Tres y no texto libre: «tía» o «vecina que lo trae» no pueden pedir el
+ * vínculo. Por debajo de 14 años consiente quien tiene la patria potestad o la
+ * tutela (LOPDGDD art. 7.2), y en Colombia su representante legal (Decreto
+ * 1377 art. 12). Nadie más.
+ */
+export const parentescoNinoEnum = pgEnum('parentesco_nino_enum', [
+  'madre',
+  'padre',
+  'tutor_legal',
+]);
+
+export type ParentescoNino = (typeof parentescoNinoEnum.enumValues)[number];
+
+/**
+ * Los dos permisos de una familia sobre su hijo, cada uno su fila.
+ *
+ * `vinculo` es el que deja ver lo del ministerio y guardar el nombre y el año;
+ * `imagen`, el de salir en fotos y vídeos, aparte y opcional: no darlo no
+ * impide el vínculo (RGPD art. 7.4). No van a `tipo_consentimiento_enum`
+ * porque aquel lo da cada persona sobre sí misma, y este lo da un adulto sobre
+ * un menor (`nino_consentimientos`).
+ */
+export const permisoNinoEnum = pgEnum('permiso_nino_enum', ['vinculo', 'imagen']);
+
+export type PermisoNino = (typeof permisoNinoEnum.enumValues)[number];
+
+/** Lo que hay en el drive del ministerio de Niños. Cada uno, su bucket. */
+export const tipoArchivoNinoEnum = pgEnum('tipo_archivo_nino_enum', ['foto', 'video']);
+
+export type TipoArchivoNino = (typeof tipoArchivoNinoEnum.enumValues)[number];

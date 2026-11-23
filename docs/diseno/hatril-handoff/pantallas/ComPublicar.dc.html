@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Comunidad · Publicar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:16px;text-decoration:none;border:0;cursor:pointer}
+.thumb{position:relative;width:96px;height:96px;border-radius:8px;overflow:hidden;flex:none;border:1px solid #E0DFDB}
+.thumb svg.f{display:block;width:100%;height:100%}
+.x{position:absolute;top:4px;right:4px;width:28px;height:28px;border-radius:999px;border:0;background:rgba(20,20,19,.72);color:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.sheet{animation:up 320ms cubic-bezier(.2,.8,.2,1) both}
+.spin{animation:spin 900ms linear infinite}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.sheet{animation:none}.spin{animation:none}}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413">
+  <div aria-hidden="true" style="padding: 53px 16px 0; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; gap: 10px"><span style="width: 36px; height: 36px; border-radius: 8px; background: #F5E7DF"></span><span style="font-size: 18px; font-weight: 800">Comunidad</span></div>
+    <div style="height: 300px; border-radius: 12px; background: #8F7E6B"></div>
+    <div style="height: 120px; border-radius: 12px; background: #FFFFFF"></div>
+  </div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(20,20,19,0.42)"></div>
+
+  <section class="sheet" role="dialog" aria-label="Nueva publicación" style="position: absolute; left: 0; right: 0; bottom: 0; height: 690px; background: #FFFFFF; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; padding-bottom: 34px">
+    <div style="display: flex; justify-content: center; padding: 8px 0 0"><span style="width: 36px; height: 4px; border-radius: 999px; background: #E0DFDB"></span></div>
+    <div style="display: flex; align-items: center; padding: 4px 8px 4px 8px; border-bottom: 1px solid #E0DFDB">
+      <a href="ComMuro.dc.html" style="height: 44px; padding: 0 10px; display: flex; align-items: center; font-size: 15px; font-weight: 600; color: #67665F; text-decoration: none">Cancelar</a>
+      <h2 style="flex: 1; text-align: center; font-size: 16px; font-weight: 700">Publicar en Betania</h2>
+      <span style="width: 80px"></span>
+    </div>
+
+    <div style="display: flex; gap: 10px; align-items: center; padding: 14px 16px 0">
+      <span style="width: 36px; height: 36px; border-radius: 999px; background: #E3E8EC; color: #2F4A5C; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center">LH</span>
+      <span style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 700">Lucía Hernández</span><span style="font-size: 12px; color: #67665F; display: flex; align-items: center; gap: 4px"><svg class="ic" width="12" height="12" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Solo la gente de Iglesia Betania</span></span>
+    </div>
+
+    <label for="cuerpo" style="position: absolute; left: -9999px">Qué quieres compartir</label>
+    <textarea id="cuerpo" placeholder="¿Qué quieres compartir?" style="{{ areaStyle }}">¡Qué bonito fue el bautismo del domingo! Gracias, Betania, por recibir así a mi hermana.</textarea>
+
+    <sc-if value="{{ conFotos }}" hint-placeholder-val="{{ true }}">
+      <div style="padding: 0 16px; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <span style="font-size: 13px; font-weight: 600; color: #67665F">Fotos</span>
+          <span style="font-size: 13px; font-weight: 700; color: #3D3D3A">{{ contador }}</span>
+        </div>
+        <div style="display: flex; gap: 8px">
+          <div class="thumb">
+            <svg class="f" viewBox="0 0 96 96" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto 1"><rect width="96" height="96" fill="#C9D3D2"/><rect y="50" width="96" height="46" fill="#7F949A"/><circle cx="70" cy="24" r="10" fill="#EFE7DA"/></svg>
+            <sc-if value="{{ editable }}" hint-placeholder-val="{{ true }}"><button class="x" aria-label="Quitar foto 1"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></sc-if>
+          </div>
+          <div class="thumb">
+            <svg class="f" viewBox="0 0 96 96" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto 2"><rect width="96" height="96" fill="#D6CCBC"/><rect x="10" y="20" width="36" height="50" fill="#EDE5D7"/><rect y="70" width="96" height="26" fill="#A8957C"/></svg>
+            <sc-if value="{{ editable }}" hint-placeholder-val="{{ true }}"><button class="x" aria-label="Quitar foto 2"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></sc-if>
+          </div>
+          <sc-if value="{{ esError }}" hint-placeholder-val="{{ false }}">
+            <div class="thumb" style="border: 2px solid #B53333">
+              <svg class="f" viewBox="0 0 96 96" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto 3, demasiado grande"><rect width="96" height="96" fill="#B8C0A2"/><circle cx="30" cy="40" r="18" fill="#7E8C67"/><rect y="66" width="96" height="30" fill="#A3AC88"/></svg>
+              <span aria-hidden="true" style="position: absolute; inset: 0; background: rgba(250,249,245,0.55)"></span>
+              <span aria-hidden="true" style="position: absolute; left: 6px; bottom: 6px; width: 26px; height: 26px; border-radius: 999px; background: #B53333; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" stroke-width="2.2"><line x1="12" x2="12" y1="7" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg></span>
+              <button class="x" aria-label="Quitar foto 3"><svg class="ic" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ puedeAnadir }}" hint-placeholder-val="{{ true }}">
+            <button aria-label="Añadir foto" style="width: 96px; height: 96px; border-radius: 8px; border: 1px dashed #67665F; background: #F5F4ED; color: #3D3D3A; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; flex: none">
+              <svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Añadir
+            </button>
+          </sc-if>
+        </div>
+        <sc-if value="{{ esError }}" hint-placeholder-val="{{ false }}">
+          <p role="alert" style="display: flex; gap: 8px; align-items: flex-start; font-size: 14px; line-height: 1.45; color: #B53333; padding-top: 4px">
+            <svg class="ic" width="18" height="18" viewBox="0 0 24 24" style="margin-top: 1px"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            <span>La foto 3 pesa 7,2 MB y el máximo son 5 MB. Quítala o elige otra más ligera.</span>
+          </p>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <div style="flex: 1"></div>
+    <div style="padding: 12px 16px 0; border-top: 1px solid #E0DFDB; display: flex; align-items: center; gap: 8px">
+      <sc-if value="{{ conFotos }}" hint-placeholder-val="{{ true }}">
+        <button aria-label="Añadir fotos" style="width: 48px; height: 48px; border-radius: 8px; border: 1px solid #E0DFDB; background: #FFFFFF; color: #3D3D3A; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg class="ic" width="22" height="22" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+        </button>
+      </sc-if>
+      <span style="flex: 1"></span>
+      <sc-if value="{{ esEnviando }}" hint-placeholder-val="{{ false }}">
+        <button class="btn" disabled aria-busy="true" style="padding: 0 22px; background: #92442A; color: #FFFFFF; opacity: 0.9">
+          <svg class="ic spin" width="18" height="18" viewBox="0 0 24 24" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Publicando…
+        </button>
+      </sc-if>
+      <sc-if value="{{ esNormal }}" hint-placeholder-val="{{ true }}">
+        <a href="ComMuro.dc.html" class="btn" style="padding: 0 28px; background: #B15435; color: #FFFFFF">Publicar</a>
+      </sc-if>
+      <sc-if value="{{ esError }}" hint-placeholder-val="{{ false }}">
+        <button class="btn" disabled aria-disabled="true" style="padding: 0 28px; background: #B15435; color: #FFFFFF; opacity: 0.45; cursor: not-allowed">Publicar</button>
+      </sc-if>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"estado":{"editor":"enum","options":["normal","enviando","error"],"default":"normal"},"fotosApagadas":{"editor":"boolean","default":false},"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const e = this.props.estado ?? 'normal';
+    const sinFotos = this.props.fotosApagadas ?? false;
+    const enviando = e === 'enviando';
+    return {
+      esNormal: e === 'normal',
+      esEnviando: enviando,
+      esError: e === 'error' && !sinFotos,
+      conFotos: !sinFotos,
+      editable: !enviando,
+      puedeAnadir: e === 'normal',
+      contador: e === 'error' ? '3 de 4' : '2 de 4',
+      areaStyle: {
+        margin: '12px 16px 16px', minHeight: sinFotos ? '320px' : '150px', padding: '0', border: '0', resize: 'none',
+        fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '19px', lineHeight: '1.45', color: '#141413',
+        background: 'transparent', outline: 'none', opacity: enviando ? 0.55 : 1
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

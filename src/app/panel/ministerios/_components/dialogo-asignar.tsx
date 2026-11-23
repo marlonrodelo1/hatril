@@ -7,6 +7,7 @@ import { Search, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { iniciales } from '@/lib/format/iniciales';
 import { ESTADOS, type EstadoMiembro } from '@/lib/miembros/estados';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 /**
  * Diálogo para sumar personas a un ministerio.
@@ -75,7 +76,7 @@ export function DialogoAsignar({
         href={cerrar}
         scroll={false}
         aria-label="Cerrar"
-        className="fixed inset-0 z-40 bg-black/30"
+        className="fixed inset-0 z-40 bg-velo"
       />
 
       <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10">
@@ -180,13 +181,11 @@ export function DialogoAsignar({
                   ? 'Nadie marcado todavía'
                   : `${n} ${n === 1 ? 'persona marcada' : 'personas marcadas'}`}
               </span>
-              <Button
+              <BotonEnlace href={cerrar} scroll={false}
                 variant="outline"
-                size="sm"
-                render={<Link href={cerrar} scroll={false} />}
-              >
+                size="sm">
                 Cancelar
-              </Button>
+              </BotonEnlace>
               <Button type="submit" size="sm" disabled={n === 0}>
                 {n === 0
                   ? (textos?.sinMarcar ?? 'Sumar al equipo')

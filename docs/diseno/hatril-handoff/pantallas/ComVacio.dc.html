@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Comunidad · Muro vacío</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ib{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:#3D3D3A;border-radius:999px;position:relative;text-decoration:none}
+.av{border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+.chip{display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-radius:999px;border:1px solid #E0DFDB;background:#FFFFFF;font-size:14px;font-weight:600;color:#141413;text-decoration:none}
+.bar{position:absolute;left:0;right:0;bottom:0;padding:6px 8px 30px;background:rgba(250,249,245,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid #E0DFDB;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:12px;font-size:11px;font-weight:600;color:#67665F;text-decoration:none}
+.tab.on{background:#F5E7DF;color:#92442A}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; padding-top: 47px; display: flex; flex-direction: column">
+  <header style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px">
+    <span style="width: 36px; height: 36px; border-radius: 8px; background: #F5E7DF; color: #92442A; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center">IB</span>
+    <div style="flex: 1; display: flex; flex-direction: column">
+      <h1 style="font-size: 18px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2">Comunidad</h1>
+      <span style="font-size: 12px; color: #67665F">Iglesia Betania</span>
+    </div>
+    <span class="ib" role="img" aria-label="Avisos"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+    <span class="ib" role="img" aria-label="Tu cuenta"><span class="av" style="width: 32px; height: 32px; background: #E3E8EC; color: #2F4A5C; font-size: 12px">LH</span></span>
+  </header>
+
+  <section aria-label="Portada del día" style="margin: 8px 12px 0; border: 1px solid #E0DFDB; border-radius: 12px; overflow: hidden; background: #FFFFFF">
+    <div style="position: relative; height: 200px">
+      <svg viewBox="0 0 351 200" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Foto del amanecer sobre el Teide" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block"><rect width="351" height="200" fill="#D9C4A8"/><rect width="351" height="80" fill="#E8D6BD"/><circle cx="250" cy="70" r="24" fill="#F4E6CF"/><path d="M0 120 L70 100 L120 108 L200 40 L238 64 L262 58 L351 110 V200 H0 Z" fill="#8F7E6B"/><path d="M0 150 L80 136 L150 146 L240 132 L351 142 V200 H0 Z" fill="#6F6253"/></svg>
+      <div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 70%; background: linear-gradient(180deg, rgba(20,20,19,0) 0%, rgba(20,20,19,0.75) 100%)"></div>
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 16px; color: #FFFFFF; text-shadow: 0 1px 12px rgba(0,0,0,0.35)">
+        <p style="font-size: 17px; line-height: 1.32; font-weight: 700">«Vengan a mí todos los que están cansados…»</p>
+        <span style="font-size: 12px; font-weight: 600; opacity: 0.92">Mateo 11:28</span>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 12px 8px 12px 14px">
+      <span class="av" style="width: 36px; height: 36px; background: #E3E8EC; color: #2F4A5C; font-size: 12px">LH</span>
+      <a href="ComPublicar.dc.html" style="flex: 1; height: 44px; border-radius: 999px; background: #F5F4ED; border: 1px solid #E0DFDB; display: flex; align-items: center; padding: 0 16px; font-size: 15px; color: #67665F; text-decoration: none">¿Qué quieres compartir?</a>
+      <a href="ComPublicar.dc.html" class="ib" aria-label="Publicar una foto"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></a>
+    </div>
+  </section>
+
+  <div style="padding: 36px 28px 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px">
+    <span style="width: 56px; height: 56px; border-radius: 999px; background: #F5E7DF; color: #B15435; display: flex; align-items: center; justify-content: center">
+      <svg class="ic" width="26" height="26" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    </span>
+    <h2 style="font-size: 19px; line-height: 1.3; font-weight: 800; letter-spacing: -0.015em; padding-top: 4px">Todavía no hay nada por aquí</h2>
+    <p style="font-size: 15px; line-height: 1.5; color: #67665F">Una foto del domingo o una petición de oración son buenas maneras de empezar.</p>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding-top: 10px">
+      <a href="ComPublicar.dc.html" class="chip"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>Una foto del domingo</a>
+      <a href="ComPublicar.dc.html" class="chip"><svg class="ic" width="16" height="16" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>Una petición de oración</a>
+    </div>
+  </div>
+
+  <nav class="bar" aria-label="Principal">
+    <a href="#" class="tab on" aria-current="page"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Comunidad</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Devocional</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Agenda</a>
+    <a href="#" class="tab"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/></svg>Biblia</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

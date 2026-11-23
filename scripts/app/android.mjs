@@ -14,14 +14,20 @@
  * -------------------------------------------------------------
  * Con una dirección de *.traefik.me —la temporal de Dokploy— los ficheros
  * salen con «-PRUEBA» en el nombre. Ese certificado no lo aceptan ni Android
- * ni iOS, así que la app abriría directamente la pantalla de sin conexión:
- * sirve para ver el icono, el arranque y que el binario se firma, no para
- * subirlo. Con el dominio definitivo sale sin la marca.
+ * ni iOS, así que la app no podría pedir sus datos a la API: sirve para ver
+ * el icono, el arranque y que el binario se firma, no para subirlo. Con el
+ * dominio definitivo sale sin la marca.
+ *
+ * DESDE EL 20-NOV, LA APP VA DENTRO
+ * ---------------------------------
+ * `CAP_SERVER_URL` ya no es la web que carga el WebView: es la API a la que la
+ * app empaquetada (`movil/`) pide los datos. El script compila la app contra
+ * esa dirección, sincroniza y comprueba que la copia lleva la buena
+ * (`compilar-movil.mjs`).
  *
  * ANTES DE COMPILAR SE NIEGA SI
  * -----------------------------
- * - falta CAP_SERVER_URL o no es https (lo comprueba también
- *   capacitor.config.ts, que es quien manda);
+ * - falta CAP_SERVER_URL o no es https;
  * - el `HatrilApp/x.y.z` de capacitor.config.ts no coincide con el
  *   versionName de android/app/build.gradle: la web distingue versiones por
  *   ahí, y una que mienta es peor que ninguna;
@@ -35,6 +41,8 @@ import { spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import { join, resolve } from 'node:path';
+
+import { compilarMovil, comprobarCopia } from './compilar-movil.mjs';
 
 const raiz = process.cwd();
 const android = join(raiz, 'android');
@@ -131,7 +139,11 @@ const nombre = `Hatril-${versionName}-${versionCode}${esPrueba ? '-PRUEBA' : ''}
 console.log(`\nHatril ${versionName} (${versionCode}) → ${servidor.origin}${esPrueba ? '   [PRUEBA]' : ''}\n`);
 
 const inicio = Date.now();
+// La app empaquetada primero, contra la dirección pedida, y después el sync,
+// que la copia dentro del proyecto. Se comprueba que la copia es esa.
+compilarMovil(raiz, servidor);
 lanzar('npx', ['cap', 'sync', 'android'], { env: entorno });
+comprobarCopia(join(android, 'app', 'src', 'main', 'assets', 'public'), servidor);
 // Con la ruta entera: hay entornos de Windows (NoDefaultCurrentDirectoryInExePath)
 // en los que cmd no busca en la carpeta actual.
 const gradlew = join(android, windows ? 'gradlew.bat' : 'gradlew');

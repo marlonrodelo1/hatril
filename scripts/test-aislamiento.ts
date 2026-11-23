@@ -20,6 +20,15 @@
  * Se ejecuta contra la base que apunte DATABASE_URL. En CI, contra una rama de
  * Supabase; en local, contra la de desarrollo. Nunca contra producción con
  * datos reales: no los tocaría, pero no hay razón para arriesgarse.
+ *
+ * LA EXCEPCIÓN: LO QUE ENTRA POR `withUser()`
+ * -------------------------------------------
+ * Dos comprobaciones de la segunda fase —el recorte del reparto por equipo y
+ * el arqueo a dos personas— necesitan datos que otra conexión pueda ver, y una
+ * transacción que se revierte no los deja ver. Hasta el 20-nov usaban la demo
+ * fija de Betania; desde que se borró, montan una iglesia de usar y tirar con
+ * `scripts/pruebas/demo.mjs`, sin publicar y sin cuentas en auth, y la borran
+ * al terminar (también si fallan). Ahí sí se escribe y se borra.
  */
 
 import postgres from 'postgres';
@@ -27,8 +36,9 @@ import postgres from 'postgres';
 // La aplicación de verdad. Ver `comprobarWithUser` más abajo.
 import { sql as dsql } from 'drizzle-orm';
 import { withUser } from '../src/lib/db/with-tenant';
-// Solo para buscar las cuentas de la demo; ver `comprobarRepartoConLaDemo`.
+// Solo para contar el padrón de la iglesia de prueba; ver `comprobarRepartoConLaDemo`.
 import { dbAdmin } from '../src/lib/db/client';
+import { conDemo, type montarDemo } from './pruebas/demo.mjs';
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -565,6 +575,138 @@ begin
     r := r || E'  OK   Sion no da me gusta a un comentario de Betania\\n';
   end;
 
+  -- --- DENUNCIAS Y BLOQUEOS (migracion 0053) ---
+  --
+  -- Quien denuncia solo ve sus denuncias; quien modera, las de su iglesia; el
+  -- autor de lo denunciado, ninguna. Un bloqueo solo lo ve quien lo hizo.
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_C), true);
+  execute 'set local role hatril_app';
+
+  insert into public.denuncias_comunidad
+    (iglesia_id, denunciante_miembro_id, publicacion_id, motivo)
+  values (IGL_A, MIE_A2, PUB_A, 'spam');
+  get diagnostics n = row_count;
+  r := r || format(E'  %s un miembro SI puede denunciar (%s fila)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.denuncias_comunidad
+      (iglesia_id, denunciante_miembro_id, publicacion_id, motivo)
+    values (IGL_A, MIE_A2, PUB_A, 'otro');
+    r := r || E'  FALLO la misma persona denuncia dos veces lo mismo\\n';
+  exception when unique_violation then
+    r := r || E'  OK   la misma persona no denuncia dos veces lo mismo\\n';
+  end;
+
+  begin
+    insert into public.denuncias_comunidad
+      (iglesia_id, denunciante_miembro_id, publicacion_id, motivo)
+    values (IGL_A, MIE_A1, PUB_A, 'spam');
+    r := r || E'  FALLO se denuncia en nombre de otra persona\\n';
+  exception when others then
+    r := r || E'  OK   no se denuncia en nombre de otra persona\\n';
+  end;
+
+  begin
+    insert into public.denuncias_comunidad
+      (iglesia_id, denunciante_miembro_id, publicacion_id, motivo, estado)
+    values (IGL_A, MIE_A2, PUB_A, 'ofensivo', 'descartada');
+    r := r || E'  FALLO una denuncia nace ya descartada\\n';
+  exception when others then
+    r := r || E'  OK   una denuncia no nace descartada\\n';
+  end;
+
+  begin
+    insert into public.denuncias_comunidad
+      (iglesia_id, denunciante_miembro_id, publicacion_id, motivo)
+    values (IGL_B, MIE_A2, PUB_A, 'spam');
+    r := r || E'  FALLO una denuncia cruza dos iglesias\\n';
+  exception when others then
+    r := r || format(E'  %s HT136 o la RLS paran la denuncia cruzada (%s)\\n',
+                     case when sqlerrm like 'HT136%' or sqlerrm like '%row-level%'
+                          then 'OK  ' else 'FALLO' end,
+                     left(sqlerrm, 30));
+  end;
+
+  update public.denuncias_comunidad set estado = 'descartada';
+  get diagnostics n = row_count;
+  r := r || format(E'  %s quien no modera no cierra denuncias (%s filas)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  insert into public.bloqueos_comunidad
+    (iglesia_id, bloqueador_miembro_id, bloqueado_miembro_id)
+  values (IGL_A, MIE_A2, MIE_A1);
+  get diagnostics n = row_count;
+  r := r || format(E'  %s un miembro SI puede bloquear (%s fila)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.bloqueos_comunidad
+      (iglesia_id, bloqueador_miembro_id, bloqueado_miembro_id)
+    values (IGL_A, MIE_A2, MIE_B1);
+    r := r || E'  FALLO se bloquea a alguien de otra iglesia\\n';
+  exception when others then
+    r := r || format(E'  %s HT137 para el bloqueo a otra iglesia (%s)\\n',
+                     case when sqlerrm like 'HT137%' then 'OK  ' else 'FALLO' end,
+                     left(sqlerrm, 30));
+  end;
+
+  begin
+    insert into public.bloqueos_comunidad
+      (iglesia_id, bloqueador_miembro_id, bloqueado_miembro_id)
+    values (IGL_A, MIE_A1, MIE_A2);
+    r := r || E'  FALLO se bloquea en nombre de otra persona\\n';
+  exception when others then
+    r := r || E'  OK   no se bloquea en nombre de otra persona\\n';
+  end;
+
+  -- El pastor modera: ve la denuncia y la cierra, pero no la reescribe. Y el
+  -- bloqueo de otro no lo ve.
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.denuncias_comunidad;
+  r := r || format(E'  %s el pastor ve las denuncias de su iglesia (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  update public.denuncias_comunidad
+     set estado = 'descartada', revisada_at = now(), revisada_por_auth_user_id = USR_A;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s el pastor SI cierra una denuncia (%s fila)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    update public.denuncias_comunidad set motivo = 'otro';
+    r := r || E'  FALLO quien modera reescribe el motivo de una denuncia\\n';
+  exception when insufficient_privilege then
+    r := r || E'  OK   quien modera no reescribe el motivo de una denuncia\\n';
+  end;
+
+  select count(*) into n from public.bloqueos_comunidad;
+  r := r || format(E'  %s el pastor no ve los bloqueos de otros (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  -- Y Sion, nada de nada.
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.denuncias_comunidad;
+  r := r || format(E'  %s Sion no ve las denuncias de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    select count(*) into n from public.bajas_cuenta;
+    r := r || format(E'  FALLO hatril_app lee las bajas de cuenta (%s)\\n', n);
+  exception when others then
+    r := r || E'  OK   hatril_app no llega a las bajas de cuenta\\n';
+  end;
+
   -- El pastor modera: borra lo que no es suyo dentro de SU iglesia.
   execute 'reset role';
   perform set_config('request.jwt.claims',
@@ -654,6 +796,20 @@ begin
     r := r || format(E'  FALLO anon lee el muro de la comunidad (%s)\\n', n);
   exception when others then
     r := r || E'  OK   anon no llega al muro de la comunidad\\n';
+  end;
+
+  begin
+    select count(*) into n from public.denuncias_comunidad;
+    r := r || format(E'  FALLO anon lee las denuncias (%s)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a las denuncias\\n';
+  end;
+
+  begin
+    select count(*) into n from public.bloqueos_comunidad;
+    r := r || format(E'  FALLO anon lee los bloqueos (%s)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a los bloqueos\\n';
   end;
 
   begin
@@ -3207,6 +3363,102 @@ begin
   r := r || format(E'  %s y las de relacion, abiertas a hatril_app (%s)\\n',
                    case when n = 1 then 'OK  ' else 'FALLO' end, n);
 
+  -- -------------------------------------------------------------------------
+  -- Diezmos y ofrendas (0056): quien da es dato protegido. El pastor ve los
+  -- de su iglesia, cada cual los suyos, un miembro raso ninguno ajeno, Sion
+  -- nada de Betania, y nadie escribe con withUser.
+  -- -------------------------------------------------------------------------
+  execute 'reset role';
+  declare
+    DON_V uuid;
+    DON_X uuid;
+  begin
+    insert into public.donativos (iglesia_id, periodicidad, estado, total, moneda,
+                                  donante_nombre, donante_email, donante_auth_user_id, fecha)
+    values (IGL_A, 'una', 'pagado', 50, 'EUR', 'Test V', 'v@test.invalid', USR_V, current_date)
+    returning id into DON_V;
+    insert into public.donativos (iglesia_id, periodicidad, estado, total, moneda,
+                                  donante_nombre, donante_email, fecha)
+    values (IGL_A, 'una', 'pagado', 20, 'EUR', 'Sin cuenta', 'x@test.invalid', current_date)
+    returning id into DON_X;
+    insert into public.donativo_lineas (donativo_id, iglesia_id, tipo_ingreso, fondo_id, importe)
+    values (DON_V, IGL_A, 'diezmo', FON_A, 50), (DON_X, IGL_A, 'ofrenda', FON_A, 20);
+
+    begin
+      insert into public.donativo_lineas (donativo_id, iglesia_id, tipo_ingreso, fondo_id, importe)
+      values (DON_V, IGL_A, 'diezmo', FON_B, 1);
+      r := r || E'  FALLO una línea de donativo de Betania acepta un fondo de Sion\\n';
+    exception when check_violation then
+      r := r || E'  OK   HT140: una línea de donativo de Betania no acepta un fondo de Sion\\n';
+    end;
+
+    -- El pastor de Betania: los dos.
+    perform set_config('request.jwt.claims',
+      format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+    execute 'set local role hatril_app';
+    select count(*) into n from public.donativos where iglesia_id = IGL_A;
+    r := r || format(E'  %s el pastor ve los donativos de su iglesia (%s de 2)\\n',
+                     case when n = 2 then 'OK  ' else 'FALLO' end, n);
+    begin
+      insert into public.donativos (iglesia_id, periodicidad, total, moneda, donante_nombre, donante_email)
+      values (IGL_A, 'una', 1, 'EUR', 'Fabricado', 'f@test.invalid');
+      r := r || E'  FALLO hatril_app puede escribir un donativo\\n';
+    exception when insufficient_privilege then
+      r := r || E'  OK   hatril_app no puede escribir donativos\\n';
+    end;
+    execute 'reset role';
+
+    -- Quien dio: solo el suyo, con su línea.
+    perform set_config('request.jwt.claims',
+      format('{"sub":"%s","role":"authenticated"}', USR_V), true);
+    execute 'set local role hatril_app';
+    select count(*) into n from public.donativos;
+    r := r || format(E'  %s quien dio ve solo su donativo (%s de 1)\\n',
+                     case when n = 1 then 'OK  ' else 'FALLO' end, n);
+    select count(*) into n from public.donativo_lineas;
+    r := r || format(E'  %s quien dio ve solo sus líneas (%s de 1)\\n',
+                     case when n = 1 then 'OK  ' else 'FALLO' end, n);
+    execute 'reset role';
+
+    -- Un miembro raso de la misma iglesia: nada.
+    perform set_config('request.jwt.claims',
+      format('{"sub":"%s","role":"authenticated"}', USR_L), true);
+    execute 'set local role hatril_app';
+    select count(*) into n from public.donativos;
+    r := r || format(E'  %s un miembro raso no ve los donativos de su iglesia (%s)\\n',
+                     case when n = 0 then 'OK  ' else 'FALLO' end, n);
+    select count(*) into n from public.donativo_lineas;
+    r := r || format(E'  %s un miembro raso no ve sus líneas (%s)\\n',
+                     case when n = 0 then 'OK  ' else 'FALLO' end, n);
+    execute 'reset role';
+
+    -- Sion: nada de Betania.
+    perform set_config('request.jwt.claims',
+      format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+    execute 'set local role hatril_app';
+    select count(*) into n from public.donativos where iglesia_id = IGL_A;
+    r := r || format(E'  %s Sion no ve los donativos de Betania (%s)\\n',
+                     case when n = 0 then 'OK  ' else 'FALLO' end, n);
+    execute 'reset role';
+  end;
+
+  select count(*) into n
+    from (values ('anon'), ('authenticated'), ('service_role')) as v(rol),
+         (values ('public.ve_donantes(uuid)'),
+                 ('public.validar_iglesia_donativo_linea()'),
+                 ('public.validar_iglesia_donativo()')) as f(fn)
+   where has_function_privilege(v.rol, f.fn, 'EXECUTE');
+  r := r || format(E'  %s las funciones de los donativos, cerradas a anon, authenticated y service_role (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n
+    from (values ('anon'), ('authenticated'), ('service_role')) as v(rol),
+         (values ('public.cuentas_stripe'), ('public.donativos'),
+                 ('public.donativo_lineas'), ('public.donativos_mensuales')) as t(tabla)
+   where has_table_privilege(v.rol, t.tabla, 'SELECT');
+  r := r || format(E'  %s las tablas de los donativos, cerradas a anon, authenticated y service_role (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
   -- Abortar a proposito: revierte los datos de prueba y devuelve el informe.
   raise exception '%', r;
 end $$;
@@ -3361,12 +3613,21 @@ async function comprobarWithUser(): Promise<string[]> {
     await withUser(USR_A, (tx) => tx.execute(`select 1 from solicitud_invitaciones limit 1`));
     lineas.push('  OK   withUser() puede consultar los grupos, su gente, sus semanas y la guia');
 
+    // Diezmos y ofrendas (0055 y 0056): las cuatro tablas, y `en_donativos`,
+    // que el panel enciende con withUser.
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from cuentas_stripe limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from donativos limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from donativo_lineas limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from donativos_mensuales limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select en_donativos from fondos limit 1`));
+    lineas.push('  OK   withUser() puede consultar los donativos y los fondos que se ofrecen');
+
     // LA FUGA, CAZADA POR LA FUNCIÓN QUE USA LA APLICACIÓN.
     //
     // `USR_A` aquí no es el de la fase de arriba: aquella transacción se revirtió
     // entera, así que este uuid no pertenece a ninguna iglesia. La cuenta correcta
     // es 0. Con `ministerios_select_publico` concedida a `hatril_app` devolvía los
-    // ministerios de toda iglesia publicada — y `seed-demo` publica Betania.
+    // ministerios de toda iglesia publicada (entonces Betania, hoy Cuerpo de Cristo).
     //
     // Caveat honesto: contra una base sin ninguna iglesia publicada esta línea
     // pasa en verde sin probar nada. La autoritativa es la de la fase SQL, que se
@@ -3389,11 +3650,24 @@ async function comprobarWithUser(): Promise<string[]> {
     lineas.push(`  FALLO withUser(): ${(e.message ?? String(err)).slice(0, 90)}`);
   }
 
-  return lineas
-    .concat(await comprobarRepartoConLaDemo())
-    .concat(await comprobarArqueoConLaDemo())
-    .concat(await comprobarCelulasConLaDemo());
+  // Lo que solo se puede probar con datos que `withUser()` vea desde su propia
+  // conexión: una iglesia de usar y tirar, montada y borrada aquí mismo.
+  try {
+    const conLaDemo = await conDemo({ cuentas: false, publicada: false }, async (demo) => [
+      ...(await comprobarRepartoConLaDemo(demo)),
+      ...(await comprobarArqueoConLaDemo(demo)),
+      ...(await comprobarNinosConLaDemo(demo)),
+      ...(await comprobarCelulasConLaDemo(demo)),
+    ]);
+    return lineas.concat(conLaDemo);
+  } catch (err) {
+    const e = err as { message?: string };
+    lineas.push(`  FALLO montar o borrar la iglesia de prueba: ${(e.message ?? String(err)).slice(0, 120)}`);
+    return lineas;
+  }
 }
+
+type Demo = Awaited<ReturnType<typeof montarDemo>>;
 
 /**
  * El arqueo a dos personas, por `withUser()` y con cuentas de verdad.
@@ -3402,14 +3676,11 @@ async function comprobarWithUser(): Promise<string[]> {
  * `withUser`. La fase SQL los pone a mano; si `withUser` dejara de ponerlos
  * —o los pusiera con otra forma—, quien confirma dejaría de ser «quien tiene la
  * sesión» y el control pasaría a fallar abierto o cerrado sin que la fase SQL
- * lo notara. Así que aquí se cuenta con `pastor@`, se intenta confirmar con la
- * misma sesión, y se confirma con la de `secretaria@`, todo en una transacción
- * que se revierte al final: no queda nada en la demo.
- *
- * Caveat honesto, como los de arriba: sin la demo o sin un fondo y una caja en
- * Betania, lo dice en vez de pasar en verde.
+ * lo notara. Así que aquí se cuenta con el pastor, se intenta confirmar con la
+ * misma sesión, y se confirma con la de la secretaria, todo en una transacción
+ * que se revierte al final: el arqueo no llega ni a la iglesia de prueba.
  */
-async function comprobarArqueoConLaDemo(): Promise<string[]> {
+async function comprobarArqueoConLaDemo(demo: Demo): Promise<string[]> {
   const lineas: string[] = [];
 
   type Fila = Record<string, string | null>;
@@ -3418,33 +3689,15 @@ async function comprobarArqueoConLaDemo(): Promise<string[]> {
   const REVERTIR = 'revertir-arqueo-de-prueba';
 
   try {
-    const demo = primera(
-      await dbAdmin.execute(dsql`
-        select
-          (select u.id::text from auth.users u where u.email = 'pastor@hatril.test')     as pastor,
-          (select u.id::text from auth.users u where u.email = 'secretaria@hatril.test') as secretaria,
-          (select iu.miembro_id::text from public.iglesia_usuarios iu
-             join auth.users u on u.id = iu.auth_user_id
-            where u.email = 'pastor@hatril.test')                                        as ficha_pastor,
-          (select iu.miembro_id::text from public.iglesia_usuarios iu
-             join auth.users u on u.id = iu.auth_user_id
-            where u.email = 'secretaria@hatril.test')                                    as ficha_secretaria,
-          (select i.id::text from public.iglesias i where i.slug = 'betania')            as iglesia,
-          (select f.id::text from public.fondos f join public.iglesias i on i.id = f.iglesia_id
-            where i.slug = 'betania' and f.es_general)                                   as fondo,
-          (select c.id::text from public.cajas c join public.iglesias i on i.id = c.iglesia_id
-            where i.slug = 'betania' and c.activo order by c.created_at limit 1)         as caja
-      `),
-    );
-
-    if (
-      !demo?.pastor || !demo.secretaria || !demo.ficha_pastor ||
-      !demo.ficha_secretaria || !demo.iglesia || !demo.fondo || !demo.caja
-    ) {
-      lineas.push('  --   sin la demo de Betania con su caja: el arqueo solo lo prueba la fase SQL');
-      return lineas;
-    }
-    const d = demo as Record<string, string>;
+    const d = {
+      pastor: demo.usuarios.pastor,
+      secretaria: demo.usuarios.secretaria,
+      ficha_pastor: demo.fichas.pastor,
+      ficha_secretaria: demo.fichas.secretaria,
+      iglesia: demo.betel.id,
+      fondo: demo.ids.fondoGeneral,
+      caja: demo.ids.caja,
+    };
 
     let autoconfirmar = '(no se intento)';
     let ingresos = -1;
@@ -3494,15 +3747,15 @@ async function comprobarArqueoConLaDemo(): Promise<string[]> {
     });
 
     lineas.push(
-      `  ${autoconfirmar.includes('HT130') ? 'OK  ' : 'FALLO'} withUser() de pastor@ no confirma el arqueo que conto (${autoconfirmar.includes('HT130') ? 'HT130' : autoconfirmar.slice(0, 60)})`,
+      `  ${autoconfirmar.includes('HT130') ? 'OK  ' : 'FALLO'} withUser() del pastor no confirma el arqueo que conto (${autoconfirmar.includes('HT130') ? 'HT130' : autoconfirmar.slice(0, 60)})`,
     );
     lineas.push(
-      `  ${ingresos === 2 ? 'OK  ' : 'FALLO'} withUser() de secretaria@ lo confirma y se apuntan los dos ingresos (${ingresos})`,
+      `  ${ingresos === 2 ? 'OK  ' : 'FALLO'} withUser() de la secretaria lo confirma y se apuntan los dos ingresos (${ingresos})`,
     );
   } catch (err) {
     const e = err as { message?: string; cause?: { message?: string } };
     lineas.push(
-      `  FALLO arqueo con la demo: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
+      `  FALLO arqueo con la iglesia de prueba: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
     );
   }
 
@@ -3514,16 +3767,12 @@ async function comprobarArqueoConLaDemo(): Promise<string[]> {
  *
  * La fase SQL lo prueba con datos que se revierten; esto lo prueba con la
  * función que usa la aplicación, que es lo que la fase SQL no puede hacer —sus
- * datos ya no existen cuando llega aquí—. Usa la demo de Betania: `lider@` es
- * responsable de Alabanza y NO está en Acción social, y `colider@` es colíder de
- * Acción social. Con la RLS por iglesia de los otros módulos, `lider@` vería el
+ * datos ya no existen cuando llega aquí—. En la iglesia de prueba, el líder es
+ * responsable de Alabanza y NO está en Acción social, y la colíder lo es de
+ * Acción social. Con la RLS por iglesia de los otros módulos, el líder vería el
  * padrón entero.
- *
- * Caveat honesto, como el de los ministerios de arriba: contra una base sin la
- * demo, o con el padrón de Acción social vacío, esto no puede probar nada y lo
- * dice en vez de pasar en verde. La autoritativa es la fase SQL.
  */
-async function comprobarRepartoConLaDemo(): Promise<string[]> {
+async function comprobarRepartoConLaDemo(demo: Demo): Promise<string[]> {
   const lineas: string[] = [];
 
   type Fila = Record<string, string | null>;
@@ -3531,23 +3780,7 @@ async function comprobarRepartoConLaDemo(): Promise<string[]> {
     (filas as { rows?: Fila[] }).rows?.[0] ?? (filas as Fila[])[0];
 
   try {
-    const demo = primera(
-      await dbAdmin.execute(dsql`
-        select
-          (select id::text from auth.users where email = 'lider@hatril.test')   as lider,
-          (select id::text from auth.users where email = 'colider@hatril.test') as colider,
-          (select m.id::text from public.ministerios m
-             join public.iglesias i on i.id = m.iglesia_id
-            where i.slug = 'betania' and lower(m.nombre) = lower('Acción social')) as ministerio
-      `),
-    );
-
-    if (!demo?.lider || !demo.colider || !demo.ministerio) {
-      lineas.push('  --   sin la demo de Betania: el recorte por equipo solo lo prueba la fase SQL');
-      return lineas;
-    }
-
-    const ministerio = demo.ministerio;
+    const ministerio = demo.ids.accionSocial;
     const contar = async (cuenta: string) =>
       Number(
         primera(
@@ -3567,24 +3800,26 @@ async function comprobarRepartoConLaDemo(): Promise<string[]> {
       )?.n ?? -1,
     );
 
+    // La iglesia de prueba nace con un hogar en el padrón: si no está, el
+    // montaje se rompió y esto no probaría nada.
     if (total <= 0) {
-      lineas.push('  --   el padron de Accion social de la demo esta vacio: no hay nada que esconder');
+      lineas.push('  FALLO el padron de Accion social de la iglesia de prueba esta vacio');
       return lineas;
     }
 
-    const loVeElLider = await contar(demo.lider);
+    const loVeElLider = await contar(demo.usuarios.lider);
     lineas.push(
-      `  ${loVeElLider === 0 ? 'OK  ' : 'FALLO'} withUser() de lider@, de otro equipo, no ve el padron del reparto (${loVeElLider} de ${total})`,
+      `  ${loVeElLider === 0 ? 'OK  ' : 'FALLO'} withUser() del lider, de otro equipo, no ve el padron del reparto (${loVeElLider} de ${total})`,
     );
 
-    const loVeElColider = await contar(demo.colider);
+    const loVeElColider = await contar(demo.usuarios.colider);
     lineas.push(
-      `  ${loVeElColider === total ? 'OK  ' : 'FALLO'} withUser() de colider@ ve el padron de su reparto (${loVeElColider} de ${total})`,
+      `  ${loVeElColider === total ? 'OK  ' : 'FALLO'} withUser() de la colider ve el padron de su reparto (${loVeElColider} de ${total})`,
     );
   } catch (err) {
     const e = err as { message?: string; cause?: { message?: string } };
     lineas.push(
-      `  FALLO reparto con la demo: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
+      `  FALLO reparto con la iglesia de prueba: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
     );
   }
 
@@ -3592,44 +3827,444 @@ async function comprobarRepartoConLaDemo(): Promise<string[]> {
 }
 
 /**
- * Las células de la demo, por `withUser()` y con cuentas de verdad.
+ * El ministerio de Niños (0059 y 0060), por `withUser()` y con datos que la
+ * aplicación ve desde su propia conexión.
+ *
+ * Es la RLS más estrecha del producto: por RELACIÓN padre–hijo, no por
+ * iglesia ni por equipo. Lo que tiene que aguantar, de `plan-ninos.md` §7:
+ *
+ *   - La madre ve a SU hijo y no al de otra familia del mismo ministerio, ni el
+ *     cronograma, ni el borrador, ni lo publicado antes de que se la aceptara,
+ *     ni un archivo que no va en una publicación o que no está confirmado.
+ *   - La secretaria, un líder de otro equipo, un miembro raso, quien espera
+ *     aprobación y el pastor de otra iglesia: nada.
+ *   - Aceptar familias, la responsable sí y la colíder no (HT144).
+ *   - Nadie pide el vínculo por otro adulto, ni para un niño de 14 (HT142).
+ *   - De un permiso solo se toca `revocado_at`, solo el propio padre, y no
+ *     vuelve atrás (HT143).
+ *   - Desvincular a la última familia borra al niño.
+ *   - Ni `anon` ni `authenticated` llegan a nada, y los buckets son privados
+ *     y sin policies.
+ *
+ * Lo que escribe va en una transacción que se revierte al final: la iglesia de
+ * prueba queda como la montó `demo.mjs` para las comprobaciones siguientes.
+ */
+async function comprobarNinosConLaDemo(demo: Demo): Promise<string[]> {
+  const lineas: string[] = [];
+  const ok = (cond: boolean, texto: string) =>
+    lineas.push(`  ${cond ? 'OK  ' : 'FALLO'} ${texto}`);
+
+  type Fila = Record<string, string | null>;
+  type Tx = Parameters<Parameters<typeof withUser>[1]>[0];
+  const filas = (res: unknown): Fila[] =>
+    (res as { rows?: Fila[] }).rows ?? (res as Fila[]);
+  const primera = (res: unknown): Fila | undefined => filas(res)[0];
+  const mensaje = (err: unknown) => {
+    const e = err as { code?: string; message?: string; cause?: { message?: string; code?: string } };
+    return `${e.code ?? ''} ${e.cause?.code ?? ''} ${e.cause?.message ?? ''} ${e.message ?? ''}`;
+  };
+
+  const u = demo.usuarios;
+  const f = demo.fichas;
+  const N = demo.ids.ninos;
+  const B = demo.betel.id;
+  const anio = new Date().getUTCFullYear();
+  const REVERTIR = 'revertir-ninos-de-prueba';
+
+  /** Cuántas filas del ministerio de Niños ve esta cuenta en esta tabla. */
+  const contar = async (cuenta: string, tabla: string) =>
+    Number(
+      primera(
+        await withUser(cuenta, (tx) =>
+          tx.execute(
+            dsql`select count(*)::text as n from ${dsql.identifier(tabla)} where ministerio_id = ${N}`,
+          ),
+        ),
+      )?.n ?? -1,
+    );
+
+  /** Pasa la sesión de la transacción a otra cuenta, como el arqueo. */
+  const como = (tx: Tx, cuenta: string) =>
+    tx.execute(
+      dsql`select set_config('request.jwt.claims', ${JSON.stringify({ sub: cuenta, role: 'authenticated' })}, true)`,
+    );
+
+  /** Lo intenta en un savepoint y devuelve el error, o '' si pasó. */
+  const intento = async (tx: Tx, fn: (sp: Tx) => Promise<unknown>) => {
+    try {
+      await tx.transaction(async (sp) => {
+        await fn(sp);
+      });
+      return '';
+    } catch (err) {
+      return mensaje(err);
+    }
+  };
+
+  /** Ejecuta y revierte todo al final, devuelva lo que devuelva. */
+  const yDeshacer = async <T>(cuenta: string, fn: (tx: Tx) => Promise<T>): Promise<T> => {
+    let salida: T | undefined;
+    await withUser(cuenta, async (tx) => {
+      salida = await fn(tx);
+      throw new Error(REVERTIR);
+    }).catch((err: Error) => {
+      if (err.message !== REVERTIR) throw err;
+    });
+    return salida as T;
+  };
+
+  try {
+    // --- Quién ve qué -------------------------------------------------------
+
+    const suyo = filas(
+      await withUser(u.madre, (tx) =>
+        tx.execute(dsql`select id::text as id from ninos where ministerio_id = ${N}`),
+      ),
+    ).map((fila) => fila.id);
+    ok(
+      suyo.length === 1 && suyo[0] === demo.ids.tomas,
+      `withUser() de la madre ve a su hijo y no al de otra familia (${suyo.length} de 2)`,
+    );
+
+    const madre = {
+      familias: await contar(u.madre, 'nino_familias'),
+      permisos: await contar(u.madre, 'nino_consentimientos'),
+      cronograma: await contar(u.madre, 'ninos_cronograma'),
+      publicaciones: await contar(u.madre, 'ninos_publicaciones'),
+      archivos: await contar(u.madre, 'ninos_archivos'),
+    };
+    ok(madre.familias === 1, `la madre ve solo su vinculo (${madre.familias} de 2)`);
+    ok(madre.permisos === 2, `la madre ve solo sus permisos (${madre.permisos} de 3)`);
+    ok(madre.cronograma === 0, `la madre no ve el cronograma de los maestros (${madre.cronograma})`);
+    ok(
+      madre.publicaciones === 1,
+      `la madre ve lo publicado desde que la aceptaron, sin el borrador ni lo de antes (${madre.publicaciones} de 3)`,
+    );
+    ok(
+      madre.archivos === 1,
+      `la madre ve solo el archivo confirmado de lo publicado (${madre.archivos} de 3)`,
+    );
+
+    const madre2 = {
+      ninos: await contar(u.madre2, 'ninos'),
+      publicaciones: await contar(u.madre2, 'ninos_publicaciones'),
+      archivos: await contar(u.madre2, 'ninos_archivos'),
+    };
+    ok(madre2.ninos === 1, `la otra madre ve solo a su hija (${madre2.ninos} de 2)`);
+    ok(
+      madre2.publicaciones === 0 && madre2.archivos === 0,
+      `la madre aceptada hoy no ve lo publicado hace dos dias (${madre2.publicaciones} publicaciones, ${madre2.archivos} archivos)`,
+    );
+
+    for (const [quien, cuenta] of [
+      ['la responsable', u.maestra],
+      ['la colider', u.auxiliar],
+      ['el pastor', u.pastor],
+    ] as const) {
+      const vistos = [
+        await contar(cuenta, 'ninos'),
+        await contar(cuenta, 'ninos_cronograma'),
+        await contar(cuenta, 'ninos_publicaciones'),
+        await contar(cuenta, 'ninos_archivos'),
+      ];
+      ok(
+        vistos.join() === '2,1,3,3',
+        `${quien} ve todo el ministerio (ninos, cronograma, publicaciones, archivos: ${vistos.join(', ')})`,
+      );
+    }
+
+    for (const [quien, cuenta] of [
+      ['la secretaria', u.secretaria],
+      ['el lider de otro equipo', u.lider],
+      ['un miembro raso', u.miembro],
+      ['quien espera aprobacion', u.visita],
+      ['el pastor de otra iglesia', u.sion],
+    ] as const) {
+      const vistos = [
+        'ninos', 'nino_familias', 'nino_consentimientos', 'ninos_cronograma',
+        'ninos_publicaciones', 'ninos_archivos', 'ninos_solicitudes',
+      ];
+      let total = 0;
+      for (const tabla of vistos) total += await contar(cuenta, tabla);
+      ok(total === 0, `${quien} no ve nada de Ninos (${total} filas en las siete tablas)`);
+    }
+
+    // --- Pedir y aceptar ----------------------------------------------------
+
+    const aceptar = await yDeshacer(u.madre, async (tx) => {
+      const [pedida] = filas(
+        await tx.execute(dsql`
+          insert into ninos_solicitudes
+            (iglesia_id, ministerio_id, miembro_id, nombre, anio_nacimiento, parentesco,
+             permiso_imagen, version_texto, ip, user_agent)
+          values (${B}, ${N}, ${f.madre}, 'Martín', ${anio - 3}, 'madre', true, 'ninos-2026-11',
+                  '203.0.113.9', 'prueba')
+          returning id::text as id
+        `),
+      );
+      const id = pedida!.id!;
+
+      await como(tx, u.auxiliar);
+      const laVeLaColider = Number(
+        primera(await tx.execute(dsql`select count(*)::text as n from ninos_solicitudes where id = ${id}`))?.n ?? -1,
+      );
+      const colider = await intento(tx, (sp) =>
+        sp.execute(dsql`select public.aceptar_solicitud_nino(${id}::uuid)`),
+      );
+
+      await como(tx, u.maestra);
+      const laVeLaResponsable = Number(
+        primera(await tx.execute(dsql`select count(*)::text as n from ninos_solicitudes where id = ${id}`))?.n ?? -1,
+      );
+      const nuevo = primera(
+        await tx.execute(dsql`select public.aceptar_solicitud_nino(${id}::uuid)::text as id`),
+      )?.id;
+      const permisos = Number(
+        primera(
+          await tx.execute(
+            dsql`select count(*)::text as n from nino_consentimientos where nino_id = ${nuevo ?? null}::uuid and revocado_at is null`,
+          ),
+        )?.n ?? -1,
+      );
+
+      await como(tx, u.madre);
+      const loVeLaMadre = Number(
+        primera(await tx.execute(dsql`select count(*)::text as n from ninos where ministerio_id = ${N}`))?.n ?? -1,
+      );
+      return { laVeLaColider, colider, laVeLaResponsable, nuevo, permisos, loVeLaMadre };
+    });
+    ok(aceptar.laVeLaColider === 0, `la colider no ve las peticiones pendientes (${aceptar.laVeLaColider})`);
+    ok(
+      aceptar.colider.includes('HT144'),
+      `la colider no puede aceptar una familia (${aceptar.colider.includes('HT144') ? 'HT144' : aceptar.colider.slice(0, 60) || 'paso'})`,
+    );
+    ok(aceptar.laVeLaResponsable === 1, `la responsable ve la peticion (${aceptar.laVeLaResponsable})`);
+    ok(
+      !!aceptar.nuevo && aceptar.permisos === 2,
+      `la responsable la acepta y se apuntan los dos permisos que dio la madre (${aceptar.permisos})`,
+    );
+    ok(aceptar.loVeLaMadre === 2, `despues, la madre ve a sus dos hijos (${aceptar.loVeLaMadre})`);
+
+    const porOtro = await yDeshacer(u.madre, (tx) =>
+      intento(tx, (sp) =>
+        sp.execute(dsql`
+          insert into ninos_solicitudes
+            (iglesia_id, ministerio_id, miembro_id, nombre, anio_nacimiento, parentesco, version_texto)
+          values (${B}, ${N}, ${f.madre2}, 'Otro', ${anio - 4}, 'madre', 'ninos-2026-11')
+        `),
+      ),
+    );
+    ok(
+      porOtro.includes('row-level security'),
+      `nadie pide el vinculo en nombre de otro adulto (${porOtro.includes('row-level security') ? 'RLS' : porOtro.slice(0, 60) || 'paso'})`,
+    );
+
+    const mayor = await yDeshacer(u.madre, (tx) =>
+      intento(tx, (sp) =>
+        sp.execute(dsql`
+          insert into ninos_solicitudes
+            (iglesia_id, ministerio_id, miembro_id, nombre, anio_nacimiento, parentesco, version_texto)
+          values (${B}, ${N}, ${f.madre}, 'Mayor', ${anio - 15}, 'madre', 'ninos-2026-11')
+        `),
+      ),
+    );
+    ok(
+      mayor.includes('HT142'),
+      `no se pide el vinculo para un nino de 14 o mas (${mayor.includes('HT142') ? 'HT142' : mayor.slice(0, 60) || 'paso'})`,
+    );
+
+    // --- Los permisos -------------------------------------------------------
+
+    const permisos = await yDeshacer(u.madre, async (tx) => {
+      const nombre = filas(
+        await tx.execute(dsql`update ninos set nombre = 'Cambiado' where id = ${demo.ids.tomas} returning id`),
+      ).length;
+      const version = await intento(tx, (sp) =>
+        sp.execute(dsql`update nino_consentimientos set version_texto = 'ninos-2027-01' where nino_id = ${demo.ids.tomas}`),
+      );
+      const retirado = filas(
+        await tx.execute(dsql`
+          update nino_consentimientos set revocado_at = now()
+           where nino_id = ${demo.ids.tomas} and tipo = 'imagen' and revocado_at is null
+          returning id
+        `),
+      ).length;
+      const vuelve = await intento(tx, (sp) =>
+        sp.execute(dsql`
+          update nino_consentimientos set revocado_at = null
+           where nino_id = ${demo.ids.tomas} and tipo = 'imagen'
+        `),
+      );
+      return { nombre, version, retirado, vuelve };
+    });
+    ok(permisos.nombre === 0, `la madre no cambia el nombre de su hijo (${permisos.nombre} filas)`);
+    ok(
+      permisos.version.includes('42501'),
+      `de un permiso no se toca mas que la retirada (${permisos.version.includes('42501') ? '42501' : permisos.version.slice(0, 60) || 'paso'})`,
+    );
+    ok(permisos.retirado === 1, `la madre retira el permiso de fotos (${permisos.retirado})`);
+    ok(
+      permisos.vuelve.includes('HT143'),
+      `un permiso retirado no vuelve (${permisos.vuelve.includes('HT143') ? 'HT143' : permisos.vuelve.slice(0, 60) || 'paso'})`,
+    );
+
+    const ajeno = await yDeshacer(u.madre2, async (tx) => {
+      const retirar = filas(
+        await tx.execute(dsql`
+          update nino_consentimientos set revocado_at = now()
+           where nino_id = ${demo.ids.tomas} returning id
+        `),
+      ).length;
+      const dar = await intento(tx, (sp) =>
+        sp.execute(dsql`
+          insert into nino_consentimientos
+            (iglesia_id, ministerio_id, nino_id, miembro_id, tipo, version_texto)
+          values (${B}, ${N}, ${demo.ids.tomas}, ${f.madre2}, 'imagen', 'ninos-2026-11')
+        `),
+      );
+      return { retirar, dar };
+    });
+    ok(ajeno.retirar === 0, `otra madre no retira los permisos de un nino ajeno (${ajeno.retirar})`);
+    // Lo paran dos barreras: HT142 (no está vinculada) y la policy. El trigger
+    // BEFORE corre antes que el `with check`, así que suele saltar el primero;
+    // cualquiera de las dos vale, y la línea dice cuál.
+    const daAjeno = ajeno.dar.includes('HT142')
+      ? 'HT142'
+      : ajeno.dar.includes('row-level security')
+        ? 'RLS'
+        : '';
+    ok(
+      daAjeno !== '',
+      `otra madre no da permisos sobre un nino ajeno (${daAjeno || ajeno.dar.slice(0, 60) || 'paso'})`,
+    );
+
+    // --- El drive y el tablon -----------------------------------------------
+
+    const rutaAjena = await yDeshacer(u.maestra, (tx) =>
+      intento(tx, (sp) =>
+        sp.execute(dsql`
+          insert into ninos_archivos (iglesia_id, ministerio_id, tipo, ruta, bytes, fecha)
+          values (${B}, ${N}, 'foto', ${`${demo.sion.id}/${N}/x.webp`}, 1000, current_date)
+        `),
+      ),
+    );
+    ok(
+      rutaAjena.includes('HT142'),
+      `un archivo no apunta a la carpeta de otra iglesia (${rutaAjena.includes('HT142') ? 'HT142' : rutaAjena.slice(0, 60) || 'paso'})`,
+    );
+
+    const alargar = await yDeshacer(u.maestra, (tx) =>
+      intento(tx, (sp) =>
+        sp.execute(dsql`
+          update ninos_publicaciones set fecha = current_date + 30 where id = ${demo.ids.pubNueva}
+        `),
+      ),
+    );
+    ok(
+      alargar.includes('HT143'),
+      `una publicacion ya publicada no cambia de fecha (${alargar.includes('HT143') ? 'HT143' : alargar.slice(0, 60) || 'paso'})`,
+    );
+
+    // --- Desvincular --------------------------------------------------------
+
+    const quitar = await yDeshacer(u.auxiliar, async (tx) => {
+      const laColider = filas(
+        await tx.execute(dsql`delete from nino_familias where nino_id = ${demo.ids.lia} returning nino_id`),
+      ).length;
+      await como(tx, u.madre2);
+      const laMadre = filas(
+        await tx.execute(dsql`delete from nino_familias where miembro_id = ${f.madre2} returning nino_id`),
+      ).length;
+      await como(tx, u.maestra);
+      const queda = Number(
+        primera(await tx.execute(dsql`select count(*)::text as n from ninos where id = ${demo.ids.lia}`))?.n ?? -1,
+      );
+      return { laColider, laMadre, queda };
+    });
+    ok(quitar.laColider === 0, `la colider no quita a una familia (${quitar.laColider})`);
+    ok(
+      quitar.laMadre === 1 && quitar.queda === 0,
+      `la madre se desvincula y, sin nadie mas de su familia, su hija se borra (${quitar.queda} queda)`,
+    );
+
+    // --- Lo de fuera --------------------------------------------------------
+
+    const tablas = [
+      'ninos_solicitudes', 'ninos', 'nino_familias', 'nino_consentimientos',
+      'ninos_cronograma', 'ninos_publicaciones', 'ninos_archivos',
+    ];
+    const abiertas = filas(
+      await dbAdmin.execute(dsql`
+        select relname::text as tabla
+          from pg_class c join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public' and c.relname in ${tablas}
+           and (has_table_privilege('anon', c.oid, 'SELECT,INSERT,UPDATE,DELETE')
+                or has_table_privilege('authenticated', c.oid, 'SELECT,INSERT,UPDATE,DELETE'))
+      `),
+    ).map((fila) => fila.tabla);
+    ok(abiertas.length === 0, `anon y authenticated no llegan a ninguna tabla de Ninos (${abiertas.join(', ') || 'ninguna'})`);
+
+    const funciones = [
+      'public.es_responsable_de(uuid)', 'public.es_familia_de(uuid)', 'public.familia_desde(uuid)',
+      'public.aceptar_solicitud_nino(uuid,uuid)',
+    ];
+    const ejecutables = filas(
+      await dbAdmin.execute(dsql`
+        select f::text as funcion
+          from unnest(array[${dsql.join(funciones.map((fn) => dsql`${fn}`), dsql`, `)}]::text[]) as f
+         where has_function_privilege('anon', f, 'EXECUTE')
+            or has_function_privilege('authenticated', f, 'EXECUTE')
+            or not has_function_privilege('hatril_app', f, 'EXECUTE')
+      `),
+    ).map((fila) => fila.funcion);
+    ok(
+      ejecutables.length === 0,
+      `las funciones de Ninos solo las ejecuta hatril_app (${ejecutables.join(', ') || 'bien'})`,
+    );
+
+    const buckets = primera(
+      await dbAdmin.execute(dsql`
+        select
+          (select count(*) from storage.buckets where id in ('ninos-fotos', 'ninos-videos') and public = false)::text as privados,
+          (select count(*) from pg_policies where schemaname = 'storage' and tablename = 'objects'
+             and (coalesce(qual, '') || coalesce(with_check, '')) like '%ninos-%')::text as policies
+      `),
+    );
+    ok(
+      buckets?.privados === '2' && buckets?.policies === '0',
+      `los dos buckets de Ninos son privados y sin policies (${buckets?.privados} privados, ${buckets?.policies} policies)`,
+    );
+  } catch (err) {
+    lineas.push(`  FALLO ninos con la iglesia de prueba: ${mensaje(err).trim().slice(0, 120)}`);
+  }
+
+  return lineas;
+}
+
+/**
+ * Las células de la iglesia de prueba, por `withUser()` y con sus sesiones.
  *
  * La fase SQL prueba las policies con claims puestos a mano; esto prueba que la
- * función que usa la aplicación llega al mismo sitio con las sesiones de la
- * demo (`scripts/seed-celulas.sql`): Andrés (`enlace@`), que lleva Los Pinos,
- * ve a su gente y no a la de El Prado, ni la propia El Prado; Lucía (`miembro@`), que va a Los Pinos,
- * ve a quien la lleva y no a los demás; y Sara (`colider@`), colíder de la red,
- * las ve todas.
+ * función que usa la aplicación llega al mismo sitio con las cuentas de la
+ * demo (`scripts/pruebas/demo.mjs`): Andrés (`enlace`), que lleva Los Pinos,
+ * ve a su gente y no a la de El Prado, ni la propia El Prado; Lucía
+ * (`miembro`), que va a Los Pinos, ve su fila y a quien la lleva, no a los
+ * demás; y Sara (`colider`), colíder de la red, las ve todas.
  *
- * Caveat honesto, como los de arriba: sin la demo de células, lo dice en vez
- * de pasar en verde.
+ * Hasta el 23-nov leía las cuentas fijas de Betania, que se borró el 20-nov.
  */
-async function comprobarCelulasConLaDemo(): Promise<string[]> {
+async function comprobarCelulasConLaDemo(demo: Demo): Promise<string[]> {
   const lineas: string[] = [];
+  const ok = (cond: boolean, texto: string) => lineas.push(`  ${cond ? 'OK  ' : 'FALLO'} ${texto}`);
 
   type Fila = Record<string, string | null>;
   const primera = (filas: unknown): Fila | undefined =>
     (filas as { rows?: Fila[] }).rows?.[0] ?? (filas as Fila[])[0];
 
+  const u = demo.usuarios;
+  const { pinos, prado } = demo.ids;
+
   try {
-    const demo = primera(
-      await dbAdmin.execute(dsql`
-        select
-          (select id::text from auth.users where email = 'enlace@hatril.test')  as lider,
-          (select id::text from auth.users where email = 'miembro@hatril.test') as participante,
-          (select id::text from auth.users where email = 'colider@hatril.test') as red,
-          (select g.id::text from public.grupos g join public.iglesias i on i.id = g.iglesia_id
-            where i.slug = 'betania' and g.nombre = 'Los Pinos' and g.activo) as pinos,
-          (select g.id::text from public.grupos g join public.iglesias i on i.id = g.iglesia_id
-            where i.slug = 'betania' and g.nombre = 'El Prado' and g.activo) as prado
-      `),
-    );
-
-    if (!demo?.lider || !demo.participante || !demo.red || !demo.pinos || !demo.prado) {
-      lineas.push('  --   sin la demo de celulas: el recorte entre celulas solo lo prueba la fase SQL');
-      return lineas;
-    }
-
     const contar = async (cuenta: string, grupo: string) =>
       Number(
         primera(
@@ -3649,44 +4284,155 @@ async function comprobarCelulasConLaDemo(): Promise<string[]> {
         )?.n ?? -1,
       );
 
-    const [enPinos, enPrado] = await Promise.all([total(demo.pinos), total(demo.prado)]);
+    const [enPinos, enPrado] = await Promise.all([total(pinos), total(prado)]);
 
-    const liderPinos = await contar(demo.lider, demo.pinos);
-    lineas.push(
-      `  ${liderPinos === enPinos ? 'OK  ' : 'FALLO'} withUser() de enlace@ ve a toda la gente de Los Pinos (${liderPinos} de ${enPinos})`,
-    );
-    const liderPrado = await contar(demo.lider, demo.prado);
-    lineas.push(
-      `  ${liderPrado === 0 ? 'OK  ' : 'FALLO'} withUser() de enlace@ no ve a la gente de El Prado (${liderPrado} de ${enPrado})`,
-    );
+    const liderPinos = await contar(u.enlace, pinos);
+    ok(liderPinos === enPinos && enPinos > 0, `withUser() de enlace ve a toda la gente de Los Pinos (${liderPinos} de ${enPinos})`);
+    const liderPrado = await contar(u.enlace, prado);
+    ok(liderPrado === 0, `withUser() de enlace no ve a la gente de El Prado (${liderPrado} de ${enPrado})`);
     // 0049: ni dónde ni cuándo se reúne la de al lado. Con la 0047 la veía por
     // ser voluntario de la red, y la portada de la red la pintaba entera.
     const pradoVisible = Number(
       primera(
-        await withUser(demo.lider, (tx) =>
-          tx.execute(dsql`select count(*)::text as n from grupos where id = ${demo.prado}`),
+        await withUser(u.enlace, (tx) =>
+          tx.execute(dsql`select count(*)::text as n from grupos where id = ${prado}`),
         ),
       )?.n ?? -1,
     );
-    lineas.push(
-      `  ${pradoVisible === 0 ? 'OK  ' : 'FALLO'} withUser() de enlace@ no ve ni donde ni cuando se reune El Prado (${pradoVisible})`,
-    );
-    const participante = await contar(demo.participante, demo.pinos);
-    lineas.push(
-      `  ${participante === 2 ? 'OK  ' : 'FALLO'} withUser() de miembro@ ve su fila y a quien lleva Los Pinos, no a los demas (${participante} de ${enPinos})`,
-    );
-    const red = (await contar(demo.red, demo.pinos)) + (await contar(demo.red, demo.prado));
-    lineas.push(
-      `  ${red === enPinos + enPrado ? 'OK  ' : 'FALLO'} withUser() de colider@, colider de la red, ve las dos celulas (${red} de ${enPinos + enPrado})`,
-    );
+    ok(pradoVisible === 0, `withUser() de enlace no ve ni dónde ni cuándo se reúne El Prado (${pradoVisible})`);
+    const participante = await contar(u.miembro, pinos);
+    ok(participante === 2, `withUser() de miembro ve su fila y a quien lleva Los Pinos, no a los demás (${participante} de ${enPinos})`);
+    const red = (await contar(u.colider, pinos)) + (await contar(u.colider, prado));
+    ok(red === enPinos + enPrado, `withUser() de colider, colíder de la red, ve las dos células (${red} de ${enPinos + enPrado})`);
   } catch (err) {
     const e = err as { message?: string; cause?: { message?: string } };
-    lineas.push(
-      `  FALLO celulas con la demo: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 90)}`,
-    );
+    lineas.push(`  FALLO células con la iglesia de prueba: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 110)}`);
   }
 
   return lineas;
+}
+
+/**
+ * Los teléfonos de las push (migraciones 0057 y 0058).
+ *
+ * En un bloque propio porque necesita cuentas de verdad en `auth.users`: la
+ * tabla tiene clave foránea a ellas, y las cuentas del bloque grande son uuids
+ * inventados. Se crean aquí dentro y se van con el mismo truco de siempre: el
+ * bloque termina lanzando y la transacción se deshace entera.
+ */
+const PRUEBA_PUSH = `
+do $$
+declare
+  r text := E'\\n';
+  n int;
+  quien uuid;
+  U1 constant uuid := 'a1000000-0000-4000-8000-0000000000a1';
+  U2 constant uuid := 'b1000000-0000-4000-8000-0000000000b1';
+  TOK constant text := 'prueba-aislamiento:token-de-un-telefono-000000000000';
+begin
+  insert into auth.users (id, aud, role, email)
+  values (U1, 'authenticated', 'authenticated', 'push-a@hatril.invalid'),
+         (U2, 'authenticated', 'authenticated', 'push-b@hatril.invalid');
+
+  -- La cuenta 1 apunta su teléfono, por la única puerta que hay.
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', U1), true);
+  execute 'set local role hatril_app';
+
+  perform public.registrar_dispositivo_push(TOK, 'ios');
+  select count(*) into n from public.dispositivos_push;
+  r := r || format(E'  %s una cuenta apunta y ve su teléfono (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.dispositivos_push (token, auth_user_id, plataforma)
+    values ('prueba-aislamiento:token-escrito-a-mano-0000000000', U2, 'ios');
+    r := r || E'  FALLO hatril_app escribe un teléfono sin pasar por la función\\n';
+  exception when insufficient_privilege then
+    r := r || E'  OK   hatril_app no escribe teléfonos a mano\\n';
+  end;
+
+  -- La cuenta 2 no ve ni borra el de la 1.
+  execute 'reset role';
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', U2), true);
+  execute 'set local role hatril_app';
+
+  select count(*) into n from public.dispositivos_push;
+  r := r || format(E'  %s otra cuenta no ve el teléfono ajeno (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  delete from public.dispositivos_push where token = TOK;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s otra cuenta no borra el teléfono ajeno (%s filas)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  -- En ese teléfono entra la cuenta 2: el token cambia de dueño, no se dobla.
+  perform public.registrar_dispositivo_push(TOK, 'ios');
+  execute 'reset role';
+  select count(*), max(auth_user_id::text)::uuid into n, quien
+    from public.dispositivos_push where token = TOK;
+  r := r || format(E'  %s el teléfono pasa a la cuenta que entra, sin copia (%s fila)\\n',
+                   case when n = 1 and quien = U2 then 'OK  ' else 'FALLO' end, n);
+
+  -- Sin sesión, la función no apunta nada.
+  perform set_config('request.jwt.claims', '{}', true);
+  execute 'set local role hatril_app';
+  begin
+    perform public.registrar_dispositivo_push(
+      'prueba-aislamiento:token-sin-sesion-00000000000000', 'android');
+    r := r || E'  FALLO se apunta un teléfono sin sesión\\n';
+  exception when insufficient_privilege then
+    r := r || E'  OK   sin sesión no se apunta ningún teléfono (HT141)\\n';
+  end;
+
+  -- Las puertas de fuera, cerradas: ni la tabla ni la función.
+  execute 'reset role';
+  execute 'set local role anon';
+  begin
+    select count(*) into n from public.dispositivos_push;
+    r := r || E'  FALLO anon lee los teléfonos\\n';
+  exception when insufficient_privilege then
+    r := r || E'  OK   anon no lee los teléfonos\\n';
+  end;
+  begin
+    perform public.registrar_dispositivo_push(TOK, 'ios');
+    r := r || E'  FALLO anon ejecuta registrar_dispositivo_push\\n';
+  exception when insufficient_privilege then
+    r := r || E'  OK   anon no ejecuta registrar_dispositivo_push\\n';
+  end;
+
+  execute 'reset role';
+  execute 'set local role authenticated';
+  begin
+    select count(*) into n from public.dispositivos_push;
+    r := r || E'  FALLO authenticated lee los teléfonos\\n';
+  exception when insufficient_privilege then
+    r := r || E'  OK   authenticated no lee los teléfonos\\n';
+  end;
+
+  -- La cuenta se borra y su teléfono con ella.
+  execute 'reset role';
+  delete from auth.users where id = U2;
+  select count(*) into n from public.dispositivos_push where token = TOK;
+  r := r || format(E'  %s borrar la cuenta borra sus teléfonos (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  raise exception '%', r;
+end $$;
+`;
+
+async function comprobarPush(): Promise<string> {
+  const conexion = postgres(connectionString!, { prepare: false, ssl: 'require', max: 1 });
+  try {
+    await conexion.unsafe(PRUEBA_PUSH);
+    return '  FALLO el bloque de las push no llegó a lanzar el informe';
+  } catch (err) {
+    // Sin `trim()` delante: se comería la sangría de la primera línea.
+    return ((err as { message?: string }).message ?? String(err)).replace(/^\n+/, '').trimEnd();
+  } finally {
+    await conexion.end();
+  }
 }
 
 async function main() {
@@ -3708,6 +4454,11 @@ async function main() {
 
   console.log('\nAislamiento entre iglesias\n');
   console.log(informe.trim());
+
+  const push = await comprobarPush();
+  console.log('\nLos teléfonos de las push\n');
+  console.log(push);
+  informe += '\n' + push;
 
   // Segunda fase: se llama a la función que usa la aplicación, no a SQL escrito
   // a mano. Es la comprobación que faltaba cuando el panel entero daba 500 con

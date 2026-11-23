@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Comunidad · Denunciar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.rad{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 14px;border:1px solid #E0DFDB;border-radius:8px;font-size:15px;cursor:pointer;background:#FFFFFF}
+.rad input{width:20px;height:20px;margin:0;accent-color:#92442A;flex:none}
+.rad.on{background:#F5E7DF;border-color:#F5E7DF;color:#92442A;font-weight:600}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413">
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(20,20,19,0.42)"></div>
+
+  <section role="dialog" aria-label="Denunciar publicación" style="position: absolute; left: 0; right: 0; bottom: 0; height: 730px; background: #FFFFFF; border-radius: 16px 16px 0 0; padding: 0 16px 34px; display: flex; flex-direction: column">
+    <div style="display: flex; justify-content: center; padding: 8px 0 4px"><span style="width: 36px; height: 4px; border-radius: 999px; background: #E0DFDB"></span></div>
+    <div style="display: flex; align-items: center; margin: 0 -8px">
+      <a href="ComMenu.dc.html" aria-label="Volver" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #141413"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></a>
+    </div>
+    <h2 style="font-size: 22px; line-height: 1.2; font-weight: 800; letter-spacing: -0.02em; padding-top: 4px">¿Qué pasa con esta publicación?</h2>
+    <p style="font-size: 14px; line-height: 1.45; color: #67665F; padding-top: 6px">Solo lo verá el pastor. David no sabrá quién la ha denunciado.</p>
+
+    <fieldset style="border: 0; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
+      <legend style="position: absolute; left: -9999px">Motivo</legend>
+      <label class="rad"><input type="radio" name="m">Falta al respeto o es ofensiva</label>
+      <label class="rad"><input type="radio" name="m">Es publicidad o spam</label>
+      <label class="rad on"><input type="radio" name="m" checked>Sale alguien sin su permiso</label>
+      <label class="rad"><input type="radio" name="m">Cuenta algo privado de otra persona</label>
+      <label class="rad"><input type="radio" name="m">Otra cosa</label>
+    </fieldset>
+
+    <label for="det" style="font-size: 14px; font-weight: 600; padding-top: 16px">Cuéntale algo más al pastor <span style="font-weight: 500; color: #67665F">(opcional)</span></label>
+    <textarea id="det" rows="3" placeholder="Por ejemplo, quién sale en la foto" style="margin-top: 6px; padding: 12px 14px; border-radius: 8px; border: 1px solid #E0DFDB; background: #F5F4ED; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; line-height: 1.4; color: #141413; resize: none"></textarea>
+
+    <div style="flex: 1"></div>
+    <a href="ComDenunciaOk.dc.html" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 8px; background: #B15435; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none">Enviar al pastor</a>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Menú de la cuenta</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ib{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:#3D3D3A;border-radius:999px;position:relative}
+.av{border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+.row{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;color:#141413;text-decoration:none;font-size:15px;font-weight:600}
+.row:active{background:#F0EEE6}
+.row .g{color:#3D3D3A}
+.row .ar{margin-left:auto;color:#67665F}
+.pop{animation:pop 200ms cubic-bezier(.2,.8,.2,1) both;transform-origin:top right}
+@keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.pop{animation:none}}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; padding-top: 47px">
+  <header style="display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px">
+    <span style="width: 36px; height: 36px; border-radius: 8px; background: #F5E7DF; color: #92442A; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center">IB</span>
+    <div style="flex: 1; display: flex; flex-direction: column"><h1 style="font-size: 18px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2">Agenda</h1><span style="font-size: 12px; color: #67665F">Iglesia Betania</span></div>
+    <span class="ib" role="img" aria-label="Avisos"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+    <button class="ib" aria-label="Cerrar el menú de tu cuenta" aria-expanded="true" style="background: #F0EEE6"><span class="av" style="width: 32px; height: 32px; background: #E3E8EC; color: #2F4A5C; font-size: 12px">LH</span></button>
+  </header>
+  <div aria-hidden="true" style="padding: 16px; display: flex; flex-direction: column; gap: 12px">
+    <div style="height: 150px; border-radius: 12px; background: #F5E7DF"></div>
+    <div style="height: 64px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E0DFDB"></div>
+    <div style="height: 64px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E0DFDB"></div>
+  </div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(20,20,19,0.18)"></div>
+
+  <section class="pop" role="menu" aria-label="Tu cuenta" style="position: absolute; top: 100px; right: 10px; width: 290px; background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; overflow: hidden">
+    <div style="display: flex; gap: 12px; align-items: center; padding: 16px">
+      <span class="av" style="width: 44px; height: 44px; background: #E3E8EC; color: #2F4A5C; font-size: 14px">LH</span>
+      <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+        <span style="font-size: 15px; font-weight: 700">Lucía Hernández</span>
+        <span style="font-size: 13px; color: #67665F; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">lucia.hm@correo.com</span>
+        <span style="align-self: flex-start; margin-top: 4px; font-size: 11px; font-weight: 700; color: #92442A; background: #F5E7DF; border-radius: 999px; padding: 2px 8px">Colíder de Alabanza</span>
+      </span>
+    </div>
+    <div style="border-top: 1px solid #E0DFDB; padding: 4px 0">
+      <a href="CtaMiCuenta.dc.html" class="row" role="menuitem"><svg class="ic g" width="20" height="20" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Tus datos<svg class="ic ar" width="18" height="18" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></a>
+      <a href="#" class="row" role="menuitem"><svg class="ic g" width="20" height="20" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Cambiar la contraseña<svg class="ic ar" width="18" height="18" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></a>
+      <a href="#" class="row" role="menuitem"><svg class="ic g" width="20" height="20" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg><span style="display: flex; flex-direction: column"><span>Ir al panel</span><span style="font-size: 12px; font-weight: 500; color: #67665F">Se abre en el navegador</span></span><svg class="ic ar" width="18" height="18" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a>
+    </div>
+    <div style="border-top: 1px solid #E0DFDB; padding: 4px 0">
+      <a href="PEntrar.dc.html" class="row" role="menuitem"><svg class="ic g" width="20" height="20" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>Cerrar sesión</a>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

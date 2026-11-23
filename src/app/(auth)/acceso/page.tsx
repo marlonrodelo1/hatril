@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 import { acceder } from '../actions';
+import { AccesoSocial } from '../_components/acceso-social';
 import {
   Caminos,
   Encabezado,
@@ -43,6 +44,8 @@ export default async function AccesoPage({
 
       <Tarjeta>
         {error && <Aviso>{error}</Aviso>}
+
+        <AccesoSocial next={next} vuelta="/acceso" />
 
         <form action={acceder} className="flex flex-col gap-4">
           {/* Se arrastra el destino para volver donde iba después de entrar. La

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 import { crearCuentaPersonal } from '@/app/solicitar/actions';
+import { AccesoSocial } from '../_components/acceso-social';
 import {
   Caminos,
   Encabezado,
@@ -49,6 +50,10 @@ export default async function CrearCuentaPage({
 
       <Tarjeta>
         {error && <Aviso>{error}</Aviso>}
+
+        {/* Con Google o Apple la cuenta se crea al entrar: es la misma cuenta
+            personal, sin iglesia, que la del formulario de abajo. */}
+        <AccesoSocial next={next} vuelta="/crear-cuenta" />
 
         <form action={crearCuentaPersonal} className="flex flex-col gap-4">
           {next && <input type="hidden" name="next" value={next} />}

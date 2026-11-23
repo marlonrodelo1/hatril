@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mi cuenta · Editar tus datos</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.lbl{font-size:14px;font-weight:600}
+.opt{font-weight:500;color:#67665F}
+.fld{width:100%;height:48px;padding:0 14px;font-family:inherit;font-size:16px;color:#141413;background:#F5F4ED;border:1px solid #E0DFDB;border-radius:8px}
+.f{display:flex;flex-direction:column;gap:6px}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; padding: 47px 0 34px; display: flex; flex-direction: column">
+  <div style="height: 56px; display: flex; align-items: center; padding: 0 6px">
+    <a href="CtaMiCuenta.dc.html" aria-label="Cerrar sin guardar" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #141413"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></a>
+    <h1 style="font-size: 18px; font-weight: 800; letter-spacing: -0.02em">Tus datos</h1>
+  </div>
+
+  <form style="padding: 8px 20px 0; display: flex; flex-direction: column; gap: 18px">
+    <div class="f"><label for="nm" class="lbl">Nombre completo</label><input id="nm" class="fld" autocomplete="name" value="Lucía Hernández Mora"></div>
+    <div class="f">
+      <label for="em" class="lbl">Correo electrónico</label>
+      <input id="em" class="fld" type="email" autocomplete="email" value="lucia.hm@correo.com">
+      <p style="font-size: 13px; color: #67665F">Si lo cambias, te mandamos un enlace al nuevo para confirmarlo.</p>
+    </div>
+    <div class="f">
+      <label for="tf" class="lbl">Teléfono</label>
+      <div style="display: flex; gap: 8px">
+        <select aria-label="Prefijo de país" class="fld" style="width: 104px; flex: none; padding: 0 10px"><option>ES +34</option><option>CO +57</option></select>
+        <input id="tf" class="fld" type="tel" autocomplete="tel-national" value="612 345 678">
+      </div>
+    </div>
+    <div class="f"><label for="dr" class="lbl">Dirección <span class="opt">(opcional)</span></label><input id="dr" class="fld" autocomplete="street-address" placeholder="Calle, número y ciudad"></div>
+  </form>
+
+  <div style="flex: 1"></div>
+  <div style="padding: 16px 16px 0">
+    <a href="CtaMiCuenta.dc.html" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 8px; background: #B15435; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none">Guardar</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

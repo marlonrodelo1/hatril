@@ -16,6 +16,7 @@ import {
   tipoDeMinisterio,
 } from '@/lib/ministerios/tipos';
 import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
+import { TEXTO_COMPROMISO_NINOS } from '@/lib/rgpd/consentimiento';
 
 /**
  * Alta y edición de un ministerio.
@@ -56,6 +57,7 @@ export function FormularioMinisterio({
   ministerio,
   error,
   puedeCambiarHerramientas = true,
+  compromisoNinos,
 }: {
   accion: (formData: FormData) => Promise<void>;
   ministerio?: MinisterioDetalle;
@@ -65,6 +67,13 @@ export function FormularioMinisterio({
    * sí, porque el alta solo la abre quien tiene `gestionar_ministerios`.
    */
   puedeCambiarHerramientas?: boolean;
+  /**
+   * El tablón de familias (`ninos`) no se enciende con una casilla a secas:
+   * lo enciende el pastor, aceptando el compromiso de la iglesia. Sin esto
+   * —el alta, o quien no es pastor— la casilla sale bloqueada mientras esté
+   * apagada. Apagarlo sí puede cualquiera que gobierne los ministerios.
+   */
+  compromisoNinos?: { esPastor: boolean; iglesia: string };
 }) {
   const colorActual = ministerio?.colorHex ?? COLORES_MINISTERIO[0].hex;
   const tipoActual = tipoDeMinisterio(ministerio?.tipo);
@@ -299,7 +308,16 @@ export function FormularioMinisterio({
           )
         ) : ministerio ? (
           <div className="flex flex-col gap-2.5">
-            {MODULOS_MINISTERIO.map((m) => (
+            {MODULOS_MINISTERIO.map((m) =>
+              m.id === 'ninos' && !marcados.has('ninos') ? (
+                <CasillaNinos
+                  key={m.id}
+                  nombre={m.nombre}
+                  descripcion={m.descripcion}
+                  Icono={m.Icono}
+                  compromiso={compromisoNinos}
+                />
+              ) : (
               <label
                 key={m.id}
                 className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface-alt p-3.5 hover:bg-surface-active has-checked:border-primary"
@@ -325,7 +343,8 @@ export function FormularioMinisterio({
                   </span>
                 </span>
               </label>
-            ))}
+              ),
+            )}
           </div>
         ) : (
           <p className="text-pretty text-[14px] leading-relaxed text-muted-foreground">
@@ -361,3 +380,81 @@ export function FormularioMinisterio({
 /** Repetida en cinco textareas; a mano se despareja en cuanto se toca una. */
 const CLASE_TEXTAREA =
   'rounded-lg border border-input bg-surface-alt px-3 py-2.5 text-[15px] leading-relaxed outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16';
+
+/**
+ * La casilla del tablón de familias mientras está APAGADO.
+ *
+ * Sin JavaScript, como el resto del formulario: el compromiso va siempre a la
+ * vista debajo, con su propia casilla, y es el servidor (`editarMinisterio`)
+ * el que exige las dos juntas y que quien envía sea el pastor. Marcar solo la
+ * primera devuelve el formulario con el motivo.
+ *
+ * A quien no es pastor se le pinta bloqueada y se le dice a quién pedírsela:
+ * una casilla que el servidor va a rechazar es un error esperando a pasar.
+ */
+function CasillaNinos({
+  nombre,
+  descripcion,
+  Icono,
+  compromiso,
+}: {
+  nombre: string;
+  descripcion: string;
+  Icono: (typeof MODULOS_MINISTERIO)[number]['Icono'];
+  compromiso?: { esPastor: boolean; iglesia: string };
+}) {
+  const puede = compromiso?.esPastor === true;
+  const texto = TEXTO_COMPROMISO_NINOS(compromiso?.iglesia ?? 'La iglesia');
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface-alt p-3.5">
+      <label
+        className={
+          'flex items-start gap-3 ' + (puede ? 'cursor-pointer' : 'cursor-not-allowed opacity-70')
+        }
+      >
+        <input
+          type="checkbox"
+          name="modulos"
+          value="ninos"
+          disabled={!puede}
+          className="mt-0.5"
+        />
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="flex items-center gap-2 text-[15px] font-semibold">
+            <Icono className="size-4 text-muted-foreground" strokeWidth={1.9} aria-hidden />
+            {nombre}
+          </span>
+          <span className="text-pretty text-[13.5px] leading-snug text-muted-foreground">
+            {descripcion}
+          </span>
+          {!puede && (
+            <span className="text-pretty text-[13.5px] leading-snug text-muted-foreground">
+              Esta la enciende el pastor, porque compromete a la iglesia.
+            </span>
+          )}
+        </span>
+      </label>
+
+      {puede && (
+        <div className="flex flex-col gap-2.5 border-t border-border pt-3">
+          <p className="text-pretty text-[13.5px] leading-snug">{texto.entrada}</p>
+          <ul className="flex list-disc flex-col gap-1.5 pl-5 text-pretty text-[13.5px] leading-snug">
+            {texto.puntos.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+          <p className="text-pretty text-[13px] leading-snug text-muted-foreground">
+            {texto.nota}
+          </p>
+          <label className="flex cursor-pointer items-start gap-3">
+            <input type="checkbox" name="compromiso_ninos" className="mt-0.5" />
+            <span className="text-pretty text-[14px] font-semibold leading-snug">
+              {texto.casilla}
+            </span>
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}

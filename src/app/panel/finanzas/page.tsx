@@ -159,6 +159,15 @@ export default async function FinanzasPage({
           >
             Informe del mes
           </Link>
+          {/* A todos los que llevan la caja, y en cualquier país: la pantalla
+              explica sola lo que no les toca (quién da, o que fuera de España
+              no hay tarjeta todavía). */}
+          <Link
+            href="/panel/finanzas/en-linea"
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            Ofrendas en línea
+          </Link>
           {/* Solo al pastor: crear un fondo es gobierno, y el sub-layout de
               ajustes rebota a quien no lo sea. Enseñar el enlace igualmente
               sería una sección que al pulsarla dice «no tienes acceso». */}

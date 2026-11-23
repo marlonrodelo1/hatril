@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     "android/**",
     "ios/**",
     "Versiones/**",
+    // La app empaquetada ya compilada (`npm run movil:build`).
+    "movil/dist/**",
   ]),
 ]);
 

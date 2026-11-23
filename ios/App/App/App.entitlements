@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Notificaciones push (APNs). Se escribe "development" y Xcode lo cambia
+	  solo a "production" al exportar para TestFlight y la App Store: es el
+	  perfil de distribución el que manda. Sin esta clave, iOS no entrega
+	  ningún token y el registro falla sin ruido.
+	-->
+	<key>aps-environment</key>
+	<string>development</string>
+	<!--
+	  Entrar con Apple. Sin esta clave la ventana de Apple sale y falla con un
+	  error 1000 sin explicación. El App ID app.hatril ya tiene la capacidad
+	  marcada en developer.apple.com (19-nov); si no, la firma lo rechaza.
+	-->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
+</dict>
+</plist>

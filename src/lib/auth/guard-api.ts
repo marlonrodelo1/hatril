@@ -4,8 +4,21 @@ import {
   getCurrentUserContext,
   type UserContext,
 } from '@/lib/auth/user-context';
-import { esPastor, puede, type Permiso } from '@/lib/auth/permisos';
+import { and, eq } from 'drizzle-orm';
+import { z } from 'zod';
+
+import {
+  esPastor,
+  puede,
+  puedeGestionarDesdeDentro,
+  puedeGestionarMinisterio,
+  type Permiso,
+} from '@/lib/auth/permisos';
 import { motivoFueraDelPanel } from '@/lib/auth/guard-panel';
+import { withUser } from '@/lib/db';
+import { ministerios } from '@/lib/db/schema';
+import { obtenerMinisterio, type MinisterioDetalle } from '@/lib/ministerios/consultas';
+import { tieneModulo, type ModuloId } from '@/lib/ministerios/modulos';
 
 /**
  * Guard para route handlers.
@@ -75,4 +88,62 @@ export async function requirePermisoApi(
     return { ok: false, respuesta: sinPermiso() };
   }
   return { ok: true, ctx };
+}
+
+function noExiste(): Response {
+  return new Response('No existe.', {
+    status: 404,
+    headers: { 'content-type': 'text/plain; charset=utf-8' },
+  });
+}
+
+export type ResultadoGuardMinisterio =
+  | { ok: true; ctx: UserContext; ministerio: MinisterioDetalle }
+  | { ok: false; respuesta: Response };
+
+/**
+ * La de `requireModuloMinisterio` para un `route.ts`: las puertas del panel,
+ * llevar ESTE ministerio (con `desdeDentro`, sin el camino de
+ * `gestionar_ministerios`), que sea de la iglesia del contexto y que la
+ * herramienta esté encendida.
+ *
+ * Es la que le faltaba al CSV del reparto (ESTADO.md, «CSV del reparto»). La
+ * estrena la descarga del drive de Niños.
+ *
+ * Con 403 y 404 y no con `redirect()`, por lo de la cabecera de este fichero:
+ * quien descarga un ZIP no tiene que recibir una página HTML con nombre de ZIP.
+ */
+export async function requireModuloMinisterioApi(
+  ministerioId: string,
+  modulo: ModuloId,
+  opciones?: { desdeDentro?: boolean },
+): Promise<ResultadoGuardMinisterio> {
+  const ctx = await getCurrentUserContext();
+  if (!ctx) return { ok: false, respuesta: sinSesion() };
+  if (await motivoFueraDelPanel(ctx)) return { ok: false, respuesta: sinPermiso() };
+  if (!z.string().uuid().safeParse(ministerioId).success) {
+    return { ok: false, respuesta: noExiste() };
+  }
+
+  const entra = opciones?.desdeDentro
+    ? puedeGestionarDesdeDentro(ctx, ministerioId)
+    : puedeGestionarMinisterio(ctx, ministerioId);
+  if (!entra) return { ok: false, respuesta: sinPermiso() };
+
+  // De la iglesia del contexto: una cuenta pastora en dos iglesias pasaría la
+  // RLS en las dos (`esMinisterioDeSuIglesia` en guard-panel.ts).
+  const [suyo] = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ id: ministerios.id })
+      .from(ministerios)
+      .where(and(eq(ministerios.id, ministerioId), eq(ministerios.iglesiaId, ctx.iglesia.id)))
+      .limit(1),
+  );
+  if (!suyo) return { ok: false, respuesta: sinPermiso() };
+
+  const ministerio = await obtenerMinisterio(ctx, ministerioId);
+  if (!ministerio || !tieneModulo(ministerio.modulos, modulo)) {
+    return { ok: false, respuesta: noExiste() };
+  }
+  return { ok: true, ctx, ministerio };
 }

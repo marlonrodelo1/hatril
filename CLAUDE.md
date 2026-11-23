@@ -41,8 +41,10 @@ No existe un `db` a secas. Hay que elegir, y elegir mal se ve en la revisión.
 `src/lib/db/client.ts` y `src/lib/db/with-tenant.ts`.
 
 `dbAdmin` solo vale para: crons, webhooks, super admin, el alta de iglesia (que
-ocurre antes de que exista membresía) y `getCurrentUserContext` (que resuelve la
-tabla que las policies consultan). Nada más.
+ocurre antes de que exista membresía), la baja de una cuenta (`lib/cuenta/baja.ts`:
+la cuenta puede ser de varias iglesias y el borrado final lo hace un cron) y
+`getCurrentUserContext` (que resuelve la tabla que las policies consultan). Nada
+más.
 
 ### Antes de dar por bueno cualquier cambio
 
@@ -63,6 +65,15 @@ Por eso ahora tiene una segunda fase que llama a `withUser()` de verdad.
 
 La regla que sale de ahí: **abrir la pantalla y pulsar el botón**. Un cambio que
 no se ha ejecutado no está verificado, por muchos verdes que haya.
+
+**Las pruebas montan sus propias iglesias.** `test:aislamiento`,
+`test:puertas`, `test:puertas:app` y `test:puertas:admin` crean dos iglesias de
+usar y tirar con sus cuentas, sin contraseña (`scripts/pruebas/demo.mjs`), y
+las borran al terminar, también si fallan. Las tres de puertas piden además
+`npm run dev`. La base de local es la de producción: una prueba nunca apunta a
+una iglesia que no haya montado ella, y menos a Cuerpo de Cristo, que tiene
+gente de verdad. Hasta el 20-nov se apoyaban en Betania, una demo fija con las
+contraseñas escritas en este repo público; se borró.
 
 ### Al crear una función en Postgres
 
@@ -215,9 +226,12 @@ Tres reglas que el propio sistema declara innegociables:
 2. Los errores llevan icono, no solo color. Ahora importa el doble: el rojo de
    error (#B53333) y el naranja de marca (#B15435) son vecinos de tono.
 3. Sin sombras. La profundidad se hace con bordes de 1px. **Sin degradados,
-   con una excepción**: la portada del muro, donde el texto va sobre una foto y
+   con dos excepciones**: la portada del muro, donde el texto va sobre una foto y
    un velo plano tendría que apagar la imagen entera para garantizar el peor
-   punto. Si aparece una segunda, es que la regla se está deshaciendo sola.
+   punto; y el carrusel de fotos de la presentación de la app (23-nov, lo pidió
+   Marlon), que se funde con el fondo por abajo y por los lados. Ese no pinta
+   color: es una máscara (`mask-image`), así que no clava ningún tono al cambiar
+   la paleta. Si aparece una tercera, es que la regla se está deshaciendo sola.
 
 Un solo modo, el claro. No hay `dark:` ni interruptor.
 
@@ -238,8 +252,10 @@ Tres cosas que hay que saber antes de tocar un color:
   volver a claro. **Al añadir un token, exponerlo.** El blanco y el negro solo
   valen encima de una foto o de un relleno de color.
 
-Faltan por diseñar: onboarding, super admin, directorio de iglesias, área del
-miembro y todas las vistas móviles. El acceso y el registro ya están (20-oct).
+Faltan por diseñar: onboarding, directorio de iglesias, área del miembro y
+todas las vistas móviles. El acceso y el registro ya están (20-oct). El super
+admin (28-oct) se construyó sin diseño, con `docs/diseno/guia-visual.md` y el
+marco del panel.
 
 ---
 

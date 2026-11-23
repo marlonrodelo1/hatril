@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { updateSession } from '@/lib/supabase/middleware';
 import { resolverSlugPorDominio } from '@/lib/dominios/iglesias';
+import { PREFIJO_API_APP, respuestaPreviaCors } from '@/lib/api/cors-app';
 
 /**
  * El middleware de Next 16, que ahora se llama `proxy`.
@@ -56,6 +57,12 @@ export async function proxy(request: NextRequest) {
    * `requireApiToken`, o —en el webhook— la firma HMAC de Stripe.
    */
   if (pathname.startsWith('/api/')) {
+    // El `OPTIONS` previo de la app empaquetada se contesta aquí, en un solo
+    // sitio, en vez de exportarlo en cada `route.ts` y olvidarlo en uno.
+    // Solo dice qué orígenes pueden leer: la puerta sigue en cada endpoint.
+    if (request.method === 'OPTIONS' && pathname.startsWith(PREFIJO_API_APP)) {
+      return respuestaPreviaCors(request.headers.get('origin'));
+    }
     return NextResponse.next();
   }
 

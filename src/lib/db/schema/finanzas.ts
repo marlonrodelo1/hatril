@@ -146,6 +146,13 @@ export const fondos = pgTable(
     colorHex: text('color_hex'),
 
     /**
+     * Si sale como destino en la página de dar (`/i/[slug]/dar`). El general
+     * sale siempre, marcado o no: es «Donde más falte». Lo enciende la iglesia
+     * en Finanzas → Ofrendas en línea.
+     */
+    enDonativos: boolean('en_donativos').notNull().default(false),
+
+    /**
      * Archivar en vez de borrar. Un fondo con movimientos no se puede borrar sin
      * descuadrar el libro, y una campaña de construcción que terminó tiene que
      * seguir sumando en el histórico aunque ya no salga en el desplegable.

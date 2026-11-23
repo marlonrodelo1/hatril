@@ -1,15 +1,22 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
-import { Clock, Search } from 'lucide-react';
+import { Check, ChevronRight, Clock, Search } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUserContext } from '@/lib/auth/user-context';
+import { getCurrentSuperAdmin } from '@/lib/auth/super-admin';
 import { esDelEquipo, inicioDe } from '@/lib/auth/permisos';
 import { solicitudDeUsuario } from '@/lib/solicitudes/consultas';
+import { bajaPendiente } from '@/lib/cuenta/baja';
+import { isNativeApp } from '@/lib/platform/is-native-app';
+import { COOKIE_BIENVENIDA } from '@/lib/bienvenida';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
 import { CabeceraMiembro } from './_components/cabecera-miembro';
+import { cancelarSolicitud } from '../solicitar/actions';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Mi cuenta' };
 
@@ -47,16 +54,23 @@ export const metadata: Metadata = { title: 'Mi cuenta' };
 export default async function MiPage({
   searchParams,
 }: {
-  searchParams: Promise<{ enviada?: string; invitacion?: string }>;
+  searchParams: Promise<{ enviada?: string; invitacion?: string; cancelada?: string }>;
 }) {
-  const { enviada, invitacion } = await searchParams;
+  const { enviada, invitacion, cancelada } = await searchParams;
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect('/acceso?next=/mi');
+  // En la app, quien la abre sin sesión es casi siempre alguien que acaba de
+  // descargarla: a la bienvenida, y a la presentación solo la primera vez. En
+  // la web, `/mi` sin sesión es un enlace guardado: a identificarse.
+  if (!user) {
+    if (!(await isNativeApp())) redirect('/acceso?next=/mi');
+    const vista = (await cookies()).get(COOKIE_BIENVENIDA)?.value === '1';
+    redirect(vista ? '/empezar' : '/bienvenida');
+  }
 
   const ctx = await getCurrentUserContext();
 
@@ -83,6 +97,15 @@ export default async function MiPage({
   // El corte del consentimiento lo pone `/mi/comunidad`, igual que las otras
   // tres pestañas: aquí no hace falta duplicarlo para redirigir.
   if (ctx) redirect('/mi/comunidad');
+
+  // El super admin sin iglesia no está «esperando a que le acepten»: su sitio
+  // es `/admin`. Aquí llega por los caminos que no pasan por el formulario de
+  // acceso —el enlace de `/auth/confirm`, la app nativa que arranca en `/mi`—.
+  if (await getCurrentSuperAdmin()) redirect('/admin');
+
+  // Quien pidió borrar su cuenta tiene sus membresías en `baja`, así que llega
+  // aquí sin iglesia. No está buscando una: está a tiempo de arrepentirse.
+  if (await bajaPendiente(user.id)) redirect('/cuenta-en-baja');
 
   const solicitud = await solicitudDeUsuario(user.id);
 
@@ -112,33 +135,58 @@ export default async function MiPage({
           </Aviso>
         )}
 
-        {solicitud?.estado === 'pendiente' && (
-          <div className="flex flex-col items-start gap-4 rounded-xl border border-border bg-surface p-6">
-            <span className="flex size-11 items-center justify-center rounded-full bg-badge-warning-bg text-badge-warning-fg">
-              <Clock className="size-5" strokeWidth={1.7} />
-            </span>
+        {cancelada && !solicitud && (
+          <Aviso tipo="ok">Solicitud cancelada. Puedes pedir entrar en otra iglesia.</Aviso>
+        )}
 
+        {/*
+         * La pantalla «Solicitud enviada» del diseño de la bienvenida: es la
+         * misma que se ve al abrir la app mientras se espera. Sin «activar
+         * avisos»: los avisos al móvil no existen todavía, y no se promete lo
+         * que no hay.
+         */}
+        {solicitud?.estado === 'pendiente' && (
+          <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
-              <h1 className="t-titulo">Tu solicitud está en revisión</h1>
-              <p className="text-pretty text-[15px] leading-relaxed text-muted-foreground">
-                Pediste unirte a <strong>{solicitud.iglesiaNombre}</strong>
-                {solicitud.iglesiaCiudad && ` (${solicitud.iglesiaCiudad})`} el{' '}
-                {formatearFecha(solicitud.createdAt)}. Alguien del equipo la
-                revisará y, en cuanto la apruebe, aquí verás lo que publica tu
-                iglesia.
-              </p>
-              <p className="text-[14px] leading-relaxed text-muted-foreground">
-                Si tienes prisa, lo más rápido es decírselo en persona el
-                domingo.
+              <h1 className="text-balance text-[26px] leading-tight font-extrabold tracking-[-0.025em]">
+                Tu solicitud está con el pastor de {solicitud.iglesiaNombre}
+              </h1>
+              <p className="text-pretty text-[15.5px] leading-relaxed text-muted-foreground">
+                Te avisaremos en cuanto te acepte. No tienes que hacer nada más.
               </p>
             </div>
 
-            <Button
-              variant="outline"
-              render={<Link href={`/i/${solicitud.iglesiaSlug}`} />}
+            <ol className="flex flex-col rounded-xl border border-border bg-surface px-4 py-2">
+              <Paso hecho titulo="Solicitud enviada" detalle={formatearFecha(solicitud.createdAt)} />
+              <Paso actual titulo="El pastor la revisa" detalle="Ahora" />
+              <Paso titulo="Entras en la comunidad" detalle="Cuando te acepte" ultimo />
+            </ol>
+
+            <p className="text-[14px] leading-relaxed text-muted-foreground">
+              Si tienes prisa, lo más rápido es decírselo en persona el domingo.
+            </p>
+
+            <Link
+              href={`/iglesia/${solicitud.iglesiaSlug}`}
+              className="flex items-center gap-3 rounded-xl border border-border bg-surface p-4 text-foreground no-underline hover:bg-surface-active"
             >
-              Ver su página
-            </Button>
+              <span className="flex size-10 flex-none items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                <Clock className="size-5" strokeWidth={1.8} />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-[15px] font-bold">
+                  Mientras esperas, conoce {solicitud.iglesiaNombre}
+                </span>
+                <span className="text-[13px] text-muted-foreground">Horarios y dónde está</span>
+              </span>
+              <ChevronRight className="size-[18px] flex-none text-muted-foreground" strokeWidth={1.8} />
+            </Link>
+
+            <form action={cancelarSolicitud} className="self-center">
+              <Button type="submit" variant="ghost" className="text-muted-foreground hover:text-foreground">
+                Cancelar solicitud
+              </Button>
+            </form>
           </div>
         )}
 
@@ -159,14 +207,12 @@ export default async function MiPage({
             </div>
 
             <div className="flex flex-wrap gap-2.5">
-              <Button
-                render={<Link href={`/solicitar/${solicitud.iglesiaSlug}`} />}
-              >
+              <BotonEnlace href={`/solicitar/${solicitud.iglesiaSlug}`}>
                 Volver a solicitarlo
-              </Button>
-              <Button variant="outline" render={<Link href="/iglesias" />}>
+              </BotonEnlace>
+              <BotonEnlace href="/iglesias" variant="outline">
                 Buscar otra iglesia
-              </Button>
+              </BotonEnlace>
             </div>
           </div>
         )}
@@ -185,11 +231,21 @@ export default async function MiPage({
               </p>
             </div>
 
-            <Button render={<Link href="/iglesias" />}>
+            <BotonEnlace href="/iglesias">
               Buscar mi iglesia
-            </Button>
+            </BotonEnlace>
           </div>
         )}
+
+        {/* También sin iglesia: Apple y Google piden poder borrar toda cuenta
+            que se pueda crear, y aquí hay cuentas que nunca llegan a entrar en
+            ninguna. */}
+        <Link
+          href="/mi/cuenta/borrar"
+          className="self-center text-[13.5px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          Borrar mi cuenta
+        </Link>
       </main>
     </div>
   );
@@ -200,4 +256,45 @@ function formatearFecha(fecha: Date): string {
     day: 'numeric',
     month: 'long',
   });
+}
+
+function Paso({
+  titulo,
+  detalle,
+  hecho = false,
+  actual = false,
+  ultimo = false,
+}: {
+  titulo: string;
+  detalle: string;
+  hecho?: boolean;
+  actual?: boolean;
+  ultimo?: boolean;
+}) {
+  return (
+    <li className="flex gap-3 py-2">
+      <span className="flex flex-col items-center">
+        <span
+          className={
+            'flex size-6 flex-none items-center justify-center rounded-full border ' +
+            (hecho
+              ? 'border-support bg-support text-white'
+              : actual
+                ? 'border-primary bg-accent'
+                : 'border-border bg-surface')
+          }
+        >
+          {hecho && <Check className="size-3.5" strokeWidth={2.4} />}
+          {actual && <span className="size-2 rounded-full bg-primary" />}
+        </span>
+        {!ultimo && <span className="mt-1 w-px flex-1 bg-border" />}
+      </span>
+      <span className="flex flex-col pb-1">
+        <span className={'text-[15px] ' + (hecho || actual ? 'font-bold' : 'text-muted-foreground')}>
+          {titulo}
+        </span>
+        <span className="text-[13px] text-muted-foreground">{detalle}</span>
+      </span>
+    </li>
+  );
 }

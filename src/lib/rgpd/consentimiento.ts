@@ -1,4 +1,7 @@
-import 'server-only';
+// Sin `server-only` desde el 20-nov: aquí solo hay textos y versiones, nada
+// secreto, y la app empaquetada (`movil/`) tiene que enseñar exactamente los
+// mismos que la web. Copiarlos sería abrir la puerta a que el teléfono pida
+// un consentimiento con una letra distinta de la que se guarda.
 
 /**
  * Consentimiento para datos de categoría especial (art. 9 RGPD).
@@ -200,3 +203,80 @@ export const VERSION_CONSENTIMIENTO_REPARTO = 'reparto-2026-10';
 
 export const TEXTO_CONSENTIMIENTO_IMAGEN =
   'Autorizo que mi foto aparezca en el directorio interno de la congregación.';
+
+/**
+ * Versión de los textos del ministerio de Niños: el compromiso del pastor al
+ * encenderlo y, con la app (fase N4), las casillas de las familias.
+ *
+ * Aparte de `VERSION_POLITICA_PRIVACIDAD` por lo mismo que la del evento y la
+ * del reparto: un cambio en lo de los niños no tiene que mandar a toda la
+ * congregación a `/acepta`. Lo decidió Marlon el 21-nov. La base exige la
+ * forma `^ninos-[0-9]{4}-[0-9]{2}$` (`0059`).
+ *
+ * Los textos salen de `docs/modulos/ninos-textos.md`, que está pendiente de la
+ * revisión de un abogado. Si cambian, sube esto.
+ */
+export const VERSION_TEXTOS_NINOS = 'ninos-2026-11';
+
+/**
+ * Lo que firma el pastor al encender el tablón de familias. Se guarda en
+ * `ministerios.modulos.ninos.compromiso` con quién, cuándo y esta versión.
+ *
+ * Es la iglesia, responsable del tratamiento, la que se compromete: Hatril no
+ * puede comprobar quién es padre de quién, ni guarda el certificado negativo
+ * de nadie (RGPD art. 10). Lo que sí hace es no dejar encender la herramienta
+ * sin que alguien con nombre lo haya leído.
+ */
+export const TEXTO_COMPROMISO_NINOS = (iglesia: string) => ({
+  entrada: `Al encender esta herramienta, ${iglesia}, que es la responsable de estos datos, se compromete a:`,
+  puntos: [
+    'Comprobar en persona que quien pide ver lo de un niño es su madre, su padre o su tutor, antes de aceptarle.',
+    'En España, pedir a quienes dan clase el certificado negativo del Registro Central de Delincuentes Sexuales (Ley Orgánica 8/2021, artículos 57 y 59), también si son voluntarios. Hatril no guarda ese certificado.',
+    'No sacar de Hatril las fotos de los niños para publicarlas en redes, en la web o en grupos de mensajería sin el permiso de sus familias.',
+    'Guardar con el mismo cuidado lo que descargue al exportar el drive.',
+  ],
+  nota: 'Tratar datos e imágenes de menores puede obligar a la iglesia a hacer una evaluación de impacto. Si tienes dudas, consúltalo antes de encenderla.',
+  casilla: 'He leído el compromiso y lo acepto en nombre de la iglesia.',
+});
+
+/**
+ * Lo que lee la familia al pedir el vínculo con su hijo, en la app («Mis
+ * hijos»). La primera capa de información del RGPD art. 13, corta, encima de
+ * las casillas. Palabra por palabra la de `docs/modulos/ninos-textos.md` §1,
+ * pendiente del abogado; si cambia, sube `VERSION_TEXTOS_NINOS`.
+ */
+export const TEXTO_NINOS_INFORMACION = (iglesia: string): string[] => [
+  `Los guarda ${iglesia}, que es quien decide sobre ellos. Hatril es el programa que usa la iglesia y solo los trata por encargo suyo.`,
+  'Se guardan el nombre con el que llamáis a tu hijo o hija, su año de nacimiento y que eres su madre, su padre o su tutor. Nada más: ni apellidos, ni fecha de nacimiento, ni foto de perfil.',
+  'Lo ven la responsable del ministerio, sus maestros y el pastor. Ninguna otra familia ve a tu hijo ni sabe que lo has apuntado.',
+  'Las publicaciones del ministerio, con sus fotos y vídeos, las ven solo las familias que el ministerio ha aceptado, dentro de la app, y se borran al año.',
+  'Los datos están en servidores de la Unión Europea, en Irlanda.',
+  'Pedir esto es voluntario. Tu hijo puede seguir yendo a la clase igual, aunque no lo pidas o aunque no des permiso para las fotos.',
+];
+
+/**
+ * La casilla obligatoria. Cada trozo, con su porqué, en `ninos-textos.md` §1:
+ * quién consiente (LOPDGDD 7.2, Decreto 1377 art. 12), haber escuchado al
+ * menor (Decreto 1377 art. 12), el dato del art. 9, y la transferencia a
+ * Irlanda (Ley 1581 art. 26.a).
+ */
+export const TEXTO_NINOS_CASILLA_VINCULO = (iglesia: string): string =>
+  'Soy su madre, su padre o su tutor legal, y he hablado de esto con mi hijo o ' +
+  `hija según su edad. Autorizo a ${iglesia} a guardar su nombre y su año de ` +
+  'nacimiento en el ministerio de Niños y a enseñarme en la app lo que hacen. ' +
+  'Sé que esto dice algo de las creencias de mi familia, que son datos ' +
+  'especialmente protegidos, y que se guardan en servidores de la Unión ' +
+  'Europea, en Irlanda. Puedo retirar este permiso cuando quiera.';
+
+/** La casilla opcional de las fotos. No marcarla no impide el vínculo (RGPD 7.4). */
+export const TEXTO_NINOS_CASILLA_IMAGEN =
+  'Puede salir en las fotos y vídeos de las actividades del ministerio de Niños. ' +
+  'Solo los ven, dentro de la app, sus maestros y las familias que el ministerio ' +
+  'ha aceptado, y se borran al año. Puedo retirar este permiso cuando quiera.';
+
+/** Decreto 1377 art. 6, para Colombia; para todos, porque no hace daño. */
+export const TEXTO_NINOS_NO_OBLIGADO = 'No estás obligado a dar ninguno de estos dos permisos.';
+
+/** Al pie del tablón: las fotos son de los niños de la iglesia, no solo del tuyo. */
+export const TEXTO_NINOS_PIE_TABLON =
+  'Estas fotos son de los niños de tu iglesia, no solo del tuyo. No las compartas fuera de la app.';

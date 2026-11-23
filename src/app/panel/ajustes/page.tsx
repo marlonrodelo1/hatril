@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { eq } from 'drizzle-orm';
 import { ExternalLink, Image as ImageIcon, Trash2, Upload } from 'lucide-react';
@@ -23,7 +22,9 @@ import {
 import type { Ranura } from '@/lib/iglesias/imagenes';
 import { FILAS_HORARIO, MAX_FOTOS } from './constantes';
 import { CabeceraPanel } from '../_components/cabecera';
+import { CampoUbicacion } from './_components/campo-ubicacion';
 import { Contenedor } from '../_components/contenedor';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Ajustes' };
 
@@ -128,6 +129,14 @@ export default async function AjustesPage({
                   </Campo>
                 </div>
 
+                <CampoUbicacion
+                  inicial={
+                    iglesia.latitud !== null && iglesia.longitud !== null
+                      ? `${iglesia.latitud}, ${iglesia.longitud}`
+                      : ''
+                  }
+                />
+
                 <Campo
                   etiqueta="En una frase"
                   nombre="descripcion"
@@ -171,14 +180,12 @@ export default async function AjustesPage({
                 nota={`Tu iglesia en hatril.com/i/${iglesia.slug}`}
                 accion={
                   iglesia.webPublica ? (
-                    <Button
+                    <BotonEnlace href={`/i/${iglesia.slug}`} target="_blank"
                       variant="outline"
-                      size="sm"
-                      render={<Link href={`/i/${iglesia.slug}`} target="_blank" />}
-                    >
+                      size="sm">
                       Verla
                       <ExternalLink strokeWidth={1.7} />
-                    </Button>
+                    </BotonEnlace>
                   ) : undefined
                 }
               >

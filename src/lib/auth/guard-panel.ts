@@ -28,7 +28,7 @@ import {
 } from '@/lib/ministerios/consultas';
 import { tieneModulo, type ModuloId } from '@/lib/ministerios/modulos';
 import { estadoConsentimiento } from '@/lib/rgpd/consultas';
-import { createClient } from '@/lib/supabase/server';
+import { usuarioActual } from '@/lib/auth/usuario';
 import { leerEstadoSuscripcion } from '@/lib/suscripcion/estado';
 import { exigirPoderEscribir } from '@/lib/suscripcion/muro';
 
@@ -120,10 +120,11 @@ const MENSAJE_SIN_PERMISO = 'No tienes acceso a esta sección.';
  * a `/mi`, que le cuenta en qué punto está su solicitud.
  */
 async function rebotar(): Promise<never> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // `usuarioActual` y no `getUser()` a mano: ya lo pidió el contexto, así que
+  // no cuesta otro viaje a Auth, y es el que entiende la sesión de la app
+  // empaquetada. Con `getUser()` aquí, quien entra desde la app sin iglesia
+  // recibía «inicia sesión» en vez de «no perteneces a ninguna iglesia».
+  const user = await usuarioActual();
 
   redirect(user ? '/mi' : '/acceso');
 }

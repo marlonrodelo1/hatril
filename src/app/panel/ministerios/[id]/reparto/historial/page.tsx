@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ChevronLeft, ChevronRight, Printer } from 'lucide-react';
 
@@ -12,6 +11,7 @@ import { SeccionesReparto } from '../_components/secciones';
 import { mesValido, moverMes } from './mes';
 
 import { requireReparto } from '../guarda';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Historial del reparto' };
 
@@ -64,26 +64,22 @@ export default async function HistorialRepartoPage({
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <nav aria-label="Mes" className="flex items-center gap-2">
-            <Button
+            <BotonEnlace href={`${base}/historial?mes=${moverMes(elegido, -1)}`}
               variant="outline"
               size="icon"
-              aria-label="Mes anterior"
-              render={<Link href={`${base}/historial?mes=${moverMes(elegido, -1)}`} />}
-            >
+              aria-label="Mes anterior">
               <ChevronLeft strokeWidth={1.9} />
-            </Button>
+            </BotonEnlace>
             <h2 className="t-subtitulo min-w-[11ch] text-center first-letter:uppercase">
               {periodo.etiqueta}
             </h2>
             {elegido < esteMes ? (
-              <Button
+              <BotonEnlace href={`${base}/historial?mes=${moverMes(elegido, 1)}`}
                 variant="outline"
                 size="icon"
-                aria-label="Mes siguiente"
-                render={<Link href={`${base}/historial?mes=${moverMes(elegido, 1)}`} />}
-              >
+                aria-label="Mes siguiente">
                 <ChevronRight strokeWidth={1.9} />
-              </Button>
+              </BotonEnlace>
             ) : (
               <Button variant="outline" size="icon" disabled aria-label="Mes siguiente">
                 <ChevronRight strokeWidth={1.9} />
@@ -92,13 +88,11 @@ export default async function HistorialRepartoPage({
           </nav>
 
           {historial.dias.length > 0 && (
-            <Button
-              variant="outline"
-              render={<Link href={`${base}/informe?mes=${elegido}`} />}
-            >
+            <BotonEnlace href={`${base}/informe?mes=${elegido}`}
+              variant="outline">
               <Printer strokeWidth={1.8} />
               Informe del mes
-            </Button>
+            </BotonEnlace>
           )}
         </div>
 
@@ -113,9 +107,9 @@ export default async function HistorialRepartoPage({
               Cada reparto aparece aquí con sus cifras en cuanto se empieza en
               «Hoy».
             </p>
-            <Button variant="outline" render={<Link href={base} />}>
+            <BotonEnlace href={base} variant="outline">
               Ir a Hoy
-            </Button>
+            </BotonEnlace>
           </div>
         ) : (
           <>

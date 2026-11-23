@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Presentación 1 · Tu iglesia, contigo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:16px;text-decoration:none;border:1px solid transparent}
+.mk path{stroke-dasharray:1;stroke-dashoffset:0;animation:draw 700ms cubic-bezier(.4,0,.2,1) both}
+.mk path:nth-child(2){animation-delay:80ms}.mk path:nth-child(3){animation-delay:160ms}.mk path:nth-child(4){animation-delay:260ms}.mk path:nth-child(5){animation-delay:340ms}.mk path:nth-child(6){animation-delay:400ms}
+.rise{animation:rise 460ms cubic-bezier(.2,.8,.2,1) both}
+.d1{animation-delay:420ms}.d2{animation-delay:540ms}.d3{animation-delay:660ms}.d4{animation-delay:820ms}
+.txt{animation:fade 400ms ease-out 200ms both}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){.mk path,.rise,.txt{animation:none}}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; display: flex; flex-direction: column; padding: 47px 0 34px">
+  <div style="height: 52px; display: flex; justify-content: flex-end; align-items: center; padding: 0 12px">
+    <a href="Pregunta.dc.html" style="display: flex; align-items: center; height: 44px; padding: 0 12px; font-size: 15px; font-weight: 600; color: #67665F; text-decoration: none">Saltar</a>
+  </div>
+
+  <div aria-hidden="true" style="height: 380px; position: relative; display: flex; flex-direction: column; align-items: center; padding: 8px 28px 0; gap: 12px">
+    <svg class="mk" width="52" height="52" viewBox="0 0 64 64" stroke="#B15435" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path pathLength="1" d="M32 20 C26 16 18 16 12 18 L12 31 C18 29 26 29 32 33"/>
+      <path pathLength="1" d="M32 20 C38 16 46 16 52 18 L52 31 C46 29 38 29 32 33"/>
+      <path pathLength="1" d="M32 20 V33"/>
+      <path pathLength="1" d="M9 36 H55 L49 42 H15 Z"/>
+      <path pathLength="1" d="M32 42 V56"/>
+      <path pathLength="1" d="M24 57 H40"/>
+    </svg>
+
+    <div class="rise d1" style="width: 100%; background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <div style="width: 32px; height: 32px; border-radius: 999px; background: #F5E7DF; color: #92442A; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center">RP</div>
+        <div style="display: flex; flex-direction: column">
+          <span style="font-size: 13px; font-weight: 700">Ruth Pérez</span>
+          <span style="font-size: 11px; color: #67665F">hace 2 h</span>
+        </div>
+      </div>
+      <p style="font-size: 13px; line-height: 1.45">Gracias a todos por orar. Mi madre ya está en casa. ¡Qué familia tenemos!</p>
+      <div style="display: flex; gap: 8px">
+        <span style="font-size: 12px; font-weight: 600; color: #92442A; background: #F5E7DF; border-radius: 999px; padding: 4px 10px">Orando · 24</span>
+        <span style="font-size: 12px; font-weight: 600; color: #67665F; border: 1px solid #E0DFDB; border-radius: 999px; padding: 3px 10px">6 comentarios</span>
+      </div>
+    </div>
+
+    <div class="rise d2" style="width: 94%; background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; padding: 14px; display: flex; gap: 12px; align-items: flex-start">
+      <div style="width: 36px; height: 36px; border-radius: 8px; background: #F5F4ED; color: #3D3D3A; display: flex; align-items: center; justify-content: center">
+        <svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 3px">
+        <span style="font-size: 11px; font-weight: 700; color: #67665F; text-transform: uppercase; letter-spacing: 0.06em">Jóvenes · Aviso</span>
+        <span style="font-size: 13px; line-height: 1.4">Sábado, limpieza de la playa. Quedamos a las 9:00 en la puerta.</span>
+      </div>
+    </div>
+
+    <div class="rise d3" style="width: 86%; height: 56px; background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; padding: 14px; display: flex; align-items: center; gap: 10px">
+      <div style="width: 26px; height: 26px; border-radius: 999px; background: #F5F4ED"></div>
+      <div style="flex: 1; height: 8px; border-radius: 4px; background: #F5F4ED"></div>
+    </div>
+  </div>
+
+  <div class="txt" style="flex: 1; padding: 20px 28px 0; display: flex; flex-direction: column; gap: 12px">
+    <h1 style="font-size: 30px; line-height: 1.12; font-weight: 800; letter-spacing: -0.025em">Tu iglesia, contigo toda la semana</h1>
+    <p style="font-size: 16px; line-height: 1.5; color: #67665F">Lo que pasa en tu comunidad entre domingo y domingo: avisos, fotos y peticiones de oración, en un solo muro.</p>
+  </div>
+
+  <div style="padding: 0 24px; display: flex; flex-direction: column; gap: 20px">
+    <div role="img" aria-label="Página 1 de 3" style="display: flex; gap: 6px; justify-content: center">
+      <span style="width: 22px; height: 6px; border-radius: 999px; background: #3D3D3A"></span>
+      <span style="width: 6px; height: 6px; border-radius: 999px; background: #E0DFDB"></span>
+      <span style="width: 6px; height: 6px; border-radius: 999px; background: #E0DFDB"></span>
+    </div>
+    <a href="Intro2.dc.html" class="btn" style="background: #3D3D3A; color: #FFFFFF">Siguiente</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

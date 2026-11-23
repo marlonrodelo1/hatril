@@ -61,3 +61,6 @@ android/keystore.properties
 # Altas asistidas (`scripts/alta-asistida.ts`): correos de personas reales y,
 # después de correr, sus contraseñas de primer acceso. Nada de esto va a GitHub.
 /altas/
+
+# La app empaquetada: lo compila `npm run movil:build` y lo copia Capacitor.
+/movil/dist

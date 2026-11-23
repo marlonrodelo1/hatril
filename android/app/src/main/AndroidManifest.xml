@@ -43,6 +43,23 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <!--
+          Notificaciones push (@capacitor-firebase/messaging). El icono es la
+          silueta del atril en blanco, y Android le pone este naranja: con el
+          icono de la app saldría un círculo blanco. El canal «avisos» lo crea
+          la web al pedir el permiso (src/components/push-nativo.tsx), para que
+          en los ajustes del teléfono se llame «Avisos» y no «Varios».
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_hatril" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/ic_launcher_background" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="avisos" />
     </application>
 
     <!-- Permissions -->
@@ -59,4 +76,31 @@
       si hay red, no cuál ni dónde.
     -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!--
+      «Cerca de mí» (/buscar/cerca) y «Usar dónde estoy» en Ajustes piden la
+      ubicación con navigator.geolocation. Sin declararla aquí, el WebView la
+      niega sin preguntar y la pantalla cae en «no hemos podido saber dónde
+      estás».
+
+      Las dos, y no solo la aproximada, aunque para «cerca de mí» bastaría:
+      Capacitor pide siempre las dos (BridgeWebChromeClient), y si la precisa
+      no está declarada la da por denegada. Desde Android 12 se salva con la
+      aproximada; por debajo, que es hasta donde llega minSdk 24, se negaría
+      entera. Y el pastor que fija su iglesia desde la puerta sí necesita la
+      precisa. Desde Android 12 la persona elige en el diálogo.
+
+      La ubicación no sale del teléfono en «cerca de mí»: la distancia la
+      calcula el navegador. Ojo al rellenar la ficha de seguridad de datos.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Pedir la ubicación hace que Android dé por obligatorio el hardware
+         (`uses-implied-feature` en `aapt2 dump badging`), y Play escondería
+         la app a quien no lo tenga. Sin ubicación se busca por nombre o por
+         ciudad, así que ninguno es obligatorio. -->
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.location.network" android:required="false" />
 </manifest>

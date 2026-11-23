@@ -158,9 +158,11 @@ export type GuardHatril =
    */
   | 'HT131'
   /**
-   * El grupo, su ministerio, la persona, quien reporta o el grupo de una
-   * solicitud no son de esta iglesia o de esta red, o quien va a llevar un grupo
-   * no está en el equipo de su ministerio (`0047`).
+   * El grupo, su ministerio, la persona, quien reporta o la invitación de una
+   * solicitud no son de esta iglesia o de esta red; quien va a llevar un grupo
+   * no está en el equipo de su ministerio; el grupo está cerrado o su red
+   * archivada; la persona ya no está en la congregación; o la solicitud ya se
+   * resolvió (`0047`, `0049`-`0051`).
    */
   | 'HT132'
   /**
@@ -169,7 +171,23 @@ export type GuardHatril =
    */
   | 'HT133'
   /** Alguien que no es el pastor intentó ponerse a sí mismo a llevar un grupo (`0047`). */
-  | 'HT134';
+  | 'HT134'
+  // HT135 es del registro del super admin, y no se atrapa: es un trigger de
+  // solo añadir sobre una tabla que la app no toca.
+  /** Quien denuncia, o lo denunciado, no son de esta iglesia (`0053`). */
+  | 'HT136'
+  /** Una de las dos personas de un bloqueo no es de esta iglesia (`0053`). */
+  | 'HT137'
+  /**
+   * Niños: una fila apunta a un ministerio, un niño, una ficha o una ruta de
+   * otra iglesia, el niño tiene más de 13 años, o da permisos quien no está
+   * vinculado (`0060`).
+   */
+  | 'HT142'
+  /** Niños: algo que no se reescribe —un permiso, una fecha publicada— (`0060`). */
+  | 'HT143'
+  /** Niños: aceptar una familia sin ser la responsable ni el pastor, o una petición que ya no existe (`0060`). */
+  | 'HT144';
 
 /**
  * ¿Es este error uno de nuestros triggers guard?

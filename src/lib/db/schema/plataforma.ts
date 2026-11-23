@@ -7,7 +7,13 @@ import {
   date,
   index,
   unique,
+  jsonb,
+  inet,
+  check,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+
+import { accionAdminEnum } from './enums';
 
 /**
  * Tablas de la plataforma, no de ninguna iglesia.
@@ -31,6 +37,73 @@ export const adminUsers = pgTable(
       .defaultNow(),
   },
   (t) => [unique('admin_users_auth_user_unique').on(t.authUserId)],
+);
+
+/**
+ * Lo que ha hecho cada super admin desde `/admin`: quién, qué, sobre qué y
+ * cuándo.
+ *
+ * NO ES `auditoria`, Y NO PUEDE SERLO
+ * ----------------------------------
+ * `auditoria` cuelga de una iglesia (`iglesia_id` obligatorio, en cascada), la
+ * escriben triggers y la lee el pastor de esa iglesia. Poner una contraseña
+ * provisional no es de ninguna iglesia, y un registro que desaparece con la
+ * iglesia sobre la que se actuó no sirve para responder qué se le hizo.
+ *
+ * SOLO SE AÑADE
+ * -------------
+ * Ni UPDATE ni DELETE ni TRUNCATE: un trigger los corta con HT135 (`0052`). Un
+ * registro que el mismo super admin puede retocar no prueba nada. Por eso
+ * tampoco hay claves ajenas: con `on delete set null` borrar una iglesia sería
+ * un UPDATE aquí, y el trigger lo pararía.
+ *
+ * SIN COPIAS DE DATOS PERSONALES
+ * ------------------------------
+ * Se guardan ids, no correos ni nombres: la pantalla los resuelve al pintar.
+ * Si una persona ejerce su derecho de supresión y se borra su cuenta, aquí
+ * queda «una cuenta borrada», no su correo. Lo que nunca se guarda es la
+ * contraseña puesta, ni en `detalle` ni en ninguna otra parte.
+ */
+export const registroAdmin = pgTable(
+  'registro_admin',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** El super admin que lo hizo. */
+    actorAuthUserId: uuid('actor_auth_user_id').notNull(),
+    accion: accionAdminEnum('accion').notNull(),
+    /** La iglesia sobre la que se actuó, si la acción es de una iglesia. */
+    iglesiaId: uuid('iglesia_id'),
+    /** La cuenta sobre la que se actuó, si la acción es de una cuenta. */
+    cuentaAuthUserId: uuid('cuenta_auth_user_id'),
+    /** Lo que cambió: `{ antes, despues }` de la fecha de la prueba, por ejemplo. */
+    detalle: jsonb('detalle')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    /**
+     * Desde dónde. Si alguna vez entra alguien con la cuenta de un super admin,
+     * es lo primero que se va a preguntar.
+     */
+    ip: inet('ip'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index('idx_registro_admin_fecha').on(t.createdAt.desc()),
+    index('idx_registro_admin_iglesia')
+      .on(t.iglesiaId, t.createdAt.desc())
+      .where(sql`${t.iglesiaId} is not null`),
+    index('idx_registro_admin_cuenta')
+      .on(t.cuentaAuthUserId, t.createdAt.desc())
+      .where(sql`${t.cuentaAuthUserId} is not null`),
+    // Toda acción es SOBRE algo. Una fila sin iglesia ni cuenta no responde a
+    // ninguna pregunta.
+    check(
+      'ck_registro_admin_objeto',
+      sql`${t.iglesiaId} is not null or ${t.cuentaAuthUserId} is not null`,
+    ),
+  ],
 );
 
 /**
@@ -75,3 +148,40 @@ export const rateLimits = pgTable(
     index('idx_rate_limits_dia').on(t.dia),
   ],
 );
+
+/**
+ * Cuentas que han pedido que se las borre, y cuándo toca hacerlo.
+ *
+ * TREINTA DÍAS Y NO AL MOMENTO
+ * ----------------------------
+ * Al pedirlo, la cuenta deja de entrar en su iglesia —sus membresías pasan a
+ * `baja`, así que la RLS ya no le abre nada— y se borra de verdad a los treinta
+ * días, desde `/api/cron/bajas`. Si entra antes, la recupera tal cual. Apple y
+ * Google admiten el plazo siempre que se diga, y un «borrar mi cuenta» pulsado
+ * por error un domingo en el banco de la iglesia no tiene otro arreglo.
+ *
+ * `membresias` guarda qué filas de `iglesia_usuarios` estaban activas, para
+ * devolver justo esas al recuperarla y no reactivar una que el pastor ya había
+ * dado de baja por su cuenta.
+ *
+ * QUÉ SE BORRA Y QUÉ NO
+ * ---------------------
+ * Se borran la cuenta, la foto, lo que publicó y comentó en el muro, sus «me
+ * gusta», sus bloqueos y denuncias, y sus avisos. La FICHA no: es de la iglesia,
+ * que la llevaba antes de que existiera la cuenta y la seguirá llevando. Se
+ * queda sin cuenta enlazada. Salir del fichero se le pide al pastor.
+ *
+ * Tabla de la plataforma: RLS sin policies y solo `dbAdmin`. La fila se queda al
+ * acabar, con `completada_at`, y sin un dato personal: el id de una cuenta que
+ * ya no existe.
+ */
+export const bajasCuenta = pgTable('bajas_cuenta', {
+  authUserId: uuid('auth_user_id').primaryKey(),
+  pedidaAt: timestamp('pedida_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  borrarDesde: timestamp('borrar_desde', { withTimezone: true }).notNull(),
+  /** Ids de `iglesia_usuarios` que estaban activos al pedirla. */
+  membresias: jsonb('membresias').$type<string[]>().notNull().default([]),
+  completadaAt: timestamp('completada_at', { withTimezone: true }),
+});

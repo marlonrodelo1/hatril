@@ -7,8 +7,8 @@
  *
  * Orden de dependencia (importa para las migraciones): enums → iglesias →
  * miembros → ministerios → asistencia → seguimiento → turnos → repertorio →
- * reparto → grupos → comunidad → notificaciones → finanzas → eventos → rgpd.
- * `plataforma` no depende de nada.
+ * reparto → grupos → ninos → comunidad → notificaciones → finanzas → eventos →
+ * rgpd. `plataforma` solo depende de `enums`.
  *
  * `asistencia` va detrás de `ministerios` y no antes: `reuniones` apunta a un
  * ministerio cuando es un ensayo, y a nada cuando es el culto del domingo.
@@ -24,9 +24,12 @@ export * from './turnos';
 export * from './repertorio';
 export * from './reparto';
 export * from './grupos';
+export * from './ninos';
 export * from './comunidad';
 export * from './notificaciones';
 export * from './finanzas';
+export * from './donativos';
 export * from './eventos';
 export * from './rgpd';
 export * from './plataforma';
+export * from './push';

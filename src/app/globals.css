@@ -112,8 +112,32 @@
   --hatril-support: #3d3d3a;
   --hatril-support-hover: #30302e;
   --hatril-support-active: #141413;
+  /*
+   * Texto secundario SOBRE el carbón: la franja oscura de la portada. Lo
+   * principal va en blanco con `secondary-foreground`; esto es lo que lo
+   * acompaña, y existe para no escribir un `text-white/70`, que es un color
+   * pensado para un fondo concreto aunque no lleve almohadilla. Es el gris
+   * claro de Claude en oscuro: 6.0:1 sobre #3D3D3A.
+   */
+  --hatril-support-fg-muted: #c2c0b6;
   --hatril-warning: #875a08;
   --hatril-danger: #b53333;
+
+  /*
+   * Dorado: el botón de «Crea la de tu iglesia» en la portada, que Marlon pidió
+   * en amarillo oscuro el 23-oct. Lleva LETRA OSCURA y no blanca: un amarillo
+   * con blanco encima no llega ni a 3:1 (#C99418 da 2.7), y para que el blanco
+   * pasara de 4.5 habría que oscurecerlo hasta el ámbar de aviso, que ya no se
+   * lee como amarillo. Con el texto casi negro: 6.8 en reposo, 5.7 al pasar
+   * por encima y 5.0 al pulsar.
+   *
+   * No es el ámbar de `warning` reutilizado: aquel significa «ojo», y un
+   * botón de alta pintado de aviso diría algo que no quiere decir.
+   */
+  --hatril-dorado: #c99418;
+  --hatril-dorado-hover: #b98715;
+  --hatril-dorado-active: #ab7d12;
+  --hatril-dorado-fg: #141413;
 
   /*
    * El azul secundario de Claude (su accent-100 en claro). NO es un segundo
@@ -236,8 +260,13 @@
   --color-support: var(--hatril-support);
   --color-support-hover: var(--hatril-support-hover);
   --color-support-active: var(--hatril-support-active);
+  --color-support-muted-foreground: var(--hatril-support-fg-muted);
   --color-warning: var(--hatril-warning);
   --color-danger: var(--hatril-danger);
+  --color-dorado: var(--hatril-dorado);
+  --color-dorado-hover: var(--hatril-dorado-hover);
+  --color-dorado-active: var(--hatril-dorado-active);
+  --color-dorado-foreground: var(--hatril-dorado-fg);
   --color-info: var(--hatril-info);
   --color-border-strong: var(--hatril-border-strong);
   --color-danger-border: var(--hatril-danger-border);
@@ -280,6 +309,20 @@
   --color-badge-danger-fg: var(--hatril-badge-danger-fg);
 
   --font-sans: var(--font-jakarta), system-ui, sans-serif;
+
+  /*
+   * La serif de los titulares de la PORTADA, y solo de la portada (17-nov).
+   *
+   * Newsreader, la de lectura de Production Type: con eje de tamaño óptico, así
+   * que a 80 px se afina como una letra de cartel y a 30 sigue firme. Es lo que
+   * hace Claude con esta misma paleta, una serif de titular junto a la sans, y
+   * es lo que más aleja a la portada del «SaaS genérico» sin tocar las reglas.
+   *
+   * `--font-newsreader` solo existe dentro de la portada: la carga `page.tsx`
+   * con `next/font` y nadie más la descarga. Fuera de ahí, `font-serif` cae en
+   * Georgia, y por eso no se usa fuera de ahí.
+   */
+  --font-serif: var(--font-newsreader), Georgia, 'Times New Roman', serif;
 
   /*
    * Radios: 8 botones e inputs · 12 tarjetas · full badges.
@@ -513,3 +556,514 @@
     animation: latido-suave 3s ease-in-out infinite;
   }
 }
+
+/*
+ * La presentación de la app (`/bienvenida`).
+ *
+ * Las piezas de cada pantalla entran escalonadas cuando esa pantalla se ve, no
+ * al cargar: la tercera no se anima mientras se mira la primera. Quien decide
+ * qué pantalla «se ve» es un IntersectionObserver que pone `data-visible`.
+ *
+ * Con «reducir movimiento» no hay nada de esto: todo está ya en su sitio desde
+ * el principio, con el mismo contenido y en el mismo orden. Por eso hasta el
+ * `opacity: 0` de partida va dentro del `@media`: fuera, una pieza invisible
+ * esperando una animación que nunca llega sería una pantalla vacía.
+ */
+@keyframes presentacion-sube {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes presentacion-aparece {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .presentacion-pieza,
+  .presentacion-texto {
+    opacity: 0;
+  }
+
+  [data-visible='true'] .presentacion-pieza {
+    animation: presentacion-sube 460ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: calc(var(--orden, 0) * 120ms);
+  }
+
+  [data-visible='true'] .presentacion-texto {
+    animation: presentacion-aparece 400ms ease-out 200ms both;
+  }
+}
+
+/*
+ * El carrusel de la presentación (`bienvenida/_components/carrusel.tsx`).
+ *
+ * Ocupa el hueco que queda encima de las tarjetas, sea el que sea: en un
+ * teléfono alto, dos filas de 104 px; en uno bajo se encogen, con poco sitio
+ * queda una, y con casi nada desaparece. Eso lo deciden las consultas de
+ * contenedor de abajo, que miden el propio carrusel y no la pantalla.
+ *
+ * EL FUNDIDO, Y POR QUÉ NO ROMPE «SIN DEGRADADOS»
+ * ----------------------------------------------
+ * Las fotos se apagan hacia abajo, contra las tarjetas, y hacia los lados. No
+ * se pinta ningún color encima: es una máscara, que decide cuánto se ve de la
+ * foto, y lo que queda detrás es el fondo de la página. Por eso funciona con
+ * cualquier paleta. `black` y `transparent` aquí no son colores sino
+ * opacidad. Es la segunda excepción a la regla, y está apuntada en CLAUDE.md.
+ *
+ * Con «reducir movimiento», las fotos quietas.
+ */
+@keyframes carrusel-avanza {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.carrusel-presentacion {
+  container-type: size;
+  display: flex;
+  flex: 1 1 0%;
+  /* Una fila siempre, también en un iPhone SE: sin mínimo, las tarjetas y el
+     texto se lo comían entero y en 667 px de alto no salía ninguna foto. */
+  min-height: 64px;
+}
+
+.carrusel-fundido {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  overflow: hidden;
+  -webkit-mask-image:
+    linear-gradient(to bottom, transparent 0%, black 10%, black 55%, transparent 100%),
+    linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to bottom, transparent 0%, black 10%, black 55%, transparent 100%),
+    linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%);
+  mask-composite: intersect;
+}
+
+.carrusel-fila {
+  flex: none;
+  height: min(104px, calc(50% - 5px));
+}
+
+.carrusel-pista {
+  display: flex;
+  width: max-content;
+  height: 100%;
+  animation: carrusel-avanza 80s linear infinite;
+  will-change: transform;
+}
+
+.carrusel-pista-inversa {
+  animation-direction: reverse;
+  animation-duration: 95s;
+}
+
+/* El hueco de detrás va también al final de cada tanda: así las dos copias
+   miden lo mismo y el salto del -50% cae justo en el empalme. */
+.carrusel-tanda {
+  display: flex;
+  height: 100%;
+  gap: 10px;
+  padding-right: 10px;
+}
+
+.carrusel-foto {
+  height: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--color-surface-alt);
+  user-select: none;
+}
+
+@container (max-height: 150px) {
+  /* Con una fila, el fundido de dos se comería media foto: empieza más abajo. */
+  .carrusel-fundido {
+    -webkit-mask-image:
+      linear-gradient(to bottom, black 0%, black 72%, transparent 100%),
+      linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%);
+    mask-image:
+      linear-gradient(to bottom, black 0%, black 72%, transparent 100%),
+      linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%);
+  }
+
+  .carrusel-fila {
+    height: min(104px, 100%);
+  }
+
+  .carrusel-fila + .carrusel-fila {
+    display: none;
+  }
+}
+
+@container (max-height: 56px) {
+  .carrusel-fila {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carrusel-pista {
+    animation: none;
+  }
+}
+
+/*
+ * La portada: el movimiento de las maquetas.
+ *
+ * Todo con CSS y sin una línea de JavaScript: la portada es estática con ISR
+ * y no tiene por qué hidratar nada para que un turno cambie de color.
+ *
+ * QUÉ SE MUEVE, Y POR QUÉ ESO
+ * ---------------------------
+ * Solo lo que en la aplicación de verdad cambia solo: un turno que pasa a
+ * «Confirmado» cuando alguien contesta desde su móvil, una publicación que
+ * entra en el muro, la radio sonando. Es el producto haciendo lo que hace, no
+ * decoración. Los avisos de la portada entran UNA vez al cargar y se quedan.
+ *
+ * Los bucles van lentos y con el 80 % del ciclo quietos, por lo mismo que el
+ * `latido-suave` de arriba: una página que se mueve sin parar cansa a los diez
+ * segundos.
+ *
+ * CON «REDUCIR MOVIMIENTO», TODO QUIETO Y TODO VISIBLE
+ * ---------------------------------------------------
+ * Fuera del `@media` cada pieza está en un estado de reposo que se entiende
+ * solo: el turno dice «Sin contestar», la publicación nueva ya está en el muro
+ * y las barras de la radio, a distintas alturas. Lo que no puede pasar es que
+ * algo se quede en `opacity: 0` esperando una animación que nunca llega.
+ */
+.portada-turno-despues {
+  opacity: 0;
+}
+
+@keyframes portada-entra {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* El turno: «Sin contestar» casi 3 s, cruza a «Confirmado», se queda 3,5 s y
+   vuelve. Las dos insignias están apiladas en la misma celda. */
+@keyframes portada-turno-antes {
+  0%,
+  38% {
+    opacity: 1;
+  }
+  44%,
+  92% {
+    opacity: 0;
+  }
+  98%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes portada-turno-despues {
+  0%,
+  38% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  44%,
+  92% {
+    opacity: 1;
+    transform: none;
+  }
+  98%,
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/*
+ * La publicación que entra en el muro: primero abre su hueco y empuja a las
+ * demás hacia abajo, luego aparece. `grid-template-rows` de 0fr a 1fr es la
+ * forma de animar una altura que no se conoce; animar `height` obligaría a
+ * escribirla a mano y se rompería con un renglón más de texto.
+ */
+@keyframes portada-publicacion {
+  0%,
+  10% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  18% {
+    grid-template-rows: 1fr;
+    opacity: 0;
+  }
+  24%,
+  88% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  94% {
+    grid-template-rows: 1fr;
+    opacity: 0;
+  }
+  100% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+@keyframes portada-ecualizador {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .portada-aparece {
+    animation: portada-entra 640ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  .portada-turno-antes {
+    animation: portada-turno-antes 7s ease-in-out 1.5s infinite;
+  }
+
+  .portada-turno-despues {
+    animation: portada-turno-despues 7s ease-in-out 1.5s infinite;
+  }
+
+  .portada-publicacion {
+    /* `backwards`: durante el segundo de espera ya está cerrada. Sin eso se
+       ve un instante, desaparece y vuelve a entrar. */
+    animation: portada-publicacion 10s cubic-bezier(0.2, 0.8, 0.2, 1) 1s
+      infinite backwards;
+  }
+
+  .portada-barra {
+    animation: portada-ecualizador var(--duracion, 1s) ease-in-out infinite;
+    animation-delay: var(--retraso, 0ms);
+  }
+}
+
+/*
+ * LA BASE COMÚN: EL MOVIMIENTO DE TODA LA APLICACIÓN (17-nov-2026)
+ * ----------------------------------------------------------------
+ * Marlon aprobó las nueve piezas de la «zona 1» del rediseño (cabeceras,
+ * navegación, botones, insignias, filas, formularios, vacíos, avisos y
+ * cifras) en una presentación con voto por pieza. Esto es lo que comparten.
+ *
+ * TRES DURACIONES Y UNA CURVA, NI UNA MÁS
+ *   150 ms  pasar por encima, pulsar          (`duration-150`)
+ *   240 ms  algo que aparece o cambia de sitio (`duration-240`)
+ *   360 ms  algo que crece o se recoge         (`duration-360`)
+ * y la curva `ease-hatril`, que sale rápido y llega despacio. Lo que late solo
+ * es únicamente lo que está en directo (la radio, una emisión).
+ *
+ * Con «reducir movimiento», nada de esto: las clases de abajo solo animan
+ * dentro de `no-preference`, y fuera de ahí cada pieza está en su sitio final.
+ * Las transiciones de Tailwind que se usen en un componente llevan además
+ * `motion-reduce:transition-none`.
+ */
+@theme inline {
+  --ease-hatril: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* El velo de TODAS las ventanas y hojas: había tres (`bg-black/10` con
+     desenfoque, `bg-black/25` y otro), y el inventario lo apuntó como D2. */
+  --color-velo: rgb(20 20 19 / 0.42);
+}
+
+/* El anillo del punto «en directo» de la insignia. Sin animación no se ve. */
+.insignia-viva::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 9999px;
+  border: 1.5px solid currentColor;
+  opacity: 0;
+}
+
+@keyframes hatril-aparece {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hatril-tiembla {
+  20% {
+    transform: translateX(-5px);
+  }
+  40% {
+    transform: translateX(4px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes hatril-salta {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.3);
+  }
+}
+
+@keyframes hatril-latido {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  80%,
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+@keyframes hatril-pulso {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes hatril-aro {
+  from {
+    transform: rotate(-90deg) scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes hatril-centro {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Algo que aparece: un error bajo su campo, una vista nueva. `--retraso`
+     escalona varias piezas seguidas. */
+  .anim-aparece {
+    animation: hatril-aparece 240ms var(--ease-hatril) both;
+    animation-delay: var(--retraso, 0ms);
+  }
+
+  /* El campo que falla al enviar. Corto: avisa, no regaña. */
+  .anim-tiembla {
+    animation: hatril-tiembla 360ms var(--ease-hatril);
+  }
+
+  /* El contador de la campana cuando llega algo nuevo. */
+  .anim-salta {
+    animation: hatril-salta 420ms var(--ease-hatril);
+  }
+
+  .insignia-viva::after {
+    animation: hatril-latido 1.8s var(--ease-hatril) infinite;
+  }
+
+  /* La silueta de una lista mientras carga: late la opacidad, sin el brillo
+     en degradado que lleva casi todo esqueleto de 21st. */
+  .anim-hueso {
+    animation: hatril-pulso 1.2s ease-in-out infinite;
+  }
+
+  /* Estado vacío: el aro gira hasta su sitio y el icono crece. Una vez, al
+     entrar; luego quieto. */
+  .vacio-entra .vacio-aro {
+    animation: hatril-aro 700ms var(--ease-hatril) both;
+  }
+
+  .vacio-entra .vacio-centro {
+    animation: hatril-centro 520ms var(--ease-hatril) 120ms both;
+  }
+}
+
+/* ===== INICIO · Portada de la web de cada iglesia (zona 3, 17-nov-2026) =====
+ *
+ * Las fotos de `/i/[slug]` (`_components/carrusel.tsx`): el acercamiento lento
+ * de cada foto y la barra que se llena, como las historias de Instagram.
+ *
+ * La barra no es adorno: su `animationend` es el reloj que pasa a la foto
+ * siguiente, así que su duración (6 s) tiene que ser la de `DURACION_MS` del
+ * carrusel. El acercamiento dura un segundo más para que la foto que sale siga
+ * creciendo mientras se funde, en vez de quedarse quieta a mitad del cambio.
+ *
+ * Todo dentro de `no-preference`: con «reducir movimiento» las fotos cambian
+ * sin acercarse y la barra se pinta llena, y el carrusel lo sabe y cuenta el
+ * tiempo por su cuenta.
+ *
+ * `iglesia-foto-` y no `portada-`: la portada de Hatril (`src/app/page.tsx`)
+ * ya tiene un `.portada-barra`, el del ecualizador. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes iglesia-foto-acerca {
+    from {
+      transform: scale(1);
+    }
+    to {
+      transform: scale(1.07);
+    }
+  }
+
+  @keyframes iglesia-foto-barra {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  .iglesia-foto-acerca {
+    animation: iglesia-foto-acerca 7s linear both;
+  }
+
+  .iglesia-foto-barra {
+    animation: iglesia-foto-barra 6s linear both;
+  }
+}
+/* ===== FIN · Portada de la web de cada iglesia ===== */

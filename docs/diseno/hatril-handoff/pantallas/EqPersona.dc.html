@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Equipo · Seguimiento de Tomás</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.sec{font-size:12px;font-weight:700;color:#67665F;text-transform:uppercase;letter-spacing:.06em;padding:22px 20px 8px}
+.b{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border-radius:8px;border:1px solid #E0DFDB;background:#FFFFFF;color:#141413;font-size:15px;font-weight:600;text-decoration:none}
+.wk{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#67665F}
+.dot{width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center}
+</style>
+</helmet>
+<div style="width: 375px; height: 1000px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; padding: 47px 0 34px; display: flex; flex-direction: column">
+  <div style="height: 56px; display: flex; align-items: center; padding: 0 6px">
+    <a href="EqSeguimiento.dc.html" aria-label="Volver a seguimiento" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #141413"><svg class="ic" width="22" height="22" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></a>
+  </div>
+  <div style="display: flex; align-items: center; gap: 14px; padding: 0 20px">
+    <span style="width: 60px; height: 60px; border-radius: 999px; background: #F3E9D3; color: #734500; font-size: 20px; font-weight: 800; display: flex; align-items: center; justify-content: center">TL</span>
+    <span style="display: flex; flex-direction: column; gap: 2px"><h1 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em">Tomás León</h1><span style="font-size: 13px; color: #67665F">Bajo · en Alabanza desde 2023</span></span>
+  </div>
+
+  <h2 class="sec">Últimos ensayos</h2>
+  <div style="margin: 0 16px; padding: 14px 10px; background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr))" role="img" aria-label="Vino a 4 de los últimos 8 ensayos; faltó a los 4 últimos">
+    <span class="wk"><span class="dot" style="background: #E6ECDE; color: #245C0E"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span>4/9</span>
+    <span class="wk"><span class="dot" style="background: #E6ECDE; color: #245C0E"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span>11/9</span>
+    <span class="wk"><span class="dot" style="background: #E6ECDE; color: #245C0E"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span>18/9</span>
+    <span class="wk"><span class="dot" style="background: #E6ECDE; color: #245C0E"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span>25/9</span>
+    <span class="wk"><span class="dot" style="border: 1.5px solid #B53333; color: #B53333"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>2/10</span>
+    <span class="wk"><span class="dot" style="border: 1.5px solid #B53333; color: #B53333"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>9/10</span>
+    <span class="wk"><span class="dot" style="border: 1.5px solid #B53333; color: #B53333"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>16/10</span>
+    <span class="wk"><span class="dot" style="border: 1.5px solid #B53333; color: #B53333"><svg class="ic" width="12" height="12" viewBox="0 0 24 24" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>23/10</span>
+  </div>
+
+  <h2 class="sec">Escríbele</h2>
+  <div style="margin: 0 16px; display: flex; flex-direction: column; gap: 10px">
+    <label for="msg" style="font-size: 13px; color: #67665F">Se abrirá WhatsApp con este mensaje. Puedes cambiarlo.</label>
+    <textarea id="msg" rows="4" style="padding: 12px 14px; font-family: inherit; font-size: 16px; line-height: 1.45; color: #141413; background: #F5F4ED; border: 1px solid #E0DFDB; border-radius: 8px; resize: none">¡Hola, Tomás! Te echamos de menos en los ensayos de los viernes. ¿Cómo estás? Si necesitas algo, aquí estamos. Un abrazo, Lucía.</textarea>
+    <div style="display: flex; gap: 8px">
+      <a href="#" class="b"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>WhatsApp</a>
+      <a href="#" class="b"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Llamar</a>
+    </div>
+  </div>
+
+  <h2 class="sec">Contactos</h2>
+  <p style="margin: 0 16px; padding: 14px; border: 1px dashed #E0DFDB; border-radius: 12px; font-size: 14px; color: #67665F; text-align: center">Aún nadie ha apuntado que le haya contactado.</p>
+
+  <div style="flex: 1"></div>
+  <div style="padding: 16px 16px 0">
+    <a href="EqSeguimiento.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 8px; height: 52px; border-radius: 8px; background: #B15435; color: #FFFFFF; font-size: 16px; font-weight: 600; text-decoration: none"><svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Apuntar que le he contactado</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

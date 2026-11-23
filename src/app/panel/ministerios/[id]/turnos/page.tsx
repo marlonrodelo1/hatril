@@ -10,12 +10,14 @@ import { puestosDelMinisterio } from '@/lib/turnos/puestos';
 import { formatearFechaLarga, hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { sumarDias } from '@/lib/agenda/horarios';
 import { Aviso } from '@/components/aviso';
+import { Insignia } from '@/components/ui/insignia';
 import { Button } from '@/components/ui/button';
 import { CabeceraPanel } from '../../../_components/cabecera';
 import { Contenedor } from '../../../_components/contenedor';
 import { PestanasMinisterio } from '../_components/pestanas';
 import { guardarPuestos } from './actions';
 import { CONFIRMACIONES } from './constantes';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Turnos del ministerio' };
 
@@ -71,10 +73,10 @@ export default async function TurnosPage({
         subtitulo="Quién sirve en cada culto y en qué puesto"
         volver={{ href: '/panel/ministerios', texto: 'Ministerios' }}
       >
-        <Button render={<Link href={`/panel/ministerios/${id}/turnos/planificar`} />}>
+        <BotonEnlace href={`/panel/ministerios/${id}/turnos/planificar`}>
           <CalendarPlus strokeWidth={1.8} />
           Planificar
-        </Button>
+        </BotonEnlace>
       </CabeceraPanel>
 
       <Contenedor>
@@ -93,13 +95,11 @@ export default async function TurnosPage({
               después pon a cada persona en su puesto. A quien tenga la
               aplicación le llega un aviso y puede confirmar desde su agenda.
             </p>
-            <Button
-              variant="outline"
-              render={<Link href={`/panel/ministerios/${id}/turnos/planificar`} />}
-            >
+            <BotonEnlace href={`/panel/ministerios/${id}/turnos/planificar`}
+              variant="outline">
               <CalendarPlus strokeWidth={1.8} />
               Planificar las próximas semanas
-            </Button>
+            </BotonEnlace>
           </div>
         ) : (
           <section className="flex flex-col gap-2.5">
@@ -215,44 +215,38 @@ function TarjetaTurno({
           </span>
         </span>
 
-        <span className="flex flex-wrap items-center gap-1.5 text-[12.5px] font-semibold">
-          <span
-            className={
-              'rounded-md px-2 py-0.5 ' +
-              (completo
-                ? 'bg-badge-success-bg text-badge-success-fg'
-                : 'bg-badge-warning-bg text-badge-warning-fg')
-            }
-          >
+        {/* Insignias de una sola forma, la pastilla (inventario, A3): aquí
+            eran rectángulos de 6 px y en Miembros pastillas. */}
+        <span className="flex flex-wrap items-center gap-1.5">
+          <Insignia tono={completo ? 'exito' : 'aviso'} punto>
             {completo
               ? 'Todos los puestos cubiertos'
               : `${puestos.length - faltan.length} de ${puestos.length} puestos`}
-          </span>
+          </Insignia>
 
           {noPueden > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-badge-danger-bg px-2 py-0.5 text-badge-danger-fg">
+            <Insignia tono="peligro">
               <CircleX className="size-3.5" strokeWidth={2} aria-hidden />
               {noPueden} no {noPueden === 1 ? 'puede' : 'pueden'}
-            </span>
+            </Insignia>
           )}
 
           {sinContestar > 0 && (
-            <span className="rounded-md bg-badge-neutral-bg px-2 py-0.5 text-badge-neutral-fg">
-              {sinContestar} sin contestar
-            </span>
+            <Insignia tono="neutro">{sinContestar} sin contestar</Insignia>
           )}
 
           {canciones !== null &&
             (canciones > 0 ? (
-              <span className="inline-flex items-center gap-1 rounded-md bg-badge-neutral-bg px-2 py-0.5 text-badge-neutral-fg">
+              <Insignia tono="neutro">
                 <ListMusic className="size-3.5" strokeWidth={2} aria-hidden />
                 Lista: {canciones} {canciones === 1 ? 'canción' : 'canciones'}
-              </span>
+              </Insignia>
             ) : (
               // Con borde discontinuo y sin relleno, como el «Sin lista» de la
               // agenda: es lo que falta por hacer, no un error ni un aviso. El
               // ámbar ya lo gasta el hueco de puestos, que corre más prisa.
-              <span className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-px text-muted-foreground">
+              // Misma pastilla que las demás, solo que vacía.
+              <span className="inline-flex h-[22px] items-center gap-1 rounded-full border border-dashed border-border px-2.5 text-[12px] font-semibold text-muted-foreground">
                 <ListMusic className="size-3.5" strokeWidth={2} aria-hidden />
                 Sin lista
               </span>

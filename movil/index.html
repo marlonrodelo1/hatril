@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      `viewport-fit=cover` para pintar bajo la muesca y la raya de gestos: las
+      zonas seguras las reparte el CSS con `env(safe-area-inset-*)`, igual que
+      en la web.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <!-- `--hatril-bg-base`: el crema de fondo, para que no haya destello blanco. -->
+    <meta name="theme-color" content="#FAF9F5" />
+    <title>Hatril</title>
+  </head>
+  <body class="bg-background text-foreground antialiased">
+    <div id="raiz"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

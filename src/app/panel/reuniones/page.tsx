@@ -6,10 +6,10 @@ import { requirePermiso } from '@/lib/auth/guard-panel';
 import { listarReuniones } from '@/lib/asistencia/consultas';
 import { formatearFechaLarga } from '@/lib/fecha/hoy';
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
 import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
 import { CONFIRMACIONES } from './constantes';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Reuniones' };
 
@@ -30,10 +30,10 @@ export default async function ReunionesPage({
         titulo="Reuniones"
         subtitulo="Los cultos de la congregación y quién vino a cada uno"
       >
-        <Button render={<Link href="/panel/reuniones/nueva" />}>
+        <BotonEnlace href="/panel/reuniones/nueva">
           <CalendarPlus strokeWidth={1.8} />
           Apuntar reunión
-        </Button>
+        </BotonEnlace>
       </CabeceraPanel>
 
       <Contenedor>

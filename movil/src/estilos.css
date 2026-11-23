@@ -1,0 +1,38 @@
+/*
+ * Los estilos de la app son los de la web: el mismo `globals.css`, con los
+ * mismos tokens (crema, naranja quemado, carbón) y las mismas tres reglas del
+ * sistema de diseño. No se copia nada: si cambia la paleta, cambia en los dos.
+ */
+@import "../../src/app/globals.css";
+
+/*
+ * Dónde busca Tailwind las clases: en las pantallas de la app y en lo que
+ * comparten con la web. Sin esto, una clase que solo use un componente
+ * compartido no llegaría al CSS de la app.
+ */
+@source "./";
+@source "../../src/components";
+@source "../../src/app";
+
+/*
+ * Plus Jakarta Sans va DENTRO del binario. En la web la trae `next/font` y
+ * la publica en `--font-jakarta`; aquí la trae fontsource, sin pedir nada a
+ * Google: así se ve igual sin red.
+ */
+@import "@fontsource-variable/plus-jakarta-sans";
+
+:root {
+  --font-jakarta: 'Plus Jakarta Sans Variable';
+}
+
+html,
+body,
+#raiz {
+  min-height: 100dvh;
+}
+
+body {
+  font-family: var(--font-sans);
+  /* Que tocar no pinte el recuadro gris de Android. */
+  -webkit-tap-highlight-color: transparent;
+}

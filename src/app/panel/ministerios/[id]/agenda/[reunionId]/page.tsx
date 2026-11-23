@@ -14,6 +14,7 @@ import { CabeceraPanel } from '../../../../_components/cabecera';
 import { Contenedor } from '../../../../_components/contenedor';
 import { borrarReunionDeMinisterio, guardarListaDelEquipo } from '../actions';
 import { CONFIRMACIONES } from '../constantes';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Reunión del ministerio' };
 
@@ -48,13 +49,11 @@ export default async function ReunionDeMinisterioPage({
         titulo={reunion.titulo}
         volver={{ href: base, texto: ministerio.nombre }}
       >
-        <Button
-          variant="outline"
-          render={<Link href={`${base}/${reunionId}/editar`} />}
-        >
+        <BotonEnlace href={`${base}/${reunionId}/editar`}
+          variant="outline">
           <Pencil strokeWidth={1.8} />
           Editar
-        </Button>
+        </BotonEnlace>
       </CabeceraPanel>
 
       <Contenedor>

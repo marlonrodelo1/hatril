@@ -20,6 +20,22 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<!--
+	  «Continuar con Google»: el cliente iOS de src/lib/auth/google.ts, al
+	  revés. Sin este esquema la librería de Google CIERRA LA APP al pulsar el
+	  botón; npm run app:ios lo comprueba antes de sincronizar.
+	-->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.426927529209-280tuf0o2khfm51g8oj17eftjcd178b4</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

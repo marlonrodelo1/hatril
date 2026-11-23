@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Solicitud enviada</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h1,h2,p{margin:0}
+a{color:#92442A}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:16px;text-decoration:none;border:1px solid transparent;cursor:pointer}
+.btn-p:active{background:#92442A}
+.mk path{stroke-dasharray:1;stroke-dashoffset:0;animation:draw 700ms cubic-bezier(.4,0,.2,1) both}
+.mk path:nth-child(2){animation-delay:80ms}.mk path:nth-child(3){animation-delay:160ms}
+.seal{animation:pop 360ms cubic-bezier(.2,.8,.2,1) 650ms both}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes pop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.mk path,.seal{animation:none}}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413; display: flex; flex-direction: column; padding: 47px 24px 34px">
+  <div style="padding-top: 28px; display: flex; justify-content: center">
+    <div style="position: relative; width: 88px; height: 88px; border-radius: 999px; background: #F5E7DF; display: flex; align-items: center; justify-content: center">
+      <svg class="mk" width="52" height="52" viewBox="0 0 64 64" fill="none" stroke="#B15435" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path pathLength="1" d="M32 20 C26 16 18 16 12 18 L12 31 C18 29 26 29 32 33 C38 29 46 29 52 31 L52 18 C46 16 38 16 32 20 V33"/>
+        <path pathLength="1" d="M9 36 H55 L49 42 H15 Z"/>
+        <path pathLength="1" d="M32 42 V56 M24 57 H40"/>
+      </svg>
+      <span class="seal" style="position: absolute; right: -2px; bottom: -2px; width: 30px; height: 30px; border-radius: 999px; background: #3D3D3A; border: 3px solid #FAF9F5; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+        <svg class="ic" width="14" height="14" viewBox="0 0 24 24" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>
+      </span>
+    </div>
+  </div>
+
+  <div style="padding-top: 20px; display: flex; flex-direction: column; gap: 8px; text-align: center">
+    <h1 style="font-size: 25px; line-height: 1.2; font-weight: 800; letter-spacing: -0.025em">Tu solicitud está con el pastor de Iglesia Betania</h1>
+    <p style="font-size: 15px; line-height: 1.5; color: #67665F">Te avisaremos en cuanto te acepte. No tienes que hacer nada más.</p>
+  </div>
+
+  <ol style="list-style: none; margin: 20px 0 0; padding: 4px 16px; background: #FFFFFF; border: 1px solid #E0DFDB; border-radius: 12px">
+    <li style="display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid #E0DFDB">
+      <span style="width: 26px; height: 26px; border-radius: 999px; background: #3D3D3A; color: #FFFFFF; display: flex; align-items: center; justify-content: center; flex: none"><svg class="ic" width="13" height="13" viewBox="0 0 24 24" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span>
+      <span style="flex: 1; font-size: 14px">Solicitud enviada</span>
+      <span style="font-size: 12px; color: #67665F">Hoy, 18:42</span>
+    </li>
+    <li style="display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid #E0DFDB">
+      <span style="width: 26px; height: 26px; border-radius: 999px; background: #F5E7DF; color: #92442A; display: flex; align-items: center; justify-content: center; flex: none"><svg class="ic" width="14" height="14" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg></span>
+      <span style="flex: 1; font-size: 14px; font-weight: 700">El pastor la revisa</span>
+      <span style="font-size: 12px; font-weight: 600; color: #92442A">Ahora</span>
+    </li>
+    <li style="display: flex; gap: 12px; align-items: center; padding: 10px 0; color: #67665F">
+      <span style="width: 26px; height: 26px; border-radius: 999px; border: 1.5px solid #E0DFDB; flex: none"></span>
+      <span style="flex: 1; font-size: 14px">Entras en la comunidad</span>
+    </li>
+  </ol>
+
+  <a href="Tour1.dc.html" style="margin-top: 12px; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid #E0DFDB; border-radius: 12px; background: #F5E7DF; color: #141413; text-decoration: none">
+    <svg class="ic" width="20" height="20" viewBox="0 0 24 24" style="color: #92442A"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+    <span style="flex: 1; display: flex; flex-direction: column; gap: 1px">
+      <span style="font-size: 14px; font-weight: 700">Mientras esperas, conoce Betania</span>
+      <span style="font-size: 12px; color: #92442A">Pastores, ministerios y cultos · 2 min</span>
+    </span>
+    <svg class="ic" width="18" height="18" viewBox="0 0 24 24" style="color: #67665F"><path d="m9 18 6-6-6-6"/></svg>
+  </a>
+
+  <div style="flex: 1"></div>
+  <button class="btn btn-p" style="background: #B15435; color: #FFFFFF; border: 0; width: 100%">
+    <svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+    Activar avisos para enterarme
+  </button>
+  <button class="btn" style="height: 44px; margin-top: 6px; background: transparent; color: #67665F; font-size: 15px; width: 100%">Cancelar solicitud</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

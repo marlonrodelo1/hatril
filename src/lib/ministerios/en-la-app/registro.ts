@@ -10,6 +10,7 @@ import { agendaEnLaApp } from '@/lib/agenda/en-la-app';
 import { fondoEnLaApp } from '@/lib/finanzas/en-la-app';
 import { gruposEnLaApp } from '@/lib/grupos/en-la-app';
 import type { MinisterioDetalle } from '@/lib/ministerios/consultas';
+import { ninosEnLaApp } from '@/lib/ninos/en-la-app';
 import { repartoEnLaApp } from '@/lib/reparto/en-la-app';
 import { repertorioEnLaApp } from '@/lib/repertorio/en-la-app';
 import { seguimientoEnLaApp } from '@/lib/seguimiento/en-la-app';
@@ -49,6 +50,7 @@ const ADAPTADORES: Partial<Record<ModuloId, ModuloEnLaApp>> = {
   repertorio: repertorioEnLaApp,
   seguimiento: seguimientoEnLaApp,
   reparto: repartoEnLaApp,
+  ninos: ninosEnLaApp,
 };
 
 export type ModuloEnLaPortada = {

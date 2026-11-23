@@ -1,7 +1,5 @@
 import 'server-only';
 
-import { Wallet } from 'lucide-react';
-
 import { puedeVerFondoDe } from '@/lib/auth/permisos';
 import type { HerramientaDerivada } from '@/lib/ministerios/en-la-app/contrato';
 import { mesPedido } from '@/lib/fecha/mes';
@@ -25,7 +23,7 @@ import { cuentasDelFondo } from './del-ministerio';
 export const fondoEnLaApp: HerramientaDerivada = {
   id: 'fondo',
   nombre: 'Fondo',
-  Icono: Wallet,
+  // El icono, en `ministerios/en-la-app/iconos.ts`: este fichero es de servidor.
   abrir: 'Ver el fondo',
   pantalla: 'app',
   aplica: (ctx, ministerio) =>

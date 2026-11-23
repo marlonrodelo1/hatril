@@ -1,10 +1,24 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { HandHeart, MapPin, Menu, UserRound, X } from 'lucide-react';
+import { clsx } from 'clsx';
+import {
+  BookOpen,
+  CalendarDays,
+  Clock,
+  HeartHandshake,
+  LogIn,
+  MapPin,
+  Menu,
+  MessagesSquare,
+  Radio,
+  UserRound,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -13,55 +27,74 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
+import { Hoja } from '@/components/hoja';
 
 export type Seccion = { href: string; texto: string };
 
 /** Cómo se dona a esta iglesia. `null` si todavía no lo ha configurado. */
 export type Donativos = { cuenta: string; titular: string | null };
 
+/** El icono de cada sección en la hoja del móvil. Una sección que no esté aquí
+ *  sale sin icono pero alineada con las demás, no se rompe. */
+const ICONOS: Record<string, LucideIcon> = {
+  '#horarios': Clock,
+  '#eventos': CalendarDays,
+  '#devocional': BookOpen,
+  '#radio': Radio,
+  '#grupos': Users,
+  '#comunidad': MessagesSquare,
+  '#contacto': MapPin,
+};
+
+/** Lo que hay que bajar para que la cabecera deje la foto y se vuelva sólida.
+ *  El del prototipo aprobado: lo justo para que no cambie con el temblor del
+ *  dedo al empezar a leer, y mucho antes de que el texto pase por debajo. */
+const UMBRAL_RECOGIDA = 60;
+
 /**
- * La cabecera de la web pública: una píldora que flota sobre el contenido.
+ * La cabecera de la web pública.
  *
- * POR QUÉ UNA SOLA PÍLDORA Y NO UNA BANDA
- * ---------------------------------------
- * Antes eran dos cosas encajadas: una banda de cristal a todo lo ancho y, dentro,
- * otra cápsula con borde para el menú. Dos bordes de 1px a cuatro píxeles de
- * distancia, que es justo lo que el sistema de diseño evita. Ahora el borde es
- * uno: el de la píldora. El menú de dentro solo aporta la marca carbón que se
- * mueve.
+ * DE PÍLDORA FLOTANTE A BANDA QUE SE RECOGE (zona 3, 17-nov)
+ * ----------------------------------------------------------
+ * Era una píldora con borde flotando sobre una portada en tarjeta. Marlon
+ * aprobó la portada a sangre y, con ella, esta cabecera: transparente y con
+ * letra blanca sobre la foto, y al bajar sólida (superficie con borde de 1px,
+ * sin sombra), más baja y sin la ciudad. Sobre la foto la píldora era una
+ * pastilla más puesta encima; y sobre el crema, al bajar, seguía pareciendo
+ * pegada encima de una foto que ya no estaba.
  *
- * Y flotando se ve que hay página debajo sin necesidad de tapar nada, que es lo
- * que el desenfoque intentaba conseguir a costa de una banda opaca.
+ * NO OCUPA SITIO, Y POR ESO NO SALTA
+ * ----------------------------------
+ * El `<header>` mide cero de alto y la banda cuelga de él. Así la foto empieza
+ * arriba del todo, por debajo de la banda, y al recogerse (64 → 56px) no se
+ * mueve nada de la página: si la cabecera ocupara su alto, encoger doce
+ * píxeles subiría todo lo de debajo doce píxeles mientras se lee. El hueco lo
+ * deja la portada, que es la que sabe si hay foto debajo o no.
+ *
+ * Sin fotos no hay nada sobre lo que ser transparente: es sólida desde el
+ * principio, y solo se recoge.
  *
  * EL MENÚ EXISTE EN MÓVIL
  * -----------------------
- * Esto es lo que faltaba de verdad. Las secciones estaban en `hidden lg:flex`:
- * por debajo de 1024px la web no tenía navegación ninguna, y más de la mitad de
- * las visitas llegan por un enlace de WhatsApp abierto en un móvil. Quien entra
- * buscando a qué hora es el culto tenía que desplazarse a ciegas.
+ * Esto es lo que faltaba de verdad en su día. Las secciones estaban en
+ * `hidden lg:flex`: por debajo de 1024px la web no tenía navegación ninguna, y
+ * más de la mitad de las visitas llegan por un enlace de WhatsApp abierto en un
+ * móvil. Ahora sale en una hoja desde abajo, con «Donar» y «Entrar» al final:
+ * es donde llega el pulgar, y la misma hoja del muro y de la agenda.
  *
- * Y EL CORTE SUBIÓ DE `lg` A `xl` CUANDO LLEGARON LOS EVENTOS
- * -----------------------------------------------------------
- * Con cinco secciones, el menú ya ocupaba 589 de los 929px de la píldora a
- * 1024px — está medido más abajo, donde se explica por qué solo cabe un botón
- * de acción. «Eventos» añade otros noventa y pico, y lo que se come es el
- * nombre de la iglesia, que es lo último que debe encogerse en su propia web.
- *
- * Así que entre 1024 y 1279px manda la hamburguesa, que no pierde nada: el menú
- * completo está dentro. Si algún día se quita una sección, esto se puede
- * devolver a `lg`, pero hay que MIRARLO a 1024 exactos con un nombre largo, no
- * razonarlo.
- *
- * LA MARCA SIGUE AL RATÓN, PERO TAMBIÉN A LA LECTURA
- * --------------------------------------------------
- * La versión anterior movía la píldora solo con `onMouseEnter`. En un móvil no
- * hay ratón, así que era decoración que nadie veía nunca. Ahora un
- * `IntersectionObserver` marca la sección que se está leyendo, y el ratón —si lo
- * hay— manda por encima mientras esté encima.
+ * Y EL CORTE ES `xl` DESDE QUE LLEGARON LOS EVENTOS
+ * -------------------------------------------------
+ * Con cinco secciones, el menú ya ocupaba 589px a 1024 de ancho. «Eventos»
+ * añade otros noventa y pico, y lo que se come es el nombre de la iglesia, que
+ * es lo último que debe encogerse en su propia web. Así que entre 1024 y
+ * 1279px manda el botón del menú, que no pierde nada: el menú completo está en
+ * la hoja. Si algún día se quita una sección, esto se puede devolver a `lg`,
+ * pero hay que MIRARLO a 1024 exactos con un nombre largo, no razonarlo.
  *
  * SIN LIBRERÍA DE ANIMACIÓN
  * -------------------------
- * Mover `left` y `width` con `transition` es una línea de CSS. Traer
+ * Recogerse es cambiar un alto y un fondo con `transition`. Traer
  * `framer-motion` para esto son decenas de kilobytes en la página que más
  * visitas sueltas recibe, muchas desde un móvil con mala cobertura.
  */
@@ -73,6 +106,8 @@ export function CabeceraIglesia({
   secciones,
   tieneContacto,
   donativos,
+  paginaDar,
+  conFoto,
 }: {
   nombre: string;
   ciudad: string | null;
@@ -81,107 +116,179 @@ export function CabeceraIglesia({
   secciones: Seccion[];
   tieneContacto: boolean;
   donativos: Donativos | null;
+  /**
+   * `/i/<slug>/dar` si la iglesia cobra con tarjeta. Entonces «Donar» lleva
+   * allí, donde además está la cuenta para transferencias, y la ventana con
+   * solo la cuenta deja de hacer falta. Si solo tiene transferencia, `null`, y
+   * «Donar» sigue abriendo la ventana de siempre.
+   */
+  paginaDar: string | null;
+  /** Si la portada lleva fotos debajo. Sin ellas, la cabecera nace sólida. */
+  conFoto: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
   const [donarAbierto, setDonarAbierto] = useState(false);
-  const contenedor = useRef<HTMLDivElement>(null);
+  const [pendiente, setPendiente] = useState<Pendiente | null>(null);
 
-  // Cerrar el menú al pulsar fuera, al escapar y al llegar a un ancho donde el
-  // menú de escritorio ya está visible. Sin esto último, quien gira el móvil se
-  // queda con el panel abierto encima de una cabecera que ya no lo necesita.
+  const recogida = useRecogida();
+  const activa = useSeccionActiva(secciones);
+  const sobreFoto = conFoto && !recogida;
+
+  // Cerrar la hoja al llegar a un ancho donde el menú de escritorio ya está
+  // visible. Sin esto, quien gira la tableta se queda con la hoja abierta
+  // encima de una cabecera que ya no la necesita.
   useEffect(() => {
     if (!abierto) return;
-
-    function fuera(e: PointerEvent) {
-      if (!contenedor.current?.contains(e.target as Node)) setAbierto(false);
-    }
-    function escape(e: KeyboardEvent) {
-      if (e.key === 'Escape') setAbierto(false);
-    }
-    const ancho = window.matchMedia('(min-width: 1024px)');
+    const ancho = window.matchMedia('(min-width: 1280px)');
     function cambioAncho() {
       if (ancho.matches) setAbierto(false);
     }
-
-    document.addEventListener('pointerdown', fuera);
-    document.addEventListener('keydown', escape);
     ancho.addEventListener('change', cambioAncho);
-    return () => {
-      document.removeEventListener('pointerdown', fuera);
-      document.removeEventListener('keydown', escape);
-      ancho.removeEventListener('change', cambioAncho);
-    };
+    return () => ancho.removeEventListener('change', cambioAncho);
   }, [abierto]);
 
-  const activa = useSeccionActiva(secciones);
+  /*
+   * LO QUE SE PULSA DENTRO DE LA HOJA SE HACE CUANDO LA HOJA YA SE HA IDO
+   *
+   * La hoja es un diálogo modal y bloquea el desplazamiento de la página.
+   * En un navegador con barras de desplazamiento de las que ocupan sitio (un
+   * Windows a 1000px, justo donde se ve el botón del menú), Base UI suelta ese
+   * bloqueo devolviendo la página a la posición en que estaba: el salto a la
+   * sección empezaba y se deshacía solo. Y abrir la ventana de donar mientras
+   * la hoja se cierra son dos diálogos peleándose por el foco.
+   *
+   * Base UI suelta el bloqueo en un `setTimeout(0)` que programa al cerrarse.
+   * Este efecto corre después de ese cierre, así que su `setTimeout(0)` va
+   * detrás: cuando salta, la página ya es libre.
+   */
+  useEffect(() => {
+    if (abierto || !pendiente) return;
+    const id = setTimeout(() => {
+      setPendiente(null);
+      if (pendiente.tipo === 'donar') {
+        setDonarAbierto(true);
+        return;
+      }
+      const destino = document.getElementById(pendiente.href.slice(1));
+      if (!destino) return;
+      // `scrollIntoView` sin opciones respeta el `scroll-behavior` de la
+      // página (suave, salvo con «reducir movimiento») y el `scroll-mt` de
+      // cada sección, igual que el salto nativo de un ancla.
+      destino.scrollIntoView();
+      if (window.location.hash !== pendiente.href) {
+        window.history.pushState(null, '', pendiente.href);
+      }
+    }, 0);
+    return () => clearTimeout(id);
+  }, [abierto, pendiente]);
 
   return (
-    // El mismo sangrado lateral que las secciones: así los bordes de la píldora
-    // caen justo encima de los de la foto del hero. Con 12px contra los 16 de la
-    // página, la píldora sobresalía cuatro píxeles y parecía descuadrada.
-    <header className="sticky top-0 z-30 px-4 pt-3 sm:px-5 md:px-10 md:pt-4">
-      <div ref={contenedor} className="relative mx-auto max-w-[1180px]">
+    <header className="sticky top-0 z-30 h-0">
+      {/*
+       * La banda. Sobre la foto no tiene fondo ni borde (el borde va
+       * transparente para que no cambie el alto al aparecer).
+       *
+       * Sólida, al 96 % y no al 80, con el cristal detrás. Lo que pasa por
+       * debajo al bajar puede ser la foto de la portada con su velo negro, y
+       * una banda clara translúcida encima de algo oscuro se agrisa: al 80 la
+       * ciudad y el menú, en gris secundario, se quedaban en 3.1:1. Al 96
+       * aguantan 4.5 incluso sobre negro puro.
+       *
+       * `env(safe-area-inset-top)`: en la app nativa la página llega hasta
+       * debajo de la barra de estado, y sin esto el nombre quedaría tapado.
+       */}
+      <div
+        className={cn(
+          'border-b pt-[env(safe-area-inset-top)] transition-[background-color,border-color,color] duration-240 ease-hatril motion-reduce:transition-none',
+          sobreFoto
+            ? 'border-transparent text-white'
+            : 'border-border bg-surface text-foreground supports-backdrop-filter:bg-surface/96 supports-backdrop-filter:backdrop-blur-xl',
+        )}
+      >
         {/*
-         * `p-1.5` y no más: dentro va un botón de 40px de alto, así que la
-         * píldora mide 52 y sigue siendo una barra, no un bloque. El cristal es
-         * el único sitio de la página donde el efecto significa algo, porque
-         * aquí el contenido pasa de verdad por debajo.
+         * El mismo sangrado lateral y el mismo ancho que las secciones: así el
+         * logo cae encima del borde izquierdo del texto de la portada.
          *
-         * Al 96 % y no al 80. Lo que pasa por debajo al bajar es la foto del
-         * hero con su velo negro, y una píldora clara translúcida encima de algo
-         * oscuro se agrisa: al 80 la ciudad y el menú, en gris secundario, se
-         * quedaban en 3.1:1. Al 96 aguantan 4.5 incluso sobre negro puro. En
-         * oscuro no pasaba porque la píldora y el velo eran del mismo lado.
-         */}
-        {/*
          * En escritorio son tres columnas: identidad, menú y acción. La del
-         * medio es la que se estira, no las de los lados.
-         *
-         * Con `1fr auto 1fr` el menú quedaba matemáticamente centrado, pero a
-         * 1024px la columna de la izquierda se quedaba en 120px y «Iglesia
-         * Betania» salía cortado con puntos suspensivos. El nombre de la iglesia
-         * es lo último que puede recortarse en su propia web; que el menú quede
-         * unos píxeles a un lado no lo nota nadie.
+         * medio es la que se estira, no las de los lados. Con `1fr auto 1fr`
+         * el menú quedaba matemáticamente centrado, pero la columna de la
+         * izquierda se encogía y «Iglesia Betania» salía cortado con puntos
+         * suspensivos. El nombre de la iglesia es lo último que puede
+         * recortarse en su propia web; que el menú quede unos píxeles a un
+         * lado no lo nota nadie.
          */}
-        <div className="flex items-center gap-2 rounded-full border border-border bg-surface-alt p-1.5 supports-[backdrop-filter]:bg-surface-alt/96 supports-[backdrop-filter]:backdrop-blur-xl md:gap-4 xl:grid xl:grid-cols-[auto_1fr_auto] xl:gap-3 2xl:gap-4">
-          {/* Identidad. `min-w-0` para que el nombre pueda encogerse: sin él, un
-              nombre largo empuja al botón fuera de la píldora en un móvil de
-              320px. */}
+        <div
+          className={clsx(
+            'mx-auto flex max-w-[1180px] items-center gap-3 px-4 transition-[height] duration-360 ease-hatril motion-reduce:transition-none sm:px-5 md:px-10 xl:grid xl:grid-cols-[auto_1fr_auto] xl:gap-4',
+            recogida ? 'h-14 xl:h-16' : 'h-16 xl:h-20',
+          )}
+        >
+          {/* Identidad. `min-w-0` para que el nombre pueda encogerse: sin él,
+              un nombre largo empuja al botón fuera de la banda en un móvil de
+              320px. `text-inherit` porque `globals.css` pinta de naranja
+              todo `<a>`. */}
           <a
             href="#"
-            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full pl-1 no-underline hover:no-underline xl:flex-none"
+            className="flex min-w-0 flex-1 items-center gap-2.5 text-inherit no-underline hover:text-inherit hover:no-underline xl:flex-none"
           >
             {logoUrl ? (
               <Image
                 src={logoUrl}
                 alt={nombre}
-                width={36}
-                height={36}
-                className="size-9 flex-none rounded-full border border-border object-cover"
+                width={40}
+                height={40}
+                className={clsx(
+                  'flex-none rounded-lg border border-border bg-surface object-cover transition-[width,height] duration-360 ease-hatril motion-reduce:transition-none',
+                  recogida ? 'size-8 xl:size-9' : 'size-9 xl:size-10',
+                )}
               />
             ) : (
-              <span className="flex size-9 flex-none items-center justify-center rounded-full bg-primary text-[13.5px] font-bold tracking-[-0.02em] text-primary-foreground">
+              <span
+                className={clsx(
+                  'flex flex-none items-center justify-center rounded-lg bg-primary text-label font-bold text-primary-foreground transition-[width,height] duration-360 ease-hatril motion-reduce:transition-none',
+                  recogida ? 'size-8 xl:size-9' : 'size-9 xl:size-10',
+                )}
+              >
                 {iniciales}
               </span>
             )}
             <span className="flex min-w-0 flex-col xl:max-w-[260px]">
-              <span className="truncate text-[15px] font-bold leading-tight tracking-[-0.018em] text-foreground">
+              <span className="truncate text-body leading-tight font-bold tracking-[-0.018em]">
                 {nombre}
               </span>
               {ciudad && (
-                <span className="truncate text-[12px] leading-tight text-muted-foreground">
+                /*
+                 * Al recogerse, la ciudad se va. Con `max-height` y no con
+                 * `hidden` para que se pliegue con el alto de la banda en vez
+                 * de desaparecer de golpe.
+                 *
+                 * Sobre la foto, blanco entero y no translúcido: a 11,5px, un
+                 * blanco al 80 % sobre el peor punto de la foto se queda por
+                 * debajo de 4:1.
+                 */
+                <span
+                  className={clsx(
+                    'truncate text-micro leading-tight font-medium transition-[max-height,opacity] duration-240 ease-hatril motion-reduce:transition-none',
+                    sobreFoto ? 'text-white' : 'text-muted-foreground',
+                    recogida ? 'max-h-0 opacity-0' : 'max-h-4 opacity-100',
+                  )}
+                >
                   {ciudad}
                 </span>
               )}
             </span>
           </a>
 
-          {/* El menú solo lista las secciones que existen. Un ancla a una sección
-              que no se ha pintado deja al visitante donde estaba sin que pase
-              nada, y parece que la web está rota. */}
+          {/* El menú solo lista las secciones que existen. Un ancla a una
+              sección que no se ha pintado deja al visitante donde estaba sin
+              que pase nada, y parece que la web está rota. */}
           {secciones.length > 0 && (
-            <nav className="hidden xl:flex xl:justify-center">
-              <MenuEscritorio secciones={secciones} activa={activa} />
+            <nav aria-label="Secciones" className="hidden xl:flex xl:justify-center">
+              <MenuEscritorio
+                secciones={secciones}
+                activa={activa}
+                sobreFoto={sobreFoto}
+              />
             </nav>
           )}
 
@@ -189,185 +296,272 @@ export function CabeceraIglesia({
             {/*
              * UN SOLO BOTÓN AQUÍ, Y CARBÓN.
              *
-             * `secondary` y no naranja porque en la primera pantalla ya hay un «Cómo
-             * llegar» naranja dentro del hero, y el sistema de diseño admite un
-             * solo naranja por pantalla: dos iguales compitiendo y ninguno
-             * destaca.
+             * `secondary` y no naranja porque en la primera pantalla ya hay un
+             * «Cómo llegar» naranja en la portada, y el sistema de diseño admite
+             * un solo naranja por pantalla: dos iguales compitiendo y ninguno
+             * destaca. Sobre la foto va en cristal, como el secundario de la
+             * portada: el carbón sobre una foto oscurecida no se distingue.
              *
-             * Y uno solo porque los dos juntos no caben: a 1024px el menú ya
-             * ocupa 589 de los 929 de la píldora. Donar manda cuando la iglesia
-             * tiene por dónde recibir; si no, el sitio es para «Cómo llegar». En
-             * escritorio no se pierde nada: «Contacto» está en el menú.
+             * Y uno solo porque los dos juntos no caben al lado del menú.
+             * Donar manda cuando la iglesia tiene por dónde recibir; si no, el
+             * sitio es para «Cómo llegar». En escritorio no se pierde nada:
+             * «Contacto» está en el menú.
              */}
-            {donativos ? (
+            {paginaDar ? (
+              <BotonEnlace
+                href={paginaDar}
+                variant="secondary"
+                size="sm"
+                className={cn(
+                  'hidden h-10 px-4 sm:inline-flex',
+                  sobreFoto && CRISTAL,
+                )}
+              >
+                <HeartHandshake strokeWidth={1.8} />
+                Donar
+              </BotonEnlace>
+            ) : donativos ? (
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="hidden h-10 px-4 sm:inline-flex"
+                className={cn(
+                  'hidden h-10 px-4 sm:inline-flex',
+                  sobreFoto && CRISTAL,
+                )}
                 onClick={() => setDonarAbierto(true)}
               >
-                <HandHeart strokeWidth={1.8} />
+                <HeartHandshake strokeWidth={1.8} />
                 Donar
               </Button>
             ) : (
               tieneContacto && (
-                <Button
+                <BotonEnlace
+                  nativo
+                  href="#contacto"
                   variant="secondary"
                   size="sm"
-                  className="hidden h-10 px-4 sm:inline-flex"
-                  render={<a href="#contacto" />}
+                  className={cn(
+                    'hidden h-10 px-4 sm:inline-flex',
+                    sobreFoto && CRISTAL,
+                  )}
                 >
                   <MapPin strokeWidth={1.8} />
                   Cómo llegar
-                </Button>
+                </BotonEnlace>
               )
             )}
 
-            {/* En escritorio no hay menú donde meterla, así que la cuenta va
-                aquí como icono. Solo el icono: a 1024px el menú ya se come 589
-                de los 929 de la píldora y con texto no cabría. */}
-            <Button
+            {/* En escritorio no hay hoja donde meter «Entrar», así que la
+                cuenta va aquí como icono. Solo el icono: con siete secciones
+                en el menú, con texto no cabría sin cortar el nombre. */}
+            <BotonEnlace
+              href="/mi"
               variant="ghost"
               size="icon"
               aria-label="Mi cuenta"
-              className="hidden size-10 rounded-full xl:inline-flex"
-              render={<Link href="/mi" />}
+              className={cn(
+                'hidden size-10 rounded-full xl:inline-flex',
+                sobreFoto &&
+                  'text-white hover:bg-white/15 hover:text-white active:bg-white/20 active:text-white',
+              )}
             >
               <UserRound strokeWidth={1.8} className="size-[19px]" />
-            </Button>
+            </BotonEnlace>
 
             {secciones.length > 0 && (
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="icon"
+                aria-haspopup="dialog"
                 aria-expanded={abierto}
-                aria-controls="menu-movil"
-                aria-label={abierto ? 'Cerrar el menú' : 'Abrir el menú'}
+                aria-label="Abrir el menú"
                 // 44px, que es el mínimo de un objetivo táctil. El `size="icon"`
                 // del sistema son 40 y aquí es el único control de la cabecera
                 // en un móvil: si falla, no hay otra forma de navegar.
-                className="size-11 rounded-full xl:hidden"
-                onClick={() => setAbierto((v) => !v)}
-              >
-                {abierto ? (
-                  <X strokeWidth={2} className="size-[22px]" />
-                ) : (
-                  <Menu strokeWidth={2} className="size-[22px]" />
+                className={cn(
+                  'size-11 transition-colors duration-240 ease-hatril motion-reduce:transition-none xl:hidden',
+                  sobreFoto && CRISTAL,
                 )}
+                onClick={() => setAbierto(true)}
+              >
+                <Menu strokeWidth={1.8} className="size-5" />
               </Button>
             )}
           </div>
         </div>
+      </div>
 
-        {/* El panel del menú, colgando de la píldora. Sin sombra: el borde de 1px
-            y el cristal ya lo separan del contenido. */}
-        {abierto && (
+      {secciones.length > 0 && (
+        <Hoja
+          abierta={abierto}
+          onCambio={setAbierto}
+          titulo={nombre}
+          descripcion="Las secciones de esta página, y cómo donar o entrar."
+        >
+          <nav aria-label="Secciones" className="flex flex-col">
+            {secciones.map((s) => {
+              const Icono = ICONOS[s.href];
+              const esActiva = activa === s.href;
+              return (
+                <a
+                  key={s.href}
+                  href={s.href}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPendiente({ tipo: 'seccion', href: s.href });
+                    setAbierto(false);
+                  }}
+                  aria-current={esActiva ? 'true' : undefined}
+                  className={clsx(
+                    'flex min-h-12 items-center gap-3 border-b border-border px-1 text-body no-underline transition-colors duration-150 hover:no-underline active:bg-surface-active motion-reduce:transition-none',
+                    // La sección que se está leyendo, con el par de «lo
+                    // elegido» de la guía. Sin relleno: entre filas separadas
+                    // por una línea, un bloque de color parece otro botón.
+                    esActiva
+                      ? 'font-bold text-accent-foreground hover:text-accent-foreground'
+                      : 'font-semibold text-foreground hover:text-foreground',
+                  )}
+                >
+                  {Icono ? (
+                    <Icono
+                      aria-hidden
+                      strokeWidth={1.8}
+                      className={clsx(
+                        'size-[18px] flex-none',
+                        esActiva ? 'text-accent-foreground' : 'text-muted-foreground',
+                      )}
+                    />
+                  ) : (
+                    <span aria-hidden className="size-[18px] flex-none" />
+                  )}
+                  <span className="flex-1">{s.texto}</span>
+                </a>
+              );
+            })}
+          </nav>
+
+          {/*
+           * Donar vive aquí y no en una franja de la página. Es el sitio donde
+           * alguien lo busca a propósito, no algo con lo que se tropieza al
+           * bajar.
+           *
+           * UN SOLO «ENTRAR» PARA LOS TRES CASOS
+           *
+           * No cambia según haya sesión, y es a propósito: esta página es
+           * estática con revalidación de 60 segundos, así que para saber quién
+           * mira habría que hacerla dinámica —una consulta a Irlanda por
+           * visita— o resolverlo en el navegador, que enseña un botón y lo
+           * cambia medio segundo después.
+           *
+           * `/mi` ya reparte sola: sin sesión manda a entrar y vuelve aquí, con
+           * iglesia va al panel, y con cuenta sin iglesia enseña en qué punto
+           * está su solicitud. «Entrar» se lee bien en los tres.
+           */}
           <div
-            id="menu-movil"
-            className="absolute inset-x-0 top-[calc(100%+8px)] flex flex-col gap-1 rounded-3xl border border-border bg-surface-alt p-2 supports-[backdrop-filter]:bg-surface-alt/95 supports-[backdrop-filter]:backdrop-blur-xl xl:hidden"
+            className={clsx(
+              'mt-3 grid gap-2 pb-[env(safe-area-inset-bottom)]',
+              (paginaDar || donativos) && 'grid-cols-2',
+            )}
           >
-            {secciones.map((s) => (
-              <a
-                key={s.href}
-                href={s.href}
+            {paginaDar ? (
+              <BotonEnlace
+                href={paginaDar}
+                size="lg"
+                variant="outline"
                 onClick={() => setAbierto(false)}
-                aria-current={activa === s.href ? 'true' : undefined}
-                className={
-                  'flex min-h-[48px] items-center rounded-2xl px-4 text-[15px] font-bold no-underline transition-colors hover:no-underline active:bg-surface-active ' +
-                  (activa === s.href
-                    ? 'bg-support text-white'
-                    : 'text-foreground hover:bg-surface-active')
-                }
               >
-                {s.texto}
-              </a>
-            ))}
-
-            {/* Donar vive aquí y no en una franja de la página. Es el sitio
-                donde alguien lo busca a propósito, no algo con lo que se tropieza
-                al bajar. */}
-            {donativos && (
+                <HeartHandshake strokeWidth={1.8} />
+                Donar
+              </BotonEnlace>
+            ) : donativos && (
               <Button
                 type="button"
                 size="lg"
-                variant="secondary"
-                className="mt-1 w-full rounded-2xl"
+                variant="outline"
                 onClick={() => {
+                  setPendiente({ tipo: 'donar' });
                   setAbierto(false);
-                  setDonarAbierto(true);
                 }}
               >
-                <HandHeart strokeWidth={1.8} />
+                <HeartHandshake strokeWidth={1.8} />
                 Donar
               </Button>
             )}
-
-            {tieneContacto && (
-              <Button
-                size="lg"
-                variant={donativos ? 'outline' : 'secondary'}
-                className="w-full rounded-2xl"
-                render={<a href="#contacto" onClick={() => setAbierto(false)} />}
-              >
-                <MapPin strokeWidth={1.8} />
-                Cómo llegar
-              </Button>
-            )}
-
-            {/*
-             * UN SOLO ENLACE PARA LOS TRES CASOS
-             *
-             * No dice «Entrar» o «Mi cuenta» según haya sesión, y es a propósito:
-             * esta página es estática con revalidación de 60 segundos, así que
-             * para saber quién mira habría que hacerla dinámica —una consulta a
-             * Irlanda por visita— o resolverlo en el navegador, que enseña un
-             * botón y lo cambia medio segundo después.
-             *
-             * `/mi` ya reparte sola: sin sesión manda a entrar y vuelve aquí,
-             * con iglesia va al panel, y con cuenta sin iglesia enseña en qué
-             * punto está su solicitud.
-             */}
-            <Link
+            <BotonEnlace
               href="/mi"
+              size="lg"
+              variant="secondary"
               onClick={() => setAbierto(false)}
-              className="mt-1 flex min-h-[48px] items-center gap-3 rounded-2xl border-t border-border px-4 pt-3 text-[15px] font-bold text-foreground no-underline transition-colors hover:bg-surface-active hover:text-foreground hover:no-underline active:bg-surface-active"
             >
-              <UserRound strokeWidth={1.8} className="size-[19px]" />
-              Mi cuenta
-            </Link>
+              <LogIn strokeWidth={1.8} />
+              Entrar
+            </BotonEnlace>
           </div>
-        )}
+        </Hoja>
+      )}
 
-        {donativos && (
-          <VentanaDonar
-            abierta={donarAbierto}
-            alCerrar={setDonarAbierto}
-            nombre={nombre}
-            donativos={donativos}
-          />
-        )}
-      </div>
+      {donativos && !paginaDar && (
+        <VentanaDonar
+          abierta={donarAbierto}
+          alCerrar={setDonarAbierto}
+          nombre={nombre}
+          donativos={donativos}
+        />
+      )}
     </header>
   );
+}
+
+type Pendiente = { tipo: 'seccion'; href: string } | { tipo: 'donar' };
+
+/**
+ * Los botones de la cabecera mientras está sobre la foto: cristal blanco, el
+ * mismo que el secundario de la portada. Va con `cn` para que sustituya el
+ * relleno y el borde de su variante en vez de sumarse a ellos.
+ */
+const CRISTAL =
+  'border-white/35 bg-white/12 text-white hover:bg-white/22 hover:text-white active:bg-white/28';
+
+/** Si la página ya ha bajado lo bastante como para que la cabecera se recoja. */
+function useRecogida() {
+  const [recogida, setRecogida] = useState(false);
+
+  useEffect(() => {
+    let pendiente = 0;
+    function calcular() {
+      pendiente = 0;
+      // React no vuelve a pintar si el valor no cambia: al desplazarse se
+      // llama decenas de veces y solo pinta al cruzar el umbral.
+      setRecogida(window.scrollY > UMBRAL_RECOGIDA);
+    }
+    function alDesplazar() {
+      if (pendiente) return;
+      pendiente = requestAnimationFrame(calcular);
+    }
+    // Al volver atrás o recargar, el navegador devuelve la página a donde
+    // estaba: hay que saberlo sin esperar al primer desplazamiento.
+    alDesplazar();
+    window.addEventListener('scroll', alDesplazar, { passive: true });
+    return () => {
+      cancelAnimationFrame(pendiente);
+      window.removeEventListener('scroll', alDesplazar);
+    };
+  }, []);
+
+  return recogida;
 }
 
 /**
  * Cómo donar, en una ventana.
  *
- * PENDIENTE: EL BOTÓN DE STRIPE
- * -----------------------------
- * Aquí es donde entra el pago con tarjeta cuando estén los datos de Stripe. Lo
- * que hoy hay —el número de cuenta— no se va a ir con él: no todas las iglesias
- * van a tener Stripe el primer día, y la que solo tiene una cuenta bancaria
- * tiene que poder seguir recibiendo. El botón de tarjeta se pondrá arriba y la
- * transferencia se quedará debajo como la otra forma.
- *
- * Falta decidir una cosa que cambia dónde se guarda: si cada iglesia pega su
- * propio enlace de pago, va una columna en `iglesias`; si el cobro pasa por la
- * cuenta de Hatril con Connect, va el identificador de la cuenta conectada y un
- * endpoint que cree la sesión. Hasta saberlo no se inventa el esquema.
+ * SOLO PARA LA IGLESIA SIN TARJETA
+ * --------------------------------
+ * Con la cuenta de Stripe conectada (Connect, `cuentas_stripe`), «Donar» ya no
+ * abre esto: lleva a `/i/[slug]/dar`, que cobra con tarjeta y enseña la cuenta
+ * del banco debajo como la otra forma. Esta ventana se queda para la iglesia
+ * que solo tiene número de cuenta, que tiene que poder seguir recibiendo.
  */
 function VentanaDonar({
   abierta,
@@ -417,23 +611,26 @@ function VentanaDonar({
 }
 
 /**
- * Las secciones en escritorio, con la marca carbón que se mueve.
+ * Las secciones en escritorio, con la marca que se mueve.
  *
- * La marca va DETRÁS de los enlaces y el texto de encima pasa a blanco. La
+ * La marca va DETRÁS de los enlaces y el texto de encima es blanco. La
  * referencia original resolvía lo mismo con `mix-blend-difference`, que invierte
  * el color contra lo que tenga debajo; aquí no hace falta y además se evita su
  * efecto secundario, que era invertir también el fondo de la cabecera al
  * desplazarse.
  *
- * `support`, el carbón, y no el naranja de marca porque en esta misma píldora ya
- * está «Cómo llegar».
+ * `support`, el carbón, y no el naranja de marca porque en la primera pantalla
+ * ya está «Cómo llegar». Sobre la foto la marca es de cristal blanco: el carbón
+ * sobre una foto oscurecida no se ve, y el texto ahí es blanco de todos modos.
  */
 function MenuEscritorio({
   secciones,
   activa,
+  sobreFoto,
 }: {
   secciones: Seccion[];
   activa: string | null;
+  sobreFoto: boolean;
 }) {
   const nodos = useRef(new Map<string, HTMLLIElement>());
   const [encima, setEncima] = useState<string | null>(null);
@@ -466,7 +663,10 @@ function MenuEscritorio({
     >
       <li
         aria-hidden="true"
-        className="pointer-events-none absolute z-0 h-9 rounded-full bg-support transition-[left,width,opacity] duration-300 ease-out"
+        className={clsx(
+          'pointer-events-none absolute z-0 h-9 rounded-full transition-[left,width,opacity,background-color] duration-240 ease-hatril motion-reduce:transition-none',
+          sobreFoto ? 'bg-white/18' : 'bg-support',
+        )}
         style={{
           left: marca.left,
           width: marca.width,
@@ -488,19 +688,20 @@ function MenuEscritorio({
             aria-current={activa === s.href ? 'true' : undefined}
             onMouseEnter={() => setEncima(s.href)}
             onFocus={() => setEncima(s.href)}
-            className={
-              // `px-3` y no `px-4`: con cinco secciones eso son 40px de menos, y
-              // 40px es justo lo que faltaba a 1024 para que el icono de cuenta
-              // entrara sin cortar el nombre de la iglesia. A partir de 1280
-              // sobra sitio y vuelve a respirar.
-              'block whitespace-nowrap rounded-full px-3 py-2 text-[12.5px] font-bold uppercase tracking-[0.06em] no-underline transition-colors duration-300 ease-out hover:no-underline xl:px-4 ' +
-              (marcada === s.href
-                ? 'text-white'
+            className={clsx(
+              // `px-3` y no `px-4`: con siete secciones eso son 56px de menos,
+              // y es lo que deja entrar el botón de donar y el de cuenta sin
+              // cortar el nombre de la iglesia a 1280.
+              'block rounded-full px-3 py-2 text-[12.5px] font-bold tracking-[0.06em] whitespace-nowrap uppercase no-underline transition-colors duration-240 ease-hatril hover:no-underline motion-reduce:transition-none',
+              // Sobre la foto, siempre blanco: translúcido, en el peor punto de
+              // la foto, se quedaba por debajo de 4:1.
+              sobreFoto || marcada === s.href
+                ? 'text-white hover:text-white'
                 : // Al pasar por encima, `encima` ya mueve la marca y cae en la
                   // rama de arriba. Esto solo cuenta antes de hidratar, cuando no
-                  // hay marca debajo: en blanco sobre la píldora crema daba 1.1:1.
-                  'text-muted-foreground hover:text-foreground focus-visible:text-foreground')
-            }
+                  // hay marca debajo: en blanco sobre la banda clara daba 1.1:1.
+                  'text-muted-foreground hover:text-foreground focus-visible:text-foreground',
+            )}
           >
             {s.texto}
           </a>
@@ -510,8 +711,9 @@ function MenuEscritorio({
   );
 }
 
-/** Justo debajo de la píldora: la línea a partir de la cual se considera que
- *  una sección ya se está leyendo y no que todavía está entrando. */
+/** Justo debajo de la cabecera recogida (56px en el móvil, 64 en escritorio),
+ *  con margen: la línea a partir de la cual se considera que una sección ya se
+ *  está leyendo y no que todavía está entrando. */
 const LINEA_DE_LECTURA = 96;
 
 /**

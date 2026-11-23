@@ -7,3 +7,7 @@ DerivedData/
 .swiftpm/config/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
+
+# Los enlaces que crea `npx cap sync ios` en el Mac para el plugin de Firebase
+# (packageOptions.symlink en capacitor.config.ts). Apuntan a node_modules.
+/symlinks

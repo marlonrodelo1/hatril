@@ -1,11 +1,7 @@
 import type { Metadata } from 'next';
 
-import { requireMinisterioEnLaApp } from '@/lib/ministerios/en-la-app/guarda';
-import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
-import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
-import { MarcoEquipo } from '../../../_components/marco';
-import { FormularioReunion } from '../_components/formulario';
-import { crearReunionDeMinisterio } from '../actions';
+import { VistaReunionNueva } from './vista';
+import { cargar } from './datos';
 
 export const metadata: Metadata = { title: 'Apuntar en la agenda' };
 
@@ -25,21 +21,6 @@ export default async function NuevaReunionEnLaAppPage({
 }) {
   const { id } = await params;
   const { error } = await searchParams;
-  const { ctx, ministerio } = await requireMinisterioEnLaApp(id, 'agenda');
-
-  return (
-    <MarcoEquipo
-      ctx={ctx}
-      titulo="Apuntar en la agenda"
-      subtitulo={ministerio.nombre}
-      volver={rutaApp(id, 'agenda')}
-      error={error}
-    >
-      <FormularioReunion
-        accion={crearReunionDeMinisterio.bind(null, id)}
-        hoy={hoyEnLaIglesia(ctx.iglesia.timezone)}
-        texto="Apuntar"
-      />
-    </MarcoEquipo>
-  );
+  const datos = await cargar({ id, error });
+  return <VistaReunionNueva {...datos} />;
 }

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useLayoutEffect, useRef, useState } from 'react';
 import {
   BookMarked,
   BookOpen,
@@ -125,15 +126,105 @@ export function BarraInferior({
 }) {
   const pathname = usePathname();
 
+  /*
+   * LA PASTILLA QUE VIAJA (base común, 17-nov)
+   *
+   * El fondo de la pestaña elegida es una pieza aparte que se desliza a la
+   * nueva al cambiar de pantalla, en vez de saltar. La barra vive en el layout
+   * y no se vuelve a montar al navegar: basta con medir la pestaña marcada.
+   * Hasta medirla (el primer pintado), la pestaña lleva el fondo ella misma.
+   */
+  const navRef = useRef<HTMLElement>(null);
+  const [pastilla, setPastilla] = useState<{
+    x: number;
+    y: number;
+    ancho: number;
+    alto: number;
+  } | null>(null);
+
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const medir = () => {
+      const act = nav.querySelector<HTMLElement>('a[aria-current="page"]');
+      setPastilla(
+        act
+          ? {
+              x: act.offsetLeft,
+              y: act.offsetTop,
+              ancho: act.offsetWidth,
+              alto: act.offsetHeight,
+            }
+          : null,
+      );
+    };
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(nav);
+    return () => observador.disconnect();
+  }, [pathname, equipo]);
+
+  /*
+   * LO QUE OCUPA LA BARRA, PARA QUIEN SE PONE ENCIMA
+   *
+   * La radio va pegada encima de la barra, y en `/mi` hay piezas fijas abajo
+   * (la barra de acciones de la Biblia, «Guardar la lista»…) que tienen que
+   * quedar por encima. En vez de que cada una adivine el alto de la barra —que
+   * cambia con la zona segura de cada móvil y con el tamaño de letra—, la barra
+   * lo mide y lo publica como `--alto-barra-mi` en la raíz: la distancia del
+   * borde de abajo de la pantalla al borde de arriba de la barra. El hueco del
+   * final de cada pantalla (`mi/layout.tsx`) también la usa.
+   */
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const raiz = document.documentElement;
+    const publicar = () => {
+      const caja = nav.getBoundingClientRect();
+      const ocupa = Math.ceil(window.innerHeight - caja.top);
+      raiz.style.setProperty('--alto-barra-mi', `${ocupa}px`);
+    };
+    publicar();
+    const observador = new ResizeObserver(publicar);
+    observador.observe(nav);
+    window.addEventListener('resize', publicar);
+    return () => {
+      observador.disconnect();
+      window.removeEventListener('resize', publicar);
+      raiz.style.removeProperty('--alto-barra-mi');
+    };
+  }, []);
+
   return (
     <nav
+      ref={navRef}
       aria-label="Secciones"
       className={
-        // Flotante en las dos anchuras. `bottom-[calc(...)]` respeta la zona
-        // segura del iPhone: pegada a `bottom-3` a secas, la barra de gestos se
-        // come la fila de abajo.
-        'fixed inset-x-3 z-30 flex items-center gap-1 rounded-2xl border border-border p-1.5 ' +
-        'bottom-[calc(0.75rem+env(safe-area-inset-bottom))] ' +
+        /*
+         * ANCLADA ABAJO EN EL MÓVIL (zona 2, 17-nov)
+         *
+         * Flotaba a 12 px de los bordes y Marlon la veía «desplazada arriba, no
+         * anclada abajo del dispositivo». Ahora, en el móvil, va pegada al
+         * borde de abajo y de lado a lado, como la barra de cualquier app
+         * nativa: una sola raya arriba, y la zona segura del iPhone dentro de
+         * su relleno de abajo para que la barra de gestos no se coma la fila.
+         * En escritorio sigue siendo la pastilla centrada y flotante.
+         */
+        'fixed inset-x-0 bottom-0 z-30 flex items-center gap-1 border-t border-border px-1.5 pt-1.5 ' +
+        /*
+         * «SALE RECORTADA POR EL TELÉFONO» (19-nov, en el iPhone)
+         *
+         * El viewport no pide `viewport-fit=cover`, así que iOS deja la web
+         * DENTRO de la zona segura y pinta la franja de la barra de gestos con
+         * el fondo del WebView, el crema (`backgroundColor` de
+         * `capacitor.config.ts`); `env(safe-area-inset-bottom)` vale 0. La
+         * barra, en blanco, se cortaba en seco justo encima de esa franja
+         * crema, con las etiquetas pegadas al borde. Ahora es del mismo crema
+         * que la franja —se leen como una sola barra hasta el borde del
+         * teléfono— y lleva más aire debajo de las etiquetas. Si un día se
+         * pide `viewport-fit=cover`, el `env()` ya está puesto.
+         */
+        'pb-[calc(0.625rem+env(safe-area-inset-bottom))] ' +
         /*
          * El glaseado, con guarda: sin `backdrop-filter` el fondo translúcido
          * dejaría el texto ilegible sobre lo que haya debajo.
@@ -152,16 +243,40 @@ export function BarraInferior({
          * con el blanco al 70 % el texto gris de las pestañas se queda en 2.4:1.
          * Al 92 % da 4.56. Las pestañas miden 10.5px: necesitan 4.5 enteros.
          */
-        'bg-surface supports-backdrop-filter:bg-surface/92 supports-backdrop-filter:backdrop-blur-2xl supports-backdrop-filter:backdrop-saturate-150 ' +
+        // Crema en el móvil (ver arriba), al 96 % y no al 92: el crema es un
+        // pelo más oscuro que el blanco y las etiquetas tienen que seguir en
+        // 4.5:1 con una foto negra pasando por debajo. En escritorio, la
+        // pastilla sigue en blanco.
+        'bg-background supports-backdrop-filter:bg-background/96 md:bg-surface md:supports-backdrop-filter:bg-surface/92 supports-backdrop-filter:backdrop-blur-2xl supports-backdrop-filter:backdrop-saturate-150 ' +
         // Escritorio: pastilla centrada del ancho de su contenido.
-        'md:inset-x-auto md:bottom-5 md:left-1/2 md:w-auto md:-translate-x-1/2'
+        'md:inset-x-auto md:bottom-5 md:left-1/2 md:w-auto md:-translate-x-1/2 md:rounded-2xl md:border md:p-1.5'
       }
     >
+      {pastilla && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-0 left-0 rounded-lg border border-primary/30 bg-accent transition-[transform,width] duration-240 ease-hatril motion-reduce:transition-none"
+          style={{
+            width: pastilla.ancho,
+            height: pastilla.alto,
+            transform: `translate(${pastilla.x}px, ${pastilla.y}px)`,
+          }}
+        />
+      )}
       {PESTANAS.map((p) => (
-        <Pestana key={p.href} pestana={p} pathname={pathname} />
+        <Pestana
+          key={p.href}
+          pestana={p}
+          pathname={pathname}
+          conPastilla={pastilla !== null}
+        />
       ))}
       {equipo && (
-        <Pestana pestana={{ ...EQUIPO, href: equipo }} pathname={pathname} />
+        <Pestana
+          pestana={{ ...EQUIPO, href: equipo }}
+          pathname={pathname}
+          conPastilla={pastilla !== null}
+        />
       )}
     </nav>
   );
@@ -170,9 +285,12 @@ export function BarraInferior({
 function Pestana({
   pestana: p,
   pathname,
+  conPastilla,
 }: {
   pestana: { href: string; etiqueta: string; Icono: LucideIcon; raiz?: string };
   pathname: string;
+  /** Con la pastilla ya medida, el fondo lo pone ella y no la pestaña. */
+  conPastilla: boolean;
 }) {
   const raiz = p.raiz ?? p.href;
   const esta = pathname === raiz || pathname.startsWith(`${raiz}/`);
@@ -182,7 +300,21 @@ function Pestana({
       href={p.href}
       aria-current={esta ? 'page' : undefined}
       className={
-        'flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10.5px] font-semibold no-underline hover:no-underline ' +
+        /*
+         * 11,5 px y no 10,5: el mínimo de la escala (inventario, A16).
+         *
+         * CADA PESTAÑA, DEL ANCHO DE SU NOMBRE
+         * Con las cinco del mismo ancho (`flex-1`) no caben: medido con la
+         * letra de verdad, «Comunidad» ocupa 65 px y «Devocional» 63, y a 360
+         * px a cada pestaña le tocan 62. Se pegaban («ComunidadDevocional»,
+         * lo vio Marlon el 17-nov). Con `flex-auto` cada una parte del ancho
+         * de su nombre y el sobrante se reparte: «Biblia» (31 px) y «Equipo»
+         * (39) ceden lo que les sobra, y las cinco caben con aire hasta en un
+         * móvil de 320 px. La pastilla mide la pestaña, así que sigue bien.
+         *
+         * `relative` para quedar encima de la pastilla, que va antes en el DOM.
+         */
+        'relative flex min-w-0 flex-auto flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-micro font-semibold whitespace-nowrap no-underline transition-colors duration-150 hover:no-underline ' +
         'md:flex-none md:flex-row md:gap-2 md:px-3 md:py-2 md:text-[13.5px] ' +
         (esta
           /*
@@ -199,7 +331,9 @@ function Pestana({
            * es `accent-foreground` (#92442A, 5.6:1 sobre este fondo) y no el
            * naranja de marca, que sobre su propio fondo suave se queda en 4.15.
            */
-          ? 'border border-primary/30 bg-accent text-accent-foreground'
+          ? conPastilla
+            ? 'border border-transparent text-accent-foreground hover:text-accent-foreground'
+            : 'border border-primary/30 bg-accent text-accent-foreground'
           : 'border border-transparent text-muted-foreground hover:bg-surface-active hover:text-foreground')
       }
     >

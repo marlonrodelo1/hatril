@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import {
   ChevronRight,
@@ -32,6 +31,7 @@ import {
   guardarPermisos,
   quitarAcceso,
 } from './actions';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Líderes' };
 
@@ -282,22 +282,18 @@ function TarjetaPersona({ persona: p }: { persona: FilaEquipo }) {
       <div className="flex flex-col gap-5 px-5">
         {p.miembroId && (
           <div className="flex flex-wrap gap-2">
-            <Button
+            <BotonEnlace href={`/panel/miembros?ficha=${p.miembroId}`}
               variant="outline"
-              size="sm"
-              render={<Link href={`/panel/miembros?ficha=${p.miembroId}`} />}
-            >
+              size="sm">
               Ver su ficha
-            </Button>
-            <Button
+            </BotonEnlace>
+            <BotonEnlace href={`/panel/miembros/${p.miembroId}/editar`}
               variant="ghost"
               size="sm"
-              className="text-muted-foreground hover:bg-muted hover:text-foreground"
-              render={<Link href={`/panel/miembros/${p.miembroId}/editar`} />}
-            >
+              className="text-muted-foreground hover:bg-muted hover:text-foreground">
               <SquarePen strokeWidth={1.7} />
               Editar ficha
-            </Button>
+            </BotonEnlace>
           </div>
         )}
 

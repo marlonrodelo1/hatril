@@ -25,8 +25,11 @@ de abrir la Terminal del Mac**:
 
 ## La dirección: https://hatril.com
 
-La app carga la web desplegada en **https://hatril.com**, con su certificado
-válido. Es la dirección de todos los comandos de abajo.
+**Desde el 20-nov la app ya no carga la web**: las pantallas van dentro del
+binario (`movil/`, `docs/app-nativa/plan-spa.md`) y `CAP_SERVER_URL` es la
+API a la que piden los datos. `npm run app:ios` compila la app contra esa
+dirección antes del sync. Es **https://hatril.com**, la de todos los comandos
+de abajo.
 
 Con una de `traefik.me`, la temporal de Dokploy, iOS rechaza el certificado y
 la app abre directamente «Sin conexión»; `npm run app:ios` avisa con
@@ -146,8 +149,11 @@ node -v
 Tiene que decir `v22` o más. Si no, instala la versión LTS desde
 https://nodejs.org y vuelve a abrir la Terminal.
 
+En el MacinCloud el clon está en el Escritorio, `~/Desktop/hatril`, al lado de
+los de Gonper y Pidoo:
+
 ```bash
-cd ~
+cd ~/Desktop
 ```
 
 ```bash
@@ -171,7 +177,7 @@ Con esto, Xcode y `xcodebuild` firman solos.
 ## 3. Cada vez que se compila
 
 ```bash
-cd ~/hatril
+cd ~/Desktop/hatril
 ```
 
 ```bash
@@ -201,9 +207,33 @@ npm run app:ios
 Comprueba la dirección y que la versión cuadra en los tres sitios, y hace
 `npx cap sync ios`. Tiene que terminar con `✓ ios/ sincronizado`.
 
-Ahora, **uno de los dos caminos**.
+Ahora, **uno de los caminos**. El que funciona siempre en el MacinCloud es el
+**rápido**; el A falla en cuanto la app estrena una capacidad (ver abajo).
 
-### Camino A: con Xcode (la primera vez, mejor este)
+### Camino rápido: archivar por terminal, subir con el Organizer (el de siempre)
+
+Así se subió el build 2 (19-nov). Archivar por terminal y no con el botón
+**Product → Archive** de Xcode: con firma automática, el botón falla en este
+Mac buscando un perfil que no existe (*Build input file cannot be found:
+…/Provisioning Profiles/xxxx.mobileprovision*). Pasó el 19-nov al estrenar las
+push y Entrar con Apple, y desmarcar y marcar la firma automática o «Download
+Manual Profiles» no lo arreglaron. Gonper llegó a lo mismo antes
+(`gonper-socio/scripts/ios/LEEME.md`). Por terminal, con
+`-allowProvisioningUpdates`, el perfil lo crea y lo usa en el mismo paso.
+
+Después del `npm run app:ios` de arriba, en la misma Terminal (cambia `2` por
+el build que toque; lo dice la línea «Hatril iOS 1.0.0 (N)» del sync):
+
+```bash
+cd ~/Desktop/hatril && mkdir -p Versiones/iOS && xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -destination 'generic/platform=iOS' -archivePath Versiones/iOS/Hatril-1.0.0-2.xcarchive -allowProvisioningUpdates DEVELOPMENT_TEAM=XR7JH7A8ZY CODE_SIGN_STYLE=Automatic archive && open Versiones/iOS/Hatril-1.0.0-2.xcarchive
+```
+
+Tiene que terminar con `** ARCHIVE SUCCEEDED **` y abrir el **Organizer** de
+Xcode con el archivo. Ahí, **Distribute App → App Store Connect → Upload**, y
+**Next** hasta **Upload**. No hace falta la clave de API: sube con la cuenta
+metida en Xcode.
+
+### Camino A: con Xcode
 
 ```bash
 open ios/App/App.xcodeproj
@@ -404,6 +434,12 @@ producto que hoy harían que Apple la rechace.
 | `No profiles for 'app.hatril' were found` | Falta `-allowProvisioningUpdates`, o la cuenta en Xcode → Settings → Accounts. |
 | `Cloud signing permission error` | La cuenta metida en Xcode no puede crear el certificado de distribución. Con la del titular de la cuenta de desarrollador no pasa; con otra, que el titular le dé permiso. La clave de API no interviene: solo la usa `altool`. |
 | *Redundant Binary Upload* | Ese build ya se subió. Sección 4. |
+| *Build input file cannot be found: …/Provisioning Profiles/xxxx.mobileprovision* al archivar con **Product → Archive** | El botón de Xcode con firma automática en este Mac. Repetir no sirve, ni refrescar la firma. Archivar por terminal: camino rápido de la sección 3. |
+| *IDEDistribution.DistributionAppRecordProviderError error 0* al subir, después de una ventana que propone crear la app con nombre «App» | La app no existe en App Store Connect y Xcode no la puede crear. Crearla a mano: appstoreconnect.apple.com → Apps → **+** → New App (iOS, nombre `Hatril`, Spanish (Spain), bundle `app.hatril`, SKU `app.hatril`). Antes, aceptar los acuerdos pendientes si sale el aviso. Luego, en el Organizer, Distribute App otra vez. |
+| *Upload completed with warnings: SDK version issue… iOS 26.5 SDK* | Solo un aviso: el build sube igual. Desde abril de 2027 Apple exigirá compilar con el SDK de iOS 27 (Xcode 27): antes de esa fecha, actualizar Xcode en el MacinCloud. |
+| La app se instala, se queda en negro un instante y vuelve al inicio. En el simulador, la consola dice *ERROR: Unable to load …/App.app/public//mi* | Falta `app-shell/mi/`. Capacitor iOS exige que la ruta de `appStartPath` exista en la carpeta web empaquetada aunque cargue hatril.com, y si no, `exit(1)`. Así cayó el build 2 (19-nov). `npm run app:ios` lo comprueba. **Antes de archivar, pulsar ▶ con un simulador**: este fallo se ve ahí en 30 segundos. |
+| La ventana de Apple sale y devuelve el error 1000 | Falta `com.apple.developer.applesignin` en `App.entitlements` (`npm run app:ios` lo comprueba) o la capacidad Sign In with Apple en el App ID. |
+| La app se cierra al pulsar «Continuar con Google» | Falta el esquema del cliente iOS de Google en el `Info.plist` (`npm run app:ios` lo comprueba). Ver `acceso-social.md`. |
 | Correo de Apple con *ITMS-91053: Missing API declaration* | Algún plugin usa una API que Apple obliga a declarar. Hoy ninguno de los tres lo hace (Capacitor trae su propio `PrivacyInfo.xcprivacy`), pero un plugin nuevo puede. Se arregla en Xcode: **File → New → File… → App Privacy**, con la razón que diga el correo. |
 
 Cuando el Team ID esté claro, se puede dejar escrito en el repo

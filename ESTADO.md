@@ -1,6 +1,6 @@
 # Estado de Hatril
 
-Última actualización: 23 de octubre de 2026.
+Última actualización: 28 de octubre de 2026.
 
 Este fichero se actualiza al cerrar cada sesión de trabajo. Va **dentro del
 repo** a propósito: Pidoo guardaba su detalle en ficheros `memory/` fuera del
@@ -15,7 +15,7 @@ repositorio y hoy no existen, así que cuatro meses de decisiones se perdieron.
 | Repo | `github.com/marlonrodelo1/hatril`, rama `main` |
 | Despliegue | Dokploy en VPS `187.124.37.206`, autodeploy al hacer push |
 | Dominio | **`https://hatril.com`**, con certificado válido, resolviendo al VPS (20-oct). Sin registros MX: `hola@hatril.com` todavía no recibe nada. Antes, la temporal de Dokploy en `traefik.me` |
-| Apps | `Versiones/Android/Hatril-1.0.0-1.aab` y `.apk` (fuera de Git), contra hatril.com. iOS: `ios/` sincronizado, sin compilar (hace falta el Mac) |
+| Apps | `Versiones/Android/Hatril-1.0.0-2.aab` y `.apk` (fuera de Git), contra hatril.com, con el permiso de ubicación (30-oct). iOS: `ios/` sincronizado, sin compilar (hace falta el Mac) |
 | Base de datos | Supabase `qutoggpigkdginvburjv`, org `ministeriales`, eu-west-1 |
 | Diseños | claude.ai/design `107021c4-dd85-485d-9cc7-34ef639d92ae` |
 
@@ -28,6 +28,136 @@ lee al arrancar.
 
 ## Qué funciona, verificado ejecutándolo
 
+- **La app empaquetada, construida entera** (20-nov; plan y avance en
+  `docs/app-nativa/plan-spa.md`). Todas las pantallas del miembro, también
+  Equipo, van dentro del binario (`movil/`, React + Vite). Los datos, de la API
+  de la app (`/api/v1/app/*`) con la sesión en un token Bearer leído en
+  `usuarioActual()` y las mismas guardas que la web; las escrituras son las
+  MISMAS server actions de la web, por `POST /api/v1/app/accion` y una lista
+  cerrada. Las páginas de `/mi` se partieron en vista y datos para que la web y
+  la app pinten lo mismo sin copiarlo. `npm run test:puertas:app`: 92 casos en
+  verde. **Probado en Chrome a 375 px** (acceso, bienvenida, buscar, ficha,
+  comunidad, devocional, agenda, avisos, Mi cuenta) y el binario de depuración
+  arrancando en el emulador de Android. Desplegada en hatril.com el 20-nov
+  (`4a55a8f`): la API responde, el CORS solo deja pasar a la app y sin sesión
+  devuelve 401. **El binario contra esa API, probado en el emulador** el mismo
+  día: acceso, push apuntada, comunidad, devocional, agenda, Biblia, Mi cuenta.
+  Salieron dos fallos de la app, arreglados (no había camino a Mi cuenta ni a
+  borrar la cuenta; cada pantalla heredaba el scroll de la anterior). **Sin
+  probar**: las escrituras y Equipo (se probaban en Betania, que se borró el
+  20-nov; ahora toca en Cuerpo de Cristo), y push, Apple y Google en un teléfono.
+  De paso, `withUser()` hace un viaje menos a la base (unos 85 ms por consulta,
+  también en la web). **Ojo**: `cache()` de React no memoiza en un route
+  handler; en la API lo hace `cachePorPeticion` (`src/lib/peticion.ts`).
+- **Buscar iglesia en la bienvenida, como lo pidió Marlon** (19-nov). «Ya
+  pertenezco a una iglesia» abre el buscador con **sugerencias mientras se
+  escribe** (palabra a palabra: «cuerpo cristo» encuentra «Cuerpo de Cristo»;
+  `/api/v1/iglesias/sugerencias`, pública y como `anon`) y el botón «Buscar».
+  Tocar una lleva a su ficha → «Pedir unirme» → ahí, **«Continuar con Google /
+  Apple»** encima del formulario, y vuelve a la solicitud ya con sesión. «Estoy
+  buscando iglesia» suma **buscar cerca de una dirección** escrita, con
+  Nominatim (OpenStreetMap) desde el teléfono: el servidor no recibe la
+  dirección. Probado en el navegador a tamaño de móvil (sugerencias, el botón
+  de Google en la solicitud, y «Chapinero, Bogotá» → Betania a 0,6 km). **Ojo**:
+  una iglesia solo sale si su pastor marca «Aparecer en el buscador de
+  iglesias» (Ajustes → Directorio de Hatril), y en «cerca» solo si además ha
+  puesto su ubicación. Cuerpo de Cristo y Sion no lo tienen marcado. **Falta**
+  decir en `/privacidad` que la dirección escrita se consulta en
+  OpenStreetMap: va con la próxima versión de la política (decisión de Marlon).
+- **Entrar con Google y con Apple** (19-nov). Botones encima del formulario de
+  `/acceso` y `/crear-cuenta`: Google en la web y en las dos apps, Apple solo en
+  el iPhone. **Probado Google en la web de punta a punta**: la cuenta de Google
+  quedó unida a la cuenta de siempre. Dentro de la app, **sin probar** hasta el
+  build 2. Cuentas, piezas y lo que queda (el SHA-1 de Play, revocar el token
+  de Apple al borrar la cuenta, la política de privacidad) en
+  `docs/app-nativa/acceso-social.md`.
+- **Avisos push en la app** (19-nov, migraciones `0057` y `0058`). Todo lo
+  que apunta un aviso en la campana (`emitirNotificacion`) lo manda también al
+  teléfono por Firebase Cloud Messaging, con la misma frase. Detalle, cuentas y
+  claves en `docs/app-nativa/push.md`. **Probado en el emulador de Android**:
+  el `enviarPush` de verdad entregó una en el canal «Avisos», con el atril y el
+  naranja, y borró solo un token muerto. `test:aislamiento` lleva 10
+  comprobaciones nuevas del bloque «Los teléfonos de las push». **Sin probar**:
+  el iPhone (hace falta el build 2 en el Mac y la clave APNs ya está subida), y
+  tocar la push con la app cerrada en un teléfono real. Lo que falta, en «Qué
+  falta».
+- **Denunciar, bloquear y borrar la cuenta** (30-oct, migración `0053`), lo
+  que Apple y Google exigían para publicar la app. Probado en el navegador con
+  cuentas de prueba, a tamaño de móvil:
+  - El «…» de cada publicación y comentario abre una hoja: lo tuyo se borra (con
+    confirmación); lo de otro se **denuncia** (cinco motivos y un detalle
+    opcional) o se **bloquea** a quien lo escribió. Quien modera, en vez de
+    denunciar, lo quita, y al autor le llega «han quitado una publicación tuya»
+    sin decir quién.
+  - Lo denunciado se le esconde a quien lo denunció para siempre; lo de un
+    bloqueado, mientras dure el bloqueo, y tampoco le llegan sus avisos. El
+    bloqueado no se entera: no puede leer ni sus propias filas.
+  - La cola de quien modera está en `/mi/comunidad/denuncias` (en `/mi` y no en
+    el panel: `moderar_comunidad` se da a miembros rasos) con «Dejarlo» y
+    «Quitar del muro», agrupada por publicación y **sin el nombre de quien
+    denuncia**. El muro le avisa con «Hay N denuncias por revisar».
+  - `/mi/cuenta/bloqueados` para desbloquear, enlazado desde Mi cuenta junto a
+    la política de privacidad (Apple 5.1.1(i)).
+  - **Borrar la cuenta** en `/mi/cuenta/borrar`, con la contraseña: desactiva
+    al momento (membresías a `baja`, sesión cerrada en todos los dispositivos,
+    turnos pendientes a «no puede» con el aviso de siempre a quien lleva el
+    equipo) y borra a los 30 días. Si entra antes, `/mi` le manda a
+    `/cuenta-en-baja` y la recupera con un botón. **La ficha se queda en la
+    iglesia**, sin cuenta ni foto; el muro, los «me gusta», bloqueos, denuncias
+    y avisos de esa persona sí se borran. El pastor no puede borrarse mientras
+    lo sea, ni el super admin. `/borrar-cuenta` es la página pública que pide
+    Google. Probado: desactivar y recuperar (con `invitada@`), y que el pastor
+    no puede. **Sin probar**: el envío con contraseña (no escribo contraseñas en
+    formularios) y el borrado final a los 30 días, que necesita el cron (ver
+    «Qué falta»).
+  - `test:aislamiento` lleva 17 comprobaciones nuevas (256 en total, todo
+    correcto) y las dos tablas nuevas no se ven con la clave publicable.
+- **La bienvenida de la app y las pantallas nuevas del diseño** (30-oct,
+  migración `0054`), del paquete de Claude Design en `docs/diseno/hatril-handoff/`.
+  Probado en el navegador a tamaño de móvil:
+  - **Presentación** (`/bienvenida`): tres pantallas que se pasan con el dedo
+    (scroll-snap, sin librería), las piezas entran escalonadas y quietas con
+    «reducir movimiento». Solo la primera vez: cookie `hatril_bienvenida`. La
+    app sin sesión ya no cae en `/acceso`: el proxy la manda a `/bienvenida` o
+    a `/empezar` (solo con el user agent `HatrilApp/`; en la web, igual que
+    antes).
+  - **La pregunta** (`/empezar`) y **buscar**: por nombre (`/buscar`, con la
+    ciudad siempre a la vista), **cerca de mí** (`/buscar/cerca`) y por ciudad
+    (`/buscar/ciudad`, sugiriendo solo ciudades con iglesias). **Sin mapa**,
+    decidido por Marlon: lista por distancia con radio de 5/10/25/50 km. La
+    distancia la calcula el navegador: la ubicación de quien busca no llega al
+    servidor. El vacío lleva a «Invita a tu iglesia» (hoja de compartir).
+  - **Dónde está cada iglesia**: `iglesias.latitud`/`longitud`, que el pastor
+    pone en Ajustes con «Usar dónde estoy» o pegando las coordenadas de un mapa
+    (sin geocodificar contra nadie). Betania ya tiene la suya.
+  - **Ficha** (`/iglesia/[slug]`), con sus variantes: gestiona las altas en
+    persona, ya eres de otra, o tienes una solicitud pendiente. **Una sola
+    iglesia por persona**: la regla la pone la action (activa o pendiente).
+  - **Solicitar** (`/solicitar/[slug]`): sin sesión, crear la cuenta y pedir
+    entrar es un solo formulario (`crearCuentaYSolicitar`). Teléfono
+    **obligatorio** con prefijo ES/CO, dirección opcional (pasa a la ficha al
+    aprobar), la regla de la contraseña visible y marcándose sola.
+    **Solicitud enviada** en `/mi`, con los tres pasos y **cancelar la
+    solicitud**. Probado cancelar y volver a pedirla con `visita@` (quedó igual
+    salvo la casilla de asistencia, ahora `false` en vez de `null`).
+  - **Foto de perfil** en Mi cuenta: al bucket privado `comunidad`, bajo
+    `perfiles/`, y firmada al pintar (`fotosParaPintar` en
+    `lib/miembros/foto.ts`); las URL viejas de la demo se siguen pintando tal
+    cual. **Permiso de asistencia** en Mi cuenta, darlo o retirarlo cuando se
+    quiera, con la misma lógica que `/acepta` (retirar borra lo apuntado).
+  - **Biblia**: tocar versículos para copiarlos o compartirlos con su cita
+    («Juan 3:16-17 (RV1909)»), y capítulo anterior/siguiente sin volver al
+    índice. Fuera, por decisión de Marlon: el recorrido por la iglesia mientras
+    se espera, y el reproductor de radio ampliado.
+- **Dos arreglos de `next.config.ts` que afectaban a lo que ya había**
+  (30-oct): `Permissions-Policy` decía `geolocation=()`, que niega la ubicación
+  en toda la web sin preguntar; ahora `geolocation=(self)`. Y las server actions
+  tenían el límite por defecto de **1 MB**: una foto normal de móvil fallaba al
+  publicarla en el muro antes de llegar a la action. Ahora 21 MB (cuatro fotos
+  de 5 MB más el texto).
+- **La Biblia tiene texto** (30-oct): la Reina-Valera 1909 entera, 66 libros y
+  31.102 versículos, en `public/biblia/rv1909/`. De dónde sale y qué se le hizo
+  al convertirla, en su `LEEME.md`.
 - **La primera iglesia real: Cuerpo de Cristo** (23-oct), la de Marlon, en
   `https://hatril.com/i/cuerpo-de-cristo` (id `4b79f1b9-…-ecd40b943a23`). Datos,
   logo y fachada sacados de cuerpodecristoacentejo.com; zona `Atlantic/Canary`,
@@ -51,6 +181,42 @@ lee al arrancar.
   quedó la fila `datos_religiosos` y entró al panel. **No crear cuentas con el
   script hasta que el commit `4a0ba46` esté desplegado**: el código anterior no
   mira esa marca y las dejaría entrar sin aceptar.
+
+- **Super admin, `/admin`** (28-oct). A la manera del de Pidoo, en pequeño:
+  **Inicio** (iglesias por situación, personas, cuentas y solicitudes; las
+  pruebas que acaban esta semana y las vencidas; las últimas altas),
+  **Iglesias** (filtro por situación y buscador; la ficha con sus recuentos,
+  sus pastores con correo, la suscripción y los datos) y **Cuentas** (a qué
+  iglesia pertenece cada una y cuándo entró por última vez). Las palancas:
+  **ampliar la prueba** (solo en `trial`: con `cancelado` esa fecha es periodo
+  pagado; hasta las 23:59 de la zona de la iglesia; un año como mucho),
+  **suspender y reactivar** (`activa`: fuera del panel, de `/mi`, de la web y
+  del directorio; pide casilla), **sacar del directorio** (solo hacia fuera) y
+  **poner una contraseña provisional**, que es lo que necesita el pastor de
+  Cuerpo de Cristo. Todo por `dbAdmin` y **sin una sola ficha de miembro**:
+  solo recuentos, porque somos encargados y nadie nos ha pedido mirar el
+  fichero. `requireSuperAdmin()` va en cada página y cada action; mandaba a
+  `/login`, que aquí no existe. El super admin sin iglesia aterriza en
+  `/admin` al entrar y desde `/mi`. **`npm run test:puertas:admin`**: cinco
+  rutas, cuatro cuentas que no pueden más la anónima, normal y con `RSC: 1`,
+  30 de 30; con `PUERTAS_CONTROL=1` detecta las 20 fugas simuladas. Probado
+  en el navegador como `admin@` sobre Betania, a 1024 y a 375 px, y Betania
+  devuelta a como estaba. **Sin probar**: cambiar de verdad una contraseña
+  (sí el rechazo de una que no cumple la regla).
+
+  **Y el registro** (29-oct, migración `0052`, `HT135`): cada palanca apunta
+  en `registro_admin` quién, qué, sobre qué iglesia o cuenta, desde qué IP y,
+  al ampliar, la fecha de antes y la nueva, en la MISMA transacción que el
+  cambio. La contraseña se apunta antes de pedírsela a Supabase y se deshace
+  si Supabase dice que no; nunca se guarda. Se ve en **Registro** y al pie de
+  cada ficha. La tabla es de plataforma (RLS sin policies, sin grants, ni
+  siquiera a `hatril_app`) y **solo se añade**: UPDATE, DELETE y TRUNCATE dan
+  HT135, también como `postgres`; probado en una transacción deshecha. Sin
+  claves ajenas y sin copiar correos: los ids se resuelven al pintar. Probado en
+  el navegador sobre Betania: **esos tres apuntes de prueba (ampliar, suspender
+  y reactivar, 29-oct, de `admin@hatril.test`) se quedan para siempre**, que
+  es justo lo que tiene que pasar. `test:puertas:admin`, 36 de 36 y 24 de 24
+  en el control negativo.
 
 - **La paleta es la de Claude en claro, desde el 15-oct**: crema #FAF9F5,
   tarjetas blancas y naranja quemado #B15435. Sustituye al oscuro del 22-ago,
@@ -940,6 +1106,13 @@ lee al arrancar.
 
 | Pieza | Estado |
 |---|---|
+| **Betania borrada; las pruebas, rehechas** | **Betania se borró entera el 20-nov**, por decisión de Marlon: una iglesia inventada salía en el buscador de hatril.com. Con ella, sus 10 cuentas `@hatril.test` (`pastor@`, `secretaria@`, `lider@`, `miembro@`, `visita@`, `colider@`, `consolidacion@`, `enlace@`, `invitada@`, `nuria.avisos@`) y sus 29 ficheros. Quedan `admin@hatril.test`, Sion y `pastor.sion@`, y en `registro_admin` los tres apuntes del 29-oct, que no se pueden borrar a propósito (`/admin` los pinta como «Una iglesia borrada»). Hay copia completa (filas, cuentas y ficheros) en el ordenador de Marlon, fuera del repo: `Escritorio/Hatril-copias/betania-2026-11-20`. **Las cuatro baterías se rehicieron el mismo día** sobre `scripts/pruebas/demo.mjs`: cada ejecución monta dos iglesias de usar y tirar («Betel prueba …» y «Sion prueba …», slug `prueba-auto-…`) con sus cuentas `<papel>.<run>@pruebas.hatril.test` sin contraseña, y las borra al terminar, también si falla o con Ctrl+C; al empezar barre los restos de más de dos horas. El borrado se niega a tocar un slug sin ese prefijo. Comprobado que no deja rastro: mismas iglesias, cuentas, ficheros, fichas y filas de auditoría antes y después. Resultados: `test:aislamiento` todo correcto, y recupera las cuatro comprobaciones por `withUser()` que sin Betania se saltaban; `test:puertas:app` 92 de 92; `test:puertas:admin` 36 de 36; `test:puertas` 411 de 411 en 70 rutas (entran las dos de ofrendas en línea, que se habían quedado fuera de su lista, y lo de la fila siguiente). Los controles negativos siguen viendo las fugas: 293 de 293 en el panel y 24 de 24 en `/admin`. Betel sale en el buscador público solo mientras corre `test:puertas:app`, que comprueba justo eso. **Los seeds se borraron el 21-nov**: los siete `scripts/seed-*.sql`, `prueba-arreglos-sueltos.sql` y `fotos-demo.ts` recreaban Betania o colgaban de su id, con la contraseña pública. Siguen en el historial de git, y las notas de `docs/modulos/` que los citan son historia. **Queda**: las notas para quien revisa en Apple y Google (`docs/app-nativa/fichas.md` §8) apuntan a Betania y hay que rehacerlas |
+| **`/mi` responde 200 aunque la página corte** | Desde `src/app/mi/loading.tsx` (19-nov) las pantallas de `/mi` salen en streaming: el código HTTP va con el esqueleto, antes de que la página llame a `notFound()` o `redirect()`. Lo cazó `test:puertas` al rehacerla: `/mi/equipo/<id>/fondo` daba 200 a quien debía recibir 404, y al pastor de una iglesia bloqueada en vez de 307 a `/suscripcion`. **No es una fuga**: la página corta igual (se ve en su segmento del payload) y no viaja ningún dato. La prueba ahora lo acepta en `/mi` y sigue mirando el segmento y los testigos. Lo que cambia de verdad: un enlace roto bajo `/mi` ya no da 404 de verdad, y la redirección por suscripción la hace el navegador. Si eso importa, la salida es sacar el `loading.tsx` de las rutas que cortan |
+| **Mi cuenta en el menú de la web: probarlo** | Arreglado en el código el 20-nov, sin probar en el navegador: en el área del miembro, el menú del avatar lleva «Mi cuenta» (`/mi/cuenta`) en vez de «Tus datos» y «Cambiar la contraseña», que a un miembro raso le rebotaban a `/mi` (prop `miCuenta` de `MenuCuenta`). Desde agosto nadie, ni el equipo, llegaba a borrar su cuenta desde la web. Abrirlo con una cuenta de Cuerpo de Cristo, como miembro raso y como alguien del equipo |
+| **Push: lo que queda** | Poner `FIREBASE_SERVICE_ACCOUNT` en Dokploy, en Environment y no en Build-time (sin ella no sale ninguna push y no falla nada). Desplegar. Build nuevo de Android y el build 2 de iOS en el Mac: el 1 de TestFlight no lleva el plugin. Probar en un iPhone y en un Android de verdad, con la app cerrada. El App ID `app.hatril` se creó el 19-nov con Push y Sign In with Apple: el build 1 no había firmado todavía con esa cuenta. Confirmar las dos entidades nuevas de `/privacidad` (Google Ireland y Apple Distribution International) |
+| **Super admin: falta la cuenta de Marlon** | **Cerrado el 28-oct**: `admin@hatril.test` tenía `Hatril2026`, escrita aquí y en `seed-demo.sql`, en un repo público, y la base de local es la de hatril.com; desplegado `/admin`, cualquiera habría podido ponerle contraseña a la cuenta del pastor de Cuerpo de Cristo. Ahora tiene una aleatoria que nadie conoce (comprobado en la base: `Hatril2026` ya no casa con el hash) y el seed la crea igual; se entra por enlace mágico y `test:puertas:admin` sigue 30 de 30. **Lo que falta**: Marlon ya tiene cuenta (29-oct), pero todavía no está en `admin_users`: su contraseña no servía para un super admin. Va en ese orden: insertar su fila desde el SQL Editor de Supabase, entrar y cambiar la contraseña al momento en `/admin/cuentas`, y comprobar en la base que ya no es una de las conocidas. **Nunca escribir aquí, en un repo público, el correo de una cuenta real junto a su contraseña** |
+| **Las migraciones de células van por delante** | La `0052` (registro) está en `main` y aplicada; las `0046`-`0051` de células están aplicadas pero solo en su rama. Al fusionar células, el journal choca y los snapshots `0046` y `0052` salen los dos del `0045`. Qué hacer, en la cabecera de la `0052` |
+| **Super admin, lo que queda** | Sin modo soporte (entrar como el pastor): con datos del art. 9 es una decisión, no un botón. Sin ingresos: los precios viven en Stripe y no hay claves todavía. Cuentas lee mil como mucho y lo avisa |
 | Proveedor de alojamiento en los legales | Relleno (Hostinger). Falta confirmar en hPanel el país del centro de datos: pone Alemania y la IP geolocaliza en Francia |
 | Módulos de ministerio | **Hechas, y fusionadas el 20-oct, la base común, el reparto v1, alabanza sin migración, consolidación v1 y la radio v1, más los equipos en la app.** Sigue, con migración y de una en una, la **contabilidad completa**; la cola está en `docs/modulos/cola.md` y el plan en `plan.md`. Peticiones de oración y la ficha de los niños esperan una decisión legal: salud y menores |
 | **Subir `VERSION_POLITICA_PRIVACIDAD`** | Decisión de Marlon. `/privacidad` ya trae redactado lo de consolidación (§3, §4 y §5: lo que guarda el alta que teclea el equipo, que también se llama a quien acaba de llegar, y que con WhatsApp el número pasa por Meta) y lo de la radio (§5), y sigue en `privacidad-2026-09`: el texto publicado ya no es exactamente el que aceptó la gente. **Antes de subirla, guardar la negativa de asistencia como fila**, o dejar de exigir la versión actual para leerla (ver «Trampas»): si no, quien negó vuelve a salir en todas las listas. En la misma subida, ampliar el texto de la casilla de asistencia, que solo habla de contactar a quien lleva tiempo sin aparecer |
@@ -959,29 +1132,41 @@ lee al arrancar.
 | Contestar un turno con los turnos apagados | `responderTurno` en `/mi/agenda` no pasa por `exigirModulo`: es la respuesta de una persona a SU asignación, no una escritura del equipo. Decidir si se corta |
 | La secretaria no puede aprobar solicitudes | Tiene `aprobar_solicitudes` de salida, pero `iglesia_usuarios` solo admite UPDATE y DELETE del pastor (`0001`). Antes aprobaba a medias sin avisar; ahora la pantalla le dice que las aprueba el pastor. Arreglarlo es una función `security definer` que active o borre solo membresías pendientes |
 | El correo de una cuenta nueva no se verifica | `/crear-cuenta` la crea con `email_confirm: true`. Pesa más desde que aprobar puede enlazar con una ficha: por eso la pantalla avisa de que el correo y el teléfono no prueban nada |
-| Dar o retirar el permiso de asistencia cuando se quiera | No hay pantalla, y el texto de la casilla lo promete («puedo retirar este permiso cuando quiera»): `/acepta` solo sale cuando cambia la versión. Hace falta en `/mi/cuenta` o en la ficha. Mientras, los pastores que se registraron antes del 20-oct siguen fuera de sus propias listas —`/registro` ya pregunta la casilla, pero solo a las altas nuevas—; en la demo, el de Betania |
-| Foto en la ficha de miembro | Va en OTRO bucket, privado y con URL firmada. El de iglesias es público |
+| Dar o retirar el permiso de asistencia cuando se quiera | **Hecho el 30-oct** en Mi cuenta, con la misma lógica que `/acepta`. Los pastores que se registraron antes del 20-oct pueden darlo ya desde ahí |
+| Foto en la ficha de miembro | Desde el 30-oct va al bucket privado con URL firmada (`lib/miembros/foto.ts`). El de iglesias sigue siendo público |
 | Eventos y calendario | Hecho y verificado, con sus textos legales |
 | Área del miembro | Comunidad, devocional con vídeo, **agenda como calendario con sus turnos, lo que se toca cada domingo y la ficha del ensayo**, Biblia, **Equipo** para quien sirve y el reproductor de la radio. Falta el material del equipo |
 | Agenda | **Calendario con día, semana y mes**, los días marcados y una hoja al tocarlos. Junta los horarios semanales, los eventos y las reuniones de los ministerios de cada persona |
 | Stripe | **Hecho el circuito entero**, sin claves todavía. Ver «Qué hay que crear en Stripe» |
 | Correo (Resend) | Nada. Ni bienvenida, ni aviso de solicitud, ni el de «se te acaba la prueba» — que ahora es el que más falta hace: el aviso solo se ve entrando al panel |
 | El muro en `/mi` | A propósito NO está. Con la iglesia bloqueada, un miembro sigue leyendo su área; lo que no puede es publicar en el muro |
-| Exportar y borrar datos | Derecho de supresión del RGPD, sin implementar |
+| Exportar y borrar datos | **Borrar la cuenta, hecho el 30-oct** (la ficha la lleva la iglesia: salir de su fichero se le pide al pastor). Exportar los datos propios, sin implementar |
 | Cumpleaños de la semana en Inicio | Se puede: `fecha_nacimiento` existe. Va con `ver_datos_sensibles` y sin enseñar el año |
 | Asistencia a escala | **Hecha la base, no la escala.** Marcar casillas una a una no sirve para 1.500 personas. Ver «Decidido y pendiente» |
 | Notas de seguimiento en texto libre | A propósito NO están. Necesitan cifrado en reposo y base jurídica antes |
 | Legales de la asistencia y el seguimiento | Hechos: `/privacidad` §3, §4 y §6, el anexo del art. 28 en `/terminos`, y el consentimiento propio |
 | Los bloques de asistencia en Inicio | El diseño los pinta y siguen sin pintarse: el dato ya existe |
-| **App nativa: lo que impide enviar a Apple** | Lo cuenta `docs/app-nativa/fichas.md` §1: borrar la cuenta desde la app, la Biblia vacía, el pago de Stripe al alcance dentro de la app (`/registro`, `/panel/suscripcion`), «Denunciar» y «Bloquear» en el muro, y la regla 4.2 (una web metida en una app; lo que más la separaría, los avisos push). Y compilar en el Mac (`docs/app-nativa/ios.md`) |
-| **App nativa: lo que pide Google** | Borrar la cuenta dentro de la app **y** una dirección web para pedirlo (`/borrar-cuenta`, no existe). El gráfico de 1024×500 y las capturas. La cuenta para quien revisa. El formulario de seguridad de datos con lo de `fichas.md` §5, que ya incluye la plaza pagada y el reparto. Con cuenta personal de Play Console, la prueba cerrada de 12 personas durante 14 días |
+| **App nativa: lo que impide enviar a Apple** | **Hechos el 30-oct** borrar la cuenta, la Biblia con texto y «Denunciar» y «Bloquear». Quedan, de `docs/app-nativa/fichas.md` §1: el pago de Stripe al alcance dentro de la app (`/registro`, `/panel/suscripcion`) y la regla 4.2 (una web metida en una app; lo que más la separaría, los avisos push). Y compilar en el Mac (`docs/app-nativa/ios.md`) |
+| **App nativa: la ubicación en iOS** | «Cerca de mí» y el botón de Ajustes piden la ubicación. Android ya la declara (30-oct, versionCode 2: la aproximada y la precisa, y el hardware como opcional; el porqué en el `AndroidManifest.xml`). Falta `NSLocationWhenInUseUsageDescription` en el `Info.plist` de iOS, o el WebView la niega sin preguntar. Sin probar todavía dentro de la app: hace falta que hatril.com tenga desplegado `/buscar/cerca` |
+| **El cron de las bajas de cuenta** | **Sin él no se borra ninguna cuenta a los 30 días**, y la pantalla lo promete. Hay que poner `INTERNAL_API_TOKEN` en Dokploy (hoy no está ni en `.env.local`: la ruta responde 500) y programar una vez al día `POST /api/v1/cron/bajas` con `Authorization: Bearer $INTERNAL_API_TOKEN`. El borrado final (`borrarCuentaDeVerdad` en `lib/cuenta/baja.ts`) no se ha ejecutado nunca: probarlo con una cuenta de usar y tirar antes de fiarse |
+| **App nativa: lo que pide Google** | Borrar la cuenta dentro de la app y la dirección web para pedirlo (`/borrar-cuenta`) están **hechos desde el 30-oct**. Queda el gráfico de 1024×500 y las capturas. La cuenta para quien revisa. El formulario de seguridad de datos con lo de `fichas.md` §5, que ya incluye la plaza pagada y el reparto. Con cuenta personal de Play Console, la prueba cerrada de 12 personas durante 14 días |
 | **App nativa: antes de cualquiera de las dos** | Desplegar la web con `app-nativa.tsx` y el cambio a hatril.com (los legales en producción aún dicen `hola@hatril.app`). Crear el buzón `hola@hatril.com`. Probar con sesión en un teléfono de verdad. **La firma de subida está solo en este ordenador**, en `Versiones/Android/firma/` (el `.jks` y `CLAVES.txt`): copiarla fuera, a un pendrive o un gestor de contraseñas. Si se pierde, Google tarda días en aceptar una nueva y mientras no se publica nada |
-| Texto de la Biblia | La pantalla `/mi/biblia` está: índice de los 66 libros, buscador y capítulos. **Falta el texto**: unos 4,5 MB de la Reina-Valera 1909 en `public/biblia/rv1909/`, un JSON por libro. La RVR60 tiene derechos de Sociedades Bíblicas Unidas |
-| Foto de perfil del miembro | **Se pinta ya**: `miembros.foto_url` existía desde la `0000` y ahora la usan el muro, los comentarios y el compositor, con las iniciales de color debajo como respaldo. Falta la pantalla para SUBIRLA, que va al bucket privado con URL firmada. Las de la demo son de `randomuser.me`, y eso NO vale para producción: la foto de un miembro es dato personal y no puede servirla un tercero |
+| Texto de la Biblia | **Cargado el 30-oct**: la Reina-Valera 1909 entera. Falta compartir o copiar un versículo, que está en el diseño. La RVR60 tiene derechos de Sociedades Bíblicas Unidas |
+| Foto de perfil del miembro | **Subirla y quitarla, hecho el 30-oct** en Mi cuenta: bucket privado `comunidad`, ruta `perfiles/<iglesia>/…` en `foto_url`, firmada al pintar. Las de la demo siguen siendo URLs de `randomuser.me` y se pintan tal cual: no valen para producción. Falta pedirla en el alta, como dice el diseño |
 
 ---
 
 ## Trampas que ya han costado tiempo
+
+**La prueba de Betania caduca, y entonces `test:puertas` falla entero** (20-nov).
+Betania ya no existe (ver «Qué falta»), pero la trampa vale para las iglesias
+que se creen las pruebas nuevas: que nazcan con `trial_until` por delante.
+Betania es `plan = trial` con `trial_until`; el 15-nov venció, con la gracia de
+3 días quedó bloqueada el 19, y el panel manda a todas sus cuentas a
+`/suscripcion`: 251 fallos que no eran de ningún cambio. Si `test:puertas`
+falla en masa con `→/suscripcion`, mirar primero `select slug, plan,
+trial_until from iglesias`. Alargarla es escribir en la base, que en local es
+la de producción.
 
 **Las cookies de `localhost` se comparten entre puertos y entre sesiones.** El
 navegador integrado es uno solo: si otra sesión entra con un enlace mágico en
@@ -1094,8 +1279,8 @@ días». La buena es `hoyEnLaIglesia()`.
 **Una iglesia no se borra con un `delete from iglesias`**, aunque todo cuelgue
 en cascada: el trigger `auditar()` de las tablas hijas inserta en `auditoria`
 con el `iglesia_id` que se está borrando, y la clave ajena lo rechaza. Hay que
-vaciar antes las tablas auditadas; el orden está en
-`scripts/prueba-arreglos-sueltos.sql`. Pesará el día de la supresión de una
+vaciar antes las tablas auditadas; el orden está en `ORDEN_BORRADO` de
+`scripts/pruebas/demo.mjs`, que es lo que borra las iglesias de las pruebas. Pesará el día de la supresión de una
 iglesia entera.
 
 **Un `<audio>` miente en dos sitios.** `paused` vale `false` en cuanto se llama
@@ -1455,6 +1640,40 @@ prueba con `stripe listen --forward-to localhost:3000/api/stripe/webhook`.
 
 ## Decidido y pendiente de construir
 
+**La app empaquetada, como Pidoo y Gonper socio** (aprobado por Marlon el
+19-nov). Las pantallas del miembro pasan a ir dentro del binario (React + Vite
+en `movil/`) en vez del WebView que carga hatril.com, porque cambiar de pestaña
+le parece lento. El teléfono no lee la base: pide los datos a `/api/v1/app/*`
+con la sesión en un token Bearer, y por detrás corren las mismas guardas y el
+mismo `withUser()`. El panel se queda en la web. Seis fases, unas 8 semanas, y
+a la tienda solo cuando haga todo lo que hace el build de hoy. Plan entero en
+`docs/app-nativa/plan-spa.md`. **Mientras dure la obra, nada nuevo en la web
+`/mi`, solo arreglos**: cada cosa nueva ahí habría que hacerla dos veces.
+
+**La bienvenida de la app** (decidido por Marlon el 30-oct, y **construida el
+mismo día** salvo el mapa: ver «Qué funciona»). La primera vez que se abre la app: el
+splash del atril, una presentación animada de tres pantallas como mucho, en
+crema y naranja quemado, con botón de saltar. Luego: «¿Ya eres de una iglesia o
+estás buscando una?».
+
+- **Buscando**: elige un radio y ve las iglesias cercanas en mapa con pines y en
+  lista. Hace falta guardar coordenadas por iglesia (hoy solo hay ciudad y
+  dirección) y que el pastor coloque su pin. Con tres iglesias el mapa sale
+  vacío casi siempre: el vacío lleva a «¿No está tu iglesia? Invítala». La
+  ubicación se pide al elegir «cerca de mí», no al abrir.
+- **Ya soy de una**: busca su iglesia por nombre y **solicita**. **Siempre
+  aprueba el pastor**: no hay entrada directa ni por código. Una iglesia abierta
+  dejaría a cualquiera dentro de su muro y sus equipos.
+- **Una sola iglesia por persona, sin «seguir» otras.** La base admite varias
+  (el unique es por pareja), así que la regla la pone la aplicación: con una
+  membresía activa o pendiente no se puede pedir otra; para cambiar, sale de
+  la suya.
+- **La cuenta se pide al final**, al solicitar: el mapa y las fichas se ven sin
+  registrarse (lo pide Apple, y convierte mejor).
+- **Datos**: nombre completo, correo, contraseña, **teléfono** (obligatorio),
+  **dirección** y **foto opcional**. La foto va al bucket privado con URL
+  firmada (hecho el 30-oct, desde Mi cuenta; en el alta todavía no se pide).
+
 **Lo que queda de los legales, que ya no es el bloqueo.** Los textos están
 reescritos y revisados contra el código, y la versión subió a
 `privacidad-2026-09` con su pantalla de re-consentimiento detrás. Queda:
@@ -1612,6 +1831,13 @@ El encargo de tratamiento del art. 28 ya no está pendiente: es el apartado 7 de
 
 ## Datos de prueba
 
+**Desde el 20-nov, Betania y sus diez cuentas no existen** (ver «Qué falta»):
+lo que sigue sobre ella es historia, y los seeds que cita se borraron el
+21-nov (siguen en el historial de git). En la base
+quedan Sion con `pastor.sion@`, `admin@hatril.test` (super admin, sin
+contraseña conocida) y Cuerpo de Cristo, que es la iglesia modelo de Marlon y
+tiene **gente de verdad**: ahí no van cuentas con contraseña pública.
+
 Las **imágenes de la demo son fotos de verdad, subidas al bucket**: los paisajes
 de Picsum —que sirve fotografías de Unsplash, con licencia de uso comercial y
 sin atribución obligatoria— y los retratos de Pravatar. Se descartó
@@ -1637,6 +1863,13 @@ otra iglesia, para probar el aislamiento), `colider@` (Sara Nieto, rol
 `scripts/seed-consolidacion.sql`) y `enlace@` (Andrés, voluntario de Acción
 social; su ficha nació sin cuenta para probar el enlace al aprobar). Son las
 ocho con las que corre `npm run test:puertas`, más `visita@` y `admin@`.
+
+**`admin@` es la excepción: no tiene contraseña conocida** desde el 28-oct.
+Es super admin, y con `/admin` una contraseña pública en un repo público
+abriría todas las iglesias de producción. Se entra por enlace mágico: la receta
+de `generateLink` con `next=%2Fadmin`, o `npm run test:puertas:admin`, que ya
+lo hace. Si alguna vez vuelve a tener `Hatril2026`, es un agujero, no una
+comodidad.
 
 `lider@` es responsable de Alabanza: es la cuenta con la que se comprueba que el
 permiso acotado deja gestionar un ministerio y ninguno más. Alabanza tiene

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Radio · Programación de hoy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+h2,h3,p{margin:0}
+.ic{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.pr{display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;padding:12px 16px;border-top:1px solid #E0DFDB}
+.pr .h{font-size:14px;font-weight:700;color:#3D3D3A}
+.pr .t{font-size:15px;font-weight:700}
+.pr .s{font-size:13px;color:#67665F}
+.pr.past .h,.pr.past .t{color:#67665F;font-weight:600}
+.pr.now{background:#F5E7DF;border-top-color:#F5E7DF}
+.pr.now .h,.pr.now .t{color:#92442A}
+.eq i{display:block;width:3px;border-radius:2px;background:#B53333;animation:eq 900ms ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:-300ms}.eq i:nth-child(3){animation-delay:-600ms}
+@keyframes eq{0%,100%{height:4px}50%{height:12px}}
+@media (prefers-reduced-motion: reduce){.eq i{animation:none;height:8px}}
+</style>
+</helmet>
+<div style="width: 375px; height: 812px; position: relative; overflow: hidden; background: #FAF9F5; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #141413">
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(20,20,19,0.42)"></div>
+  <section role="dialog" aria-label="Radio Betania" style="position: absolute; left: 0; right: 0; bottom: 0; height: 740px; background: #FFFFFF; border-radius: 16px 16px 0 0; display: flex; flex-direction: column; padding-bottom: 34px">
+    <div style="display: flex; justify-content: center; padding: 8px 0 0"><span style="width: 36px; height: 4px; border-radius: 999px; background: #E0DFDB"></span></div>
+    <div style="display: flex; align-items: center; padding: 4px 6px 0 20px">
+      <h2 style="flex: 1; font-size: 20px; font-weight: 800; letter-spacing: -0.02em">Radio Betania</h2>
+      <button aria-label="Cerrar" style="width: 44px; height: 44px; border: 0; background: transparent; color: #3D3D3A; display: flex; align-items: center; justify-content: center"><svg class="ic" width="20" height="20" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+    </div>
+
+    <div style="margin: 10px 16px 0; padding: 16px; border: 1px solid #E0DFDB; border-radius: 12px; display: flex; gap: 14px; align-items: center">
+      <button aria-label="Pausar la radio" style="width: 56px; height: 56px; border-radius: 999px; border: 0; background: #3D3D3A; color: #FFFFFF; display: flex; align-items: center; justify-content: center; flex: none"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button>
+      <span style="flex: 1; display: flex; flex-direction: column; gap: 3px">
+        <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #8A2424"><span class="eq" aria-hidden="true" style="display: inline-flex; align-items: flex-end; gap: 2px; height: 12px"><i></i><i></i><i></i></span>En directo</span>
+        <span style="font-size: 17px; font-weight: 800; letter-spacing: -0.01em">La hora de la familia</span>
+        <span style="font-size: 13px; color: #67665F">Con Rosa Medina · hasta las 12:00</span>
+      </span>
+    </div>
+
+    <h3 style="padding: 22px 20px 8px; font-size: 12px; font-weight: 700; color: #67665F; text-transform: uppercase; letter-spacing: 0.06em">Hoy, viernes</h3>
+    <div>
+      <div class="pr past"><span class="h">08:00</span><span style="display: flex; flex-direction: column"><span class="t">Buenos días con la Palabra</span><span class="s">Andrés Rivas</span></span></div>
+      <div class="pr past"><span class="h">10:00</span><span style="display: flex; flex-direction: column"><span class="t">Música para el camino</span><span class="s">Selección del equipo de Alabanza</span></span></div>
+      <div class="pr now" aria-current="true"><span class="h">11:00</span><span style="display: flex; flex-direction: column"><span class="t">La hora de la familia</span><span class="s" style="color: #92442A">Rosa Medina · suena ahora</span></span></div>
+      <div class="pr"><span class="h">12:00</span><span style="display: flex; flex-direction: column"><span class="t">Al Día Contigo</span><span class="s">Noticias y entrevistas</span></span></div>
+      <div class="pr"><span class="h">14:00</span><span style="display: flex; flex-direction: column"><span class="t">Tarde de alabanza</span><span class="s">Música</span></span></div>
+      <div class="pr" style="border-bottom: 1px solid #E0DFDB"><span class="h">19:30</span><span style="display: flex; flex-direction: column"><span class="t">Oración en directo</span><span class="s">Desde el templo, con Pilar Soto</span></span></div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

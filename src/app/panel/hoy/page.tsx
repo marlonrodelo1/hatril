@@ -33,7 +33,7 @@ import { formatearDinero } from '@/lib/format/dinero';
 import type { Moneda } from '@/lib/db/schema';
 import { ESTADOS } from '@/lib/miembros/estados';
 import { iniciales } from '@/lib/format/iniciales';
-import { Button } from '@/components/ui/button';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 import { Aviso } from '@/components/aviso';
 import { cifrasDeSeguimiento } from '@/lib/seguimiento/consultas';
 import { CabeceraPanel } from '../_components/cabecera';
@@ -355,10 +355,10 @@ export default async function HoyPage({
                   completa con el tiempo.
                 </p>
               </div>
-              <Button render={<Link href="/panel/miembros/nuevo" />}>
+              <BotonEnlace href="/panel/miembros/nuevo">
                 Añadir la primera persona
                 <ArrowRight strokeWidth={1.9} />
-              </Button>
+              </BotonEnlace>
             </section>
           )}
           </div>
@@ -410,7 +410,7 @@ export default async function HoyPage({
 
                     <Link
                       href="/panel/finanzas"
-                      className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border bg-surface p-5 no-underline transition-colors hover:bg-surface-alt hover:no-underline"
+                      className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border bg-surface p-5 text-foreground no-underline transition-colors hover:bg-surface-alt hover:text-foreground hover:no-underline"
                     >
                       <div className="flex flex-col gap-1">
                         <span className="t-micro">Entró este mes</span>
@@ -465,9 +465,9 @@ function Panel({
 
       {/* Todos en `outline`: hay varios avisos y un solo botón naranja por
           pantalla. Si todos gritan, ninguno se oye. */}
-      <Button variant="outline" size="sm" render={<Link href={enlace} />}>
+      <BotonEnlace href={enlace} variant="outline" size="sm">
         {accion}
-      </Button>
+      </BotonEnlace>
     </article>
   );
 }
@@ -491,9 +491,9 @@ function PanelRecienLlegados({ personas }: { personas: RecienLlegado[] }) {
           </span>
         </div>
 
-        <Button variant="outline" size="sm" render={<Link href="/panel/miembros" />}>
+        <BotonEnlace href="/panel/miembros" variant="outline" size="sm">
           Ver el fichero
-        </Button>
+        </BotonEnlace>
       </div>
 
       <ul className="flex flex-wrap gap-2">

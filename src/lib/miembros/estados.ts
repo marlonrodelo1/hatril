@@ -1,3 +1,4 @@
+import type { TonoInsignia } from '@/components/ui/insignia';
 import type { estadoMiembroEnum } from '@/lib/db/schema';
 
 export type EstadoMiembro = (typeof estadoMiembroEnum.enumValues)[number];
@@ -21,15 +22,17 @@ export type EstadoMiembro = (typeof estadoMiembroEnum.enumValues)[number];
  */
 export const ESTADOS: Record<
   EstadoMiembro,
-  { etiqueta: string; badge: string; avatar: string }
+  { etiqueta: string; badge: string; avatar: string; tono: TonoInsignia }
 > = {
   miembro: {
     etiqueta: 'Activo',
+    tono: 'exito',
     badge: 'bg-badge-success-bg text-badge-success-fg',
     avatar: 'bg-muted text-muted-foreground',
   },
   nuevo: {
     etiqueta: 'Nuevo',
+    tono: 'marca',
     badge: 'bg-badge-accent-bg text-badge-accent-fg',
     // Los recién llegados destacan también en el avatar. Es la gente a la que
     // hay que contactar esta semana, y el diseño los separa del resto.
@@ -37,16 +40,19 @@ export const ESTADOS: Record<
   },
   visitante: {
     etiqueta: 'Visitante',
+    tono: 'aviso',
     badge: 'bg-badge-warning-bg text-badge-warning-fg',
     avatar: 'bg-muted text-muted-foreground',
   },
   inactivo: {
     etiqueta: 'Inactivo',
+    tono: 'neutro',
     badge: 'bg-muted text-muted-foreground',
     avatar: 'bg-muted text-muted-foreground',
   },
   baja: {
     etiqueta: 'Baja',
+    tono: 'neutro',
     badge: 'bg-muted text-muted-foreground',
     avatar: 'bg-muted text-muted-foreground',
   },

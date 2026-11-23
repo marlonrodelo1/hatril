@@ -5,7 +5,7 @@ import {
   DIAS_EN_NUEVOS,
   type CifrasSeguimiento,
 } from '@/lib/seguimiento/consultas';
-import { Button } from '@/components/ui/button';
+import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 /**
  * Quién llega y quién falta, en cuatro cifras.
@@ -86,15 +86,13 @@ export function BloqueSeguimiento({ cifras }: { cifras: CifrasSeguimiento }) {
           {contenido}
           <div className="flex flex-wrap gap-2">
             {cifras.ministerios.map((m) => (
-              <Button
+              <BotonEnlace href={`/panel/ministerios/${m.id}/seguimiento/nuevos`}
                 key={m.id}
                 variant="outline"
-                size="sm"
-                render={<Link href={`/panel/ministerios/${m.id}/seguimiento/nuevos`} />}
-              >
+                size="sm">
                 {m.nombre}
                 <ArrowRight strokeWidth={1.9} />
-              </Button>
+              </BotonEnlace>
             ))}
           </div>
         </div>

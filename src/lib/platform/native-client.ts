@@ -12,6 +12,7 @@
 type CapacitorGlobal = {
   isNativePlatform?: () => boolean;
   getPlatform?: () => string;
+  isPluginAvailable?: (nombre: string) => boolean;
 };
 
 function getCapacitor(): CapacitorGlobal | null {
@@ -29,4 +30,13 @@ export function isNativePlatform(): boolean {
 export function getPlatform(): 'ios' | 'android' | 'web' {
   const p = getCapacitor()?.getPlatform?.() ?? 'web';
   return p === 'ios' || p === 'android' ? p : 'web';
+}
+
+/**
+ * ¿Lleva ESTE binario el plugin? La web se actualiza sola y la app no: un
+ * teléfono con un build viejo recibe la pantalla nueva sin el código nativo que
+ * la sostiene, y llamar al plugin ahí falla con «not implemented».
+ */
+export function pluginDisponible(nombre: string): boolean {
+  return getCapacitor()?.isPluginAvailable?.(nombre) ?? false;
 }
