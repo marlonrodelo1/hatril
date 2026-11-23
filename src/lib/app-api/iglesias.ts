@@ -21,6 +21,8 @@ export type RespuestaCiudades = {
 
 export type RespuestaCerca = {
   iglesias: (IglesiaEnLista & { latitud: number; longitud: number })[];
+  /** Si hay mapa de Google (`/mapa`): el servidor tiene su clave. */
+  mapas: boolean;
 };
 
 /**
@@ -56,6 +58,8 @@ export type RespuestaFicha = {
     webPublica: boolean;
   };
   relacion: RelacionConIglesia;
+  /** Si hay mapa de Google (`/mapa`): el servidor tiene su clave. */
+  mapas: boolean;
   /** Con `pendiente`: la iglesia de la solicitud, que puede ser otra. */
   pendienteEn: { nombre: string; slug: string } | null;
   /** Con `de_esta` o `de_otra`: el nombre de su iglesia. */

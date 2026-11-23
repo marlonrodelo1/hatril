@@ -22,7 +22,8 @@ import {
 import type { Ranura } from '@/lib/iglesias/imagenes';
 import { FILAS_HORARIO, MAX_FOTOS } from './constantes';
 import { CabeceraPanel } from '../_components/cabecera';
-import { CampoUbicacion } from './_components/campo-ubicacion';
+import { CamposLugar } from './_components/campos-lugar';
+import { lugaresConfigurados } from '@/lib/lugares/google';
 import { Contenedor } from '../_components/contenedor';
 import { BotonEnlace } from '@/components/ui/boton-enlace';
 
@@ -116,10 +117,6 @@ export default async function AjustesPage({
                     <Input id="ciudad" name="ciudad" maxLength={120} defaultValue={iglesia.ciudad ?? ''} />
                   </Campo>
 
-                  <Campo etiqueta="Dirección" nombre="direccion">
-                    <Input id="direccion" name="direccion" maxLength={240} defaultValue={iglesia.direccion ?? ''} />
-                  </Campo>
-
                   <Campo etiqueta="Teléfono" nombre="telefono">
                     <Input id="telefono" name="telefono" type="tel" maxLength={40} defaultValue={iglesia.telefono ?? ''} />
                   </Campo>
@@ -129,12 +126,15 @@ export default async function AjustesPage({
                   </Campo>
                 </div>
 
-                <CampoUbicacion
-                  inicial={
+                <CamposLugar
+                  direccion={iglesia.direccion ?? ''}
+                  coordenadas={
                     iglesia.latitud !== null && iglesia.longitud !== null
                       ? `${iglesia.latitud}, ${iglesia.longitud}`
                       : ''
                   }
+                  lugarId={iglesia.lugarGoogleId ?? ''}
+                  conGoogle={lugaresConfigurados()}
                 />
 
                 <Campo

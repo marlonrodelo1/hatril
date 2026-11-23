@@ -66,6 +66,16 @@ const EsquemaDatos = z.object({
       }
       return { latitud: lat, longitud: lng };
     }),
+  /**
+   * El sitio de Google del que salieron las coordenadas, si salieron de la
+   * dirección sugerida (`_components/campos-lugar.tsx`). Vacío si las puso el
+   * pastor. Migración `0063`.
+   */
+  lugarId: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{10,300}$/, 'La ubicación elegida no es válida. Vuelve a elegir la dirección.')
+    .optional()
+    .or(z.literal('')),
 });
 
 export async function guardarDatosIglesia(formData: FormData) {
@@ -81,6 +91,7 @@ export async function guardarDatosIglesia(formData: FormData) {
     web: campo(formData, 'web'),
     descripcion: campo(formData, 'descripcion'),
     coordenadas: campo(formData, 'coordenadas'),
+    lugarId: campo(formData, 'lugar_id'),
   });
 
   if (!parsed.success) {
@@ -92,8 +103,36 @@ export async function guardarDatosIglesia(formData: FormData) {
 
   const d = parsed.data;
 
-  await withUser(ctx.user.id, (tx) =>
-    tx
+  // Sin coordenadas no hay sitio de Google que recordar (lo exige además
+  // `ck_iglesias_lugar_google`).
+  const lugarGoogleId = d.coordenadas.latitud !== null ? d.lugarId || null : null;
+
+  await withUser(ctx.user.id, async (tx) => {
+    const [antes] = await tx
+      .select({
+        lugarGoogleId: iglesias.lugarGoogleId,
+        latitud: iglesias.latitud,
+        longitud: iglesias.longitud,
+      })
+      .from(iglesias)
+      .where(eq(iglesias.id, ctx.iglesia.id))
+      .limit(1);
+
+    // La fecha de las coordenadas de Google es la de cuando se le pidieron,
+    // no la de cada vez que se guardan los datos: si el pastor cambia solo el
+    // teléfono, el sitio y las coordenadas viajan igual en el formulario y la
+    // fecha no se toca. Si se reiniciara, nunca caducarían.
+    const mismas =
+      antes?.lugarGoogleId === lugarGoogleId &&
+      antes?.latitud === d.coordenadas.latitud &&
+      antes?.longitud === d.coordenadas.longitud;
+    const origen = !lugarGoogleId
+      ? { lugarGoogleId: null, coordenadasGoogleEn: null }
+      : mismas
+        ? {}
+        : { lugarGoogleId, coordenadasGoogleEn: new Date() };
+
+    await tx
       .update(iglesias)
       .set({
         nombre: d.nombre,
@@ -106,9 +145,10 @@ export async function guardarDatosIglesia(formData: FormData) {
         descripcion: d.descripcion || null,
         latitud: d.coordenadas.latitud,
         longitud: d.coordenadas.longitud,
+        ...origen,
       })
-      .where(eq(iglesias.id, ctx.iglesia.id)),
-  );
+      .where(eq(iglesias.id, ctx.iglesia.id));
+  });
 
   revalidatePath('/panel', 'layout');
   revalidatePath(`/i/${ctx.iglesia.slug}`);

@@ -5,6 +5,7 @@ import { clsx } from 'clsx';
 import { iniciales } from '@/lib/format/iniciales';
 import type { HorarioSemanal } from '@/lib/db/schema';
 import { BotonEnlace } from '@/components/ui/boton-enlace';
+import { MapaAlTocar } from '@/components/lugares/mapa-google';
 import { nombrePais } from '@/app/buscar/_components/fila-iglesia';
 
 /**
@@ -40,6 +41,7 @@ export function VistaFicha({
   esDeEsta,
   pendiente,
   urlWeb,
+  mapa = null,
 }: {
   iglesia: FichaParaPintar;
   /** El nombre de la iglesia de quien mira, si ya pertenece a una. */
@@ -49,6 +51,11 @@ export function VistaFicha({
   pendiente: { nombre: string; slug: string } | null;
   /** La web de la iglesia. La app la pasa entera, para abrirla fuera. */
   urlWeb?: string;
+  /**
+   * El mapa de Google de `/mapa`, o null si el servidor no tiene su clave. La
+   * web pasa `/mapa`; la app, la dirección entera en hatril.com.
+   */
+  mapa?: { desde: string } | null;
 }) {
   const web = urlWeb ?? `/i/${iglesia.slug}`;
 
@@ -171,6 +178,21 @@ export function VistaFicha({
                 </BotonEnlace>
               )}
             </div>
+          )}
+
+          {/* Solo con coordenadas: el mapa no busca la dirección escrita. Y no
+              carga nada de Google hasta que se toca. */}
+          {mapa && iglesia.latitud !== null && iglesia.longitud !== null && (
+            <MapaAlTocar
+              desde={mapa.desde}
+              iglesia={{
+                slug: iglesia.slug,
+                nombre: iglesia.nombre,
+                latitud: iglesia.latitud,
+                longitud: iglesia.longitud,
+                logoUrl: iglesia.logoUrl,
+              }}
+            />
           )}
 
           {miIglesia && !esDeEsta ? (

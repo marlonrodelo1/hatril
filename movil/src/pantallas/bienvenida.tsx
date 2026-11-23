@@ -98,9 +98,11 @@ export function BuscarCiudad() {
 }
 
 /**
- * «Cerca de mí»: el mismo `CercaDeMi` de la web. La ubicación y la dirección
- * escrita no salen del teléfono: la API solo da las iglesias con su sitio, y
- * la distancia se calcula aquí.
+ * «Cerca de mí»: el mismo `CercaDeMi` de la web. La ubicación no sale del
+ * teléfono: la API solo da las iglesias con su sitio, y la distancia se calcula
+ * aquí. La dirección escrita se sugiere con Google a través de hatril.com
+ * (`/api/v1/app/lugares/*`), y el mapa es el de `https://hatril.com/mapa` en
+ * un iframe (`src/lib/lugares/mapa.ts` dice por qué no va dentro del binario).
  */
 export function BuscarCerca() {
   const iglesias = useQuery({
@@ -122,7 +124,11 @@ export function BuscarCerca() {
       </header>
       <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col px-5 pt-2">
         {iglesias.data ? (
-          <CercaDeMi iglesias={iglesias.data.iglesias} />
+          <CercaDeMi
+            iglesias={iglesias.data.iglesias}
+            lugaresDesde={`${API_URL}/api/v1/app/lugares`}
+            mapa={iglesias.data.mapas ? { desde: `${API_URL}/mapa` } : null}
+          />
         ) : (
           <p className="text-[14px] text-muted-foreground">
             {iglesias.error ? iglesias.error.message : 'Cargando…'}

@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { LocateFixed, MapPin, MapPinOff, Navigation } from 'lucide-react';
+import { LocateFixed, MapPinOff, Navigation } from 'lucide-react';
 
 import { Button, buttonVariants } from '@/components/ui/button';
+import { CampoLugar } from '@/components/lugares/campo-lugar';
+import { AvisoMapaGoogle, MapaGoogle } from '@/components/lugares/mapa-google';
 import { BotonInvitar } from '../../_components/boton-invitar';
 import { FilaIglesia, type IglesiaEnLista } from '../../_components/fila-iglesia';
-import { geocodificar } from './geocodificar';
 
 /**
  * «Estoy buscando iglesia»: las que hay cerca, ordenadas por distancia.
@@ -19,18 +20,22 @@ import { geocodificar } from './geocodificar';
  * una promesa: el servidor nunca la recibe. Y se pide al pulsar el botón,
  * después de explicar para qué, no al abrir la pantalla.
  *
- * O POR UNA DIRECCIÓN (19-nov)
- * ----------------------------
+ * O POR UNA DIRECCIÓN (19-nov; con Google desde el 23-nov)
+ * --------------------------------------------------------
  * Quien no quiere dar la ubicación, o se la ha negado a la app, escribe una
- * calle, un barrio o una ciudad, y se ordena igual, desde ahí. La dirección se
- * convierte en coordenadas con OpenStreetMap, desde el teléfono
- * (`geocodificar.ts`): nuestro servidor tampoco la recibe.
+ * calle, un barrio o una ciudad, elige de las sugerencias de Google y se ordena
+ * igual, desde ahí. Antes era OpenStreetMap desde el teléfono, que no
+ * encontraba ninguna dirección colombiana con «#». Ahora la dirección pasa por
+ * nuestro servidor camino de Google (`lib/lugares/google.ts`) y no se guarda;
+ * la ubicación del teléfono sigue sin salir de él.
  *
- * SIN MAPA, Y ES UNA DECISIÓN
- * ---------------------------
- * Con las iglesias que hay hoy, un mapa sale vacío casi siempre y además pide
- * un proveedor de teselas con cuenta. Una lista ordenada por distancia
- * responde a la misma pregunta. Decidido por Marlon el 30-oct.
+ * Y EN UN MAPA (23-nov)
+ * ---------------------
+ * El 30-oct Marlon decidió lista sin mapa; el 23-nov pidió el mapa con pines.
+ * La lista sigue siendo lo primero: con pocas iglesias, un mapa sale casi
+ * vacío. «Mapa» las pinta junto a quien busca, y no carga nada de Google hasta
+ * que se toca (`components/lugares/mapa-google.tsx`). Solo aparece si el
+ * servidor tiene la clave del mapa (`mapa` no es null).
  */
 type ConUbicacion = IglesiaEnLista & { latitud: number; longitud: number };
 
@@ -45,80 +50,37 @@ type Estado =
   | { paso: 'sin-ubicacion' };
 
 /**
- * «Calle, barrio o ciudad» y «Buscar». Mientras OpenStreetMap contesta, el
- * botón lo dice; si no encuentra nada, se pide algo más general en vez de
- * enseñar una lista vacía.
+ * «Calle, barrio o ciudad», con las sugerencias de Google. Elegir una basta:
+ * no hay botón de buscar.
  */
 function BuscarPorDireccion({
+  desde,
   onLugar,
 }: {
+  desde: string;
   onLugar: (lugar: { lat: number; lng: number; nombre: string }) => void;
 }) {
-  const [texto, setTexto] = useState('');
-  const [buscando, setBuscando] = useState(false);
-  const [aviso, setAviso] = useState<string | null>(null);
-
-  async function buscar(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const direccion = texto.trim();
-    if (direccion.length < 3) {
-      setAviso('Escribe una calle, un barrio o una ciudad.');
-      return;
-    }
-    setBuscando(true);
-    setAviso(null);
-    try {
-      const lugar = await geocodificar(direccion);
-      // Arriba de la lista sale lo que la persona escribió: el nombre de
-      // OpenStreetMap («UPZs Localidad Chapinero, Localidad Chapinero…») es
-      // exacto pero no se reconoce de un vistazo.
-      if (lugar) onLugar({ ...lugar, nombre: direccion });
-      else setAviso('No encontramos esa dirección. Prueba con el barrio o la ciudad.');
-    } catch {
-      setAviso('No hemos podido buscar la dirección. Inténtalo otra vez en un momento.');
-    } finally {
-      setBuscando(false);
-    }
-  }
-
   return (
-    <form onSubmit={buscar} className="flex flex-col gap-2" role="search">
+    <div className="flex flex-col gap-2">
       <label htmlFor="direccion" className="text-[14px] font-semibold text-foreground">
         O escribe una dirección
       </label>
-      <div className="relative">
-        <MapPin
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground"
-          strokeWidth={1.8}
-        />
-        <input
-          id="direccion"
-          type="search"
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          maxLength={160}
-          enterKeyHint="search"
-          autoComplete="street-address"
-          placeholder="Calle, barrio o ciudad"
-          aria-describedby="direccion-ayuda"
-          className="h-12 w-full rounded-xl border border-input bg-surface pr-3.5 pl-11 text-base outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16"
-        />
-      </div>
-      {aviso && (
-        <p role="alert" className="flex items-center gap-1.5 text-[14px] text-danger">
-          <MapPinOff aria-hidden className="size-4 flex-none" strokeWidth={1.8} />
-          {aviso}
-        </p>
-      )}
-      <Button type="submit" variant="outline" size="lg" className="h-[52px] w-full" disabled={buscando}>
-        {buscando ? 'Buscando…' : 'Buscar cerca de esta dirección'}
-      </Button>
+      {/* Arriba de la lista sale lo que la persona eligió («Calle 45
+          #12-30»), no la dirección entera de Google, que se reconoce peor. */}
+      <CampoLugar
+        desde={desde}
+        id="direccion"
+        grande
+        maxLength={160}
+        placeholder="Calle, barrio o ciudad"
+        describedBy="direccion-ayuda"
+        onElegir={(l) => onLugar({ lat: l.latitud, lng: l.longitud, nombre: l.texto })}
+      />
       <p id="direccion-ayuda" className="text-[13px] leading-snug text-muted-foreground">
-        La dirección se consulta en OpenStreetMap para situarla. Hatril no la
-        guarda.
+        Elige una de la lista. La dirección se consulta en Google para situarla;
+        Hatril no la guarda.
       </p>
-    </form>
+    </div>
   );
 }
 
@@ -131,9 +93,46 @@ function distanciaKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export function CercaDeMi({ iglesias }: { iglesias: ConUbicacion[] }) {
+export function CercaDeMi({
+  iglesias,
+  lugaresDesde = '/api/v1/lugares',
+  mapa = null,
+}: {
+  iglesias: ConUbicacion[];
+  /** Las sugerencias de direcciones: la web las pide aquí, la app a hatril.com. */
+  lugaresDesde?: string;
+  /** El mapa de `/mapa`, o null si el servidor no tiene su clave. */
+  mapa?: { desde: string } | null;
+}) {
   const [estado, setEstado] = useState<Estado>({ paso: 'explicar' });
   const [radio, setRadio] = useState<Radio>(10);
+  const [vista, setVista] = useState<'lista' | 'mapa'>('lista');
+  const [elegida, setElegida] = useState<string | null>(null);
+  const filaElegida = useRef<HTMLDivElement>(null);
+
+  // Al tocar un pin, su fila sale debajo del mapa, que en un teléfono queda al
+  // pie de la pantalla o fuera de ella (se vio a 375 × 812): se lleva a la vista.
+  useEffect(() => {
+    if (!elegida) return;
+    const quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    filaElegida.current?.scrollIntoView({ block: 'nearest', behavior: quieto ? 'auto' : 'smooth' });
+  }, [elegida]);
+
+  // Memorizadas: el mapa vuelve a mandar sus datos al iframe cada vez que
+  // cambian, y sin esto cambiarían en cada pintado.
+  const lat = estado.paso === 'lista' ? estado.lat : null;
+  const lng = estado.paso === 'lista' ? estado.lng : null;
+  const yo = useMemo(() => (lat !== null && lng !== null ? { lat, lng } : null), [lat, lng]);
+  const cerca = useMemo(
+    () =>
+      yo
+        ? iglesias
+            .map((i) => ({ ...i, distancia: distanciaKm(yo.lat, yo.lng, i.latitud, i.longitud) }))
+            .filter((i) => i.distancia <= radio)
+            .sort((a, b) => a.distancia - b.distancia)
+        : [],
+    [iglesias, yo, radio],
+  );
 
   function desdeDireccion(lugar: { lat: number; lng: number; nombre: string }) {
     setEstado({ paso: 'lista', lat: lugar.lat, lng: lugar.lng, desde: lugar.nombre });
@@ -177,7 +176,7 @@ export function CercaDeMi({ iglesias }: { iglesias: ConUbicacion[] }) {
             <Navigation strokeWidth={1.8} />
             {estado.paso === 'buscando' ? 'Buscando…' : 'Usar mi ubicación'}
           </Button>
-          <BuscarPorDireccion onLugar={desdeDireccion} />
+          <BuscarPorDireccion desde={lugaresDesde} onLugar={desdeDireccion} />
           <Link
             href="/buscar/ciudad"
             className="self-center text-[14px] font-semibold text-foreground underline underline-offset-2"
@@ -203,7 +202,7 @@ export function CercaDeMi({ iglesias }: { iglesias: ConUbicacion[] }) {
           cercanas. Si un día quieres usar la ubicación, puedes darle permiso a
           la app desde los ajustes del teléfono.
         </p>
-        <BuscarPorDireccion onLugar={desdeDireccion} />
+        <BuscarPorDireccion desde={lugaresDesde} onLugar={desdeDireccion} />
         <Link
           href="/buscar/ciudad"
           className="self-center text-[14px] font-semibold text-foreground underline underline-offset-2"
@@ -213,11 +212,6 @@ export function CercaDeMi({ iglesias }: { iglesias: ConUbicacion[] }) {
       </div>
     );
   }
-
-  const cerca = iglesias
-    .map((i) => ({ ...i, distancia: distanciaKm(estado.lat, estado.lng, i.latitud, i.longitud) }))
-    .filter((i) => i.distancia <= radio)
-    .sort((a, b) => a.distancia - b.distancia);
 
   const siguienteRadio = RADIOS.find((r) => r > radio);
 
@@ -263,12 +257,44 @@ export function CercaDeMi({ iglesias }: { iglesias: ConUbicacion[] }) {
 
       {cerca.length > 0 ? (
         <>
-          <p className="text-[14px] text-muted-foreground">Ordenadas por distancia</p>
-          <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
-            {cerca.map((i) => (
-              <FilaIglesia key={i.slug} iglesia={i} />
-            ))}
+          <div className="flex min-h-9 items-center justify-between gap-3">
+            <p className="text-[14px] text-muted-foreground">
+              {vista === 'mapa' && mapa ? 'Toca un pin para verla' : 'Ordenadas por distancia'}
+            </p>
+            {mapa && <SelectorVista vista={vista} onCambiar={setVista} />}
           </div>
+          {vista === 'mapa' && mapa ? (
+            <>
+              <MapaGoogle
+                desde={mapa.desde}
+                iglesias={cerca}
+                yo={yo}
+                elegida={elegida}
+                onElegir={setElegida}
+                gestos="greedy"
+                titulo="Mapa con las iglesias cercanas"
+                className="h-[min(56dvh,440px)]"
+              />
+              <AvisoMapaGoogle />
+              {cerca
+                .filter((i) => i.slug === elegida)
+                .map((i) => (
+                  <div
+                    key={i.slug}
+                    ref={filaElegida}
+                    className="overflow-hidden rounded-xl border border-border bg-surface"
+                  >
+                    <FilaIglesia iglesia={i} />
+                  </div>
+                ))}
+            </>
+          ) : (
+            <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
+              {cerca.map((i) => (
+                <FilaIglesia key={i.slug} iglesia={i} />
+              ))}
+            </div>
+          )}
           <Link
             href="/buscar/ciudad"
             className="self-center text-[14px] font-semibold text-foreground underline underline-offset-2"
@@ -307,6 +333,40 @@ export function CercaDeMi({ iglesias }: { iglesias: ConUbicacion[] }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * «Lista» o «Mapa». Con el mismo dibujo que los radios de arriba, más pequeño:
+ * es otra forma de ver lo mismo, no otra búsqueda.
+ */
+function SelectorVista({
+  vista,
+  onCambiar,
+}: {
+  vista: 'lista' | 'mapa';
+  onCambiar: (v: 'lista' | 'mapa') => void;
+}) {
+  return (
+    <div role="radiogroup" aria-label="Ver como" className="flex flex-none gap-1.5">
+      {(['lista', 'mapa'] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          role="radio"
+          aria-checked={vista === v}
+          onClick={() => onCambiar(v)}
+          className={
+            'h-9 cursor-pointer rounded-full border px-4 text-[14px] font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/20 ' +
+            (vista === v
+              ? 'border-support bg-support text-white'
+              : 'border-border bg-surface text-foreground hover:bg-surface-active')
+          }
+        >
+          {v === 'lista' ? 'Lista' : 'Mapa'}
+        </button>
+      ))}
     </div>
   );
 }

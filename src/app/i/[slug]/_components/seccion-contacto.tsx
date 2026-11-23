@@ -6,6 +6,8 @@ import type { IglesiaPublica } from '@/lib/iglesias/publica';
 import { redesParaPintar } from '@/lib/iglesias/redes';
 import { formatearTelefono } from '@/lib/telefono/normalizar';
 import { BotonEnlace } from '@/components/ui/boton-enlace';
+import { MapaAlTocar } from '@/components/lugares/mapa-google';
+import { mapaWeb } from '@/lib/lugares/mapa';
 
 type Accion = {
   clave: string;
@@ -28,6 +30,7 @@ const COLUMNAS: Record<number, string> = {
 /** Cómo llegar y cómo contactar. Solo si la iglesia ha puesto algún dato. */
 export function SeccionContacto({ iglesia }: { iglesia: IglesiaPublica }) {
   const whatsapp = chatDeWhatsapp(iglesia.redes);
+  const mapa = mapaWeb();
 
   // Solo los que la iglesia haya rellenado. Un botón «Escribir» que no lleva
   // a ninguna parte es peor que no tenerlo: quien lo pulsa cree que la web
@@ -168,7 +171,7 @@ export function SeccionContacto({ iglesia }: { iglesia: IglesiaPublica }) {
                * «Calle 45 #12-30» existe en muchas ciudades.
                */}
               <BotonEnlace
-                href={enlaceMapa(iglesia.direccion, iglesia.ciudad)}
+                href={enlaceMapa(iglesia)}
                 nuevaPestana
                 variant="outline"
                 size="sm"
@@ -180,15 +183,39 @@ export function SeccionContacto({ iglesia }: { iglesia: IglesiaPublica }) {
               </BotonEnlace>
             </div>
           )}
+
+          {/* El mapa, solo con coordenadas y solo al tocarlo: abrirlo manda a
+              Google la conexión de quien mira (`lib/lugares/mapa.ts`). */}
+          {mapa && iglesia.latitud !== null && iglesia.longitud !== null && (
+            <MapaAlTocar
+              desde={mapa.desde}
+              iglesia={{
+                slug: iglesia.slug,
+                nombre: iglesia.nombre,
+                latitud: iglesia.latitud,
+                longitud: iglesia.longitud,
+                logoUrl: iglesia.logoUrl,
+              }}
+            />
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-/** La búsqueda de Google Maps, con la forma documentada (`api=1`). */
-function enlaceMapa(direccion: string, ciudad: string | null): string {
-  const consulta = [direccion, ciudad].filter(Boolean).join(', ');
+/**
+ * La búsqueda de Google Maps, con la forma documentada (`api=1`).
+ *
+ * Con coordenadas, las coordenadas: son el sitio exacto que eligió el pastor,
+ * y una dirección escrita a mano puede no encontrarse. Es lo que ya hacía la
+ * ficha del directorio (`/iglesia/[slug]`); aquí faltaba.
+ */
+function enlaceMapa(iglesia: IglesiaPublica): string {
+  const consulta =
+    iglesia.latitud !== null && iglesia.longitud !== null
+      ? `${iglesia.latitud},${iglesia.longitud}`
+      : [iglesia.direccion, iglesia.ciudad].filter(Boolean).join(', ');
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(consulta)}`;
 }
 
