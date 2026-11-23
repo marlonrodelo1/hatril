@@ -46,6 +46,7 @@ siguiente, además de lo que ya estaba:
 | La pantalla del turno del equipo se caía en el iPhone | `0ef86f7` | iOS |
 | Google Maps: sugerencias de Google en «cerca de una dirección», mapa con el logo de cada iglesia como pin en «cerca de mí» y «Ver en el mapa» en la ficha | `c383f86` (migración) y el commit de Google Maps del 23-nov | las dos |
 | Permiso de ubicación en iOS (`NSLocationWhenInUseUsageDescription`): sin él, «Usar mi ubicación» fallaba sin preguntar | el commit de Google Maps del 23-nov | iOS |
+| Células en Equipo: la red, la célula de su líder (reporte, temas, invitar, su gente con teléfono, Llamar, WhatsApp y «Escribir a la célula») y sus temas; «Tu célula» y salir en Mi cuenta | la fusión de células del 23-nov (`claude/awesome-driscoll-58a8cc`) | las dos |
 
 Antes de compilar:
 
@@ -54,7 +55,7 @@ Antes de compilar:
 - **iOS**: ya está en 9 (23-nov, `npm run app:version -- build ios`; el 8
   ya lo tenía App Store Connect, según Marlon).
 - **Espera a células** (decisión de Marlon, 23-nov): la versión sale cuando
-  células esté en `main`.
+  células esté en `main`. **Ya lo está** (23-nov).
 - **Google Maps**: hecho. Variables en Dokploy y web desplegada (23-nov),
   comprobado en hatril.com.
 
@@ -98,7 +99,7 @@ Antes de compilar:
     suma a dos desde el panel; al líder le llegan los dos avisos y a cada
     sumada el suyo, todo comprobado en la base.
   - **Sin probar**: en un teléfono de verdad, que va en el próximo build
-    (Android versionCode 4 e iOS build 8, que esperaban a células), ni las push
+    (Android versionCode 4 e iOS build 9, que esperan a células), ni las push
     de estos avisos.
 
 - **Google Maps** (23-nov, `docs/google-maps.md`, migración `0063`). Probado
@@ -1212,7 +1213,7 @@ Antes de compilar:
 | **Push: lo que queda** | Poner `FIREBASE_SERVICE_ACCOUNT` en Dokploy, en Environment y no en Build-time (sin ella no sale ninguna push y no falla nada). Desplegar. Build nuevo de Android y el build 2 de iOS en el Mac: el 1 de TestFlight no lleva el plugin. Probar en un iPhone y en un Android de verdad, con la app cerrada. El App ID `app.hatril` se creó el 19-nov con Push y Sign In with Apple: el build 1 no había firmado todavía con esa cuenta. Confirmar las dos entidades nuevas de `/privacidad` (Google Ireland y Apple Distribution International) |
 | **Super admin: falta la cuenta de Marlon** | **Cerrado el 28-oct**: `admin@hatril.test` tenía `Hatril2026`, escrita aquí y en `seed-demo.sql`, en un repo público, y la base de local es la de hatril.com; desplegado `/admin`, cualquiera habría podido ponerle contraseña a la cuenta del pastor de Cuerpo de Cristo. Ahora tiene una aleatoria que nadie conoce (comprobado en la base: `Hatril2026` ya no casa con el hash) y el seed la crea igual; se entra por enlace mágico y `test:puertas:admin` sigue 30 de 30. **Lo que falta**: Marlon ya tiene cuenta (29-oct), pero todavía no está en `admin_users`: su contraseña no servía para un super admin. Va en ese orden: insertar su fila desde el SQL Editor de Supabase, entrar y cambiar la contraseña al momento en `/admin/cuentas`, y comprobar en la base que ya no es una de las conocidas. **Nunca escribir aquí, en un repo público, el correo de una cuenta real junto a su contraseña** |
 | **Las migraciones de células, cosidas** | **Hecho el 23-nov** al fusionar células: journal en orden de `when` (0046-0051 y luego 0052…), el `prevId` del 0052 apunta al 0051 y las cinco tablas y los dos enums de células están en todos los snapshots posteriores (`drizzle-kit generate` sin cambios). Si otra rama trae un snapshot generado antes de esta fusión, le faltarán: pasar `node scripts/migraciones/coser-snapshots-celulas.mjs`, que las copia del 0051 y no toca nada más. **El SQL de la `0054` no casa con el hash que guardó la base**: se tocó después de aplicarla. El migrador no lo mira, pero el fichero no es exactamente lo aplicado |
-| **Células, lo que queda** | 1) **El build de la app** (Android versionCode 4 e iOS build 8): las pantallas de células van dentro del binario, y en la app vieja la tarjeta de la célula lleva a «No existe». 2) **Subir `VERSION_POLITICA_PRIVACIDAD`**: Marlon decidió desplegar células sin esperar; la subida va en su rama, `claude/gracious-antonelli-debda1`, con la `0066` (guardar el «no» a la asistencia como fila). 3) Después, por orden: la reunión en la Agenda de quien va, «tu célula no ha reportado» (pide el primer cron), el enlace del grupo de WhatsApp de la célula visible a su gente, un aviso push del líder a toda su célula y que el enlace abra la app si está instalada |
+| **Células, lo que queda** | 1) **El build de la app** (Android versionCode 4 e iOS build 9, ver «La próxima versión de la app»): las pantallas de células van dentro del binario, y en la app vieja la tarjeta de la célula lleva a «No existe». 2) **Subir `VERSION_POLITICA_PRIVACIDAD`**: Marlon decidió desplegar células sin esperar; la subida va en su rama, `claude/gracious-antonelli-debda1`, con la `0066` (guardar el «no» a la asistencia como fila). 3) Después, por orden: la reunión en la Agenda de quien va, «tu célula no ha reportado» (pide el primer cron), el enlace del grupo de WhatsApp de la célula visible a su gente, un aviso push del líder a toda su célula y que el enlace abra la app si está instalada |
 | **Super admin, lo que queda** | Sin modo soporte (entrar como el pastor): con datos del art. 9 es una decisión, no un botón. Sin ingresos: los precios viven en Stripe y no hay claves todavía. Cuentas lee mil como mucho y lo avisa |
 | Proveedor de alojamiento en los legales | Relleno (Hostinger). Falta confirmar en hPanel el país del centro de datos: pone Alemania y la IP geolocaliza en Francia |
 | Módulos de ministerio | **Hechas, y fusionadas el 20-oct, la base común, el reparto v1, alabanza sin migración, consolidación v1 y la radio v1, más los equipos en la app.** Sigue, con migración y de una en una, la **contabilidad completa**; la cola está en `docs/modulos/cola.md` y el plan en `plan.md`. Peticiones de oración y la ficha de los niños esperan una decisión legal: salud y menores |
