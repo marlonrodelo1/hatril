@@ -51,7 +51,6 @@ export default async function SolicitarPage({
 }) {
   const { slug } = await params;
   const { error, grupo: codigo } = await searchParams;
-  const mensajeError = error;
 
   const iglesia = await iglesiaParaSolicitar(slug);
   if (!iglesia) notFound();
@@ -82,7 +81,7 @@ export default async function SolicitarPage({
       // llega igual a quien está dentro, que es casi todo el grupo de WhatsApp.
       const yaVa = (await misGrupos(ctx)).some((g) => g.grupoId === grupo.id);
       return (
-        <Marco slug={slug} titulo={yaVa ? `Ya vas a ${grupo.nombre}` : `Entrar en ${grupo.nombre}`} error={mensajeError}>
+        <Marco slug={slug} titulo={yaVa ? `Ya vas a ${grupo.nombre}` : `Entrar en ${grupo.nombre}`} error={error}>
           {yaVa ? (
             <>
               <p className="text-pretty text-body text-muted-foreground">
@@ -117,7 +116,7 @@ export default async function SolicitarPage({
     if (pendiente && grupo) {
       if (pendiente.conInvitacion) redirect('/mi');
       return (
-        <Marco slug={slug} titulo={`Ya pediste unirte a ${iglesia.nombre}`} error={mensajeError}>
+        <Marco slug={slug} titulo={`Ya pediste unirte a ${iglesia.nombre}`} error={error}>
           <form action={sumarInvitacionASolicitud} className="flex flex-col items-start gap-4">
             <input type="hidden" name="slug" value={slug} />
             <input type="hidden" name="grupo" value={grupo.codigo} />

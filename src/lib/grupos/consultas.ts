@@ -408,7 +408,10 @@ export async function telefonosDeLaCelula(acceso: {
   ctx: UserContext;
   grupo: GrupoDetalle;
 }): Promise<Record<string, ContactoDeIntegrante>> {
-  const ids = acceso.grupo.integrantes.map((p) => p.miembroId);
+  // Sin el de quien mira: su propio número no le sirve de nada aquí.
+  const ids = acceso.grupo.integrantes
+    .map((p) => p.miembroId)
+    .filter((id) => id !== acceso.ctx.miembroId);
   if (ids.length === 0) return {};
 
   const filas = await withUser(acceso.ctx.user.id, (tx) =>
