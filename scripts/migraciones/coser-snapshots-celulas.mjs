@@ -1,6 +1,6 @@
 // Cose los snapshots de main (0052 en adelante) detrás de los de células.
 //
-//   node scripts/migraciones/coser-snapshots-celulas.cjs
+//   node scripts/migraciones/coser-snapshots-celulas.mjs
 //
 // Se pasó el 23-nov al fusionar células. Hay que volver a pasarlo cuando entre
 // en main una migración cuyo snapshot se generó SIN células (la de una rama
@@ -13,8 +13,8 @@
 // `generate` volvería a crear `grupos`. Se copian SOLO las cinco tablas y los
 // dos enums que añade células (del 0051), y el 0052 pasa a colgar del 0051.
 // Idempotente: se puede volver a pasar después de cada fusión de main.
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
 
 const dir = path.join(process.cwd(), 'drizzle', 'meta');
 const s51 = JSON.parse(fs.readFileSync(path.join(dir, '0051_snapshot.json'), 'utf8'));

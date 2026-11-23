@@ -49,6 +49,16 @@ queda en recuento. Lo hecho:
   Miembros filtra por «va a una célula», solo para el pastor.
 - **Pruebas** sin Betania: la red pasa a `scripts/pruebas/demo.mjs`, y
   `test:puertas:app` mira que ningún teléfono ajeno viaje.
+- **Migraciones `0064` y `0065`**, aplicadas el 23-nov detrás de la `0063` de
+  Google Maps (que hubo que esperar: las migraciones van en fila). La 0064, los
+  dos valores del aviso, sola; la 0065, las dos funciones, revocadas a todos y
+  concedidas solo a `hatril_app`. Antes, la `0063` se cosió con
+  `scripts/migraciones/coser-snapshots-celulas.mjs`.
+- **Probado ejecutándolo**: `test:aislamiento` (con diez comprobaciones nuevas
+  de entrar y salir por `withUser()`), las tres baterías de puertas, y en el
+  navegador: la secretaria entra con el enlace y sale desde Mi cuenta, el
+  pastor suma a dos desde el panel, y los avisos llegan a quien tienen que
+  llegar (comprobado en la base y en la campana del líder).
 
 ---
 
@@ -449,12 +459,11 @@ sesión. Se comprobó a mano lo que mira: RLS activada en las cuatro tablas,
 - **Un aviso de consola que no es de esta rama**: en `/mi`, el botón «Ver su
   página» de la solicitud en revisión (`Button` con `render={<Link>}`) hace que
   Base UI se queje de `nativeButton`. Viene de 92897bd.
-- **Avisos en la campana**: «tu célula no ha reportado» y «alguien entró por
-  tu enlace» pedirían valores nuevos de `tipo_notificacion_enum`, en su propia
-  migración. No se han hecho, como pedía el encargo.
-- **Quien ya es de la iglesia y abre el enlace** ve que el enlace no es para
-  él y que le sume la red. Unirse con el código desde dentro
-  (`/mi/grupo/unirme/[código]`) sigue siendo una pantalla más, sin hacer.
+- **Avisos en la campana**: «alguien entró en tu célula» y «te han sumado»,
+  hechos el 23-nov (`0064`). Falta «tu célula no ha reportado», que pide un
+  cron, y todavía no hay ninguno programado.
+- **Quien ya es de la iglesia y abre el enlace** entra él mismo desde el
+  23-nov, en `/solicitar/<iglesia>?grupo=<código>` (`unirse_a_grupo`, `0065`).
 - **La reunión de la célula no sale en `/mi/agenda`**. Haría falta un tipo de
   día nuevo en `calendario.ts`.
 - **Consolidación v2** (punto 3 de la cola) puede asignar al nuevo a una
