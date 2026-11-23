@@ -15,6 +15,8 @@ import {
 
 import { withUser } from '@/lib/db';
 import {
+  grupoMiembros,
+  grupos,
   miembros,
   ministerioMiembros,
   ministerios,
@@ -57,6 +59,8 @@ export type FiltrosMiembros = {
   busqueda?: string;
   estado?: EstadoMiembro;
   ministerioId?: string;
+  /** Va (`si`) o no (`no`) a alguna célula abierta. Solo lo ofrece el pastor. */
+  celula?: 'si' | 'no';
   pagina?: number;
 };
 
@@ -109,6 +113,23 @@ function condicionAmbito(ctx: ContextoPermisos) {
  * plantilla: Drizzle enlazaría el array entero como UN parámetro y el SQL
  * saldría inválido. `inArray` genera el `in ($1, $2, …)` correcto.
  */
+/**
+ * Va o no a alguna célula —o grupo— abierta (23-nov). Es como el pastor
+ * distingue en Miembros a quien llegó por una célula. La RLS de
+ * `grupo_miembros` (`0047`) solo le enseña todo al pastor, y por eso la
+ * pantalla solo se lo ofrece a él: con otra sesión «no va» saldría inflado.
+ */
+function vaAUnaCelula(va: boolean) {
+  const existe = sql`exists (
+    select 1 from ${grupoMiembros}
+      join ${grupos} on ${grupos.id} = ${grupoMiembros.grupoId}
+    where ${grupoMiembros.miembroId} = ${miembros.id}
+      and ${grupoMiembros.activo} = true
+      and ${grupos.activo} = true
+  )`;
+  return va ? existe : sql`not ${existe}`;
+}
+
 function sirveEnAlgunMinisterio(ministerioIds: string[]) {
   return sql`exists (
     select 1 from ${ministerioMiembros}
@@ -142,6 +163,7 @@ export async function listarMiembros(
     filtros.ministerioId
       ? sirveEnAlgunMinisterio([filtros.ministerioId])
       : undefined,
+    filtros.celula ? vaAUnaCelula(filtros.celula === 'si') : undefined,
   ].filter(Boolean);
 
   return withUser(ctx.user.id, async (tx) => {

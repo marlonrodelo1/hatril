@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Mail, Pencil, Phone, X, Lock } from 'lucide-react';
 
 import { obtenerMiembro } from '@/lib/miembros/consultas';
+import { celulasDeLaPersona } from '@/lib/grupos/consultas';
 import { ESTADOS } from '@/lib/miembros/estados';
 import { iniciales } from '@/lib/format/iniciales';
 import { esPastor, puede } from '@/lib/auth/permisos';
@@ -32,7 +33,11 @@ export async function FichaMiembroPanel({
   miembroId: string;
   params: Record<string, string | string[] | undefined>;
 }) {
-  const miembro = await obtenerMiembro(ctx, miembroId);
+  const [miembro, celulas] = await Promise.all([
+    obtenerMiembro(ctx, miembroId),
+    // Lo que deja ver la RLS: el pastor, todas; quien lleva una red, las suyas.
+    celulasDeLaPersona(ctx, miembroId),
+  ]);
 
   const cerrar = (() => {
     const limpios = new URLSearchParams();
@@ -200,6 +205,29 @@ export async function FichaMiembroPanel({
               </div>
             )}
           </div>
+
+          {/* Su célula: es como el pastor distingue a quien llegó por una, sin
+              ponerle una etiqueta en el muro (23-nov). Sin bloque si no va a
+              ninguna o si quien mira no lleva su red. */}
+          {celulas.length > 0 && (
+            <div className="flex flex-col gap-2.5">
+              <span className="t-micro">{celulas.length === 1 ? 'Célula' : 'Células'}</span>
+              <div className="flex flex-wrap gap-2">
+                {celulas.map((c) => (
+                  <span
+                    key={`${c.red}-${c.grupo}`}
+                    className="rounded-full bg-muted px-3 py-1.5 text-[13px] font-semibold text-muted-foreground"
+                  >
+                    {c.grupo}
+                    <span className="font-normal">
+                      {' · '}
+                      {c.rol === 'lider' ? 'la lleva' : c.rol === 'auxiliar' ? 'ayuda a llevarla' : c.red}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {miembro.sensibles?.notas && (
             <div className="flex flex-col gap-2.5">

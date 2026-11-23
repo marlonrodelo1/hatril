@@ -690,6 +690,93 @@ export async function candidatosParaGrupo(
 }
 
 /**
+ * ¿Tiene esta iglesia algún grupo abierto? Para ofrecer el filtro de células
+ * en Miembros solo donde significa algo. Con la sesión de quien pregunta: la
+ * RLS de `grupos` (`0049`) solo le enseña todos al pastor y a la red.
+ */
+export async function hayGruposAbiertos(ctx: UserContext): Promise<boolean> {
+  const [fila] = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ id: grupos.id })
+      .from(grupos)
+      .where(and(eq(grupos.iglesiaId, ctx.iglesia.id), eq(grupos.activo, true)))
+      .limit(1),
+  );
+  return Boolean(fila);
+}
+
+/**
+ * Las células a las que va una persona, para su ficha del panel: «Va a Los
+ * Pinos (Células)». Es como el pastor distingue a quien llegó por una célula
+ * (23-nov): sin etiqueta en el muro, que se lo enseñaría a toda la iglesia.
+ *
+ * Lo que sale lo decide la RLS (`0047`, `0049`): el pastor, todas; quien lleva
+ * una red, las de su red; el resto, ninguna.
+ */
+export async function celulasDeLaPersona(
+  ctx: UserContext,
+  miembroId: string,
+): Promise<{ grupo: string; red: string; rol: RolGrupo }[]> {
+  return withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ grupo: grupos.nombre, red: ministerios.nombre, rol: grupoMiembros.rolGrupo })
+      .from(grupoMiembros)
+      .innerJoin(grupos, eq(grupos.id, grupoMiembros.grupoId))
+      .innerJoin(ministerios, eq(ministerios.id, grupoMiembros.ministerioId))
+      .where(
+        and(
+          eq(grupoMiembros.iglesiaId, ctx.iglesia.id),
+          eq(grupoMiembros.miembroId, miembroId),
+          eq(grupoMiembros.activo, true),
+          eq(grupos.activo, true),
+        ),
+      )
+      .orderBy(asc(grupos.nombre)),
+  );
+}
+
+/** Cuántas fichas de fuera del equipo ofrece «Nueva célula» como mucho. */
+export const LIMITE_FUERA_DEL_EQUIPO = 400;
+
+/**
+ * Quien puede llevar una célula nueva sin estar todavía en el equipo de la red:
+ * las fichas vivas de la iglesia que no están en él. Para «Nueva célula», que
+ * desde el 23-nov las suma al equipo al crearla (`sumarAlEquipo`).
+ *
+ * Para el pastor y quien lidera la red, que ya ven el fichero para sumar gente
+ * a una célula (`candidatosParaGrupo`). Con tope: en una iglesia grande la
+ * lista se corta, y la pantalla dice qué hacer si alguien no sale.
+ */
+export async function fichasFueraDelEquipo(
+  ctx: UserContext,
+  ministerioId: string,
+): Promise<{ id: string; nombre: string }[]> {
+  return withUser(ctx.user.id, async (tx) => {
+    const equipo = await tx
+      .select({ miembroId: ministerioMiembros.miembroId })
+      .from(ministerioMiembros)
+      .where(and(eq(ministerioMiembros.ministerioId, ministerioId), eq(ministerioMiembros.activo, true)));
+    const dentro = equipo.map((e) => e.miembroId);
+
+    const filas = await tx
+      .select({ id: miembros.id, nombre: miembros.nombre, apellidos: miembros.apellidos })
+      .from(miembros)
+      .where(
+        and(
+          eq(miembros.iglesiaId, ctx.iglesia.id),
+          isNull(miembros.archivadoAt),
+          ne(miembros.estado, 'baja'),
+          dentro.length > 0 ? notInArray(miembros.id, dentro) : undefined,
+        ),
+      )
+      .orderBy(asc(miembros.nombre), asc(miembros.apellidos))
+      .limit(LIMITE_FUERA_DEL_EQUIPO);
+
+    return filas.map((f) => ({ id: f.id, nombre: nombreCompleto(f.nombre, f.apellidos) }));
+  });
+}
+
+/**
  * ¿Es este grupo de esta red y de esta iglesia, y sigue abierto?
  *
  * La puerta de cada action de un grupo, después de la del ministerio. Sin ella,

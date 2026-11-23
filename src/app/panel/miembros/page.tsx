@@ -18,6 +18,7 @@ import { EstadoVacio as Vacio } from '@/components/ui/estado-vacio';
 import { Insignia } from '@/components/ui/insignia';
 import { CabeceraPanel } from '../_components/cabecera';
 import { Contenedor } from '../_components/contenedor';
+import { hayGruposAbiertos } from '@/lib/grupos/consultas';
 import { FiltrosMiembros, BuscadorMiembros } from './_components/filtros';
 import { FichaMiembroPanel } from './_components/ficha';
 import { Paginacion } from '../_components/paginacion';
@@ -42,10 +43,15 @@ export default async function MiembrosPage({
     Array.isArray(v) ? v[0] : v;
 
   const estado = primer(sp.estado);
+  // El filtro de células, solo para el pastor y solo si hay células: la RLS
+  // de `grupo_miembros` solo le enseña todo a él (`vaAUnaCelula`).
+  const conCelulas = esPastor(ctx) && (await hayGruposAbiertos(ctx));
+  const celula = primer(sp.celula);
   const filtros: Filtros = {
     busqueda: primer(sp.q) || undefined,
     estado: esEstadoValido(estado) ? estado : undefined,
     ministerioId: primer(sp.ministerio) || undefined,
+    celula: conCelulas && (celula === 'si' || celula === 'no') ? celula : undefined,
     pagina: Number(primer(sp.pagina)) || 1,
   };
 
@@ -58,7 +64,7 @@ export default async function MiembrosPage({
   ]);
 
   const hayFiltros = Boolean(
-    filtros.busqueda || filtros.estado || filtros.ministerioId,
+    filtros.busqueda || filtros.estado || filtros.ministerioId || filtros.celula,
   );
   const puedeCrear = esPastor(ctx) || puede(ctx, 'editar_miembros');
 
@@ -91,7 +97,7 @@ export default async function MiembrosPage({
           separa son los filtros de SU tabla, y con más aire parecen dos bloques
           que no se hablan. */}
       <Contenedor className="gap-4">
-        <FiltrosMiembros ministerios={ministerios} />
+        <FiltrosMiembros ministerios={ministerios} conCelulas={conCelulas} />
 
         <div className="overflow-hidden rounded-xl border border-border bg-surface-alt">
           {/* Cabecera de la tabla. Se oculta en móvil: siete columnas en 375px

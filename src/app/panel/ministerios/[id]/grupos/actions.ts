@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
@@ -168,6 +168,73 @@ async function estaEnElEquipo(
   return Boolean(fila);
 }
 
+/** ¿Es una ficha viva de esta iglesia? Para elegirla como líder sin estar en el equipo. */
+async function esFichaViva(ctx: UserContext, miembroId: string): Promise<boolean> {
+  const [fila] = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ id: miembros.id })
+      .from(miembros)
+      .where(
+        and(
+          eq(miembros.id, miembroId),
+          eq(miembros.iglesiaId, ctx.iglesia.id),
+          isNull(miembros.archivadoAt),
+          ne(miembros.estado, 'baja'),
+        ),
+      )
+      .limit(1),
+  );
+  return Boolean(fila);
+}
+
+/**
+ * ENCARGAR EN UN PASO (23-nov)
+ * ----------------------------
+ * Marlon lo pidió así: el pastor encarga a los líderes de célula. Antes eran
+ * dos pasos —sumar a la persona al equipo de la red y después crear la célula
+ * con ella—, y la base lo sigue exigiendo (HT132: quien lleva un grupo está en
+ * el equipo de su ministerio). Ahora, si no estaba, entra aquí, en la misma
+ * transacción que la célula y ANTES de su fila de líder.
+ *
+ * No abre ninguna puerta nueva: quien llega aquí (pastor, responsable o
+ * colíder de la red) ya podía sumar voluntarios al equipo. Y copia la regla de
+ * `asignarAlMinisterio`, que costó un fallo aprenderla: a quien ya está dentro
+ * no se le toca ni el papel ni el `desde`, y quien estuvo y salió vuelve en su
+ * última fila, como voluntario.
+ */
+async function sumarAlEquipo(
+  tx: Tx,
+  iglesiaId: string,
+  ministerioId: string,
+  miembroId: string,
+  hoy: string,
+): Promise<void> {
+  const previos = await tx
+    .select({ id: ministerioMiembros.id, activo: ministerioMiembros.activo })
+    .from(ministerioMiembros)
+    .where(
+      and(
+        eq(ministerioMiembros.iglesiaId, iglesiaId),
+        eq(ministerioMiembros.ministerioId, ministerioId),
+        eq(ministerioMiembros.miembroId, miembroId),
+      ),
+    )
+    .orderBy(desc(ministerioMiembros.createdAt), desc(ministerioMiembros.id));
+
+  if (previos.some((f) => f.activo)) return;
+
+  const ultima = previos[0];
+  if (ultima) {
+    await tx
+      .update(ministerioMiembros)
+      .set({ activo: true, desde: hoy, hasta: null, rolEquipo: 'voluntario' })
+      // Redundante y a propósito: este UPDATE no puede pisar a nadie de dentro.
+      .where(and(eq(ministerioMiembros.id, ultima.id), eq(ministerioMiembros.activo, false)));
+    return;
+  }
+  await tx.insert(ministerioMiembros).values({ iglesiaId, ministerioId, miembroId, desde: hoy });
+}
+
 /**
  * Los errores de la base que tienen un porqué que contar. Lo que no está aquí
  * se relanza: un fallo de permisos de verdad no se disfraza de mensaje amable
@@ -216,10 +283,10 @@ export async function crearGrupo(ministerioId: string, formData: FormData) {
   const lider = Id.safeParse(campo(formData, 'lider'));
   if (!lider.success) volver('Elige quién es el líder.', destino);
 
-  // La base lo vuelve a decir (HT132), pero así el error sale antes y con
-  // nombre, sin abrir la transacción.
-  if (!(await estaEnElEquipo(ctx, ministerioId, lider.data))) {
-    volver('El líder tiene que estar en el equipo de la red.', destino);
+  // Una ficha viva de esta iglesia. No hace falta que esté ya en el equipo:
+  // entra en él aquí mismo (`sumarAlEquipo`).
+  if (!(await esFichaViva(ctx, lider.data))) {
+    volver('Esa persona ya no está en la congregación. Elige a otra.', destino);
   }
 
   const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
@@ -240,6 +307,10 @@ export async function crearGrupo(ministerioId: string, formData: FormData) {
           creadoPorMiembroId: ctx.miembroId,
         })
         .returning({ id: grupos.id });
+
+      // En este orden: la célula (que bloquea la red, `0051`), el equipo y
+      // la fila de líder, que HT132 mira contra el equipo.
+      await sumarAlEquipo(tx, ctx.iglesia.id, ministerioId, lider.data, hoy);
 
       await tx.insert(grupoMiembros).values({
         iglesiaId: ctx.iglesia.id,

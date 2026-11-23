@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 
 import { esPastor } from '@/lib/auth/permisos';
 import { etiquetasDeGrupos } from '@/lib/grupos/etiquetas';
+import { fichasFueraDelEquipo, LIMITE_FUERA_DEL_EQUIPO } from '@/lib/grupos/consultas';
 import { Aviso } from '@/components/aviso';
 import { Bloque, Campo, CamposDelGrupo, SELECT } from '@/components/grupos/formulario';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -14,12 +15,14 @@ import { requireGrupos } from '../guarda';
 export const metadata: Metadata = { title: 'Nuevo grupo' };
 
 /**
- * Crear un grupo eligiendo su líder entre el equipo de la red.
+ * Crear un grupo eligiendo su líder.
  *
- * Solo el equipo: es lo que exige HT132, y lo que hace que «nombrar líder de
- * célula» no sea una puerta lateral para darle a cualquiera una lista de
- * gente. Quien no está, se suma antes al equipo desde «El equipo», donde el
- * pastor ve quién lleva qué.
+ * Desde el 23-nov, de toda la iglesia y no solo del equipo de la red: Marlon
+ * quiere que el pastor encargue a los líderes de célula en un paso. Quien no
+ * estaba en el equipo entra en él al crear la célula (`sumarAlEquipo`), que es
+ * lo que la base exige (HT132), y la pantalla lo dice: ahí el pastor sigue
+ * viendo quién lleva qué. No es una puerta lateral: quien llega aquí ya podía
+ * sumar voluntarios al equipo.
  *
  * Y quien no es pastor no se ofrece a sí mismo: HT134 se lo rechazaría.
  */
@@ -36,9 +39,11 @@ export default async function NuevoGrupoPage({
 
   const e = etiquetasDeGrupos(ministerio.tipo);
   const base = `/panel/ministerios/${id}/grupos`;
-  const elegibles = ministerio.equipo.filter(
-    (p) => esPastor(ctx) || p.miembroId !== ctx.miembroId,
-  );
+  const pastor = esPastor(ctx);
+  const delEquipo = ministerio.equipo.filter((p) => pastor || p.miembroId !== ctx.miembroId);
+  const deFuera = (await fichasFueraDelEquipo(ctx, id)).filter((p) => pastor || p.id !== ctx.miembroId);
+  const cortada = deFuera.length >= LIMITE_FUERA_DEL_EQUIPO;
+  const hayAQuien = delEquipo.length + deFuera.length > 0;
 
   return (
     <>
@@ -58,40 +63,52 @@ export default async function NuevoGrupoPage({
 
           <Bloque
             titulo="Su líder"
-            nota="Alguien del equipo de la red. Desde la app verá a su gente, reportará cada semana y compartirá el enlace para invitar."
+            nota="Desde la app verá a su gente con su teléfono, reportará cada semana y compartirá el enlace para invitar."
           >
-            {elegibles.length === 0 ? (
+            {!hayAQuien ? (
               <p className="text-pretty text-body text-muted-foreground">
-                En el equipo de la red no hay nadie a quien elegir. Suma antes a las
-                personas que van a llevar cada {e.uno} desde{' '}
-                <Link href={`/panel/ministerios/${id}`} className="font-semibold">
-                  El equipo
-                </Link>
-                .
+                No hay nadie en el fichero a quien elegir.
               </p>
             ) : (
               <Campo
                 etiqueta="Líder"
                 nombre="lider"
                 requerido
-                ayuda="¿No está en la lista? Súmalo antes al equipo desde «El equipo»."
+                ayuda={
+                  cortada
+                    ? `Si no está en la lista, súmalo antes al equipo desde «El equipo». Quien no esté en el equipo de ${e.laRed} entra en él al crear la ${e.uno}.`
+                    : `Quien no esté en el equipo de ${e.laRed} entra en él al crear la ${e.uno}, y lo verás en «El equipo».`
+                }
               >
                 <select id="lider" name="lider" required defaultValue="" className={SELECT}>
                   <option value="" disabled>
-                    Elige a alguien del equipo
+                    Elige a quién la lleva
                   </option>
-                  {elegibles.map((p) => (
-                    <option key={p.miembroId} value={p.miembroId}>
-                      {p.nombre}
-                    </option>
-                  ))}
+                  {delEquipo.length > 0 && (
+                    <optgroup label="Del equipo de la red">
+                      {delEquipo.map((p) => (
+                        <option key={p.miembroId} value={p.miembroId}>
+                          {p.nombre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {deFuera.length > 0 && (
+                    <optgroup label="Del resto de la iglesia">
+                      {deFuera.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nombre}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </Campo>
             )}
           </Bloque>
 
           <div className="flex items-center gap-3">
-            <Button type="submit" disabled={elegibles.length === 0}>
+            <Button type="submit" disabled={!hayAQuien}>
               Crear
             </Button>
             <Link href={base} className={buttonVariants({ variant: 'ghost' })}>

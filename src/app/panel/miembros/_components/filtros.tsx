@@ -23,8 +23,11 @@ import { ESTADOS, ESTADOS_ELEGIBLES } from '@/lib/miembros/estados';
  */
 export function FiltrosMiembros({
   ministerios,
+  conCelulas = false,
 }: {
   ministerios: { id: string; nombre: string }[];
+  /** Solo el pastor, y solo si la iglesia tiene células (`page.tsx`). */
+  conCelulas?: boolean;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -52,6 +55,7 @@ export function FiltrosMiembros({
   const estado = params.get('estado') ?? '';
   const ministerioId = params.get('ministerio') ?? '';
   const busqueda = params.get('q') ?? '';
+  const celula = conCelulas ? (params.get('celula') ?? '') : '';
 
   const chips = [
     estado && {
@@ -61,6 +65,10 @@ export function FiltrosMiembros({
     ministerioId && {
       etiqueta: `Ministerio: ${ministerios.find((m) => m.id === ministerioId)?.nombre ?? ''}`,
       quitar: () => aplicar('ministerio', ''),
+    },
+    celula && {
+      etiqueta: celula === 'si' ? 'Va a una célula' : 'No va a ninguna célula',
+      quitar: () => aplicar('celula', ''),
     },
     busqueda && {
       etiqueta: `«${busqueda}»`,
@@ -124,6 +132,21 @@ export function FiltrosMiembros({
             </option>
           ))}
         </select>
+
+        {/* Quien va a una célula, y quien no: así distingue el pastor a quien
+            llegó por una sin ponerle una etiqueta en el muro (23-nov). */}
+        {conCelulas && (
+          <select
+            value={celula}
+            onChange={(e) => aplicar('celula', e.target.value)}
+            aria-label="Filtrar por célula"
+            className={claseSelect}
+          >
+            <option value="">Célula</option>
+            <option value="si">Va a una célula</option>
+            <option value="no">No va a ninguna</option>
+          </select>
+        )}
       </div>
 
       {chips.length > 0 && (
