@@ -24,12 +24,13 @@ import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
 import { formatearEuros } from '@/lib/donativos/calculo';
 import { colorDeMinisterio } from '@/lib/ministerios/colores';
 import { Fila } from '@/components/ui/fila';
+import { BotonEnviar } from '@/components/ui/boton-enviar';
 import { TarjetaMiGrupo } from '@/components/grupos/mi-grupo';
 import { salir } from '../../../(auth)/actions';
 import { CuadroIcono, FilaBoton, FilaDato, Grupo } from './ajustes';
 import { FotoPerfil } from './foto-perfil';
 import { InterruptorAsistencia } from './interruptor-asistencia';
-import { cambiarPermisoAsistencia } from '../actions';
+import { cambiarPermisoAsistencia, salirDeGrupo } from '../actions';
 import type { datosDeMiCuenta } from '../datos';
 
 /**
@@ -52,6 +53,8 @@ const CONFIRMACIONES: Record<string, string> = {
   'sin-foto': 'Foto quitada.',
   'asistencia-si': 'Gracias. La iglesia podrá apuntar cuándo vienes.',
   'asistencia-no': 'Permiso retirado. Ya no sales en las listas, y lo que había apuntado de ti se ha borrado.',
+  celula: 'Ya estás en tu célula. Quien la lleva ya te ve en su lista.',
+  'sin-celula': 'Has salido de la célula. Para volver, pide el enlace a quien la lleva.',
 };
 
 export type DatosDeMiCuenta = Awaited<ReturnType<typeof datosDeMiCuenta>>;
@@ -146,7 +149,35 @@ export function VistaCuenta({
             </h2>
             <ul className="flex flex-col gap-2.5">
               {grupos.map((g) => (
-                <TarjetaMiGrupo key={g.grupoId} grupo={g} hoy={hoy} />
+                <TarjetaMiGrupo
+                  key={g.grupoId}
+                  grupo={g}
+                  hoy={hoy}
+                  salir={
+                    // Solo quien va como participante: al líder y al auxiliar
+                    // los cambia la red. Con `<details>`: dos toques y sin
+                    // JavaScript, para que no se salga nadie de un roce.
+                    g.rol === 'participante' ? (
+                      <details className="group">
+                        <summary className="cursor-pointer list-none text-label font-semibold text-muted-foreground [&::-webkit-details-marker]:hidden">
+                          Salir de esta {g.etiquetas.uno}
+                        </summary>
+                        <form
+                          action={salirDeGrupo.bind(null, g.grupoId)}
+                          className="mt-2 flex flex-col items-start gap-2"
+                        >
+                          <p className="text-pretty text-label text-muted-foreground">
+                            Dejarás de estar en {g.nombre} y quien la lleva ya no verá tu
+                            teléfono. Para volver, te hará falta su enlace.
+                          </p>
+                          <BotonEnviar variant="outline" size="sm" pendiente="Saliendo…">
+                            Sí, salir de {g.nombre}
+                          </BotonEnviar>
+                        </form>
+                      </details>
+                    ) : undefined
+                  }
+                />
               ))}
             </ul>
           </section>

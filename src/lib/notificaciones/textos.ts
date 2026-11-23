@@ -120,6 +120,22 @@ export function textoNotificacion(
           : 'Revisa las publicaciones del último año.',
       };
 
+    case 'grupo_nuevo_integrante':
+      return {
+        titulo:
+          Number(datos.cuantos ?? '1') > 1
+            ? `${datos.cuantos} personas han entrado en ${datos.grupo ?? 'tu célula'}`
+            : `${quien} ha entrado en ${datos.grupo ?? 'tu célula'}`,
+        detalle: 'Ya sale en tu lista, con su teléfono para llamarle o escribirle.',
+      };
+
+    case 'grupo_incorporado':
+      return {
+        titulo: `Te han sumado a ${datos.grupo ?? 'una célula'}`,
+        detalle:
+          'Quien la lleva verá tu nombre y tu teléfono. Si no quieres estar, puedes salir desde Mi cuenta.',
+      };
+
     case 'contenido_retirado':
       return {
         titulo:

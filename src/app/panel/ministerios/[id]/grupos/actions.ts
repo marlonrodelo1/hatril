@@ -25,6 +25,7 @@ import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { generarCodigo } from '@/lib/grupos/codigo';
 import { grupoAbiertoDeLaRed } from '@/lib/grupos/consultas';
 import { lunesDe } from '@/lib/grupos/semanas';
+import { avisarDeEntrada } from '@/lib/grupos/avisos';
 import { SEMANAS_POR_DELANTE } from './constantes';
 
 /**
@@ -97,9 +98,14 @@ class GrupoCerrado extends Error {}
  * fila nueva podía quedar activa en un grupo ya cerrado. La base lo repite
  * (HT132, `0049`).
  */
-async function bloquearAbierto(tx: Tx, ctx: UserContext, ministerioId: string, grupoId: string) {
+async function bloquearAbierto(
+  tx: Tx,
+  ctx: UserContext,
+  ministerioId: string,
+  grupoId: string,
+): Promise<{ nombre: string }> {
   const [fila] = await tx
-    .select({ id: grupos.id })
+    .select({ id: grupos.id, nombre: grupos.nombre })
     .from(grupos)
     .where(
       and(
@@ -112,6 +118,7 @@ async function bloquearAbierto(tx: Tx, ctx: UserContext, ministerioId: string, g
     .limit(1)
     .for('share');
   if (!fila) throw new GrupoCerrado();
+  return { nombre: fila.nombre };
 }
 
 const EsquemaDatos = z.object({
@@ -657,17 +664,20 @@ export async function anadirIntegrantes(
   const pedidos = [...new Set(ids.data)];
   const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
 
-  let sumados = 0;
+  let sumados: { grupo: string; personas: { miembroId: string; nombre: string }[] } = {
+    grupo: '',
+    personas: [],
+  };
   try {
     sumados = await withUser(ctx.user.id, async (tx) => {
-      await bloquearAbierto(tx, ctx, ministerioId, grupoId);
+      const { nombre: grupo } = await bloquearAbierto(tx, ctx, ministerioId, grupoId);
       // Solo fichas vivas de ESTA iglesia, como `asignarAlMinisterio`. Una baja
       // a la vez la resuelve la base y no esta lectura: `validar_grupo_miembro`
       // toma el cerrojo de la baja de cada ficha (`0051`), que vale para todos
       // los caminos. Un `FOR SHARE` aquí chocaría además con pasar lista, que
       // actualiza las mismas fichas en otro orden.
       const vivas = await tx
-        .select({ id: miembros.id })
+        .select({ id: miembros.id, nombre: miembros.nombre, apellidos: miembros.apellidos })
         .from(miembros)
         .where(
           and(
@@ -694,11 +704,11 @@ export async function anadirIntegrantes(
           .filter((o) => o.grupoId === grupoId || o.rol === 'participante')
           .map((o) => o.miembroId),
       );
-      const nuevos = vivas.map((v) => v.id).filter((id) => !saltar.has(id));
-      if (nuevos.length === 0) return 0;
+      const nuevos = vivas.filter((v) => !saltar.has(v.id));
+      if (nuevos.length === 0) return { grupo, personas: [] };
 
       await tx.insert(grupoMiembros).values(
-        nuevos.map((miembroId) => ({
+        nuevos.map(({ id: miembroId }) => ({
           iglesiaId: ctx.iglesia.id,
           ministerioId,
           grupoId,
@@ -707,7 +717,13 @@ export async function anadirIntegrantes(
           desde: hoy,
         })),
       );
-      return nuevos.length;
+      return {
+        grupo,
+        personas: nuevos.map((v) => ({
+          miembroId: v.id,
+          nombre: [v.nombre, v.apellidos].filter(Boolean).join(' '),
+        })),
+      };
     });
   } catch (err) {
     // Dos personas sumando a la vez a la misma gente: lo que entró, entró.
@@ -717,12 +733,24 @@ export async function anadirIntegrantes(
     traducir(err, destino, base(ministerioId));
   }
 
-  if (sumados === 0) {
+  if (sumados.personas.length === 0) {
     volver(
       'Nadie nuevo que sumar: ya estaban dentro, van a otro de la red o ya no están en la congregación.',
       destino,
     );
   }
+
+  // A quien la lleva, que ha entrado gente; y a cada persona sumada, que la
+  // han sumado y que su líder verá su teléfono (`avisarDeEntrada`).
+  await avisarDeEntrada({
+    iglesiaId: ctx.iglesia.id,
+    ministerioId,
+    grupoId,
+    grupo: sumados.grupo,
+    personas: sumados.personas,
+    provocadoPor: ctx.user.id,
+    sumadasPorLaRed: true,
+  });
 
   revalidatePath(destino);
   redirect(`${destino}?guardado=anadidos`);

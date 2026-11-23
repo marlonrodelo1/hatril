@@ -18,7 +18,16 @@ import { buttonVariants } from '@/components/ui/button';
  * demás: lo esconde la base (`0047`), y esta tarjeta no tendría de dónde
  * sacarlo. A quien la lleva, además, la entrada a su pantalla.
  */
-export function TarjetaMiGrupo({ grupo: g, hoy }: { grupo: VistaDeMiGrupo; hoy: string }) {
+export function TarjetaMiGrupo({
+  grupo: g,
+  hoy,
+  salir,
+}: {
+  grupo: VistaDeMiGrupo;
+  hoy: string;
+  /** «Salir de esta célula», que pone Mi cuenta con su action. */
+  salir?: React.ReactNode;
+}) {
   const lider = g.lideres.find((l) => l.rol === 'lider');
 
   return (
@@ -86,6 +95,8 @@ export function TarjetaMiGrupo({ grupo: g, hoy }: { grupo: VistaDeMiGrupo; hoy: 
           </Link>
         </>
       )}
+
+      {salir}
     </li>
   );
 }

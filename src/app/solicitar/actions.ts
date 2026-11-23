@@ -25,7 +25,12 @@ import {
   rutaDeSolicitud,
 } from '@/lib/solicitudes/alta';
 import { leerCodigo } from '@/lib/grupos/codigo';
-import { sumarInvitacion } from '@/lib/grupos/invitacion';
+import { grupoDeLaInvitacion, sumarInvitacion } from '@/lib/grupos/invitacion';
+import { nombreDeMiFicha, unirseConElCodigo } from '@/lib/grupos/unirse';
+import { avisarDeEntrada } from '@/lib/grupos/avisos';
+import { getCurrentUserContext } from '@/lib/auth/user-context';
+import { exigirPoderEscribir } from '@/lib/suscripcion/muro';
+import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 
 /**
  * Crear cuenta personal y pedir entrar en una iglesia.
@@ -168,6 +173,60 @@ export async function sumarInvitacionASolicitud(formData: FormData) {
 
   const hecho = await sumarInvitacion(user.id, slug, codigo);
   redirect(hecho === 'sumada' ? '/mi?invitacion=1' : '/mi');
+}
+
+/**
+ * Quien YA es de la iglesia entra en la célula del enlace (23-nov).
+ *
+ * Hasta aquí el enlace solo servía a quien todavía no era de la iglesia, y a
+ * los demás —casi todo el grupo de WhatsApp de la célula— se les decía que se
+ * lo pidieran a quien lleva la red. Ahora entran ellos mismos, después de leer
+ * que quien la lleva verá su nombre y su teléfono. Las reglas las pone la base
+ * (`unirse_a_grupo`); aquí, antes, que la herramienta esté encendida y el
+ * grupo abierto, lo mismo que mira la invitación.
+ */
+export async function unirseAGrupo(formData: FormData) {
+  const parsed = EsquemaSumarInvitacion.safeParse({
+    slug: campoObligatorio(formData, 'slug'),
+    grupo: campo(formData, 'grupo'),
+  });
+  const codigo = parsed.success ? leerCodigo(parsed.data.grupo) : null;
+  if (!parsed.success || !codigo) redirect('/mi');
+  const { slug } = parsed.data;
+  const volverA = rutaDeSolicitud(slug, codigo);
+
+  const ctx = await getCurrentUserContext();
+  if (!ctx) redirect(`/acceso?next=${encodeURIComponent(volverA)}`);
+  // Solo en la iglesia del enlace: con el de otra, no hay nada que hacer aquí.
+  if (ctx.iglesia.slug !== slug) redirect('/mi');
+  await exigirConsentimientoAlDia(ctx);
+  exigirPoderEscribir(ctx, volverA);
+
+  const grupo = await grupoDeLaInvitacion(ctx.iglesia.id, codigo);
+  if (!grupo) volverCon(volverA, 'Ese enlace ya no lleva a ninguna célula abierta. Pídele uno nuevo a quien te lo mandó.');
+
+  const resultado = await unirseConElCodigo(ctx, codigo);
+
+  if (resultado === 'otra') {
+    volverCon(volverA, 'Ya vas a otra célula de esta red. Para cambiarte, pídeselo a quien lleva la red.');
+  }
+  if (resultado === 'no_vale') {
+    volverCon(volverA, 'Ese enlace ya no lleva a ninguna célula abierta. Pídele uno nuevo a quien te lo mandó.');
+  }
+
+  if (resultado === 'dentro' && ctx.miembroId) {
+    await avisarDeEntrada({
+      iglesiaId: ctx.iglesia.id,
+      ministerioId: grupo.ministerioId,
+      grupoId: grupo.id,
+      grupo: grupo.nombre,
+      personas: [{ miembroId: ctx.miembroId, nombre: (await nombreDeMiFicha(ctx)) ?? 'Alguien' }],
+      provocadoPor: ctx.user.id,
+      sumadasPorLaRed: false,
+    });
+  }
+
+  redirect('/mi/cuenta?guardado=celula');
 }
 
 /** Cancelar la solicitud propia mientras está pendiente. */

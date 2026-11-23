@@ -66,6 +66,17 @@ export const tipoNotificacionEnum = pgEnum('tipo_notificacion_enum', [
   'ninos_publicacion',
   /** Niños: una familia ha retirado el permiso de fotos. Va a la responsable, para que quite las suyas. */
   'ninos_sin_fotos',
+  /**
+   * Células: alguien ha entrado en tu célula, por el enlace de invitación o
+   * porque lo sumó la red. Va a quien la lleva, que ya le ve con su teléfono.
+   */
+  'grupo_nuevo_integrante',
+  /**
+   * Células: la red te ha sumado a una célula. Va a esa persona, porque quien
+   * la lleva verá su teléfono sin que ella hiciera nada: se le dice, y que
+   * puede salir desde Mi cuenta (23-nov).
+   */
+  'grupo_incorporado',
 ]);
 
 export const notificaciones = pgTable(

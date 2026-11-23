@@ -10,6 +10,7 @@ import {
   EyeOff,
   Flag,
   Heart,
+  HouseHeart,
   Images,
   MessageCircle,
   UserCheck,
@@ -75,6 +76,8 @@ const ESTILO: Record<TipoNotificacion, { Icono: LucideIcon; circulo: string }> =
   ninos_aceptada: { Icono: UserCheck, circulo: BIEN },
   ninos_publicacion: { Icono: Images, circulo: GENTE },
   ninos_sin_fotos: { Icono: CameraOff, circulo: OJO },
+  grupo_nuevo_integrante: { Icono: HouseHeart, circulo: GENTE },
+  grupo_incorporado: { Icono: HouseHeart, circulo: NEUTRO },
 };
 
 type Grupo = 'Hoy' | 'Esta semana' | 'Antes';

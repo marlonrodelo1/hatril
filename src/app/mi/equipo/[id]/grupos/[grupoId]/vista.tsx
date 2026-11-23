@@ -41,8 +41,8 @@ const PAPEL = { lider: 'Líder', auxiliar: 'Auxiliar', participante: null } as c
  * Nombre, papel y, desde el 23-nov, el teléfono con Llamar y WhatsApp: lo
  * decidió Marlon, para que el líder pueda llamar a los suyos. Solo los de esta
  * célula (`telefonosDeLaCelula`, detrás de la guarda). Quien la lleva no suma ni
- * quita a nadie: la gente nueva entra con el enlace de invitación, con su
- * propio consentimiento, y a quien ya es de la iglesia lo suma la red.
+ * quita a nadie: la gente entra con el enlace de invitación, con su propio
+ * consentimiento, y a quien no usa la app la suma la red.
  */
 export type DatosGrupo = Awaited<ReturnType<typeof cargar>>;
 
@@ -275,8 +275,8 @@ export function VistaGrupo({
           })}
         </Lista>
         <p className="px-1 text-pretty text-label text-muted-foreground">
-          Quien llega nuevo entra con el enlace de invitación. A quien ya es de la
-          iglesia, tenga la app o no, lo suma quien lleva {e.laRed}: pídeselo.
+          Con el enlace de invitación entra quien llega nuevo y quien ya es de la
+          iglesia. A quien no usa la app lo suma quien lleva {e.laRed}: pídeselo.
         </p>
       </Seccion>
 

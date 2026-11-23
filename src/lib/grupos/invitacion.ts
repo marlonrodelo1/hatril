@@ -34,12 +34,12 @@ import { leerCodigo } from './codigo';
 export async function grupoDeLaInvitacion(
   iglesiaId: string,
   codigo: string | null | undefined,
-): Promise<{ id: string; nombre: string; codigo: string } | null> {
+): Promise<{ id: string; ministerioId: string; nombre: string; codigo: string } | null> {
   const leido = leerCodigo(codigo);
   if (!leido) return null;
 
   const [fila] = await dbAdmin
-    .select({ id: grupos.id, nombre: grupos.nombre, modulos: ministerios.modulos })
+    .select({ id: grupos.id, ministerioId: grupos.ministerioId, nombre: grupos.nombre, modulos: ministerios.modulos })
     .from(grupos)
     .innerJoin(ministerios, eq(ministerios.id, grupos.ministerioId))
     .where(
@@ -53,7 +53,7 @@ export async function grupoDeLaInvitacion(
     .limit(1);
 
   if (!fila || !tieneModulo(fila.modulos, 'grupos')) return null;
-  return { id: fila.id, nombre: fila.nombre, codigo: leido };
+  return { id: fila.id, ministerioId: fila.ministerioId, nombre: fila.nombre, codigo: leido };
 }
 
 /**

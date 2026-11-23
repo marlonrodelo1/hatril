@@ -15,6 +15,7 @@ import {
 import { VERSION_POLITICA_PRIVACIDAD } from '@/lib/rgpd/consentimiento';
 import { casilla } from '@/lib/api/formulario';
 import { quitarMiFoto, subirMiFoto } from '@/lib/miembros/foto';
+import { salirDelGrupo } from '@/lib/grupos/unirse';
 
 /**
  * Lo que cada cual cambia de sí mismo en Mi cuenta.
@@ -117,4 +118,25 @@ export async function cambiarPermisoAsistencia(formData: FormData) {
 
   revalidatePath('/', 'layout');
   volver(quiere ? 'guardado=asistencia-si' : 'guardado=asistencia-no');
+}
+
+/**
+ * Salir de la célula a la que se va (23-nov).
+ *
+ * Desde ese día quien lleva una célula ve el teléfono de su gente, así que
+ * cada cual tiene que poder irse sin pedírselo a nadie. Solo como participante:
+ * al líder y al auxiliar los cambia la red. Lo hace la base (`salir_de_grupo`),
+ * con la sesión de quien pulsa.
+ *
+ * Sin el muro de suscripción, como darse de baja: dejar de compartir el
+ * teléfono no puede depender de que la iglesia esté al día con el pago.
+ */
+export async function salirDeGrupo(grupoId: string) {
+  if (typeof grupoId !== 'string' || !/^[0-9a-f-]{36}$/i.test(grupoId)) redirect('/mi/cuenta');
+  const ctx = await requireIglesiaAccion({ sinMuro: true });
+
+  const salio = await salirDelGrupo(ctx, grupoId);
+
+  revalidatePath('/mi/cuenta');
+  redirect(salio ? '/mi/cuenta?guardado=sin-celula' : '/mi/cuenta');
 }

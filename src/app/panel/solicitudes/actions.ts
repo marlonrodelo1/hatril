@@ -24,6 +24,7 @@ import {
 import { VERSION_POLITICA_PRIVACIDAD } from '@/lib/rgpd/consentimiento';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { motivoDeLaInvitacion } from '@/lib/grupos/consultas';
+import { avisarDeEntrada } from '@/lib/grupos/avisos';
 import { campo } from '@/lib/api/formulario';
 import {
   condicionFichaEnlazable,
@@ -139,7 +140,7 @@ export async function aprobarSolicitud(
   // fuera: va por `dbAdmin` —la tabla no acepta escrituras de una sesión— y
   // meterlo dentro ataría la aprobación al éxito de una notificación.
   let resultado:
-    | { tipo: 'aprobada'; avisarA: string }
+    | { tipo: 'aprobada'; avisarA: string; entro: EntradaEnGrupo | null; nombre: string; fichaId: string }
     | { tipo: 'ya_resuelta' }
     | { tipo: 'ficha_no_vale' };
 
@@ -409,7 +410,13 @@ export async function aprobarSolicitud(
       // dentro, o si ya va como participante a otra célula de esa red: lo que
       // se aprueba es la entrada en la iglesia, y no puede caerse por esto. La
       // bandeja lo dice antes de pulsar, con la misma regla.
-      await meterEnElGrupo(tx, ctx.iglesia.id, solicitud.id, fichaId, hoyEnLaIglesia(ctx.iglesia.timezone));
+      const entro = await meterEnElGrupo(
+        tx,
+        ctx.iglesia.id,
+        solicitud.id,
+        fichaId,
+        hoyEnLaIglesia(ctx.iglesia.timezone),
+      );
 
       // Si la membresía no se tocó, la persona se quedaría en «pendiente» con
       // la solicitud ya cerrada: fuera de la bandeja y sin poder entrar. Y al
@@ -427,7 +434,13 @@ export async function aprobarSolicitud(
         })
         .where(eq(solicitudesIngreso.id, solicitud.id));
 
-      return { tipo: 'aprobada', avisarA: solicitud.authUserId } as const;
+      return {
+        tipo: 'aprobada',
+        avisarA: solicitud.authUserId,
+        entro,
+        nombre: solicitud.nombre,
+        fichaId,
+      } as const;
     });
   } catch (err) {
     if (err instanceof AprobacionDeshecha) {
@@ -461,10 +474,27 @@ export async function aprobarSolicitud(
     enlace: '/mi/comunidad',
   });
 
+  // Si entró en la célula que la invitó, que lo sepa quien la lleva: es lo
+  // que cierra el círculo del enlace (`avisarDeEntrada`).
+  if (resultado.tipo === 'aprobada' && resultado.entro) {
+    await avisarDeEntrada({
+      iglesiaId: ctx.iglesia.id,
+      ministerioId: resultado.entro.ministerioId,
+      grupoId: resultado.entro.grupoId,
+      grupo: resultado.entro.grupo,
+      personas: [{ miembroId: resultado.fichaId, nombre: resultado.nombre }],
+      provocadoPor: ctx.user.id,
+      sumadasPorLaRed: false,
+    });
+  }
+
   revalidatePath('/panel/solicitudes');
   revalidatePath('/panel/miembros');
   redirect('/panel/solicitudes');
 }
+
+/** La célula en la que acaba de entrar alguien al aprobarle, para avisar a quien la lleva. */
+type EntradaEnGrupo = { ministerioId: string; grupoId: string; grupo: string };
 
 type Tx = Parameters<Parameters<typeof withUser>[1]>[0];
 
@@ -480,12 +510,13 @@ async function meterEnElGrupo(
   fichaId: string,
   /** En la zona de la iglesia (`hoyEnLaIglesia`), no en UTC. */
   hoy: string,
-): Promise<void> {
+): Promise<EntradaEnGrupo | null> {
   const [inv] = await tx
     .select({
       grupoId: solicitudInvitaciones.grupoId,
       codigoConQueLlego: solicitudInvitaciones.codigo,
       ministerioId: grupos.ministerioId,
+      grupo: grupos.nombre,
       grupoActivo: grupos.activo,
       codigoDeAhora: grupos.codigo,
       redActiva: ministerios.activo,
@@ -512,7 +543,7 @@ async function meterEnElGrupo(
     .delete(solicitudInvitaciones)
     .where(eq(solicitudInvitaciones.solicitudId, solicitudId));
 
-  if (!inv || motivoDeLaInvitacion(inv) !== 'vale') return;
+  if (!inv || motivoDeLaInvitacion(inv) !== 'vale') return null;
 
   const ya = await tx
     .select({ grupoId: grupoMiembros.grupoId, rol: grupoMiembros.rolGrupo })
@@ -524,11 +555,11 @@ async function meterEnElGrupo(
         eq(grupoMiembros.activo, true),
       ),
     );
-  if (ya.some((f) => f.grupoId === inv.grupoId || f.rol === 'participante')) return;
+  if (ya.some((f) => f.grupoId === inv.grupoId || f.rol === 'participante')) return null;
 
   // Sin conflicto que deshaga la aprobación: si la red la suma a la vez, lo que
-  // entró, entró.
-  await tx
+  // entró, entró. Con `returning` para saber si entró de verdad, y avisar.
+  const entro = await tx
     .insert(grupoMiembros)
     .values({
       iglesiaId,
@@ -538,7 +569,12 @@ async function meterEnElGrupo(
       rolGrupo: 'participante',
       desde: hoy,
     })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ id: grupoMiembros.id });
+
+  return entro.length > 0
+    ? { ministerioId: inv.ministerioId, grupoId: inv.grupoId, grupo: inv.grupo }
+    : null;
 }
 
 const EsquemaRechazo = z.object({

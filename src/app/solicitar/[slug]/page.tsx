@@ -10,11 +10,12 @@ import { getCurrentUserContext } from '@/lib/auth/user-context';
 import { createClient } from '@/lib/supabase/server';
 import { grupoDeLaInvitacion, solicitudPendienteEn } from '@/lib/grupos/invitacion';
 import { misGrupos } from '@/lib/grupos/consultas';
-import { crearCuentaYSolicitar, solicitarIngreso, sumarInvitacionASolicitud } from '../actions';
+import { crearCuentaYSolicitar, solicitarIngreso, sumarInvitacionASolicitud, unirseAGrupo } from '../actions';
 import { PasosSolicitud } from './_components/pasos-solicitud';
 import { AccesoSocial } from '@/app/(auth)/_components/acceso-social';
 import { Permisos } from './_components/permisos';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Aviso } from '@/components/aviso';
 
 export const metadata: Metadata = { title: 'Pedir entrar' };
 
@@ -50,6 +51,7 @@ export default async function SolicitarPage({
 }) {
   const { slug } = await params;
   const { error, grupo: codigo } = await searchParams;
+  const mensajeError = error;
 
   const iglesia = await iglesiaParaSolicitar(slug);
   if (!iglesia) notFound();
@@ -80,23 +82,33 @@ export default async function SolicitarPage({
       // llega igual a quien está dentro, que es casi todo el grupo de WhatsApp.
       const yaVa = (await misGrupos(ctx)).some((g) => g.grupoId === grupo.id);
       return (
-        <Marco slug={slug} titulo={yaVa ? `Ya vas a ${grupo.nombre}` : `Ya eres de ${iglesia.nombre}`}>
+        <Marco slug={slug} titulo={yaVa ? `Ya vas a ${grupo.nombre}` : `Entrar en ${grupo.nombre}`} error={mensajeError}>
           {yaVa ? (
-            <p className="text-pretty text-body text-muted-foreground">
-              Este enlace es para quien todavía no es de la iglesia. Tú ya estás
-              dentro: lo tuyo de {grupo.nombre} lo ves en la app.
-            </p>
+            <>
+              <p className="text-pretty text-body text-muted-foreground">
+                Tú ya estás dentro: lo tuyo de {grupo.nombre} lo ves en la app, en Mi
+                cuenta.
+              </p>
+              <Link href="/mi/cuenta" className={buttonVariants({ variant: 'outline' })}>
+                Ir a la app
+              </Link>
+            </>
           ) : (
-            <p className="text-pretty text-body text-muted-foreground">
-              Este enlace es para quien todavía no es de la iglesia. Para entrar en{' '}
-              <strong className="font-semibold text-foreground">{grupo.nombre}</strong>,
-              pídeselo a quien lleva su red: te suma en un momento desde el panel.
-            </p>
+            // Desde el 23-nov entra él mismo: antes se le mandaba a pedírselo a
+            // quien lleva la red. Lo del teléfono, antes de pulsar.
+            <form action={unirseAGrupo} className="flex flex-col items-start gap-4">
+              <input type="hidden" name="slug" value={slug} />
+              <input type="hidden" name="grupo" value={grupo.codigo} />
+              <p className="text-pretty text-body text-muted-foreground">
+                Ya eres de {iglesia.nombre}. Con este enlace entras en{' '}
+                <strong className="font-semibold text-foreground">{grupo.nombre}</strong>: lo
+                verás en Mi cuenta, con quién la lleva, cuándo se reúne y el tema de cada
+                semana. Quien la lleva verá tu nombre y tu teléfono, para poder llamarte.
+                Puedes salir cuando quieras.
+              </p>
+              <Button type="submit">Entrar en {grupo.nombre}</Button>
+            </form>
           )}
-          {/* «Tu célula» vive en la cuenta, no en el inicio. */}
-          <Link href={yaVa ? '/mi/cuenta' : '/mi'} className={buttonVariants({ variant: 'outline' })}>
-            Ir a la app
-          </Link>
         </Marco>
       );
     }
@@ -105,7 +117,7 @@ export default async function SolicitarPage({
     if (pendiente && grupo) {
       if (pendiente.conInvitacion) redirect('/mi');
       return (
-        <Marco slug={slug} titulo={`Ya pediste unirte a ${iglesia.nombre}`}>
+        <Marco slug={slug} titulo={`Ya pediste unirte a ${iglesia.nombre}`} error={mensajeError}>
           <form action={sumarInvitacionASolicitud} className="flex flex-col items-start gap-4">
             <input type="hidden" name="slug" value={slug} />
             <input type="hidden" name="grupo" value={grupo.codigo} />
@@ -155,7 +167,17 @@ export default async function SolicitarPage({
  * El marco de las dos pantallas de la invitación que no son el formulario:
  * la misma cabecera que los pasos, con la flecha a la ficha de la iglesia.
  */
-function Marco({ slug, titulo, children }: { slug: string; titulo: string; children: ReactNode }) {
+function Marco({
+  slug,
+  titulo,
+  error,
+  children,
+}: {
+  slug: string;
+  titulo: string;
+  error?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="flex min-h-dvh flex-col bg-background pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-10 border-b border-border bg-surface pt-[env(safe-area-inset-top)]">
@@ -170,6 +192,7 @@ function Marco({ slug, titulo, children }: { slug: string; titulo: string; child
         </div>
       </header>
       <main className="mx-auto flex w-full max-w-[560px] flex-col gap-5 px-5 pt-5">
+        {error && <Aviso>{error}</Aviso>}
         <section className="flex flex-col items-start gap-4 rounded-xl border border-border bg-surface p-5">
           <h1 className="t-subtitulo">{titulo}</h1>
           {children}

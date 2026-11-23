@@ -1,12 +1,14 @@
 import 'server-only';
 
-import { and, eq, isNull, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { after } from 'next/server';
 
 import { dbAdmin } from '@/lib/db';
 import { enviarPush } from '@/lib/push/enviar';
 import {
   bloqueosComunidad,
+  grupoMiembros,
+  grupos,
   iglesiaUsuarios,
   ministerioMiembros,
   notificaciones,
@@ -270,6 +272,47 @@ export async function cuentasQueLlevanElMinisterio(
         eq(ministerioMiembros.activo, true),
         ne(ministerioMiembros.rolEquipo, 'voluntario'),
         eq(iglesiaUsuarios.estado, 'activo'),
+      ),
+    );
+
+  return [...new Set(filas.map((f) => f.authUserId))];
+}
+
+/**
+ * Quién lleva una célula —líder y auxiliares— y sigue en el equipo de su red:
+ * lo mismo que `lleva_grupo()` en la base (`0049`). A ellos va «ha entrado
+ * alguien en tu célula».
+ *
+ * Por `dbAdmin`, como el resto de este fichero: quien provoca el aviso puede
+ * ser quien acaba de entrar, que no ve quién lleva qué más allá de su célula.
+ */
+export async function cuentasQueLlevanElGrupo(iglesiaId: string, grupoId: string): Promise<string[]> {
+  const filas = await dbAdmin
+    .select({ authUserId: iglesiaUsuarios.authUserId })
+    .from(grupoMiembros)
+    .innerJoin(grupos, and(eq(grupos.id, grupoMiembros.grupoId), eq(grupos.activo, true)))
+    .innerJoin(
+      ministerioMiembros,
+      and(
+        eq(ministerioMiembros.ministerioId, grupoMiembros.ministerioId),
+        eq(ministerioMiembros.miembroId, grupoMiembros.miembroId),
+        eq(ministerioMiembros.activo, true),
+      ),
+    )
+    .innerJoin(
+      iglesiaUsuarios,
+      and(
+        eq(iglesiaUsuarios.miembroId, grupoMiembros.miembroId),
+        eq(iglesiaUsuarios.iglesiaId, grupoMiembros.iglesiaId),
+        eq(iglesiaUsuarios.estado, 'activo'),
+      ),
+    )
+    .where(
+      and(
+        eq(grupoMiembros.iglesiaId, iglesiaId),
+        eq(grupoMiembros.grupoId, grupoId),
+        eq(grupoMiembros.activo, true),
+        inArray(grupoMiembros.rolGrupo, ['lider', 'auxiliar']),
       ),
     );
 
