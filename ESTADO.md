@@ -1,6 +1,6 @@
 # Estado de Hatril
 
-Última actualización: 28 de octubre de 2026.
+Última actualización: 23 de noviembre de 2026.
 
 Este fichero se actualiza al cerrar cada sesión de trabajo. Va **dentro del
 repo** a propósito: Pidoo guardaba su detalle en ficheros `memory/` fuera del
@@ -27,6 +27,36 @@ lee al arrancar.
 ---
 
 ## Qué funciona, verificado ejecutándolo
+
+- **Células** (23-nov; plan en `docs/modulos/plan-celulas.md`, detalle en
+  `docs/modulos/estado-celulas.md`). La v1 del 22-23 oct llevaba un mes sin
+  fusionar, con cuatro migraciones aplicadas en la base y sin commitear: se
+  commiteó, se fusionó con main y se le sumó lo que pidió Marlon. **En la rama
+  `claude/awesome-driscoll-58a8cc`, todavía no en main** (ver «Qué falta»).
+  - El pastor activa «Células» y **encarga a los líderes en un paso**: en
+    «Nueva célula» elige de toda la iglesia, y quien no estaba entra en el
+    equipo de la red en la misma transacción. Probado: Rubén, de fuera del
+    equipo, quedó de voluntario y llevando la célula, firmado por el pastor.
+  - El líder (rol miembro) trabaja en **Equipo**, en la web y en la app
+    empaquetada (las tres pantallas registradas en `PANTALLAS_EQUIPO`):
+    reporte en un toque, temas, invitar, y **su gente con teléfono, Llamar y
+    WhatsApp, y «Escribir a la célula»** (WhatsApp con el mensaje, para el grupo:
+    a varios números no se puede desde fuera). Lo decidió Marlon el 23-nov.
+    Solo los de su célula: `telefonosDeLaCelula` recibe lo que devuelve la
+    guarda. Visto en el navegador a 375 px: los `tel:` y `wa.me` correctos, y
+    ni un dato de la célula de al lado en el HTML.
+  - Quien va: «Tu célula» en Mi cuenta (web y app), sin el teléfono de nadie, y
+    «Salir de esta célula».
+  - Sin etiqueta en el muro: la ficha del panel dice a qué célula va cada cual y
+    Miembros filtra por «Va a una célula», solo para el pastor. Probado: seis
+    personas, las seis que van.
+  - `test:aislamiento` todo correcto (las 42 de células, sobre la iglesia de usar
+    y tirar), `test:puertas` 610 de 610 en 91 rutas, `test:puertas:app` 127 de
+    127 (sin teléfonos ajenos, y el líder reportando desde la app) y
+    `test:puertas:admin` 36 de 36. `tsc`, `tsc -p movil`, lint y build en verde.
+  - **Sin probar todavía**: entrar con el enlace siendo ya de la iglesia, salir,
+    y los avisos nuevos, que esperan su migración; y todo en un teléfono de
+    verdad, que pide un build nuevo de la app.
 
 - **La app empaquetada, construida entera** (20-nov; plan y avance en
   `docs/app-nativa/plan-spa.md`). Todas las pantallas del miembro, también
@@ -1112,6 +1142,7 @@ lee al arrancar.
 | **Push: lo que queda** | Poner `FIREBASE_SERVICE_ACCOUNT` en Dokploy, en Environment y no en Build-time (sin ella no sale ninguna push y no falla nada). Desplegar. Build nuevo de Android y el build 2 de iOS en el Mac: el 1 de TestFlight no lleva el plugin. Probar en un iPhone y en un Android de verdad, con la app cerrada. El App ID `app.hatril` se creó el 19-nov con Push y Sign In with Apple: el build 1 no había firmado todavía con esa cuenta. Confirmar las dos entidades nuevas de `/privacidad` (Google Ireland y Apple Distribution International) |
 | **Super admin: falta la cuenta de Marlon** | **Cerrado el 28-oct**: `admin@hatril.test` tenía `Hatril2026`, escrita aquí y en `seed-demo.sql`, en un repo público, y la base de local es la de hatril.com; desplegado `/admin`, cualquiera habría podido ponerle contraseña a la cuenta del pastor de Cuerpo de Cristo. Ahora tiene una aleatoria que nadie conoce (comprobado en la base: `Hatril2026` ya no casa con el hash) y el seed la crea igual; se entra por enlace mágico y `test:puertas:admin` sigue 30 de 30. **Lo que falta**: Marlon ya tiene cuenta (29-oct), pero todavía no está en `admin_users`: su contraseña no servía para un super admin. Va en ese orden: insertar su fila desde el SQL Editor de Supabase, entrar y cambiar la contraseña al momento en `/admin/cuentas`, y comprobar en la base que ya no es una de las conocidas. **Nunca escribir aquí, en un repo público, el correo de una cuenta real junto a su contraseña** |
 | **Las migraciones de células, cosidas** | **Hecho el 23-nov** al fusionar células: journal en orden de `when` (0046-0051 y luego 0052…), el `prevId` del 0052 apunta al 0051 y las cinco tablas y los dos enums de células están en todos los snapshots posteriores (`drizzle-kit generate` sin cambios). Si otra rama trae un snapshot generado antes de esta fusión, le faltarán: pasar `node scripts/migraciones/coser-snapshots-celulas.cjs`, que las copia del 0051 y no toca nada más. **El SQL de la `0054` no casa con el hash que guardó la base**: se tocó después de aplicarla. El migrador no lo mira, pero el fichero no es exactamente lo aplicado |
+| **Células: para llegar a main** | 1) **La migración de avisos, unirse y salir**: los dos valores de `tipo_notificacion_enum` (`db:generate`) y `unirse_a_grupo`/`salir_de_grupo` (`docs/modulos/celulas-migracion-pendiente.sql`). Espera a que la 0063 de la sesión del lugar de Google esté en main (ya está aplicada en la base y sin commitear): entonces se fusiona main en la rama, se pasa `scripts/migraciones/coser-snapshots-celulas.cjs` (el snapshot de la 0063 nace sin células) y estas pasan a ser la 0064 y la 0065. 2) **Decisión de Marlon**: subir `VERSION_POLITICA_PRIVACIDAD` o desplegar con el texto nuevo de `/privacidad` (quien lleva tu célula ve tu teléfono) sin pedir de nuevo el consentimiento. 3) Un build nuevo de la app: las pantallas van en el binario, y en la app vieja la tarjeta de la célula lleva a «No existe». Después, por orden: la reunión en la Agenda, «tu célula no ha reportado», el enlace del grupo de WhatsApp de la célula, aviso push del líder a su célula, App Links |
 | **Super admin, lo que queda** | Sin modo soporte (entrar como el pastor): con datos del art. 9 es una decisión, no un botón. Sin ingresos: los precios viven en Stripe y no hay claves todavía. Cuentas lee mil como mucho y lo avisa |
 | Proveedor de alojamiento en los legales | Relleno (Hostinger). Falta confirmar en hPanel el país del centro de datos: pone Alemania y la IP geolocaliza en Francia |
 | Módulos de ministerio | **Hechas, y fusionadas el 20-oct, la base común, el reparto v1, alabanza sin migración, consolidación v1 y la radio v1, más los equipos en la app.** Sigue, con migración y de una en una, la **contabilidad completa**; la cola está en `docs/modulos/cola.md` y el plan en `plan.md`. Peticiones de oración y la ficha de los niños esperan una decisión legal: salud y menores |
