@@ -9,7 +9,10 @@ import {
   type FichaSugerida,
 } from '@/lib/solicitudes/consultas';
 import { iniciales } from '@/lib/format/iniciales';
-import { nombresDeGrupos } from '@/lib/grupos/consultas';
+import {
+  invitacionesDeSolicitudes,
+  type InvitacionDeSolicitud,
+} from '@/lib/grupos/consultas';
 import { formatearTelefono } from '@/lib/telefono/normalizar';
 import { Aviso } from '@/components/aviso';
 import { Button } from '@/components/ui/button';
@@ -28,12 +31,13 @@ export default async function SolicitudesPage({
   const ctx = await requirePermiso('aprobar_solicitudes');
   const { error } = await searchParams;
   const solicitudes = await listarSolicitudesPendientes(ctx);
-  // De qué célula viene cada una, si viene con invitación. Solo el pastor lee
-  // los grupos de toda la iglesia (`0047`); a los demás les sale vacío, y es lo
-  // que toca: no pueden aprobar, y el grupo no es asunto suyo.
-  const grupos = await nombresDeGrupos(
+  // Con qué invitación viene cada una. `solicitud_invitaciones` solo la lee el
+  // pastor (`0049`), que es quien aprueba; a quien ve la bandeja sin poder
+  // aprobar le sale vacía, y es lo que toca: con qué célula llega alguien no es
+  // asunto suyo.
+  const invitaciones = await invitacionesDeSolicitudes(
     ctx,
-    [...new Set(solicitudes.map((s) => s.grupoId).filter((g): g is string => g !== null))],
+    solicitudes.map((s) => s.id),
   );
 
   // Hoy solo el pastor puede resolverlas: la base no deja a nadie más activar
@@ -170,18 +174,8 @@ export default async function SolicitudesPage({
                       </div>
                     </div>
 
-                    {s.grupoId && grupos.get(s.grupoId) && (
-                      <p className="flex items-start gap-2 text-label">
-                        <HouseHeart className="mt-0.5 size-4 flex-none text-muted-foreground" strokeWidth={1.8} aria-hidden />
-                        <span>
-                          Viene con la invitación de{' '}
-                          <strong className="font-semibold">{grupos.get(s.grupoId)!.nombre}</strong>{' '}
-                          ({grupos.get(s.grupoId)!.ministerio}).{' '}
-                          {grupos.get(s.grupoId)!.activo
-                            ? 'Al aprobarla, quedará en ese grupo.'
-                            : 'Ese grupo ya se cerró: entrará en la iglesia sin grupo.'}
-                        </span>
-                      </p>
+                    {invitaciones.get(s.id) && (
+                      <InvitacionDeLaSolicitud invitacion={invitaciones.get(s.id)!} />
                     )}
 
                     {s.mensaje && (
@@ -259,4 +253,31 @@ function formatearFecha(fecha: Date): string {
     day: 'numeric',
     month: 'long',
   });
+}
+
+/**
+ * Con qué invitación llega, y si al aprobarla quedará en ese grupo. La regla es
+ * la de la aprobación (`motivoDeLaInvitacion`), para que la bandeja no prometa
+ * lo que después no pasa.
+ */
+const MOTIVO: Record<InvitacionDeSolicitud['motivo'], string> = {
+  // La salvedad es la de `meterEnElGrupo`: si se une a una ficha que ya va a
+  // otro de esa red, se queda en el suyo. La bandeja no sabe qué ficha se elegirá.
+  vale: 'Al aprobarla, quedará en ese grupo, salvo que la unas a una ficha que ya va a otro de esa red.',
+  cerrado: 'Ese grupo ya se cerró: entrará en la iglesia, sin grupo.',
+  red: 'La red de ese grupo ya no está activa o lo tiene apagado: entrará en la iglesia, sin grupo.',
+  enlace:
+    'La red cambió el enlace después de que llegara: entrará en la iglesia, pero no en el grupo. Si de verdad va, que la sume quien lleva la red.',
+};
+
+function InvitacionDeLaSolicitud({ invitacion: i }: { invitacion: InvitacionDeSolicitud }) {
+  return (
+    <p className="flex items-start gap-2 text-label">
+      <HouseHeart className="mt-0.5 size-4 flex-none text-muted-foreground" strokeWidth={1.8} aria-hidden />
+      <span>
+        Viene con la invitación de <strong className="font-semibold">{i.grupo}</strong> ({i.ministerio}).{' '}
+        {MOTIVO[i.motivo]}
+      </span>
+    </p>
+  );
 }

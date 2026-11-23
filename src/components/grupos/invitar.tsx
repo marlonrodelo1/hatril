@@ -15,6 +15,10 @@ import { Copiar } from '@/app/panel/compartir/_components/copiar';
  *
  * El mensaje de WhatsApp no lleva zona, día ni nombres: lo reenvía quien lo
  * recibe, y lo que se cuenta por ahí no se puede borrar.
+ *
+ * Y es para quien todavía no es de la iglesia. A quien ya lo es, `/solicitar`
+ * le dice que le sume la red, y a quien ya esperaba aprobación le deja llevar
+ * también esta invitación.
  */
 export function urlDeInvitacion(
   iglesia: IglesiaEnlazable,
@@ -43,9 +47,13 @@ export function Invitar({
     >
       <div className="flex flex-col gap-1">
         <h2 className="t-subtitulo">Invitar</h2>
+        {/* Dice para quién es: el enlace acaba en el grupo de WhatsApp de la
+            célula, y a quien ya es de la iglesia no le hace nada —`/solicitar`
+            se lo explica—. Prometerle que «entra directamente» era mentir. */}
         <p className="max-w-[62ch] text-pretty text-label text-muted-foreground">
-          Con este enlace, quien invites pide unirse a {iglesia}. Cuando se le
-          aprueba, entra directamente aquí y se queda con la app de la iglesia.
+          Para quien todavía no es de {iglesia}: con este enlace pide unirse, y
+          cuando se le aprueba entra directamente aquí y se queda con la app de la
+          iglesia. A quien ya es de la iglesia lo suma quien lleva la red.
         </p>
       </div>
       <Copiar url={url} etiqueta={`Enlace de invitación de ${grupo}`} />

@@ -15,7 +15,7 @@ import {
 import { sql } from 'drizzle-orm';
 
 import { iglesias } from './iglesias';
-import { miembros } from './miembros';
+import { miembros, solicitudesIngreso } from './miembros';
 import { ministerios } from './ministerios';
 
 /**
@@ -374,5 +374,57 @@ export const grupoGuias = pgTable(
     index('idx_grupo_guias_iglesia').on(t.iglesiaId),
     check('ck_grupo_guias_lunes', sql`extract(isodow from ${t.semana}) = 1`),
     check('ck_grupo_guias_tema', sql`length(btrim(${t.tema})) between 1 and 120`),
+  ],
+);
+
+/**
+ * La invitación con la que llegó una solicitud de ingreso: de qué grupo, y con
+ * qué código.
+ *
+ * TABLA PROPIA Y NO UNA COLUMNA DE `solicitudes_ingreso`
+ * ------------------------------------------------------
+ * Fue una columna en la 0046, y la revisión del 23-oct cazó por qué no vale:
+ * `solicitudes_ingreso` la lee cualquiera de la iglesia (0001), así que la
+ * participante de una célula podía saber, por esa columna, quién más había
+ * entrado en la suya. Es justo lo que la 0047 le oculta en `grupo_miembros`.
+ * Aquí solo lee el pastor, que es quien aprueba (0049), y la fila se borra al
+ * resolver la solicitud: lo que queda después es la fila de `grupo_miembros`.
+ *
+ * EL CÓDIGO, PARA QUE «CAMBIAR EL ENLACE» FRENE LO YA ENVIADO
+ * -----------------------------------------------------------
+ * Si el enlace de una célula acaba donde no debía, la red lo cambia. Las
+ * solicitudes que llegaron con el viejo siguen pendientes, y sin esto, al
+ * aprobarlas, la persona entraría igual en la célula. Con el código con que
+ * llegó, la aprobación y la bandeja saben que ese enlace ya no vale.
+ *
+ * La escribe `/solicitar` por `dbAdmin` (quien solicita no es de la iglesia).
+ */
+export const solicitudInvitaciones = pgTable(
+  'solicitud_invitaciones',
+  {
+    solicitudId: uuid('solicitud_id')
+      .primaryKey()
+      .references(() => solicitudesIngreso.id, { onDelete: 'cascade' }),
+
+    iglesiaId: uuid('iglesia_id')
+      .notNull()
+      .references(() => iglesias.id, { onDelete: 'cascade' }),
+
+    /** CASCADE: sin el grupo, la invitación no lleva a ningún sitio. */
+    grupoId: uuid('grupo_id')
+      .notNull()
+      .references(() => grupos.id, { onDelete: 'cascade' }),
+
+    /** El código del enlace con que llegó. Si el grupo ya tiene otro, no vale. */
+    codigo: text('codigo').notNull(),
+
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index('idx_solicitud_invitaciones_iglesia').on(t.iglesiaId),
+    index('idx_solicitud_invitaciones_grupo').on(t.grupoId),
+    check('ck_solicitud_invitaciones_codigo', sql`${t.codigo} ~ '^[A-HJ-NP-Z2-9]{8}$'`),
   ],
 );

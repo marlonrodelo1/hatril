@@ -132,6 +132,11 @@ declare
   GRU_1 uuid;
   GRU_2 uuid;
   GRU_B uuid;
+  -- 0049: una solicitud con invitacion, un grupo cerrado y una segunda red.
+  SOL_INV uuid;
+  GRU_C uuid;
+  MIN_CEL2 constant uuid := 'e0000000-0000-4000-8000-0000000000a5';
+  GRU_R2 uuid;
   -- Lo que responde inscribir_en_evento. Un solo escalar a proposito: ver la
   -- cabecera de la 0024.
   v_res text;
@@ -2667,15 +2672,23 @@ begin
   end;
 
   -- HT132: la invitacion de una celula de Sion en una solicitud de Betania.
+  -- Desde la 0048 vive en solicitud_invitaciones, no en la solicitud.
+  insert into public.solicitudes_ingreso (iglesia_id, auth_user_id, nombre)
+  values (IGL_A, USR_D, 'Invitada por la celula uno')
+  returning id into SOL_INV;
+
   begin
-    insert into public.solicitudes_ingreso (iglesia_id, auth_user_id, nombre, grupo_id)
-    values (IGL_A, USR_D, 'Invitada cruzada', GRU_B);
+    insert into public.solicitud_invitaciones (solicitud_id, iglesia_id, grupo_id, codigo)
+    values (SOL_INV, IGL_A, GRU_B, 'GRUPSNA4');
     r := r || E'  FALLO una solicitud de Betania trajo una celula de Sion\\n';
   exception when others then
     r := r || case when sqlerrm like '%HT132%'
                    then E'  OK   HT132 impide una solicitud con un grupo de otra iglesia\\n'
                    else format(E'  FALLO error inesperado (HT132 solicitud): %s\\n', sqlerrm) end;
   end;
+
+  insert into public.solicitud_invitaciones (solicitud_id, iglesia_id, grupo_id, codigo)
+  values (SOL_INV, IGL_A, GRU_1, 'GRUPUNA2');
 
   -- Un lider por grupo, y una celula como participante por red.
   begin
@@ -2733,6 +2746,16 @@ begin
 
   select count(*) into n from public.grupo_miembros where grupo_id = GRU_2;
   r := r || format(E'  %s y no a la de la celula de al lado (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  -- 0049: ni donde ni cuando se reune la de al lado. Con la 0047 la veia por
+  -- estar en el equipo de la red.
+  select count(*) into n from public.grupos where id = GRU_2;
+  r := r || format(E'  %s ni donde ni cuando se reune la celula de al lado (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  select count(*) into n from public.solicitud_invitaciones;
+  r := r || format(E'  %s ni con que celula llega quien pide entrar (%s)\\n',
                    case when n = 0 then 'OK  ' else 'FALLO' end, n);
 
   insert into public.grupo_semanas
@@ -2799,6 +2822,11 @@ begin
   select count(*) into n from public.grupo_semanas where grupo_id = GRU_1;
   r := r || format(E'  %s ve las semanas de su celula, para el proximo tema (%s)\\n',
                    case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  -- 0048: quien entra en su celula por invitacion ya no se lee en la solicitud.
+  select count(*) into n from public.solicitud_invitaciones;
+  r := r || format(E'  %s la participante no sabe quien entra en su celula por invitacion (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
 
   update public.grupo_semanas set asistentes = 30 where grupo_id = GRU_1;
   get diagnostics n = row_count;
@@ -2958,6 +2986,199 @@ begin
   end;
   execute 'reset role';
 
+  -- ==========================================================================
+  -- GRUPOS, LO QUE CIERRA LA 0049
+  -- ==========================================================================
+
+  -- --- La invitacion de una solicitud: solo el pastor ---
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_L), true);
+  execute 'set local role hatril_app';
+  select count(*) into n from public.solicitud_invitaciones;
+  r := r || format(E'  %s ni quien lidera la red lee las invitaciones (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+  execute 'reset role';
+
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_B), true);
+  execute 'set local role hatril_app';
+  select count(*) into n from public.solicitud_invitaciones where iglesia_id = IGL_A;
+  r := r || format(E'  %s Sion no lee las invitaciones de Betania (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+  execute 'reset role';
+
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_A), true);
+  execute 'set local role hatril_app';
+  select count(*) into n from public.solicitud_invitaciones where solicitud_id = SOL_INV;
+  r := r || format(E'  %s el pastor lee la invitacion de la solicitud (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  begin
+    insert into public.solicitud_invitaciones (solicitud_id, iglesia_id, grupo_id, codigo)
+    values (SOL_INV, IGL_A, GRU_2, 'GRUPDSA3');
+    r := r || E'  FALLO una sesion escribio una invitacion\\n';
+  exception when others then
+    r := r || E'  OK   ninguna sesion escribe invitaciones: las pone /solicitar\\n';
+  end;
+
+  delete from public.solicitud_invitaciones where solicitud_id = SOL_INV;
+  get diagnostics n = row_count;
+  r := r || format(E'  %s el pastor la borra al resolver la solicitud (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+  execute 'reset role';
+
+  -- --- No se entra en un grupo cerrado (HT132) ---
+  perform set_config('request.jwt.claims', '', true);
+  insert into public.grupos (iglesia_id, ministerio_id, nombre, dia_semana, codigo, activo)
+  values (IGL_A, MIN_CEL, 'Celula cerrada', 5, 'GRUPCRA5', false) returning id into GRU_C;
+
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_L), true);
+  execute 'set local role hatril_app';
+  begin
+    insert into public.grupo_miembros (iglesia_id, ministerio_id, grupo_id, miembro_id)
+    values (IGL_A, MIN_CEL, GRU_C, MIE_A2);
+    r := r || E'  FALLO alguien entro en una celula cerrada\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT132%cerrado%'
+                   then E'  OK   HT132 impide entrar en un grupo cerrado\\n'
+                   else format(E'  FALLO error inesperado (HT132 cerrado): %s\\n', sqlerrm) end;
+  end;
+  execute 'reset role';
+
+  -- Y una fila que se reactiva en un grupo cerrado, tampoco. Se monta sin
+  -- sesion: entra con el grupo abierto, se cierra el grupo y sale.
+  perform set_config('request.jwt.claims', '', true);
+  update public.grupos set activo = true where id = GRU_C;
+  insert into public.grupo_miembros (iglesia_id, ministerio_id, grupo_id, miembro_id)
+  values (IGL_A, MIN_CEL, GRU_C, MIE_A2);
+  update public.grupo_miembros set activo = false where grupo_id = GRU_C;
+  update public.grupos set activo = false where id = GRU_C;
+  begin
+    update public.grupo_miembros set activo = true where grupo_id = GRU_C;
+    r := r || E'  FALLO se reactivo a alguien en una celula cerrada\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT132%cerrado%'
+                   then E'  OK   HT132 impide volver a activar a alguien en un grupo cerrado\\n'
+                   else format(E'  FALLO error inesperado (HT132 reactivar): %s\\n', sqlerrm) end;
+  end;
+
+  -- --- Dar de baja a alguien le saca de su celula ---
+  update public.miembros set estado = 'baja' where id = MIE_P2;
+  select count(*) into n from public.grupo_miembros
+   where miembro_id = MIE_P2 and activo = false and hasta is not null;
+  r := r || format(E'  %s dar de baja a alguien le saca de su celula, con su hasta (%s)\\n',
+                   case when n = 1 then 'OK  ' else 'FALLO' end, n);
+
+  update public.miembros set archivado_at = now() where id = MIE_Q;
+  select count(*) into n from public.grupo_miembros where miembro_id = MIE_Q and activo;
+  r := r || format(E'  %s archivar una ficha tambien (%s activas)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  -- --- Archivar una red cierra sus celulas y saca a su gente ---
+  insert into public.ministerios (id, iglesia_id, nombre, tipo)
+  values (MIN_CEL2, IGL_A, 'Otra red test', 'celulas');
+  insert into public.ministerio_miembros (iglesia_id, ministerio_id, miembro_id, rol_equipo)
+  values (IGL_A, MIN_CEL2, MIE_V, 'voluntario');
+  insert into public.grupos (iglesia_id, ministerio_id, nombre, dia_semana, codigo)
+  values (IGL_A, MIN_CEL2, 'Celula de la otra red', 1, 'GRUPTRA6') returning id into GRU_R2;
+  insert into public.grupo_miembros (iglesia_id, ministerio_id, grupo_id, miembro_id, rol_grupo)
+  values (IGL_A, MIN_CEL2, GRU_R2, MIE_V, 'lider'),
+         (IGL_A, MIN_CEL2, GRU_R2, MIE_P, 'participante');
+
+  update public.ministerios set activo = false where id = MIN_CEL2;
+  select count(*) into n from public.grupos where id = GRU_R2 and activo;
+  r := r || format(E'  %s archivar una red cierra sus celulas (%s abiertas)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+  select count(*) into n from public.grupo_miembros where grupo_id = GRU_R2 and activo;
+  r := r || format(E'  %s y saca a su gente (%s activas)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+
+  -- 0051: y en una red archivada no se abre ninguna.
+  begin
+    insert into public.grupos (iglesia_id, ministerio_id, nombre, dia_semana, codigo)
+    values (IGL_A, MIN_CEL2, 'Celula tardia', 2, 'GRUPTDA7');
+    r := r || E'  FALLO se abrio una celula en una red archivada\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT132%archivada%'
+                   then E'  OK   HT132 impide abrir un grupo en una red archivada\\n'
+                   else format(E'  FALLO error inesperado (HT132 archivada): %s\\n', sqlerrm) end;
+  end;
+
+  -- --- Cerrar un grupo quita la llave a quien lo lleva ---
+  update public.grupos set activo = false where id = GRU_1;
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_V), true);
+  execute 'set local role hatril_app';
+  select count(*) into n where public.lleva_grupo(GRU_1);
+  r := r || format(E'  %s cerrado el grupo, su lider ya no lo lleva (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+  execute 'reset role';
+
+  -- 0050: ni le abre la fila a quien va, aunque la suya siga activa. Aqui se
+  -- cerro a mano, sin sacar a nadie, que es justo el caso.
+  perform set_config('request.jwt.claims',
+    format('{"sub":"%s","role":"authenticated"}', USR_P), true);
+  execute 'set local role hatril_app';
+  select count(*) into n from public.grupos where id = GRU_1;
+  r := r || format(E'  %s cerrado el grupo, quien va ya no lo ve (%s)\\n',
+                   case when n = 0 then 'OK  ' else 'FALLO' end, n);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', '', true);
+
+  -- 0050: una ficha de baja no entra en ningun grupo. Pepe se dio de baja
+  -- arriba; su fila de la celula uno quedo inactiva, asi que el indice de una
+  -- celula por red no salta antes.
+  begin
+    insert into public.grupo_miembros (iglesia_id, ministerio_id, grupo_id, miembro_id)
+    values (IGL_A, MIN_CEL, GRU_2, MIE_P2);
+    r := r || E'  FALLO una ficha de baja entro en una celula\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT132%congregacion%'
+                   then E'  OK   HT132 impide meter en un grupo a una ficha de baja\\n'
+                   else format(E'  FALLO error inesperado (HT132 baja): %s\\n', sqlerrm) end;
+  end;
+
+  -- 0050: ni una invitacion sobre una solicitud ya resuelta.
+  update public.solicitudes_ingreso set estado = 'rechazada' where id = SOL_INV;
+  begin
+    insert into public.solicitud_invitaciones (solicitud_id, iglesia_id, grupo_id, codigo)
+    values (SOL_INV, IGL_A, GRU_2, 'GRUPDSA3');
+    r := r || E'  FALLO una invitacion quedo sobre una solicitud resuelta\\n';
+  exception when others then
+    r := r || case when sqlerrm like '%HT132%resuelta%'
+                   then E'  OK   HT132 impide una invitacion sobre una solicitud resuelta\\n'
+                   else format(E'  FALLO error inesperado (HT132 resuelta): %s\\n', sqlerrm) end;
+  end;
+
+  execute 'set local role anon';
+  begin
+    select count(*) into n from public.solicitud_invitaciones;
+    r := r || format(E'  FALLO anon lee las invitaciones (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   anon no llega a las invitaciones\\n';
+  end;
+  execute 'reset role';
+
+  execute 'set local role authenticated';
+  begin
+    select count(*) into n from public.solicitud_invitaciones;
+    r := r || format(E'  FALLO authenticated lee las invitaciones (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   authenticated no llega a las invitaciones\\n';
+  end;
+  execute 'reset role';
+
+  execute 'set local role service_role';
+  begin
+    select count(*) into n from public.solicitud_invitaciones;
+    r := r || format(E'  FALLO service_role lee las invitaciones (%s filas)\\n', n);
+  exception when others then
+    r := r || E'  OK   service_role no llega a las invitaciones\\n';
+  end;
+  execute 'reset role';
+
   -- Las funciones de los grupos: las de relacion, solo para hatril_app; las de
   -- trigger, para nadie.
   select count(*) into n
@@ -2968,7 +3189,9 @@ begin
                  ('public.validar_grupo_miembro()'),
                  ('public.validar_grupo_semana()'),
                  ('public.validar_grupo_guia()'),
-                 ('public.validar_solicitud_grupo()'),
+                 ('public.validar_solicitud_invitacion()'),
+                 ('public.sacar_de_grupos_al_dar_de_baja()'),
+                 ('public.cerrar_grupos_de_red_archivada()'),
                  ('public.guard_grupos()'),
                  ('public.guard_grupo_miembros()'),
                  ('public.guard_grupo_semanas()'),
@@ -3128,14 +3351,14 @@ async function comprobarWithUser(): Promise<string[]> {
     await withUser(USR_A, (tx) => tx.execute(`select arqueo_id from movimientos limit 1`));
     lineas.push('  OK   withUser() puede consultar los arqueos y las columnas nuevas de la caja');
 
-    // Los grupos (0046 y 0047), por lo mismo: la fase SQL prueba que anon y
-    // service_role NO llegan; que `hatril_app` SÍ, y la columna nueva de las
-    // solicitudes, solo se ve aquí.
+    // Los grupos (0046, 0047 y 0049), por lo mismo: la fase SQL prueba que anon
+    // y service_role NO llegan; que `hatril_app` SÍ, también a la invitación de
+    // cada solicitud, solo se ve aquí.
     await withUser(USR_A, (tx) => tx.execute(`select 1 from grupos limit 1`));
     await withUser(USR_A, (tx) => tx.execute(`select 1 from grupo_miembros limit 1`));
     await withUser(USR_A, (tx) => tx.execute(`select 1 from grupo_semanas limit 1`));
     await withUser(USR_A, (tx) => tx.execute(`select 1 from grupo_guias limit 1`));
-    await withUser(USR_A, (tx) => tx.execute(`select grupo_id from solicitudes_ingreso limit 1`));
+    await withUser(USR_A, (tx) => tx.execute(`select 1 from solicitud_invitaciones limit 1`));
     lineas.push('  OK   withUser() puede consultar los grupos, su gente, sus semanas y la guia');
 
     // LA FUGA, CAZADA POR LA FUNCIÓN QUE USA LA APLICACIÓN.
@@ -3374,7 +3597,7 @@ async function comprobarRepartoConLaDemo(): Promise<string[]> {
  * La fase SQL prueba las policies con claims puestos a mano; esto prueba que la
  * función que usa la aplicación llega al mismo sitio con las sesiones de la
  * demo (`scripts/seed-celulas.sql`): Andrés (`enlace@`), que lleva Los Pinos,
- * ve a su gente y no a la de El Prado; Lucía (`miembro@`), que va a Los Pinos,
+ * ve a su gente y no a la de El Prado, ni la propia El Prado; Lucía (`miembro@`), que va a Los Pinos,
  * ve a quien la lleva y no a los demás; y Sara (`colider@`), colíder de la red,
  * las ve todas.
  *
@@ -3435,6 +3658,18 @@ async function comprobarCelulasConLaDemo(): Promise<string[]> {
     const liderPrado = await contar(demo.lider, demo.prado);
     lineas.push(
       `  ${liderPrado === 0 ? 'OK  ' : 'FALLO'} withUser() de enlace@ no ve a la gente de El Prado (${liderPrado} de ${enPrado})`,
+    );
+    // 0049: ni dónde ni cuándo se reúne la de al lado. Con la 0047 la veía por
+    // ser voluntario de la red, y la portada de la red la pintaba entera.
+    const pradoVisible = Number(
+      primera(
+        await withUser(demo.lider, (tx) =>
+          tx.execute(dsql`select count(*)::text as n from grupos where id = ${demo.prado}`),
+        ),
+      )?.n ?? -1,
+    );
+    lineas.push(
+      `  ${pradoVisible === 0 ? 'OK  ' : 'FALLO'} withUser() de enlace@ no ve ni donde ni cuando se reune El Prado (${pradoVisible})`,
     );
     const participante = await contar(demo.participante, demo.pinos);
     lineas.push(

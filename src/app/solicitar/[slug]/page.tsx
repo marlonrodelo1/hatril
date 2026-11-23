@@ -8,15 +8,15 @@ import { solicitudDeUsuario } from '@/lib/solicitudes/consultas';
 import { getCurrentUserContext } from '@/lib/auth/user-context';
 import { createClient } from '@/lib/supabase/server';
 import { iniciales } from '@/lib/format/iniciales';
-import { solicitarIngreso } from '../actions';
+import { solicitarIngreso, sumarInvitacionASolicitud } from '../actions';
 import { Aviso } from '@/components/aviso';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TEXTO_CONSENTIMIENTO_DATOS_RELIGIOSOS } from '@/lib/rgpd/consentimiento';
 import { CasillaAsistencia } from '@/components/casilla-asistencia';
-import { grupoDeLaInvitacion } from '@/lib/grupos/invitacion';
-import { leerCodigo } from '@/lib/grupos/codigo';
+import { grupoDeLaInvitacion, solicitudPendienteEn } from '@/lib/grupos/invitacion';
+import { misGrupos } from '@/lib/grupos/consultas';
 
 export const metadata: Metadata = { title: 'Pedir unirme' };
 
@@ -38,7 +38,7 @@ export default async function SolicitarPage({
   // se viene a hacer es entrar en la iglesia, y eso no depende del grupo.
   const grupo = await grupoDeLaInvitacion(iglesia.id, codigo);
   // Para no perderlo al ir a crear la cuenta o a identificarse y volver.
-  const aqui = `/solicitar/${slug}${grupo ? `?grupo=${leerCodigo(codigo)}` : ''}`;
+  const aqui = `/solicitar/${slug}${grupo ? `?grupo=${grupo.codigo}` : ''}`;
 
   const supabase = await createClient();
   const {
@@ -47,12 +47,35 @@ export default async function SolicitarPage({
 
   // Con sesión y con iglesia activa no hay nada que solicitar: esta persona ya
   // está dentro de alguna congregación.
+  //
+  // SALVO SI TRAE LA INVITACIÓN DE UN GRUPO DE AQUÍ
+  // -----------------------------------------------
+  // El enlace de una célula acaba en el grupo de WhatsApp de la célula, y casi
+  // todos los que lo abren ya son de la iglesia. Antes se les mandaba al panel
+  // sin decir nada, y el líder creía que habían entrado. Ahora se les dice la
+  // verdad: el enlace es para quien todavía no es de la iglesia, y a ellos los
+  // suma quien lleva la red. Y a quien ya pidió entrar y espera, se le ofrece
+  // que su solicitud lleve también esta invitación.
+  let yaEsDeAqui = false;
+  // Y si ya va a ese grupo, tampoco se le manda a pedírselo a nadie: el enlace
+  // llega igual a quien está dentro, que es casi todo el grupo de WhatsApp.
+  let yaVa = false;
+  let pendiente: Awaited<ReturnType<typeof solicitudPendienteEn>> = null;
   if (user) {
     const ctx = await getCurrentUserContext();
-    if (ctx) redirect('/panel/hoy');
-
-    const solicitud = await solicitudDeUsuario(user.id);
-    if (solicitud) redirect('/mi');
+    if (ctx) {
+      if (grupo && ctx.iglesia.id === iglesia.id) {
+        yaEsDeAqui = true;
+        yaVa = (await misGrupos(ctx)).some((g) => g.grupoId === grupo.id);
+      } else redirect('/panel/hoy');
+    } else {
+      if (grupo) pendiente = await solicitudPendienteEn(user.id, iglesia.id);
+      if (pendiente?.conInvitacion) redirect('/mi');
+      if (!pendiente) {
+        const solicitud = await solicitudDeUsuario(user.id);
+        if (solicitud) redirect('/mi');
+      }
+    }
   }
 
   const nombreSugerido =
@@ -91,18 +114,63 @@ export default async function SolicitarPage({
 
         {error && <Aviso>{error}</Aviso>}
 
-        {grupo && iglesia.aceptaSolicitudes && (
+        {grupo && iglesia.aceptaSolicitudes && !yaEsDeAqui && !pendiente && (
           <p className="flex items-start gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-[14px] leading-relaxed">
             <HouseHeart className="mt-0.5 size-5 flex-none text-muted-foreground" strokeWidth={1.8} aria-hidden />
             <span>
+              {/* Las condiciones son las de la aprobación (`motivoDeLaInvitacion`):
+                  prometer el grupo sin más era prometer de más. */}
               Vienes con la invitación de <strong className="font-semibold">{grupo.nombre}</strong>.
-              Cuando {iglesia.nombre} apruebe tu solicitud, quedarás en ese grupo y verás
-              lo de toda la iglesia.
+              Cuando {iglesia.nombre} apruebe tu solicitud verás lo de toda la iglesia, y
+              quedarás en ese grupo si para entonces sigue abierto y con este enlace.
             </span>
           </p>
         )}
 
-        {!iglesia.aceptaSolicitudes ? (
+        {yaEsDeAqui && grupo ? (
+          <div className="flex flex-col items-start gap-4 rounded-xl border border-border bg-surface p-5">
+            <div className="flex flex-col gap-1.5">
+              <h2 className="t-subtitulo">
+                {yaVa ? `Ya vas a ${grupo.nombre}` : `Ya eres de ${iglesia.nombre}`}
+              </h2>
+              {yaVa ? (
+                <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
+                  Este enlace es para quien todavía no es de la iglesia. Tú ya estás
+                  dentro: lo tuyo de {grupo.nombre} lo ves en la app.
+                </p>
+              ) : (
+                <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
+                  Este enlace es para quien todavía no es de la iglesia. Para entrar en{' '}
+                  <strong className="font-semibold text-foreground">{grupo.nombre}</strong>,
+                  pídeselo a quien lleva su red: te suma en un momento desde el panel.
+                </p>
+              )}
+            </div>
+            {/* «Tu célula» vive en la cuenta, no en el inicio. */}
+            <Link href={yaVa ? '/mi/cuenta' : '/mi'} className={buttonVariants({ variant: 'outline' })}>
+              Ir a la app
+            </Link>
+          </div>
+        ) : pendiente && grupo ? (
+          <form
+            action={sumarInvitacionASolicitud}
+            className="flex flex-col items-start gap-4 rounded-xl border border-border bg-surface p-5"
+          >
+            <input type="hidden" name="slug" value={slug} />
+            <input type="hidden" name="grupo" value={grupo.codigo} />
+            <div className="flex flex-col gap-1.5">
+              <h2 className="t-subtitulo">Ya pediste unirte a {iglesia.nombre}</h2>
+              <p className="text-pretty text-[14.5px] leading-relaxed text-muted-foreground">
+                Tu solicitud espera respuesta. Si quieres, llevará también la
+                invitación de{' '}
+                <strong className="font-semibold text-foreground">{grupo.nombre}</strong>,
+                y al aprobarla entrarás en ese grupo si sigue abierto y con este
+                enlace.
+              </p>
+            </div>
+            <Button type="submit">Sí, entrar también en {grupo.nombre}</Button>
+          </form>
+        ) : !iglesia.aceptaSolicitudes ? (
           <Aviso>
             Esta iglesia no está aceptando solicitudes ahora mismo. Ponte en
             contacto con ellos directamente y te dirán cómo unirte.
@@ -155,7 +223,7 @@ export default async function SolicitarPage({
             className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-5"
           >
             <input type="hidden" name="slug" value={slug} />
-            {grupo && <input type="hidden" name="grupo" value={leerCodigo(codigo) ?? ''} />}
+            {grupo && <input type="hidden" name="grupo" value={grupo.codigo} />}
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="nombre">Cómo te llamas</Label>

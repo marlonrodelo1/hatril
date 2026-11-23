@@ -194,7 +194,7 @@ export default function PrivacidadPage() {
           peticiones de oración. Quién está en cada grupo lo ven el pastor,
           quienes llevan esa red —su responsable y sus colíderes— y quienes llevan
           ese grupo; los demás que van contigo ven a quien lo lleva, no la lista,
-          y quien no está en la red ni en el grupo no ve ni la lista ni dónde ni
+          y quien no lleva esa red ni va a ese grupo no ve ni la lista ni dónde ni
           cuándo se reúne. Eso lo impone la base de datos, no solo la pantalla. En
           la pantalla de su grupo, quien lo lleva ve los nombres, no los
           teléfonos.
@@ -202,8 +202,10 @@ export default function PrivacidadPage() {
         <P>
           De quien solo pide entrar desde el directorio: nombre, correo,
           teléfono si lo das, y el mensaje que escribas. Si llegas con el enlace
-          de invitación de un grupo, la solicitud guarda también de qué grupo, y
-          al aprobarla entras en él si sigue abierto y no vas ya a otro de su red.
+          de invitación de un grupo, se guarda también de qué grupo y con qué
+          enlace; eso solo lo ve el pastor, y se borra al resolver tu solicitud.
+          Al aprobarla entras en él si sigue abierto, su enlace no ha cambiado y
+          no vas ya a otro de su red.
         </P>
         <P>
           De quien visita una iglesia por primera vez y le apunta alguien del
@@ -472,8 +474,8 @@ export default function PrivacidadPage() {
             .
           </li>
           <li>
-            Tu sitio en un grupo se guarda mientras vayas. Si sales, o el grupo se
-            cierra, queda como historial —desde cuándo y hasta cuándo—, y se va con
+            Tu sitio en un grupo se guarda mientras vayas. Si sales, si el grupo se
+            cierra o si te das de baja en la congregación, queda como historial —desde cuándo y hasta cuándo—, y se va con
             el resto de tu ficha cuando pides el borrado. Las cifras de cada
             semana no llevan a nadie detrás y se quedan como historia del grupo.
           </li>

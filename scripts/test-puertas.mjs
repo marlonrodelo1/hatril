@@ -143,6 +143,9 @@ const RUTA_MARCO = '/panel/cuenta/contrasena';
 // la misma exigencia que las del panel: existir y estar en `rutas()`.
 const FUERA_DEL_PANEL = [
   'mi/equipo/[id]/fondo/page.tsx',
+  // La portada de un equipo. Está por la red de células: con la 0047 quien
+  // lleva una célula veía ahí la de al lado, y la página pintaba bien.
+  'mi/equipo/[id]/page.tsx',
   // Las células desde la app: la red (de quien la lleva), la célula de su líder
   // y sus próximos temas. Las tres con su 404 para quien no puede.
   'mi/equipo/[id]/grupos/page.tsx',
@@ -316,6 +319,36 @@ async function leerDemo() {
         anadir(t.tema, 'tema de célula');
       }
 
+      // Lo de El Prado que no es de Andrés (enlace@), que lleva Los Pinos y está
+      // en el mismo equipo. Va aparte de los testigos porque estos se comparan
+      // con lo que trae el pastor y aquí no hay 404 que mirar: Andrés SÍ entra en
+      // la portada de la red, y lo que no tiene que salir es la otra célula.
+      // Sin el mínimo de cinco letras: la zona es «Suba». Sin los de su equipo
+      // —Marta, que la lleva, sale con razón en «El equipo»— ni los temas que
+      // coinciden con la guía o con los de Los Pinos.
+      ids.deElPrado = [];
+      if (ids.prado) {
+        const [g] = await sql`select nombre, zona from grupos where id = ${ids.prado}`;
+        ids.deElPrado.push(g.nombre, g.zona);
+        for (const p of await sql`
+          select m.nombre, m.apellidos from grupo_miembros gm
+            join miembros m on m.id = gm.miembro_id
+           where gm.grupo_id = ${ids.prado} and gm.activo
+             and not exists (
+               select 1 from ministerio_miembros mm
+                where mm.ministerio_id = gm.ministerio_id and mm.miembro_id = gm.miembro_id and mm.activo)`) {
+          ids.deElPrado.push(`${p.nombre} ${p.apellidos ?? ''}`.trim());
+        }
+        for (const s of await sql`
+          select s.tema from grupo_semanas s
+           where s.grupo_id = ${ids.prado} and s.tema is not null
+             and not exists (select 1 from grupo_guias gg where gg.ministerio_id = s.ministerio_id and gg.tema = s.tema)
+             and not exists (select 1 from grupo_semanas o where o.grupo_id = ${ids.pinos} and o.tema = s.tema)`) {
+          ids.deElPrado.push(s.tema);
+        }
+        ids.deElPrado = ids.deElPrado.filter((v) => typeof v === 'string' && v.trim().length >= 3);
+      }
+
       // Sin repetidos: dos personas con los mismos apellidos son un testigo.
       const vistos = new Set();
       const unicos = testigos.filter((t) => !vistos.has(t.valor) && vistos.add(t.valor));
@@ -453,6 +486,14 @@ function testigosEn(texto, testigos) {
   return new Set(testigos.filter((t) => p.includes(t.valor)).map((t) => t.valor));
 }
 
+/** Lo de `lista` que sale en la respuesta, como palabra entera: «Suba» no es «Subasta». */
+function ajenosEn(texto, lista) {
+  const p = pajar(texto);
+  return lista.filter((v) =>
+    new RegExp(`(?<![\\p{L}\\p{N}])${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'u').test(p),
+  );
+}
+
 // ============================================
 // 4. Las rutas
 // ============================================
@@ -471,15 +512,19 @@ function testigosEn(texto, testigos) {
  *
  * Por defecto: el pastor pinta, el miembro raso va a /mi y el pastor de Sion,
  * con su suscripción bloqueada, a /suscripcion antes de que nada se consulte.
+ *
+ * `ajenos`, por cuenta, es lo que esa cuenta no tiene que ver en la página aunque
+ * la pinte: el recorte DENTRO de una pantalla abierta, que el 404 no prueba.
  */
 function rutas(ids) {
   const r = [];
-  const pagina = (etiqueta, url, pagePath, casos = {}) =>
+  const pagina = (etiqueta, url, pagePath, casos = {}, ajenos = {}) =>
     r.push({
       etiqueta,
       url,
       pagePath,
       casos: { [PASTOR]: 'pinta', [MIEMBRO]: '/mi', [SION]: '/suscripcion', ...casos },
+      ajenos,
     });
   const ruta = (etiqueta, url, fichero, casos) =>
     r.push({
@@ -736,6 +781,14 @@ function rutas(ids) {
       [SECRETARIA]: 'oculta',
       [CONSOLIDACION]: 'oculta',
     };
+    // Andrés entra en la portada de la red y en Los Pinos; en ninguna de las
+    // dos tiene que salir El Prado: ni su nombre, ni su zona, ni su gente.
+    const SIN_EL_PRADO = { [ENLACE]: ids.deElPrado };
+    pagina('/mi/equipo/<Células>', `/mi/equipo/${ids.celulas}`, 'mi/equipo/[id]/page.tsx', {
+      ...FUERA,
+      [COLIDER]: 'pinta',
+      [ENLACE]: 'pinta',
+    }, SIN_EL_PRADO);
     const A = `/mi/equipo/${ids.celulas}/grupos`;
     pagina('/mi/equipo/<Células>/grupos', A, 'mi/equipo/[id]/grupos/page.tsx', {
       ...FUERA,
@@ -746,14 +799,19 @@ function rutas(ids) {
       ...FUERA,
       [COLIDER]: 'pinta',
       [ENLACE]: 'pinta',
-    });
+    }, SIN_EL_PRADO);
     pagina('/mi/equipo/<Células>/grupos/<Los Pinos>/temas', `${A}/${ids.pinos}/temas`, 'mi/equipo/[id]/grupos/[grupoId]/temas/page.tsx', {
       ...FUERA,
       [COLIDER]: 'pinta',
       [ENLACE]: 'pinta',
-    });
-    // La otra célula: su líder de al lado no entra.
+    }, SIN_EL_PRADO);
+    // La otra célula: su líder de al lado no entra, ni a la ficha ni a los temas.
     pagina('/mi/equipo/<Células>/grupos/<El Prado>', `${A}/${ids.prado}`, 'mi/equipo/[id]/grupos/[grupoId]/page.tsx', {
+      ...FUERA,
+      [COLIDER]: 'pinta',
+      [ENLACE]: 'oculta',
+    });
+    pagina('/mi/equipo/<Células>/grupos/<El Prado>/temas', `${A}/${ids.prado}/temas`, 'mi/equipo/[id]/grupos/[grupoId]/temas/page.tsx', {
       ...FUERA,
       [COLIDER]: 'pinta',
       [ENLACE]: 'oculta',
@@ -834,6 +892,9 @@ async function comprobarPagina(def, sesiones, testigos, marco) {
       segRsc: segmentoDePagina(rsc.cuerpo),
       segHtml: segmentoDePagina(payloadDelHtml(normal.cuerpo)),
       vistos: new Set([...testigosEn(normal.cuerpo, testigos), ...testigosEn(rsc.cuerpo, testigos)]),
+      ajenos: def.ajenos?.[cuenta]
+        ? [...new Set([...ajenosEn(normal.cuerpo, def.ajenos[cuenta]), ...ajenosEn(rsc.cuerpo, def.ajenos[cuenta])])]
+        : [],
     };
   };
   // El pastor antes que nadie; el resto, a la vez.
@@ -853,11 +914,15 @@ async function comprobarPagina(def, sesiones, testigos, marco) {
       resultados.push({ ruta: def.etiqueta, cuenta, esperado: DESCRIPCION[esperado], obtenido: 'cuenta no disponible en la demo', ok: false });
       continue;
     }
-    const { normal, rsc, segRsc, segHtml, vistos } = medidas[cuenta];
+    const { normal, rsc, segRsc, segHtml, vistos, ajenos } = medidas[cuenta];
     respuestas[cuenta] = vistos;
 
     const problemas = [];
     let resumenDatos = '';
+    // Va delante y aparte del resto: también vale para una página que pinta.
+    const deOtros = def.ajenos?.[cuenta];
+    if (deOtros && ajenos.length) problemas.push(`ENSEÑA lo que no es suyo: ${ajenos.join(', ')}`);
+    const resumenAjenos = deOtros ? ` · ${ajenos.length}/${deOtros.length} de lo ajeno` : '';
 
     if (esperado === 'pinta' || esperado === '404' || esperado === 'oculta') {
       const estado = esperado === 'pinta' ? 'pinta' : '404';
@@ -910,8 +975,8 @@ async function comprobarPagina(def, sesiones, testigos, marco) {
 
     const obtenido =
       problemas.length > 0
-        ? problemas.join('; ') + resumenDatos
-        : `HTML ${normal.status}${normal.location ? '→' + normal.location.replace(BASE, '').split('?')[0] : ''} · RSC ${describirSegmento(segRsc)}${resumenDatos}`;
+        ? problemas.join('; ') + resumenDatos + resumenAjenos
+        : `HTML ${normal.status}${normal.location ? '→' + normal.location.replace(BASE, '').split('?')[0] : ''} · RSC ${describirSegmento(segRsc)}${resumenDatos}${resumenAjenos}`;
     resultados.push({ ruta: def.etiqueta, cuenta, esperado: DESCRIPCION[esperado], obtenido, ok: problemas.length === 0 });
   }
   return resultados;

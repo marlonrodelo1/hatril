@@ -23,7 +23,9 @@ import {
   miembros,
   ministerioMiembros,
   ministerios,
+  solicitudInvitaciones,
 } from '@/lib/db/schema';
+import { tieneModulo } from '@/lib/ministerios/modulos';
 import type { EstadoSemanaGrupo, RolGrupo } from '@/lib/db/schema/grupos';
 import type { UserContext } from '@/lib/auth/user-context';
 import type { EstadoMiembro } from '@/lib/miembros/estados';
@@ -38,9 +40,10 @@ import {
 /**
  * Consultas de los grupos.
  *
- * Todo por `withUser`, y aquí la RLS es por RELACIÓN (`0047`): el líder de una
- * célula recibe las filas de la suya y ninguna de la de al lado aunque la
- * pantalla se equivoque al pedirlas. El filtro por iglesia y ministerio de
+ * Todo por `withUser`, y aquí la RLS es por RELACIÓN (`0047` y `0049`): el
+ * líder de una célula recibe las filas de la suya y ninguna de la de al lado
+ * —ni su gente, ni dónde ni cuándo se reúne— aunque la pantalla se equivoque
+ * al pedirlas. El filtro por iglesia y ministerio de
  * cada consulta no es la seguridad; es para que el pastor, que lo ve todo, lea
  * solo lo que tiene delante.
  *
@@ -51,6 +54,13 @@ import {
 
 const nombreCompleto = (nombre: string, apellidos: string | null) =>
   [nombre, apellidos].filter(Boolean).join(' ');
+
+/**
+ * Solo fichas vivas. La base ya saca de sus grupos a quien se da de baja o se
+ * archiva (`0049`); esto es el segundo cinturón, para que una fila que quedara
+ * de antes no siga pintando a esa persona dentro.
+ */
+const fichaViva = () => and(isNull(miembros.archivadoAt), ne(miembros.estado, 'baja'));
 
 export type SemanaGuardada = {
   semana: string;
@@ -131,7 +141,9 @@ export async function gruposDeLaRed(
         })
         .from(grupoMiembros)
         .innerJoin(miembros, eq(miembros.id, grupoMiembros.miembroId))
-        .where(and(inArray(grupoMiembros.grupoId, ids), eq(grupoMiembros.activo, true))),
+        .where(
+          and(inArray(grupoMiembros.grupoId, ids), eq(grupoMiembros.activo, true), fichaViva()),
+        ),
       tx
         .select({ miembroId: ministerioMiembros.miembroId })
         .from(ministerioMiembros)
@@ -217,13 +229,20 @@ export type CuentaDeLaRed = {
   noHubo: number;
   asistentes: number;
   visitas: number;
+  /** Las que se reúnen hoy y todavía no han reportado: fuera de la cuenta. */
+  hoy: number;
 };
 
 export function contarLaRed(lista: GrupoDeLaRed[]): CuentaDeLaRed {
-  // Los que todavía no podían reportar no cuentan en ningún lado: ni como
-  // reportados ni como pendientes.
-  const cuentan = lista.filter((g) => g.reunion.estado !== 'sin_empezar');
+  // Fuera de la cuenta, las que todavía no podían reportar y las que se reúnen
+  // hoy: contarlas en el total sin sus cifras daba, cada martes, una red que
+  // parecía ir peor —«1 de 2», y las personas de esa célula sin contar— sin
+  // que faltara ningún reporte. Las de hoy se dicen aparte.
+  const cuentan = lista.filter(
+    (g) => g.reunion.estado !== 'sin_empezar' && g.reunion.estado !== 'hoy',
+  );
   return {
+    hoy: lista.filter((g) => g.reunion.estado === 'hoy').length,
     total: cuentan.length,
     reportados: cuentan.filter(
       (g) => g.reunion.estado === 'reportada' || g.reunion.estado === 'no_hubo',
@@ -307,7 +326,9 @@ export async function obtenerGrupo(
         })
         .from(grupoMiembros)
         .innerJoin(miembros, eq(miembros.id, grupoMiembros.miembroId))
-        .where(and(eq(grupoMiembros.grupoId, grupoId), eq(grupoMiembros.activo, true)))
+        .where(
+          and(eq(grupoMiembros.grupoId, grupoId), eq(grupoMiembros.activo, true), fichaViva()),
+        )
         .orderBy(asc(miembros.nombre)),
       tx
         .select({ miembroId: ministerioMiembros.miembroId })
@@ -413,8 +434,11 @@ export type MiGrupo = {
 /**
  * Los grupos en los que está esta persona, con su papel en cada uno.
  *
- * Solo los abiertos y de ministerios activos: una célula de una red archivada
- * no le pide a nadie que reporte nada.
+ * Solo los abiertos, de ministerios activos y con la herramienta encendida:
+ * una célula de una red archivada no le pide a nadie que reporte nada, y con
+ * `grupos` apagado su pantalla da 404 —«apagado, la ruta no existe»—, así que
+ * tampoco puede salir en `/mi/cuenta`. El módulo se filtra aquí y no en SQL,
+ * como `exigirModulo`: el jsonb lo interpreta `tieneModulo`.
  */
 export async function misGrupos(ctx: UserContext): Promise<MiGrupo[]> {
   if (!ctx.miembroId) return [];
@@ -433,6 +457,7 @@ export async function misGrupos(ctx: UserContext): Promise<MiGrupo[]> {
         hora: grupos.hora,
         createdAt: grupos.createdAt,
         rol: grupoMiembros.rolGrupo,
+        modulos: ministerios.modulos,
       })
       .from(grupoMiembros)
       .innerJoin(grupos, eq(grupos.id, grupoMiembros.grupoId))
@@ -449,10 +474,11 @@ export async function misGrupos(ctx: UserContext): Promise<MiGrupo[]> {
       .orderBy(asc(grupos.nombre)),
   );
 
-  return filas.map(({ createdAt, ...f }) => ({
-    ...f,
-    alta: fechaEnLaIglesia(createdAt, ctx.iglesia.timezone),
-  }));
+  return filas.flatMap(({ createdAt, modulos, ...f }) =>
+    tieneModulo(modulos, 'grupos')
+      ? [{ ...f, alta: fechaEnLaIglesia(createdAt, ctx.iglesia.timezone) }]
+      : [],
+  );
 }
 
 /**
@@ -517,6 +543,7 @@ export async function quienLleva(
           eq(grupoMiembros.grupoId, grupoId),
           eq(grupoMiembros.activo, true),
           ne(grupoMiembros.rolGrupo, 'participante'),
+          fichaViva(),
         ),
       ),
   );
@@ -588,23 +615,109 @@ export async function candidatosParaGrupo(
   });
 }
 
-/** El nombre de cada grupo, para la bandeja de solicitudes. Solo del pastor. */
-export async function nombresDeGrupos(
+/**
+ * ¿Es este grupo de esta red y de esta iglesia, y sigue abierto?
+ *
+ * La puerta de cada action de un grupo, después de la del ministerio. Sin ella,
+ * la guarda y `exigirModulo` miran el ministerio de la URL y la escritura va al
+ * grupo del formulario: quien lleva dos redes podía tocar una célula de la red
+ * con la herramienta apagada mandando el id de la otra. Es el «tercer
+ * cinturón» de turnos y reparto.
+ */
+export async function grupoAbiertoDeLaRed(
   ctx: UserContext,
-  ids: string[],
-): Promise<Map<string, { nombre: string; activo: boolean; ministerio: string }>> {
-  if (ids.length === 0) return new Map();
+  ministerioId: string,
+  grupoId: string,
+): Promise<boolean> {
+  const [fila] = await withUser(ctx.user.id, (tx) =>
+    tx
+      .select({ id: grupos.id })
+      .from(grupos)
+      .where(
+        and(
+          eq(grupos.id, grupoId),
+          eq(grupos.iglesiaId, ctx.iglesia.id),
+          eq(grupos.ministerioId, ministerioId),
+          eq(grupos.activo, true),
+        ),
+      )
+      .limit(1),
+  );
+  return Boolean(fila);
+}
+
+/**
+ * Si quien pide entrar con la invitación de un grupo quedará dentro al
+ * aprobarle, y si no, por qué.
+ *
+ *   - `vale`: el grupo sigue abierto, su red activa con la herramienta
+ *     encendida, y el enlace con que llegó es el de ahora.
+ *   - `cerrado`, `red`: el grupo o su red ya no están.
+ *   - `enlace`: la red cambió el enlace después de que llegara. Es para lo que
+ *     se cambia —el enlace circuló por donde no debía—, así que lo que llegó
+ *     con el viejo no entra en la célula aunque se apruebe en la iglesia.
+ *
+ * La usan la bandeja y la aprobación, para que digan lo mismo.
+ */
+export type MotivoDeLaInvitacion = 'vale' | 'cerrado' | 'red' | 'enlace';
+
+export function motivoDeLaInvitacion(i: {
+  grupoActivo: boolean;
+  redActiva: boolean;
+  modulos: unknown;
+  codigoConQueLlego: string;
+  codigoDeAhora: string;
+}): MotivoDeLaInvitacion {
+  if (!i.grupoActivo) return 'cerrado';
+  if (!i.redActiva || !tieneModulo(i.modulos, 'grupos')) return 'red';
+  if (i.codigoConQueLlego !== i.codigoDeAhora) return 'enlace';
+  return 'vale';
+}
+
+export type InvitacionDeSolicitud = {
+  grupo: string;
+  ministerio: string;
+  motivo: MotivoDeLaInvitacion;
+};
+
+/**
+ * La invitación de cada solicitud, para la bandeja.
+ *
+ * `solicitud_invitaciones` solo la lee el pastor (`0049`), que es quien
+ * aprueba. A quien ve la bandeja sin poder aprobar le sale vacía, y es lo que
+ * toca: con qué célula llega cada uno no es asunto suyo.
+ */
+export async function invitacionesDeSolicitudes(
+  ctx: UserContext,
+  solicitudIds: string[],
+): Promise<Map<string, InvitacionDeSolicitud>> {
+  if (solicitudIds.length === 0) return new Map();
   const filas = await withUser(ctx.user.id, (tx) =>
     tx
       .select({
-        id: grupos.id,
-        nombre: grupos.nombre,
-        activo: grupos.activo,
+        solicitudId: solicitudInvitaciones.solicitudId,
+        codigoConQueLlego: solicitudInvitaciones.codigo,
+        grupo: grupos.nombre,
+        grupoActivo: grupos.activo,
+        codigoDeAhora: grupos.codigo,
         ministerio: ministerios.nombre,
+        redActiva: ministerios.activo,
+        modulos: ministerios.modulos,
       })
-      .from(grupos)
+      .from(solicitudInvitaciones)
+      .innerJoin(grupos, eq(grupos.id, solicitudInvitaciones.grupoId))
       .innerJoin(ministerios, eq(ministerios.id, grupos.ministerioId))
-      .where(and(eq(grupos.iglesiaId, ctx.iglesia.id), inArray(grupos.id, ids))),
+      .where(
+        and(
+          eq(solicitudInvitaciones.iglesiaId, ctx.iglesia.id),
+          inArray(solicitudInvitaciones.solicitudId, solicitudIds),
+        ),
+      ),
   );
-  return new Map(filas.map(({ id, ...f }) => [id, f]));
+  return new Map(
+    filas.map((f) => [
+      f.solicitudId,
+      { grupo: f.grupo, ministerio: f.ministerio, motivo: motivoDeLaInvitacion(f) },
+    ]),
+  );
 }

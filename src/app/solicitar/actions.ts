@@ -8,8 +8,13 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { dbAdmin } from '@/lib/db';
-import { iglesiaUsuarios, solicitudesIngreso, iglesias } from '@/lib/db/schema';
-import { isUniqueViolation } from '@/lib/db/error';
+import {
+  iglesiaUsuarios,
+  solicitudesIngreso,
+  solicitudInvitaciones,
+  iglesias,
+} from '@/lib/db/schema';
+import { esGuardHatril, isUniqueViolation } from '@/lib/db/error';
 import { checkRateLimit, getClientIp } from '@/lib/api/rate-limit';
 import { validarPassword, traducirErrorAuth } from '@/lib/auth/password';
 import { normalizarTelefono } from '@/lib/telefono/normalizar';
@@ -20,7 +25,7 @@ import {
   cuentasQueAprueban,
   emitirNotificaciones,
 } from '@/lib/notificaciones/emitir';
-import { grupoDeLaInvitacion } from '@/lib/grupos/invitacion';
+import { grupoDeLaInvitacion, solicitudPendienteEn } from '@/lib/grupos/invitacion';
 import { leerCodigo } from '@/lib/grupos/codigo';
 
 /**
@@ -50,7 +55,11 @@ import { leerCodigo } from '@/lib/grupos/codigo';
 function volverCon(ruta: string, error: string, next?: string): never {
   const destino = destinoSeguro(next);
   const extra = destino ? `&next=${encodeURIComponent(destino)}` : '';
-  redirect(`${ruta}?error=${encodeURIComponent(error)}${extra}`);
+  // `&` si la ruta ya trae su consulta: la de una invitación lleva `?grupo=`, y
+  // con un segundo `?` el error se pegaba al código —«?grupo=X?error=…»—, el
+  // código dejaba de leerse y la persona perdía el mensaje y la célula.
+  const separador = ruta.includes('?') ? '&' : '?';
+  redirect(`${ruta}${separador}error=${encodeURIComponent(error)}${extra}`);
 }
 
 const EsquemaSolicitud = z.object({
@@ -142,11 +151,21 @@ export async function solicitarIngreso(formData: FormData) {
           // lo trata como tal: ver las columnas en el schema.
           aceptaAsistencia: d.asistencia,
           versionTexto: VERSION_POLITICA_PRIVACIDAD,
-          grupoId: grupo?.id ?? null,
         })
         .returning({ id: solicitudesIngreso.id });
 
       solicitudId = creada!.id;
+
+      // La invitación, en su tabla y con el código con que llegó: la lee solo
+      // el pastor y se borra al resolver la solicitud (`0049`).
+      if (grupo) {
+        await tx.insert(solicitudInvitaciones).values({
+          solicitudId: creada!.id,
+          iglesiaId: iglesia.id,
+          grupoId: grupo.id,
+          codigo: grupo.codigo,
+        });
+      }
 
       /*
        * La membresía se crea YA, en estado 'pendiente'.
@@ -204,6 +223,77 @@ export async function solicitarIngreso(formData: FormData) {
   );
 
   redirect('/mi?enviada=1');
+}
+
+const EsquemaSumarInvitacion = z.object({
+  slug: z.string().regex(/^[a-z0-9-]{1,80}$/),
+  grupo: z.string().optional(),
+});
+
+/**
+ * Quien ya había pedido entrar sin enlace abre el de una célula: que su
+ * solicitud pendiente lleve también esa invitación.
+ *
+ * Sin esto, el enlace no le hacía nada —`/solicitar` le mandaba a `/mi`— y la
+ * célula que le invitó se perdía sin que nadie lo supiera. Solo para una
+ * solicitud PENDIENTE de ESTA iglesia y de ESTA cuenta, sin invitación ya, y
+ * con un código que valga hoy: lo vuelve a resolver todo aquí, no se fía del
+ * formulario. Por `dbAdmin`, como el resto de `/solicitar`: mientras espera,
+ * la cuenta no ve nada de la iglesia.
+ */
+export async function sumarInvitacionASolicitud(formData: FormData) {
+  const parsed = EsquemaSumarInvitacion.safeParse({
+    slug: campoObligatorio(formData, 'slug'),
+    grupo: campo(formData, 'grupo'),
+  });
+  // Sin mensaje: el formulario lo pinta la página con los dos campos ocultos, y
+  // si no llegan bien es que se ha fabricado a mano.
+  const codigo = parsed.success ? leerCodigo(parsed.data.grupo) : null;
+  if (!parsed.success || !codigo) redirect('/mi');
+  const { slug } = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(`/acceso?next=${encodeURIComponent(`/solicitar/${slug}?grupo=${codigo}`)}`);
+  }
+
+  const [iglesia] = await dbAdmin
+    .select({ id: iglesias.id })
+    .from(iglesias)
+    .where(and(eq(iglesias.slug, slug), eq(iglesias.activa, true)))
+    .limit(1);
+  if (!iglesia) redirect('/mi');
+
+  const [grupo, solicitud] = await Promise.all([
+    grupoDeLaInvitacion(iglesia.id, codigo),
+    solicitudPendienteEn(user.id, iglesia.id),
+  ]);
+  if (!grupo || !solicitud || solicitud.conInvitacion) redirect('/mi');
+
+  // Dos pestañas a la vez: la segunda choca con la clave primaria y no pasa
+  // nada, la invitación ya está.
+  try {
+    await dbAdmin
+      .insert(solicitudInvitaciones)
+      .values({
+        solicitudId: solicitud.id,
+        iglesiaId: iglesia.id,
+        grupoId: grupo.id,
+        codigo: grupo.codigo,
+      })
+      .onConflictDoNothing();
+  } catch (err) {
+    // Se aprobó o se rechazó entre la lectura de arriba y aquí: la base ya no
+    // la deja colgar de una solicitud resuelta (HT132, `0050`). No queda nada a
+    // lo que sumarla, y `/mi` dice cómo quedó.
+    if (esGuardHatril(err, 'HT132')) redirect('/mi');
+    throw err;
+  }
+
+  redirect('/mi?invitacion=1');
 }
 
 // ============================================================================

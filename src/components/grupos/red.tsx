@@ -85,10 +85,15 @@ export function CuentaDeLaRedTarjeta({
         </div>
       </div>
       <p className="text-pretty text-label text-muted-foreground">
-        De la última reunión de cada {e.uno}: la de esta semana si ya tocó, y si no,
-        la de la anterior.
-        {cuenta.noHubo > 0 &&
-          ` En ${cuenta.noHubo} no hubo reunión.`}
+        De la última reunión de cada {e.uno}: la de esta semana si ya pasó su día,
+        y si no, la de la anterior.
+        {cuenta.noHubo > 0 && ` En ${cuenta.noHubo} no hubo reunión.`}
+        {/* Fuera de la cuenta hasta que la reporten: contarlas sin sus cifras
+            hacía parecer peor a la red cada día de reunión (`contarLaRed`). */}
+        {cuenta.hoy > 0 &&
+          (cuenta.hoy === 1
+            ? ` 1 se reúne hoy y entra en la cuenta cuando la reporte.`
+            : ` ${cuenta.hoy} se reúnen hoy y entran en la cuenta cuando las reporten.`)}
       </p>
       {cuenta.sinReportar > 0 && (
         <p className="flex items-center gap-2 text-body font-semibold text-badge-warning-fg">

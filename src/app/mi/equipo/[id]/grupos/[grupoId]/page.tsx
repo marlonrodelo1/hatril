@@ -273,8 +273,8 @@ export default async function MiGrupoPage({
           ))}
         </Lista>
         <p className="px-1 text-pretty text-label text-muted-foreground">
-          Para sumar a alguien que no tiene la app, pídeselo a quien lleva {e.laRed}.
-          Quien llega nuevo entra solo con el enlace de invitación.
+          Quien llega nuevo entra con el enlace de invitación. A quien ya es de la
+          iglesia, tenga la app o no, lo suma quien lleva {e.laRed}: pídeselo.
         </p>
       </Seccion>
 

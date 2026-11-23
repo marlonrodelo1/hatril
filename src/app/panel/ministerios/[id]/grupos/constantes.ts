@@ -13,7 +13,10 @@ export const CONFIRMACIONES: Record<string, string> = {
   'sin-auxiliar': 'Hecho: sigue dentro como uno más, sin llevar nada.',
   anadidos: 'Sumados.',
   quitado: 'Quitado. Su historial no se pierde.',
-  codigo: 'Enlace nuevo. El anterior ya no sirve para entrar.',
+  // Lo de quien ya pidió entrar con el viejo es cierto por `motivoDeLaInvitacion`:
+  // la solicitud guarda el código con que llegó.
+  codigo:
+    'Enlace nuevo. Con el anterior ya no se puede pedir entrar, y quien lo usó y espera respuesta entrará en la iglesia si se le aprueba, pero no aquí.',
   cerrado: 'Hecho: ya no sale en la lista y su enlace deja de valer.',
   guia: 'Guía guardada. Se propone a cada grupo que no tenga su propio tema.',
   reporte: 'Semana reportada. Gracias.',

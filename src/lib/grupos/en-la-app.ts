@@ -128,7 +128,7 @@ export const gruposEnLaApp: ModuloEnLaApp = {
       pendientes: pendientes.slice(0, EN_LA_PORTADA),
       restantes: Math.max(0, pendientes.length - EN_LA_PORTADA),
       cifras:
-        cuenta.total > 0
+        cuenta.total > 0 || cuenta.hoy > 0
           ? [
               {
                 rotulo: 'Reportaron la última reunión',
@@ -136,6 +136,9 @@ export const gruposEnLaApp: ModuloEnLaApp = {
               },
               { rotulo: 'Vinieron', valor: String(cuenta.asistentes) },
               { rotulo: 'Visitas', valor: String(cuenta.visitas) },
+              // Las de hoy no entran en la cuenta hasta que reporten
+              // (`contarLaRed`); se dicen para que el «de» no parezca corto.
+              ...(cuenta.hoy > 0 ? [{ rotulo: 'Se reúnen hoy', valor: String(cuenta.hoy) }] : []),
             ]
           : undefined,
       proximo: guia

@@ -13,7 +13,12 @@ import { exigirUuid, requireAppAbierta } from '@/lib/ministerios/en-la-app/guard
 import { rutaApp } from '@/lib/ministerios/en-la-app/rutas';
 import { tieneModulo } from '@/lib/ministerios/modulos';
 import { exigirPoderEscribir } from '@/lib/suscripcion/muro';
-import { llevaElGrupo, obtenerGrupo, type GrupoDetalle } from './consultas';
+import {
+  grupoAbiertoDeLaRed,
+  llevaElGrupo,
+  obtenerGrupo,
+  type GrupoDetalle,
+} from './consultas';
 
 /**
  * Las puertas de la pantalla de un grupo en la app: la de la célula de su líder.
@@ -81,9 +86,14 @@ export async function requireGrupoAccion(
   exigirUuid(ministerioId, grupoId);
   await exigirModulo(ctx, ministerioId, 'grupos', rutaApp(ministerioId));
 
+  // `llevaElGrupo` ya ata el grupo a esta red y lo pide abierto; en modo red
+  // hay que decirlo aparte: sin ello, un grupo de OTRA red llegaba a HT132 con
+  // un 500, y uno cerrado se dejaba reportar.
+  const red = puedeGestionarDesdeDentro(ctx, ministerioId);
   if (
-    !puedeGestionarDesdeDentro(ctx, ministerioId) &&
-    !(await llevaElGrupo(ctx, ministerioId, grupoId))
+    red
+      ? !(await grupoAbiertoDeLaRed(ctx, ministerioId, grupoId))
+      : !(await llevaElGrupo(ctx, ministerioId, grupoId))
   ) {
     notFound();
   }

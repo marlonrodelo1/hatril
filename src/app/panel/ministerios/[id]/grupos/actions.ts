@@ -23,6 +23,7 @@ import { campo, campoObligatorio, campos, casilla } from '@/lib/api/formulario';
 import { sumarDias } from '@/lib/agenda/horarios';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
 import { generarCodigo } from '@/lib/grupos/codigo';
+import { grupoAbiertoDeLaRed } from '@/lib/grupos/consultas';
 import { lunesDe } from '@/lib/grupos/semanas';
 import { SEMANAS_POR_DELANTE } from './constantes';
 
@@ -64,10 +65,53 @@ async function guarda(ministerioId: string): Promise<UserContext> {
   return ctx;
 }
 
-/** La guarda, y además que el grupo sea un uuid: el resto lo mira la base. */
+const CERRADO = 'Ese grupo ya no está abierto: se cerró, o no es de esta red.';
+const NADA = 'No ha cambiado nada: esa persona ya no estaba así en el grupo. Mira la lista.';
+
+/**
+ * La guarda, y además que el grupo sea de ESTA red y siga abierto.
+ *
+ * Lo segundo es el tercer cinturón (`grupoAbiertoDeLaRed`): sin él, la guarda y
+ * `exigirModulo` miraban el ministerio de la URL y la escritura iba al grupo del
+ * formulario, de otra red quizá, con la herramienta apagada. Y una ficha vieja,
+ * abierta en otra pestaña, ya no escribe en un grupo que se cerró mientras.
+ */
 async function guardaDelGrupo(ministerioId: string, grupoId: string) {
   if (!Id.safeParse(grupoId).success) redirect(base(ministerioId));
-  return guarda(ministerioId);
+  const ctx = await guarda(ministerioId);
+  if (!(await grupoAbiertoDeLaRed(ctx, ministerioId, grupoId))) {
+    volver(CERRADO, base(ministerioId));
+  }
+  return ctx;
+}
+
+type Tx = Parameters<Parameters<typeof withUser>[1]>[0];
+
+/** Salida de la transacción cuando el grupo se cerró entre la guarda y aquí. */
+class GrupoCerrado extends Error {}
+
+/**
+ * Dentro de la transacción que va a meter a alguien: el grupo, abierto, con su
+ * fila bloqueada para compartir. Un `cerrarGrupo` a la vez espera a que esto
+ * acabe y después cierra también a quien acaba de entrar; sin el bloqueo, la
+ * fila nueva podía quedar activa en un grupo ya cerrado. La base lo repite
+ * (HT132, `0049`).
+ */
+async function bloquearAbierto(tx: Tx, ctx: UserContext, ministerioId: string, grupoId: string) {
+  const [fila] = await tx
+    .select({ id: grupos.id })
+    .from(grupos)
+    .where(
+      and(
+        eq(grupos.id, grupoId),
+        eq(grupos.iglesiaId, ctx.iglesia.id),
+        eq(grupos.ministerioId, ministerioId),
+        eq(grupos.activo, true),
+      ),
+    )
+    .limit(1)
+    .for('share');
+  if (!fila) throw new GrupoCerrado();
 }
 
 const EsquemaDatos = z.object({
@@ -129,7 +173,10 @@ async function estaEnElEquipo(
  * se relanza: un fallo de permisos de verdad no se disfraza de mensaje amable
  * (`esGuardHatril`, en `lib/db/error.ts`).
  */
-function traducir(err: unknown, destino: string): never {
+function traducir(err: unknown, destino: string, red: string): never {
+  // Cerrado, a la lista de la red y no a `destino`: la ficha de un grupo
+  // cerrado da 404, y el aviso se perdía con ella.
+  if (err instanceof GrupoCerrado) volver(CERRADO, red);
   if (esGuardHatril(err, 'HT134')) {
     volver(
       'No puedes ponerte a ti mismo a llevarlo. Que lo haga el pastor, o elige a otra persona.',
@@ -137,8 +184,19 @@ function traducir(err: unknown, destino: string): never {
     );
   }
   if (esGuardHatril(err, 'HT132')) {
+    const texto = `${err instanceof Error ? err.message : ''} ${
+      (err as { cause?: { message?: string } })?.cause?.message ?? ''
+    }`;
+    if (texto.includes('cerrado')) volver(CERRADO, red);
+    // Se archivó la red mientras se creaba la célula (`0051`): la lista de la
+    // red ya no existe, así que a la de ministerios.
+    if (texto.includes('archivada')) {
+      volver('Esa red se ha archivado: ya no se le pueden crear células.', '/panel/ministerios');
+    }
     volver(
-      'Esa persona no está en el equipo de la red. Súmala antes al equipo desde «El equipo».',
+      texto.includes('congregacion')
+        ? 'Esa persona ya no está en la congregación: se dio de baja o se archivó su ficha.'
+        : 'Esa persona no está en el equipo de la red. Súmala antes al equipo desde «El equipo».',
       destino,
     );
   }
@@ -198,7 +256,7 @@ export async function crearGrupo(ministerioId: string, formData: FormData) {
     if (isUniqueViolation(err)) {
       volver('Ya hay uno abierto con ese nombre en esta red. Ponle otro.', destino);
     }
-    traducir(err, destino);
+    traducir(err, destino, base(ministerioId));
   }
 
   revalidatePath(base(ministerioId));
@@ -348,6 +406,7 @@ export async function cambiarLider(
 
   try {
     await withUser(ctx.user.id, async (tx) => {
+      await bloquearAbierto(tx, ctx, ministerioId, grupoId);
       const filas = await tx
         .select({ id: grupoMiembros.id, miembroId: grupoMiembros.miembroId, rol: grupoMiembros.rolGrupo })
         .from(grupoMiembros)
@@ -388,7 +447,7 @@ export async function cambiarLider(
       }
     });
   } catch (err) {
-    traducir(err, destino);
+    traducir(err, destino, base(ministerioId));
   }
 
   revalidatePath(destino);
@@ -414,12 +473,14 @@ export async function anadirAuxiliar(
 
   try {
     await withUser(ctx.user.id, async (tx) => {
+      await bloquearAbierto(tx, ctx, ministerioId, grupoId);
       const [suya] = await tx
         .select({ id: grupoMiembros.id, rol: grupoMiembros.rolGrupo })
         .from(grupoMiembros)
         .where(
           and(
             eq(grupoMiembros.iglesiaId, ctx.iglesia.id),
+            eq(grupoMiembros.ministerioId, ministerioId),
             eq(grupoMiembros.grupoId, grupoId),
             eq(grupoMiembros.miembroId, persona.data),
             eq(grupoMiembros.activo, true),
@@ -446,7 +507,7 @@ export async function anadirAuxiliar(
       }
     });
   } catch (err) {
-    traducir(err, destino);
+    traducir(err, destino, base(ministerioId));
   }
 
   revalidatePath(destino);
@@ -463,8 +524,9 @@ export async function quitarDeAuxiliar(
   const destino = `${base(ministerioId)}/${grupoId}`;
   if (!Id.safeParse(filaId).success) redirect(destino);
 
+  let cambiadas: { id: string }[];
   try {
-    await withUser(ctx.user.id, (tx) =>
+    cambiadas = await withUser(ctx.user.id, (tx) =>
       tx
         .update(grupoMiembros)
         .set({ rolGrupo: 'participante' })
@@ -472,11 +534,13 @@ export async function quitarDeAuxiliar(
           and(
             eq(grupoMiembros.id, filaId),
             eq(grupoMiembros.iglesiaId, ctx.iglesia.id),
+            eq(grupoMiembros.ministerioId, ministerioId),
             eq(grupoMiembros.grupoId, grupoId),
             eq(grupoMiembros.rolGrupo, 'auxiliar'),
             eq(grupoMiembros.activo, true),
           ),
-        ),
+        )
+        .returning({ id: grupoMiembros.id }),
     );
   } catch (err) {
     // `uq_grupo_participante_por_ministerio`: ya va a otra célula de la red.
@@ -488,6 +552,10 @@ export async function quitarDeAuxiliar(
     }
     throw err;
   }
+
+  // Cero filas: ya no era auxiliar, o la RLS no le deja tocarla. Decir
+  // «hecho» sería mentir.
+  if (cambiadas.length === 0) volver(NADA, destino);
 
   revalidatePath(destino);
   redirect(`${destino}?guardado=sin-auxiliar`);
@@ -518,9 +586,15 @@ export async function anadirIntegrantes(
   const pedidos = [...new Set(ids.data)];
   const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
 
+  let sumados = 0;
   try {
-    await withUser(ctx.user.id, async (tx) => {
-      // Solo fichas vivas de ESTA iglesia, como `asignarAlMinisterio`.
+    sumados = await withUser(ctx.user.id, async (tx) => {
+      await bloquearAbierto(tx, ctx, ministerioId, grupoId);
+      // Solo fichas vivas de ESTA iglesia, como `asignarAlMinisterio`. Una baja
+      // a la vez la resuelve la base y no esta lectura: `validar_grupo_miembro`
+      // toma el cerrojo de la baja de cada ficha (`0051`), que vale para todos
+      // los caminos. Un `FOR SHARE` aquí chocaría además con pasar lista, que
+      // actualiza las mismas fichas en otro orden.
       const vivas = await tx
         .select({ id: miembros.id })
         .from(miembros)
@@ -550,7 +624,7 @@ export async function anadirIntegrantes(
           .map((o) => o.miembroId),
       );
       const nuevos = vivas.map((v) => v.id).filter((id) => !saltar.has(id));
-      if (nuevos.length === 0) return;
+      if (nuevos.length === 0) return 0;
 
       await tx.insert(grupoMiembros).values(
         nuevos.map((miembroId) => ({
@@ -562,13 +636,21 @@ export async function anadirIntegrantes(
           desde: hoy,
         })),
       );
+      return nuevos.length;
     });
   } catch (err) {
     // Dos personas sumando a la vez a la misma gente: lo que entró, entró.
     if (isUniqueViolation(err)) {
       volver('Alguien la sumó a la vez que tú. Mira la lista y vuelve a probar.', destino);
     }
-    traducir(err, destino);
+    traducir(err, destino, base(ministerioId));
+  }
+
+  if (sumados === 0) {
+    volver(
+      'Nadie nuevo que sumar: ya estaban dentro, van a otro de la red o ya no están en la congregación.',
+      destino,
+    );
   }
 
   revalidatePath(destino);
@@ -591,7 +673,7 @@ export async function quitarIntegrante(
 
   const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
 
-  await withUser(ctx.user.id, (tx) =>
+  const quitadas = await withUser(ctx.user.id, (tx) =>
     tx
       .update(grupoMiembros)
       .set({ activo: false, hasta: hoy })
@@ -599,12 +681,16 @@ export async function quitarIntegrante(
         and(
           eq(grupoMiembros.id, filaId),
           eq(grupoMiembros.iglesiaId, ctx.iglesia.id),
+          eq(grupoMiembros.ministerioId, ministerioId),
           eq(grupoMiembros.grupoId, grupoId),
           ne(grupoMiembros.rolGrupo, 'lider'),
           eq(grupoMiembros.activo, true),
         ),
-      ),
+      )
+      .returning({ id: grupoMiembros.id }),
   );
+
+  if (quitadas.length === 0) volver(NADA, destino);
 
   revalidatePath(destino);
   redirect(`${destino}?guardado=quitado`);

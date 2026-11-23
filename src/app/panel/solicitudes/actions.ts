@@ -13,6 +13,8 @@ import {
   consentimientos,
   grupoMiembros,
   grupos,
+  ministerios,
+  solicitudInvitaciones,
   iglesiaUsuarios,
   miembros,
   seguimientoAsignaciones,
@@ -21,6 +23,7 @@ import {
 } from '@/lib/db/schema';
 import { VERSION_POLITICA_PRIVACIDAD } from '@/lib/rgpd/consentimiento';
 import { hoyEnLaIglesia } from '@/lib/fecha/hoy';
+import { motivoDeLaInvitacion } from '@/lib/grupos/consultas';
 import { campo } from '@/lib/api/formulario';
 import {
   condicionFichaEnlazable,
@@ -151,7 +154,6 @@ export async function aprobarSolicitud(
           telefono: solicitudesIngreso.telefono,
           aceptaAsistencia: solicitudesIngreso.aceptaAsistencia,
           versionTexto: solicitudesIngreso.versionTexto,
-          grupoId: solicitudesIngreso.grupoId,
         })
         .from(solicitudesIngreso)
         .where(
@@ -399,14 +401,13 @@ export async function aprobarSolicitud(
       // célula. Como participante, que es lo que es: llevarla pide estar en el
       // equipo (HT132).
       //
-      // Se salta, sin error, si el grupo ya se cerró o su red no está activa,
-      // si la ficha enlazada ya está dentro, o si ya va como participante a
-      // otra célula de esa red (`uq_grupo_participante_por_ministerio`): lo
-      // que se aprueba es la entrada en la iglesia, y no puede caerse por esto.
-      // La bandeja lo avisa antes de pulsar.
-      if (solicitud.grupoId) {
-        await meterEnElGrupo(tx, ctx.iglesia.id, solicitud.grupoId, fichaId, hoyEnLaIglesia(ctx.iglesia.timezone));
-      }
+      // Se salta, sin error, si el grupo ya se cerró, si su red no está activa
+      // o tiene la herramienta apagada, si la red cambió el enlace después de
+      // que llegara (`motivoDeLaInvitacion`), si la ficha enlazada ya está
+      // dentro, o si ya va como participante a otra célula de esa red: lo que
+      // se aprueba es la entrada en la iglesia, y no puede caerse por esto. La
+      // bandeja lo dice antes de pulsar, con la misma regla.
+      await meterEnElGrupo(tx, ctx.iglesia.id, solicitud.id, fichaId, hoyEnLaIglesia(ctx.iglesia.timezone));
 
       // Si la membresía no se tocó, la persona se quedaría en «pendiente» con
       // la solicitud ya cerrada: fuera de la bandeja y sin poder entrar. Y al
@@ -473,38 +474,69 @@ type Tx = Parameters<Parameters<typeof withUser>[1]>[0];
 async function meterEnElGrupo(
   tx: Tx,
   iglesiaId: string,
-  grupoId: string,
+  solicitudId: string,
   fichaId: string,
   /** En la zona de la iglesia (`hoyEnLaIglesia`), no en UTC. */
   hoy: string,
 ): Promise<void> {
-  const [grupo] = await tx
-    .select({ ministerioId: grupos.ministerioId, activo: grupos.activo })
-    .from(grupos)
-    .where(and(eq(grupos.id, grupoId), eq(grupos.iglesiaId, iglesiaId)))
-    .limit(1);
-  if (!grupo?.activo) return;
+  const [inv] = await tx
+    .select({
+      grupoId: solicitudInvitaciones.grupoId,
+      codigoConQueLlego: solicitudInvitaciones.codigo,
+      ministerioId: grupos.ministerioId,
+      grupoActivo: grupos.activo,
+      codigoDeAhora: grupos.codigo,
+      redActiva: ministerios.activo,
+      modulos: ministerios.modulos,
+    })
+    .from(solicitudInvitaciones)
+    .innerJoin(grupos, eq(grupos.id, solicitudInvitaciones.grupoId))
+    .innerJoin(ministerios, eq(ministerios.id, grupos.ministerioId))
+    .where(
+      and(
+        eq(solicitudInvitaciones.solicitudId, solicitudId),
+        eq(solicitudInvitaciones.iglesiaId, iglesiaId),
+      ),
+    )
+    .limit(1)
+    // La fila del grupo, bloqueada para compartir: un cierre a la vez espera a
+    // que esta aprobación acabe, y después saca también a quien acaba de
+    // entrar. Sin esto, la fila nueva podía quedar activa en un grupo cerrado.
+    .for('share', { of: grupos });
+
+  // Lo de la invitación se borra pase lo que pase: resuelta la solicitud, lo
+  // que queda es la fila de `grupo_miembros` o nada (`0049`).
+  await tx
+    .delete(solicitudInvitaciones)
+    .where(eq(solicitudInvitaciones.solicitudId, solicitudId));
+
+  if (!inv || motivoDeLaInvitacion(inv) !== 'vale') return;
 
   const ya = await tx
     .select({ grupoId: grupoMiembros.grupoId, rol: grupoMiembros.rolGrupo })
     .from(grupoMiembros)
     .where(
       and(
-        eq(grupoMiembros.ministerioId, grupo.ministerioId),
+        eq(grupoMiembros.ministerioId, inv.ministerioId),
         eq(grupoMiembros.miembroId, fichaId),
         eq(grupoMiembros.activo, true),
       ),
     );
-  if (ya.some((f) => f.grupoId === grupoId || f.rol === 'participante')) return;
+  if (ya.some((f) => f.grupoId === inv.grupoId || f.rol === 'participante')) return;
 
-  await tx.insert(grupoMiembros).values({
-    iglesiaId,
-    ministerioId: grupo.ministerioId,
-    grupoId,
-    miembroId: fichaId,
-    rolGrupo: 'participante',
-    desde: hoy,
-  });
+  // Sin conflicto que deshaga la aprobación: si la red la suma a la vez, lo que
+  // entró, entró.
+  await tx
+    .insert(grupoMiembros)
+    .values({
+      iglesiaId,
+      ministerioId: inv.ministerioId,
+      grupoId: inv.grupoId,
+      miembroId: fichaId,
+      rolGrupo: 'participante',
+      desde: hoy,
+    })
+    .onConflictDoNothing();
 }
 
 const EsquemaRechazo = z.object({
@@ -557,6 +589,12 @@ export async function rechazarSolicitud(
       // `estado = 'pendiente'` otra vez aunque el bloqueo ya lo garantice: si
       // algún día se quita el `for update`, esto no puede pasar a reescribir
       // una solicitud que ya resolvió otra persona.
+      // Rechazada, la invitación no lleva a ningún sitio y no tiene por qué
+      // quedarse: con qué célula llegó alguien es dato de esa persona.
+      await tx
+        .delete(solicitudInvitaciones)
+        .where(eq(solicitudInvitaciones.solicitudId, solicitudId));
+
       await tx
         .update(solicitudesIngreso)
         .set({

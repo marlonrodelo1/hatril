@@ -47,9 +47,9 @@ export const metadata: Metadata = { title: 'Mi cuenta' };
 export default async function MiPage({
   searchParams,
 }: {
-  searchParams: Promise<{ enviada?: string }>;
+  searchParams: Promise<{ enviada?: string; invitacion?: string }>;
 }) {
-  const { enviada } = await searchParams;
+  const { enviada, invitacion } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -100,6 +100,15 @@ export default async function MiPage({
         {enviada && (
           <Aviso tipo="ok">
             Solicitud enviada. Te avisamos en cuanto la revisen.
+          </Aviso>
+        )}
+        {/* De `sumarInvitacionASolicitud`: quien ya esperaba y abrió el enlace
+            de un grupo. Con las condiciones de `motivoDeLaInvitacion`: el grupo
+            abierto y con el mismo enlace al aprobar. */}
+        {invitacion && (
+          <Aviso tipo="ok">
+            Hecho: tu solicitud lleva la invitación del grupo. Si cuando te
+            aprueben sigue abierto y con el mismo enlace, entrarás también en él.
           </Aviso>
         )}
 
