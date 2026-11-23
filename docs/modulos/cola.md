@@ -29,8 +29,12 @@ fusionar.
 
 ## Cola con migración (de una en una)
 
-**Al 21-nov, la siguiente migración es la 0063 y el siguiente código de
-trigger, HT145.** Las últimas: donativos (`0055`-`0056`, HT140; la HT138 y
+**Al 23-nov, la 0063 la tiene otra sesión (el lugar de Google, aplicada en la
+base y sin commitear todavía), y células espera detrás con dos: los dos
+valores de avisos y las funciones `unirse_a_grupo` y `salir_de_grupo` (el SQL, escrito, en
+`celulas-migracion-pendiente.sql`). El siguiente código de trigger sigue siendo HT145:
+células no gasta ninguno.** Antes, al 21-nov, la siguiente era la 0063 y el
+siguiente código, HT145. Las últimas: donativos (`0055`-`0056`, HT140; la HT138 y
 la HT139 no las usa nadie), los teléfonos de las push (`0057`-`0058`, HT141)
 y el ministerio de Niños (`0059`-`0062`, HT142-HT144). Las tres, aplicadas en
 la base.
@@ -54,7 +58,8 @@ Su snapshot sale del de la `0052`, así que al fusionar células hay que coserlo
 igual: su `prevId` pasa a ser el de la `0052` ya cosida.
 
 1. ~~Contabilidad completa~~: hecha y fusionada el 21-oct.
-2. **Células** — en marcha. Con la pieza genérica de grupos (`grupos`, `grupo_miembros`):
+2. **Células** — fusionada con main en su rama el 23-nov (`estado-celulas.md`,
+   plan en `plan-celulas.md`); falta su migración de avisos, unirse y salir. Con la pieza genérica de grupos (`grupos`, `grupo_miembros`):
    reporte semanal en un toque, guía común de la semana para toda la red, aviso
    de célula sin reportar, invitación por enlace hacia `/solicitar`. Si el tema
    de cada semana va en `turnos.tema`, esa columna sirve también a la radio.
