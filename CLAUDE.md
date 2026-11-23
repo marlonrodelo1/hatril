@@ -226,9 +226,12 @@ Tres reglas que el propio sistema declara innegociables:
 2. Los errores llevan icono, no solo color. Ahora importa el doble: el rojo de
    error (#B53333) y el naranja de marca (#B15435) son vecinos de tono.
 3. Sin sombras. La profundidad se hace con bordes de 1px. **Sin degradados,
-   con una excepción**: la portada del muro, donde el texto va sobre una foto y
+   con dos excepciones**: la portada del muro, donde el texto va sobre una foto y
    un velo plano tendría que apagar la imagen entera para garantizar el peor
-   punto. Si aparece una segunda, es que la regla se está deshaciendo sola.
+   punto; y el carrusel de fotos de la presentación de la app (23-nov, lo pidió
+   Marlon), que se funde con el fondo por abajo y por los lados. Ese no pinta
+   color: es una máscara (`mask-image`), así que no clava ningún tono al cambiar
+   la paleta. Si aparece una tercera, es que la regla se está deshaciendo sola.
 
 Un solo modo, el claro. No hay `dark:` ni interruptor.
 

@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Heart, MessageCircle, Users } from 'lucide-react';
 
-import { Logo } from '@/components/marca/logo';
 import { Button } from '@/components/ui/button';
 import { COOKIE_BIENVENIDA } from '@/lib/bienvenida';
+import { CarruselFotos } from './carrusel';
 
 /**
  * La presentación: tres pantallas, la primera vez que se abre la app.
@@ -99,9 +99,14 @@ export function Presentacion() {
         </button>
       </div>
 
+      {/* Común a las tres pantallas y quieto al deslizar: lo que pasa son las
+          fotos, no el carrusel. Se queda con el hueco que dejan las tarjetas
+          y el texto, que no crecen (`carrusel.tsx`). */}
+      <CarruselFotos />
+
       <div
         ref={carril}
-        className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex min-h-0 snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {PANTALLAS.map((p, i) => (
           <section
@@ -111,18 +116,17 @@ export function Presentacion() {
             aria-label={`${i + 1} de ${PANTALLAS.length}`}
             className="mx-auto flex w-full max-w-[480px] flex-none snap-center snap-always flex-col"
           >
-            <div aria-hidden className="flex min-h-0 flex-1 flex-col items-center justify-end gap-3 overflow-hidden px-7 pt-2">
-              <span className="presentacion-pieza" style={{ '--orden': 0 } as React.CSSProperties}>
-                <Logo variante="simbolo" tamano={52} />
-              </span>
+            <div aria-hidden className="flex min-h-0 flex-1 flex-col items-center justify-end gap-3 overflow-hidden px-7 pt-1">
               {p.piezas}
             </div>
 
             <div className="presentacion-texto flex flex-none flex-col gap-3 px-7 pt-6">
-              <h1 className="text-balance text-[30px] leading-[1.12] font-extrabold tracking-[-0.025em]">
+              {/* Un punto menos en pantallas bajas: es lo que deja sitio a una
+                  fila de fotos en un iPhone SE sin cortar las tarjetas. */}
+              <h1 className="text-balance text-[30px] leading-[1.12] font-extrabold tracking-[-0.025em] [@media(max-height:700px)]:text-[26px]">
                 {p.titulo}
               </h1>
-              <p className="text-pretty text-[16px] leading-relaxed text-muted-foreground">
+              <p className="text-pretty text-[16px] leading-relaxed text-muted-foreground [@media(max-height:700px)]:text-[15px]">
                 {p.texto}
               </p>
             </div>

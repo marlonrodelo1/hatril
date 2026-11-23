@@ -606,6 +606,127 @@
 }
 
 /*
+ * El carrusel de la presentación (`bienvenida/_components/carrusel.tsx`).
+ *
+ * Ocupa el hueco que queda encima de las tarjetas, sea el que sea: en un
+ * teléfono alto, dos filas de 104 px; en uno bajo se encogen, con poco sitio
+ * queda una, y con casi nada desaparece. Eso lo deciden las consultas de
+ * contenedor de abajo, que miden el propio carrusel y no la pantalla.
+ *
+ * EL FUNDIDO, Y POR QUÉ NO ROMPE «SIN DEGRADADOS»
+ * ----------------------------------------------
+ * Las fotos se apagan hacia abajo, contra las tarjetas, y hacia los lados. No
+ * se pinta ningún color encima: es una máscara, que decide cuánto se ve de la
+ * foto, y lo que queda detrás es el fondo de la página. Por eso funciona con
+ * cualquier paleta. `black` y `transparent` aquí no son colores sino
+ * opacidad. Es la segunda excepción a la regla, y está apuntada en CLAUDE.md.
+ *
+ * Con «reducir movimiento», las fotos quietas.
+ */
+@keyframes carrusel-avanza {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.carrusel-presentacion {
+  container-type: size;
+  display: flex;
+  flex: 1 1 0%;
+  /* Una fila siempre, también en un iPhone SE: sin mínimo, las tarjetas y el
+     texto se lo comían entero y en 667 px de alto no salía ninguna foto. */
+  min-height: 64px;
+}
+
+.carrusel-fundido {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  overflow: hidden;
+  -webkit-mask-image:
+    linear-gradient(to bottom, transparent 0%, black 10%, black 55%, transparent 100%),
+    linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to bottom, transparent 0%, black 10%, black 55%, transparent 100%),
+    linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%);
+  mask-composite: intersect;
+}
+
+.carrusel-fila {
+  flex: none;
+  height: min(104px, calc(50% - 5px));
+}
+
+.carrusel-pista {
+  display: flex;
+  width: max-content;
+  height: 100%;
+  animation: carrusel-avanza 80s linear infinite;
+  will-change: transform;
+}
+
+.carrusel-pista-inversa {
+  animation-direction: reverse;
+  animation-duration: 95s;
+}
+
+/* El hueco de detrás va también al final de cada tanda: así las dos copias
+   miden lo mismo y el salto del -50% cae justo en el empalme. */
+.carrusel-tanda {
+  display: flex;
+  height: 100%;
+  gap: 10px;
+  padding-right: 10px;
+}
+
+.carrusel-foto {
+  height: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--color-surface-alt);
+  user-select: none;
+}
+
+@container (max-height: 150px) {
+  /* Con una fila, el fundido de dos se comería media foto: empieza más abajo. */
+  .carrusel-fundido {
+    -webkit-mask-image:
+      linear-gradient(to bottom, black 0%, black 72%, transparent 100%),
+      linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%);
+    mask-image:
+      linear-gradient(to bottom, black 0%, black 72%, transparent 100%),
+      linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%);
+  }
+
+  .carrusel-fila {
+    height: min(104px, 100%);
+  }
+
+  .carrusel-fila + .carrusel-fila {
+    display: none;
+  }
+}
+
+@container (max-height: 56px) {
+  .carrusel-fila {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carrusel-pista {
+    animation: none;
+  }
+}
+
+/*
  * La portada: el movimiento de las maquetas.
  *
  * Todo con CSS y sin una línea de JavaScript: la portada es estática con ISR
