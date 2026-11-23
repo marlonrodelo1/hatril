@@ -65,7 +65,8 @@ sugerencias y un detalle; abrir el mapa es una carga, moverlo no cuenta.
   facturación» ya estaba en tres proyectos, que es el máximo que deja.
 - Claves: **«Hatril servidor»** (Places API (New), IP del VPS y la de casa) y
   **«Hatril mapa»** (Maps JavaScript API, `https://hatril.com/*` y
-  `http://localhost:3000/*`). Las dos en `.env.local`; **falta Dokploy**.
+  `http://localhost:3000/*`). Las dos en `.env.local` y en Dokploy
+  (Environment), comprobadas en hatril.com el 23-nov.
 - Queda por hacer: borrar la clave **«Maps Platform API Key»** que Google creó
   sola al habilitar (sin restringir, con 32 APIs), el Map ID (paso 18), los
   topes (pasos 20-22) y el cron.
