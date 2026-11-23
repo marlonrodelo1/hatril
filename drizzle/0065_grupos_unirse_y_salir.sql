@@ -1,11 +1,5 @@
--- PENDIENTE DE NUMERAR (23-nov). No es una migración todavía: el migrador solo
--- lee las de drizzle/ con su entrada en el journal. Cuando la 0063 de otra
--- sesión esté en main, esto pasa a ser la migración siguiente, escrita a mano
--- (npm run db:generate -- --custom --name grupos_unirse_y_salir), DESPUÉS de la
--- que genere los dos valores nuevos de tipo_notificacion_enum.
---
 -- ===========================================================================
--- NNNN -- Entrar en una célula desde dentro, y salir de ella
+-- 0065 -- Entrar en una célula desde dentro, y salir de ella
 --
 -- Lo que pidió Marlon el 23-nov: el líder de célula comparte el enlace de su
 -- célula, y con eso la gente queda en ella. Hasta aquí el enlace solo servía a
