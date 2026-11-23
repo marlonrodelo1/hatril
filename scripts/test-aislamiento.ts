@@ -3361,15 +3361,19 @@ begin
                  ('public.guard_grupo_miembros()'),
                  ('public.guard_grupo_semanas()'),
                  ('public.guard_grupo_guias()'),
-                 ('public.guard_grupo_miembros_ascenso()')) as f(fn)
+                 ('public.guard_grupo_miembros_ascenso()'),
+                 ('public.unirse_a_grupo(text)'),
+                 ('public.salir_de_grupo(uuid)')) as f(fn)
    where has_function_privilege(v.rol, f.fn, 'EXECUTE');
   r := r || format(E'  %s las funciones de los grupos, cerradas a anon, authenticated y service_role (%s)\\n',
                    case when n = 0 then 'OK  ' else 'FALLO' end, n);
 
   select count(*) into n
    where has_function_privilege('hatril_app', 'public.lleva_grupo(uuid)', 'EXECUTE')
-     and has_function_privilege('hatril_app', 'public.esta_en_grupo(uuid)', 'EXECUTE');
-  r := r || format(E'  %s y las de relacion, abiertas a hatril_app (%s)\\n',
+     and has_function_privilege('hatril_app', 'public.esta_en_grupo(uuid)', 'EXECUTE')
+     and has_function_privilege('hatril_app', 'public.unirse_a_grupo(text)', 'EXECUTE')
+     and has_function_privilege('hatril_app', 'public.salir_de_grupo(uuid)', 'EXECUTE');
+  r := r || format(E'  %s y las de relacion, entrar y salir, abiertas a hatril_app (%s)\\n',
                    case when n = 1 then 'OK  ' else 'FALLO' end, n);
 
   -- -------------------------------------------------------------------------
@@ -4313,6 +4317,44 @@ async function comprobarCelulasConLaDemo(demo: Demo): Promise<string[]> {
     ok(participante === 2, `withUser() de miembro ve su fila y a quien lleva Los Pinos, no a los demás (${participante} de ${enPinos})`);
     const red = (await contar(u.colider, pinos)) + (await contar(u.colider, prado));
     ok(red === enPinos + enPrado, `withUser() de colider, colíder de la red, ve las dos células (${red} de ${enPinos + enPrado})`);
+
+    // Entrar con el enlace siendo ya de la iglesia, y salir (0065). Con la
+    // secretaria, que es de Betel y no va a ninguna célula. Lo que escribe se
+    // queda en la iglesia de prueba, que se borra al terminar.
+    const codigos = await dbAdmin.execute(
+      dsql`select id::text as id, codigo from grupos where id in (${pinos}, ${prado})`,
+    );
+    const codigoDe = (id: string) =>
+      ((codigos as unknown as { rows?: Fila[] }).rows ?? (codigos as unknown as Fila[])).find((f) => f.id === id)?.codigo ?? '';
+    const unirse = async (cuenta: string, codigo: string) =>
+      String(
+        primera(await withUser(cuenta, (tx) => tx.execute(dsql`select public.unirse_a_grupo(${codigo}) as r`)))?.r,
+      );
+    const salir = async (cuenta: string, grupo: string) =>
+      String(
+        primera(await withUser(cuenta, (tx) => tx.execute(dsql`select public.salir_de_grupo(${grupo}::uuid) as r`)))?.r,
+      );
+
+    const entra = await unirse(u.secretaria, codigoDe(pinos));
+    ok(entra === 'dentro', `withUser() de secretaria entra en Los Pinos con su enlace (${entra})`);
+    const otraVez = await unirse(u.secretaria, codigoDe(pinos));
+    ok(otraVez === 'ya_estaba', `y con el mismo enlace otra vez no entra dos veces (${otraVez})`);
+    const ladoAlLado = await unirse(u.secretaria, codigoDe(prado));
+    ok(ladoAlLado === 'otra', `ni en otra célula de la misma red (${ladoAlLado})`);
+    const inventado = await unirse(u.secretaria, 'ZZZZZZZZ');
+    ok(inventado === 'no_vale', `un código inventado no lleva a nada (${inventado})`);
+    const deSion = await unirse(u.sion, codigoDe(pinos));
+    ok(deSion === 'no_vale', `el pastor de Sion con el enlace de Betel no entra, y no sabe si existe (${deSion})`);
+    const sale = await salir(u.secretaria, pinos);
+    ok(sale === 'true', `la secretaria sale de Los Pinos (${sale})`);
+    const yaFuera = await salir(u.secretaria, pinos);
+    ok(yaFuera === 'false', `y salir otra vez no hace nada (${yaFuera})`);
+    const vuelve = await unirse(u.secretaria, codigoDe(pinos));
+    ok(vuelve === 'dentro', `con el enlace vuelve a entrar después de salir (${vuelve})`);
+    await salir(u.secretaria, pinos);
+    const lider = await salir(u.enlace, pinos);
+    ok(lider === 'false', `quien lleva la célula no se sale por aquí: lo cambia la red (${lider})`);
+    ok((await total(pinos)) === enPinos, `Los Pinos queda como estaba (${await total(pinos)} de ${enPinos})`);
   } catch (err) {
     const e = err as { message?: string; cause?: { message?: string } };
     lineas.push(`  FALLO células con la iglesia de prueba: ${(e.cause?.message ?? e.message ?? String(err)).slice(0, 110)}`);

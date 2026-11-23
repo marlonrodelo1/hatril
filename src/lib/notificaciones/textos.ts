@@ -126,7 +126,10 @@ export function textoNotificacion(
           Number(datos.cuantos ?? '1') > 1
             ? `${datos.cuantos} personas han entrado en ${datos.grupo ?? 'tu célula'}`
             : `${quien} ha entrado en ${datos.grupo ?? 'tu célula'}`,
-        detalle: 'Ya sale en tu lista, con su teléfono para llamarle o escribirle.',
+        detalle:
+          Number(datos.cuantos ?? '1') > 1
+            ? 'Ya salen en tu lista, con su teléfono para llamarles o escribirles.'
+            : 'Ya sale en tu lista, con su teléfono para llamarle o escribirle.',
       };
 
     case 'grupo_incorporado':
