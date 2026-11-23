@@ -89,6 +89,9 @@ let MAESTRA;
 let MADRE; // madre de Tomás, aceptada hace diez días
 let MADRE2; // madre de Lía, aceptada hoy
 let AUXILIAR; // colíder de Niños: maestro, no acepta familias
+// Células: Andrés lleva Los Pinos con rol miembro; Lucía (MIEMBRO) va a ella y
+// Sara (COLIDER) es colíder de la red.
+let ENLACE;
 
 let CUENTAS = [];
 // El slug de Betel, para la solicitud bien formada de `solicitudValida()`.
@@ -679,6 +682,10 @@ const ENDPOINTS = [
           `/mi/equipo/${demo.ninos}/ninos/cronograma`,
           `/mi/equipo/${demo.ninos}/ninos/familias`,
           `/mi/equipo/${demo.ninos}/ninos/publicacion/${demo.pubNueva}`,
+          `/mi/equipo/${demo.celulas}`,
+          `/mi/equipo/${demo.celulas}/grupos`,
+          `/mi/equipo/${demo.celulas}/grupos/${demo.pinos}`,
+          `/mi/equipo/${demo.celulas}/grupos/${demo.pinos}/temas`,
         ];
         const fallos = [];
         for (const p of pantallas) {
@@ -779,6 +786,103 @@ const ENDPOINTS = [
         ),
     },
   },
+  // ------------------------------------------------------------------
+  // Células en Equipo. El líder de una célula (rol miembro) ve la suya con
+  // los teléfonos de su gente —lo decidió Marlon el 23-nov— y nada de la de
+  // al lado. La participante ve su célula en Mi cuenta, sin el teléfono de
+  // nadie. La guarda es la única puerta: la RLS de `miembros` es por iglesia.
+  // ------------------------------------------------------------------
+  {
+    ruta: 'mi/equipo/[[...ruta]]',
+    casos: {
+      'Células: el líder ve su célula con los teléfonos de su gente': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(ENLACE, 'GET', `/mi/equipo/${demo.celulas}/grupos/${demo.pinos}`);
+        const contactos = Object.values(r.json?.datos?.contactos ?? {});
+        return [
+          ...espera(r, 200),
+          ...igual('pantalla', r.json?.pantalla, 'grupo'),
+          ...igual('contactos', contactos.length, 2),
+          ...(contactos.every((c) => c.whatsapp?.startsWith('https://wa.me/')) ? [] : ['algún contacto sin WhatsApp']),
+          ...telefonosQueSalen(r, demo.telefonosPrado).map((t) => `FUGA: trae el teléfono ${t}, de El Prado`),
+        ];
+      },
+      'Células: el líder no entra en la célula de al lado': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(ENLACE, 'GET', `/mi/equipo/${demo.celulas}/grupos/${demo.prado}`);
+        return [
+          ...(r.status === 404 || r.status === 403 ? [] : [`código ${r.status}, se esperaba 404 o 403`]),
+          ...telefonosQueSalen(r, demo.telefonosPrado).map((t) => `FUGA: trae el teléfono ${t}`),
+          ...(r.texto.includes('El Prado') ? ['FUGA: trae el nombre de El Prado'] : []),
+        ];
+      },
+      'Células: el líder de una célula no ve la red entera': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(ENLACE, 'GET', `/mi/equipo/${demo.celulas}/grupos`);
+        return [
+          ...(r.status === 404 || r.status === 403 ? [] : [`código ${r.status}, se esperaba 404 o 403`]),
+          ...(r.texto.includes('El Prado') ? ['FUGA: trae El Prado'] : []),
+        ];
+      },
+      'Células: la participante no entra en la pantalla de su célula': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(MIEMBRO, 'GET', `/mi/equipo/${demo.celulas}/grupos/${demo.pinos}`);
+        return [
+          ...(r.status === 404 || r.status === 403 ? [] : [`código ${r.status}, se esperaba 404 o 403`]),
+          ...telefonosQueSalen(r, [...demo.telefonosPinos, ...demo.telefonosPrado]).map(
+            (t) => `FUGA: trae el teléfono ${t}`,
+          ),
+        ];
+      },
+      'Células: la colíder de la red ve las dos, y la lista no trae teléfonos': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(COLIDER, 'GET', `/mi/equipo/${demo.celulas}/grupos`);
+        return [
+          ...espera(r, 200),
+          ...igual('células', (r.json?.datos?.lista ?? []).length, 2),
+          ...telefonosQueSalen(r, [...demo.telefonosPinos, ...demo.telefonosPrado]).map(
+            (t) => `la lista de la red trae el teléfono ${t}`,
+          ),
+        ];
+      },
+      'Células: Sion no ve nada de Betel': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(SION, 'GET', `/mi/equipo/${demo.celulas}/grupos/${demo.pinos}`);
+        return [
+          ...(r.status === 404 || r.status === 403 ? [] : [`código ${r.status}, se esperaba 404 o 403`]),
+          ...sinRastroDe(r, demo.betel),
+        ];
+      },
+    },
+  },
+  {
+    ruta: 'mi/cuenta',
+    casos: {
+      'Células: la participante ve su célula en Mi cuenta, sin el teléfono de nadie': async ({ pedirComo, demo }) => {
+        const r = await pedirComo(MIEMBRO, 'GET', '/mi/cuenta');
+        const grupos = r.json?.grupos ?? [];
+        // El suyo es el primero de Los Pinos; el de los demás, y el de quien la
+        // lleva, no tienen por qué viajar.
+        const ajenos = [...demo.telefonosPinos.slice(1), demo.telefonoLiderPinos, ...demo.telefonosPrado];
+        return [
+          ...espera(r, 200),
+          ...igual('células', grupos.length, 1),
+          ...igual('célula', grupos[0]?.nombre, 'Los Pinos'),
+          ...telefonosQueSalen(r, ajenos).map((t) => `FUGA: trae el teléfono ${t}`),
+        ];
+      },
+    },
+  },
+  {
+    ruta: 'accion',
+    casos: {
+      'Células: la participante no reporta la semana de su célula': async ({ pedirAccion, demo }) => {
+        const r = await pedirAccion(MIEMBRO, 'mi/equipo/[id]/grupos/[grupoId]#reportarSemana', [
+          demo.celulas,
+          demo.pinos,
+          { __campos: { hubo: 'si', semana: '2026-11-16', asistentes: '3', visitas: '0' } },
+        ]);
+        const cerrada =
+          r.status === 404 ||
+          (r.status === 200 && typeof r.json?.redirigir === 'string' && !r.json.redirigir.includes('guardado='));
+        return cerrada ? [] : [`código ${r.status}: ${r.texto.slice(0, 120)}`];
+      },
+    },
+  },
   {
     ruta: 'accion',
     casos: {
@@ -848,6 +952,12 @@ function solicitudValida() {
   };
 }
 
+/** Los teléfonos de la lista que salen en la respuesta, con o sin espacios ni `+`. */
+function telefonosQueSalen(r, lista) {
+  const texto = r.texto.replace(/\s+/g, '');
+  return lista.filter((tel) => texto.includes(tel.replace(/^\+/, '')));
+}
+
 function sinRastroDe(r, iglesia) {
   const fallos = [];
   if (r.texto.includes(iglesia.id)) fallos.push(`FUGA: trae el id de ${iglesia.nombre}`);
@@ -876,6 +986,14 @@ function datosDe(demo) {
     consolidacion: demo.ids.consolidacion,
     personaSeguimiento: demo.ids.personaSeguimiento,
     accionSocial: demo.ids.accionSocial,
+    celulas: demo.ids.celulas,
+    pinos: demo.ids.pinos,
+    prado: demo.ids.prado,
+    // Los teléfonos de la gente de cada célula, tal como los guarda la demo:
+    // lo que NO tiene que viajar a quien no lleva esa célula.
+    telefonosPinos: ['+573158884567', '+573157778899'],
+    telefonosPrado: ['+573171116789', '+573182227890', '+573176661234'],
+    telefonoLiderPinos: '+573169995678',
   };
 }
 
@@ -988,8 +1106,9 @@ async function probar(montada, fallos) {
     madre: MADRE,
     madre2: MADRE2,
     auxiliar: AUXILIAR,
+    enlace: ENLACE,
   } = montada.cuentas);
-  CUENTAS = [PASTOR, SECRETARIA, LIDER, MIEMBRO, COLIDER, VISITA, SION, MAESTRA, MADRE, MADRE2, AUXILIAR];
+  CUENTAS = [PASTOR, SECRETARIA, LIDER, MIEMBRO, COLIDER, VISITA, SION, MAESTRA, MADRE, MADRE2, AUXILIAR, ENLACE];
   SLUG_BETEL = montada.betel.slug;
   const demo = datosDe(montada);
   const sesiones = {};

@@ -25,6 +25,10 @@ export const PANTALLAS_EQUIPO = [
   { nombre: 'cancion', patron: [':id', 'repertorio', ':cancionId'], busqueda: ['error', 'guardado'] },
   { nombre: 'seguimiento', patron: [':id', 'seguimiento'], busqueda: ['error', 'guardado'] },
   { nombre: 'persona', patron: [':id', 'seguimiento', ':miembroId'], busqueda: ['error', 'guardado'] },
+  // Las células: la red (de quien la lleva), la célula de su líder y sus temas.
+  { nombre: 'grupos', patron: [':id', 'grupos'], busqueda: ['error', 'guardado'] },
+  { nombre: 'grupo', patron: [':id', 'grupos', ':grupoId'], busqueda: ['error', 'guardado', 'semana', 'cambiar'] },
+  { nombre: 'grupoTemas', patron: [':id', 'grupos', ':grupoId', 'temas'], busqueda: ['error'] },
   { nombre: 'ninos', patron: [':id', 'ninos'], busqueda: ['error', 'guardado'] },
   { nombre: 'ninosCronograma', patron: [':id', 'ninos', 'cronograma'], busqueda: [] },
   { nombre: 'ninosFamilias', patron: [':id', 'ninos', 'familias'], busqueda: ['error', 'guardado'] },

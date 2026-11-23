@@ -16,6 +16,9 @@ import { cargar as cancionNueva } from '@/app/mi/equipo/[id]/repertorio/nueva/da
 import { cargar as cancion } from '@/app/mi/equipo/[id]/repertorio/[cancionId]/datos';
 import { cargar as seguimiento } from '@/app/mi/equipo/[id]/seguimiento/datos';
 import { cargar as persona } from '@/app/mi/equipo/[id]/seguimiento/[miembroId]/datos';
+import { cargar as grupos } from '@/app/mi/equipo/[id]/grupos/datos';
+import { cargar as grupo } from '@/app/mi/equipo/[id]/grupos/[grupoId]/datos';
+import { cargar as grupoTemas } from '@/app/mi/equipo/[id]/grupos/[grupoId]/temas/datos';
 import { cargar as ninos } from '@/app/mi/equipo/[id]/ninos/datos';
 import { cargar as ninosCronograma } from '@/app/mi/equipo/[id]/ninos/cronograma/datos';
 import { cargar as ninosFamilias } from '@/app/mi/equipo/[id]/ninos/familias/datos';
@@ -25,7 +28,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * Las pantallas de `/mi/equipo` en la app: una ruta para las diecinueve.
+ * Las pantallas de `/mi/equipo` en la app: una ruta para las veintidós.
  *
  * Cada pantalla tiene su `cargar` en su `datos.ts`, el mismo que usa su página
  * de la web, CON SU GUARDA DENTRO: ser del equipo, que el ministerio sea de su
@@ -55,6 +58,9 @@ const CARGAS: Record<NombrePantallaEquipo, Carga> = {
   cancion,
   seguimiento,
   persona,
+  grupos,
+  grupo,
+  grupoTemas,
   ninos,
   ninosCronograma,
   ninosFamilias,

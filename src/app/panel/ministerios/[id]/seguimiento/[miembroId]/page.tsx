@@ -33,6 +33,7 @@ import {
   registrarContacto,
 } from '../actions';
 import { CONFIRMACIONES } from '../constantes';
+import { enlaceWhatsappA } from '@/lib/telefono/enlaces';
 import { BotonEnlace } from '@/components/ui/boton-enlace';
 
 export const metadata: Metadata = { title: 'Seguimiento de una persona' };
@@ -74,7 +75,7 @@ export default async function PersonaEnSeguimientoPage({
 
   const hoy = hoyEnLaIglesia(ctx.iglesia.timezone);
   const base = `/panel/ministerios/${id}/seguimiento`;
-  const whatsapp = enlaceWhatsApp(persona.telefono);
+  const whatsapp = enlaceWhatsappA(persona.telefono);
 
   // Quien acompaña sale del equipo de ESTE ministerio, que es lo que HT118
   // exige en la base. Ofrecer la congregación entera dejaría elegir a alguien
@@ -369,16 +370,3 @@ const ETAPAS: Record<EtapaNuevo, string> = {
   volvio: 'Ha vuelto a algún culto con lista después de su primera visita.',
   se_queda: `Viene: ${SE_QUEDA.presencias} o más de las últimas ${SE_QUEDA.deLasUltimas} reuniones con lista.`,
 };
-
-/**
- * El enlace de WhatsApp, o `null` si el número no está en internacional.
- *
- * `wa.me` quiere el número con su prefijo y sin el más, igual que en
- * `iglesias/redes.ts`. Un teléfono que `normalizarTelefono` no supo poner en
- * E.164 se queda sin botón: adivinarle el país abriría el chat de otra persona.
- */
-function enlaceWhatsApp(telefono: string | null): string | null {
-  if (!telefono?.startsWith('+')) return null;
-  const digitos = telefono.slice(1).replace(/\D/g, '');
-  return digitos.length >= 8 ? `https://wa.me/${digitos}` : null;
-}

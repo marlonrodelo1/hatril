@@ -17,6 +17,9 @@ import { VistaCancionNueva } from '@/app/mi/equipo/[id]/repertorio/nueva/vista';
 import { VistaCancion } from '@/app/mi/equipo/[id]/repertorio/[cancionId]/vista';
 import { VistaSeguimiento } from '@/app/mi/equipo/[id]/seguimiento/vista';
 import { VistaSeguimientoPersona } from '@/app/mi/equipo/[id]/seguimiento/[miembroId]/vista';
+import { VistaRed } from '@/app/mi/equipo/[id]/grupos/vista';
+import { VistaGrupo } from '@/app/mi/equipo/[id]/grupos/[grupoId]/vista';
+import { VistaTemas } from '@/app/mi/equipo/[id]/grupos/[grupoId]/temas/vista';
 import { VistaNinos } from '@/app/mi/equipo/[id]/ninos/vista';
 import { VistaCronograma } from '@/app/mi/equipo/[id]/ninos/cronograma/vista';
 import { VistaFamilias } from '@/app/mi/equipo/[id]/ninos/familias/vista';
@@ -52,6 +55,9 @@ const VISTAS: Record<NombrePantallaEquipo, ComponentType<never>> = {
   cancion: VistaCancion,
   seguimiento: VistaSeguimiento,
   persona: VistaSeguimientoPersona,
+  grupos: VistaRed,
+  grupo: VistaGrupo,
+  grupoTemas: VistaTemas,
   ninos: VistaNinos,
   ninosCronograma: VistaCronograma,
   ninosFamilias: VistaFamilias,

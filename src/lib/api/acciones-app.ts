@@ -8,6 +8,8 @@ import * as cuenta from '@/app/mi/cuenta/actions';
 import * as cuentaBorrar from '@/app/mi/cuenta/borrar/actions';
 import * as cuentaDonativos from '@/app/mi/cuenta/donativos/actions';
 import * as equipoAgenda from '@/app/mi/equipo/[id]/agenda/actions';
+import * as equipoGrupos from '@/app/mi/equipo/[id]/grupos/actions';
+import * as equipoGrupo from '@/app/mi/equipo/[id]/grupos/[grupoId]/actions';
 import * as equipoNinos from '@/app/mi/equipo/[id]/ninos/actions';
 import * as equipoRepertorio from '@/app/mi/equipo/[id]/repertorio/actions';
 import * as equipoSeguimiento from '@/app/mi/equipo/[id]/seguimiento/actions';
@@ -59,6 +61,9 @@ export const MODULOS_DE_ACCIONES: Record<string, Record<string, unknown>> = {
   'mi/cuenta/borrar': cuentaBorrar,
   'mi/cuenta/donativos': cuentaDonativos,
   'mi/equipo/[id]/agenda': equipoAgenda,
+  // Las células: la guía de la red, y el reporte y los temas de cada célula.
+  'mi/equipo/[id]/grupos': equipoGrupos,
+  'mi/equipo/[id]/grupos/[grupoId]': equipoGrupo,
   'mi/equipo/[id]/ninos': equipoNinos,
   'mi/equipo/[id]/repertorio': equipoRepertorio,
   'mi/equipo/[id]/seguimiento': equipoSeguimiento,

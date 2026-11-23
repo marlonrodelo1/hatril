@@ -28,6 +28,8 @@ import {
 import { tieneModulo } from '@/lib/ministerios/modulos';
 import type { EstadoSemanaGrupo, RolGrupo } from '@/lib/db/schema/grupos';
 import type { UserContext } from '@/lib/auth/user-context';
+import { enlaceLlamar, enlaceWhatsappA } from '@/lib/telefono/enlaces';
+import { formatearTelefono } from '@/lib/telefono/normalizar';
 import type { EstadoMiembro } from '@/lib/miembros/estados';
 import { sumarDias } from '@/lib/agenda/horarios';
 import {
@@ -364,6 +366,78 @@ export async function obtenerGrupo(
         .sort((a, b) => ORDEN_ROL[a.rol] - ORDEN_ROL[b.rol]),
     };
   });
+}
+
+/** Cómo llamar o escribir a alguien de la célula: lo que pintan sus botones. */
+export type ContactoDeIntegrante = {
+  /** El número para leerlo, con sus espacios. */
+  numero: string;
+  llamar: string;
+  /** Solo si el número está en internacional: si no, el chat sería de otro. */
+  whatsapp: string | null;
+};
+
+/**
+ * Los teléfonos de la gente de una célula, para quien la lleva.
+ *
+ * DECIDIDO POR MARLON EL 23-NOV
+ * -----------------------------
+ * Hasta entonces el líder veía nombres y no teléfonos («con cuarenta líderes
+ * serían los teléfonos de la congregación»). Marlon lo cambió: el líder tiene
+ * que poder llamar a su gente y escribirle por WhatsApp. Se acota a lo que
+ * pidió: los de SU célula, y nada de la de al lado.
+ *
+ * RECIBE LA PUERTA, NO UN ID
+ * --------------------------
+ * Lo que se le pasa es lo que devuelve `requireGrupoEnLaApp`: quien llama ya
+ * pasó la guarda —lleva esa célula, o la red, o es el pastor—, y aquí solo se
+ * miran los que la guarda trajo. La RLS de `miembros` es por iglesia y no
+ * recorta nada dentro de ella: la guarda es la única puerta (CLAUDE.md).
+ *
+ * Por eso esto va APARTE y nunca dentro de `obtenerGrupo`, `quienLleva`,
+ * `vistaDeMisGrupos`, `gruposDeLaRed` ni el adaptador de la app: esas llegan
+ * también a quien solo va a la célula, que no tiene por qué ver el teléfono de
+ * nadie.
+ *
+ * El permiso de asistencia no entra aquí: es para apuntar quién viene y para
+ * llamar a quien lleva tiempo sin aparecer. Que el líder llame a la gente de
+ * la célula a la que esa persona entró es la célula misma, y lo cuentan
+ * `/privacidad` y la invitación de `/solicitar`.
+ */
+export async function telefonosDeLaCelula(acceso: {
+  ctx: UserContext;
+  grupo: GrupoDetalle;
+}): Promise<Record<string, ContactoDeIntegrante>> {
+  const ids = acceso.grupo.integrantes.map((p) => p.miembroId);
+  if (ids.length === 0) return {};
+
+  const filas = await withUser(acceso.ctx.user.id, (tx) =>
+    tx
+      .select({ miembroId: miembros.id, telefono: miembros.telefono })
+      .from(grupoMiembros)
+      .innerJoin(miembros, eq(miembros.id, grupoMiembros.miembroId))
+      .where(
+        and(
+          eq(grupoMiembros.grupoId, acceso.grupo.id),
+          eq(grupoMiembros.iglesiaId, acceso.ctx.iglesia.id),
+          eq(grupoMiembros.activo, true),
+          inArray(grupoMiembros.miembroId, ids),
+          fichaViva(),
+        ),
+      ),
+  );
+
+  const contactos: Record<string, ContactoDeIntegrante> = {};
+  for (const f of filas) {
+    const llamar = enlaceLlamar(f.telefono);
+    if (!llamar || !f.telefono) continue;
+    contactos[f.miembroId] = {
+      numero: formatearTelefono(f.telefono),
+      llamar,
+      whatsapp: enlaceWhatsappA(f.telefono),
+    };
+  }
+  return contactos;
 }
 
 /** Lo guardado de un grupo en estas semanas, por lunes. */
