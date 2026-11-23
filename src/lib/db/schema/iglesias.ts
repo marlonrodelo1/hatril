@@ -86,6 +86,24 @@ export const iglesias = pgTable(
     longitud: doublePrecision('longitud'),
 
     /**
+     * Si las coordenadas salieron de Google (23-nov), el sitio del que
+     * salieron y cuándo.
+     *
+     * Desde que la dirección de Ajustes se autocompleta con Places, el pastor
+     * ya no tiene que pegar coordenadas: elige su dirección y se guardan solas.
+     * Pero las condiciones de Google (§14.3 de las de cada servicio) solo dejan
+     * guardar una latitud y una longitud de Places **30 días**; el identificador
+     * del sitio, en cambio, sin límite. Así que se guarda el identificador, y
+     * el cron de `lib/lugares/refresco.ts` vuelve a pedirle a Google las
+     * coordenadas antes de que caduquen, o las borra si no puede.
+     *
+     * Las dos van a null cuando las coordenadas son del pastor (su móvil o
+     * pegadas a mano): esas no caducan.
+     */
+    lugarGoogleId: text('lugar_google_id'),
+    coordenadasGoogleEn: timestamp('coordenadas_google_en', { withTimezone: true }),
+
+    /**
      * Zona horaria IANA. Por defecto Bogotá porque es el mercado inicial.
      * Se guarda por iglesia y no global: una plataforma que sirve a Colombia y
      * España no puede calcular "hoy" desde el servidor.
@@ -296,6 +314,12 @@ export const iglesias = pgTable(
     check(
       'ck_iglesias_coordenadas',
       sql`(${t.latitud} is null and ${t.longitud} is null) or (${t.latitud} is not null and ${t.longitud} is not null and ${t.latitud} between -90 and 90 and ${t.longitud} between -180 and 180)`,
+    ),
+    // El sitio de Google y su fecha van juntos, y solo con coordenadas: una
+    // fecha sin sitio no se podría refrescar, y un sitio sin fecha no caducaría.
+    check(
+      'ck_iglesias_lugar_google',
+      sql`(${t.lugarGoogleId} is null and ${t.coordenadasGoogleEn} is null) or (${t.lugarGoogleId} is not null and ${t.coordenadasGoogleEn} is not null and ${t.latitud} is not null)`,
     ),
   ],
 );
