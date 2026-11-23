@@ -105,7 +105,7 @@ export function VistaTurnoEquipo({ id, turnoId, error, guardado, ctx, ministerio
               const candidatos = ministerio.equipo.filter(
                 (p) => !yaAqui.has(p.miembroId),
               );
-              const huerfano = !enLista.has(clave);
+              const huerfano = !enLista.includes(clave);
               const sinCubrir = !huerfano && estado.huecos.includes(puesto);
 
               return (
@@ -159,7 +159,7 @@ export function VistaTurnoEquipo({ id, turnoId, error, guardado, ctx, ministerio
                         </option>
                         {candidatos.map((c) => (
                           <option key={c.miembroId} value={c.miembroId}>
-                            {textoCandidato(c, otros.get(c.miembroId))}
+                            {textoCandidato(c, otros[c.miembroId])}
                           </option>
                         ))}
                       </select>

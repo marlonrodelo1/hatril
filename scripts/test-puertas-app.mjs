@@ -649,6 +649,47 @@ const ENDPOINTS = [
     },
   },
   // ------------------------------------------------------------------
+  // Cada pantalla de Equipo, abierta de verdad. La web las pinta con props y
+  // la app las recibe por JSON: un `Set` llega como `{}` y un componente
+  // desaparece, y la pantalla se cae en el teléfono (el turno, el 23-nov; la
+  // portada, el 22-nov). Fuera de producción `endpointApp` da un 500 si algo
+  // no viaja (`lib/api/viaja-por-json.ts`); aquí se mira que ninguna lo dé.
+  // ------------------------------------------------------------------
+  {
+    ruta: 'mi/equipo/[[...ruta]]',
+    casos: {
+      'cada pantalla del equipo llega entera a la app': async ({ pedirComo, demo }) => {
+        // `/mi/equipo` a secas no: con un solo equipo manda a él (403 con `ir`).
+        const pantallas = [
+          `/mi/equipo/${demo.alabanza}`,
+          `/mi/equipo/${demo.alabanza}/turnos`,
+          `/mi/equipo/${demo.alabanza}/turnos/planificar`,
+          `/mi/equipo/${demo.alabanza}/turnos/${demo.turnoAlabanza}`,
+          `/mi/equipo/${demo.alabanza}/agenda`,
+          `/mi/equipo/${demo.alabanza}/agenda/nueva`,
+          `/mi/equipo/${demo.alabanza}/agenda/${demo.reunionAlabanza}`,
+          `/mi/equipo/${demo.alabanza}/agenda/${demo.reunionAlabanza}/editar`,
+          `/mi/equipo/${demo.alabanza}/repertorio`,
+          `/mi/equipo/${demo.alabanza}/repertorio/nueva`,
+          `/mi/equipo/${demo.alabanza}/repertorio/${demo.cancionAlabanza}`,
+          `/mi/equipo/${demo.consolidacion}/seguimiento`,
+          `/mi/equipo/${demo.consolidacion}/seguimiento/${demo.personaSeguimiento}`,
+          `/mi/equipo/${demo.accionSocial}/fondo`,
+          `/mi/equipo/${demo.ninos}/ninos`,
+          `/mi/equipo/${demo.ninos}/ninos/cronograma`,
+          `/mi/equipo/${demo.ninos}/ninos/familias`,
+          `/mi/equipo/${demo.ninos}/ninos/publicacion/${demo.pubNueva}`,
+        ];
+        const fallos = [];
+        for (const p of pantallas) {
+          const r = await pedirComo(PASTOR, 'GET', p);
+          if (r.status !== 200) fallos.push(`${p}: código ${r.status} ${r.texto.slice(0, 120)}`);
+        }
+        return fallos;
+      },
+    },
+  },
+  // ------------------------------------------------------------------
   // Niños en Equipo (fase N5): la puerta ESTRECHA, la de quien lleva ESE
   // ministerio (la responsable y los maestros) y el pastor. Ni las familias
   // ni el líder de otro ministerio ni el pastor de otra iglesia.
@@ -829,6 +870,12 @@ function datosDe(demo) {
     ninos: demo.ids.ninos,
     pubNueva: demo.ids.pubNueva,
     pubBorrador: demo.ids.pubBorrador,
+    turnoAlabanza: demo.ids.turnoAlabanza,
+    reunionAlabanza: demo.ids.reunionAlabanza,
+    cancionAlabanza: demo.ids.cancionAlabanza,
+    consolidacion: demo.ids.consolidacion,
+    personaSeguimiento: demo.ids.personaSeguimiento,
+    accionSocial: demo.ids.accionSocial,
   };
 }
 

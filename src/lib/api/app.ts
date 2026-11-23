@@ -20,6 +20,7 @@ import { exigirConsentimientoAlDia } from '@/lib/rgpd/consultas';
 import { captureException } from '@/lib/observability';
 import { enUnaPeticion, tiemposDeLaPeticion } from '@/lib/peticion';
 import { cabecerasCors } from './cors-app';
+import { loQueNoViaja } from './viaja-por-json';
 
 /**
  * El envoltorio de TODO endpoint de la app empaquetada (`/api/v1/app/*`).
@@ -113,6 +114,13 @@ export function endpointApp<C, E = undefined>(
     const origen = request.headers.get('origin');
 
     const responder = (cuerpo: unknown, status: number): Response => {
+      // Fuera de producción, lo que JSON no sabe llevar (un `Set`, un
+      // componente) es un 500 aquí y no una pantalla rota en el teléfono
+      // (`viaja-por-json.ts`). Se lanza dentro del `try` de abajo.
+      if (process.env.NODE_ENV !== 'production' && !(cuerpo instanceof Response)) {
+        const mal = loQueNoViaja(cuerpo);
+        if (mal) throw new Error(`No viaja por JSON a la app: ${mal}`);
+      }
       // Un manejador puede devolver su propia `Response` (un 201, un 204);
       // lleva las mismas cabeceras que las demás.
       const r = cuerpo instanceof Response ? cuerpo : Response.json(cuerpo ?? null, { status });

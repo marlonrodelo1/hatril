@@ -28,7 +28,7 @@ export async function cargar({ id, turnoId, error, guardado }: { id: string; tur
   // ujieres no tiene nada que tocar.
   const conRepertorio = tieneModulo(ministerio.modulos, 'repertorio');
 
-  const [otros, paraCopiar, lista, repertorio] = await Promise.all([
+  const [otrosMapa, paraCopiar, lista, repertorio] = await Promise.all([
     otrosTurnosDelDia(ctx, turno),
     turno.personas.length === 0
       ? turnoParaCopiar(ctx, turno, id)
@@ -45,18 +45,25 @@ export async function cargar({ id, turnoId, error, guardado }: { id: string; tur
   // Los puestos de la lista y, detrás, los que tenga este turno y ya no estén
   // en ella: esa gente sigue yendo, y esconderla haría creer que el puesto
   // está vacío. La misma regla que el panel.
-  const enLista = new Set(puestos.map((p) => p.toLocaleLowerCase('es')));
+  const enListaSet = new Set(puestos.map((p) => p.toLocaleLowerCase('es')));
   const huerfanos = [
     ...new Set(
       turno.personas
         .map((p) => p.puesto)
-        .filter((p) => !enLista.has(p.toLocaleLowerCase('es'))),
+        .filter((p) => !enListaSet.has(p.toLocaleLowerCase('es'))),
     ),
   ];
   const filas = [...puestos, ...huerfanos];
 
   const enLaLista = new Set(lista.map((c) => c.id));
   const candidatas = repertorio.filter((c) => !enLaLista.has(c.id));
+
+  // `enLista` sale como lista y no como `Set`, y `otros` como objeto y no como
+  // `Map`: esto viaja por JSON a la app empaquetada, y los dos llegan como
+  // `{}`. Hasta el 23-nov la pantalla del turno se caía en el iPhone al tocar
+  // un turno («h.has is not a function»); `otros.get` era el siguiente.
+  const enLista = [...enListaSet];
+  const otros: Record<string, string[]> = Object.fromEntries(otrosMapa);
 
   return { id, turnoId, error, guardado, ctx, ministerio, turno, conRepertorio, otros, paraCopiar, lista, repertorio, hoy, puestos, estado, falta, enLista, filas, candidatas };
 }
