@@ -28,7 +28,7 @@ android {
         // Al subir de versión, las dos cosas: Google Play rechaza un
         // versionCode repetido, y versionName tiene que coincidir con el
         // `HatrilApp/x.y.z` de capacitor.config.ts (el script lo comprueba).
-        versionCode 4
+        versionCode 5
         versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

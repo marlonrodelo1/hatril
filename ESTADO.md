@@ -31,7 +31,7 @@ Environment**, porque se leen en cada petición. Cómo se sacan, en
 
 ---
 
-## La próxima versión de la app: iOS build 9 y Android versionCode 4
+## La próxima versión de la app: iOS build 10 y Android versionCode 5
 
 En las tiendas está lo del 23-nov a las 12:24 (`69e488c`): Android versionCode
 3 e iOS build 5, con Niños en la app y la portada de Equipo arreglada. Los
@@ -50,19 +50,19 @@ siguiente, además de lo que ya estaba:
 | «Invita a tu iglesia» abre la hoja de compartir nativa (`@capacitor/share`) con `https://hatril.com/`. En la app no hacía nada: dependía de `navigator.share`, que el WebView de Android no tiene, y el enlace salía de `window.location.origin`, que en la app es `capacitor://localhost`. «Compartir» de la Biblia y del devocional, igual. Todo por `lib/compartir.ts` | el del 26-nov | las dos |
 | «Cerca de mí»: el mapa sale solo en cuanto hay alguna iglesia en el radio, con sus pines y la lista debajo (sin el botón «Mapa»); tocar un pin resalta su fila. Lo pidió Marlon al probar TestFlight | el del 26-nov | las dos |
 
-**Lo del 26-nov no va en lo que ya está en TestFlight**: pide otro build de
-iOS (el 10) y, en Android, compilar otra vez. Lleva un plugin nativo nuevo, así
-que en el Mac: `git pull`, **`npm install`** y `npm run app:ios`, como siempre.
-Sin el `npm install`, la compilación de `movil` se para (no encuentra
-`@capacitor/share`), no sale una app rota.
+**Lo del 26-nov no va en el build 9 de TestFlight ni en el `.aab` del
+versionCode 4**: por eso los números subieron ese día a iOS 10 y Android 5.
+Lleva un plugin nativo nuevo, así que en el Mac el `npm ci` de siempre después
+del `git pull` es obligatorio. Sin él, la compilación de `movil` se para (no
+encuentra `@capacitor/share`), no sale una app rota.
 
 Antes de compilar:
 
-- **Android**: `versionCode` 4 (23-nov, `npm run app:version -- build
-  android`), y el `.aab` compilado ese día contra hatril.com con células ya
-  en `main` (`cfa7d40`).
-- **iOS**: ya está en 9 (23-nov, `npm run app:version -- build ios`; el 8
-  ya lo tenía App Store Connect, según Marlon).
+- **Android**: `versionCode` 5 (26-nov, `npm run app:version -- build`), y
+  el `.aab` compilado ese día contra hatril.com con el mapa de «cerca» y la
+  hoja de compartir (`Versiones/Android/Hatril-1.0.0-5.aab`). El del
+  versionCode 4 (23-nov) no los lleva.
+- **iOS**: 10 (26-nov). El 9 es el que Marlon probaba en TestFlight ese día.
 - **Espera a células** (decisión de Marlon, 23-nov): la versión sale cuando
   células esté en `main`. **Ya lo está** (23-nov).
 - **Google Maps**: hecho. Variables en Dokploy y web desplegada (23-nov),
