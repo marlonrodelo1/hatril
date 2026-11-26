@@ -135,6 +135,10 @@ const configuracion: UserConfig = {
     alias: [
       { find: /^next\/link$/, replacement: `${aqui}src/shims/next-link.tsx` },
       { find: /^next\/navigation$/, replacement: `${aqui}src/shims/next-navigation.ts` },
+      // La hoja de compartir nativa en lugar de `navigator.share`, y los
+      // enlaces a hatril.com y no a `capacitor://localhost` (ver el shim).
+      // Antes que `@/`, que si no se lo queda.
+      { find: /^@\/lib\/compartir$/, replacement: `${aqui}src/shims/compartir.ts` },
       { find: /^@movil\//, replacement: `${aqui}src/` },
       { find: /^@\//, replacement: `${raiz}src/` },
     ],

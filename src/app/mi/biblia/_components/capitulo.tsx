@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState, type KeyboardEvent } from 'react';
 import { Check, Copy, Share2, X } from 'lucide-react';
 import { clsx } from 'clsx';
 
+import { compartir as compartirConElSistema } from '@/lib/compartir';
 import { TextoAMedida } from '../../_components/tamano-letra';
 
 /**
@@ -100,18 +101,12 @@ export function Capitulo({
     return `«${cuerpo}» — ${referencia()} (RV1909)`;
   }
 
+  // Por `lib/compartir`: en la app, la hoja nativa (el WebView de Android no
+  // tiene `navigator.share` y aquí se acababa copiando).
   async function compartir() {
-    const t = texto();
-    if (navigator.share) {
-      try {
-        await navigator.share({ text: t });
-        setMarcados([]);
-      } catch {
-        // Cancelado: no es un error.
-      }
-      return;
-    }
-    await copiar();
+    const resultado = await compartirConElSistema({ texto: texto() });
+    if (resultado === 'compartido') setMarcados([]);
+    if (resultado === 'copiado') setCopiado(true);
   }
 
   async function copiar() {

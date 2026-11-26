@@ -23,10 +23,13 @@ import 'server-only';
  * `postMessage`, nunca en la dirección: la ubicación de quien busca no viaja a
  * nuestro servidor (`components/lugares/mapa-google.tsx`).
  *
- * SE CARGA AL TOCAR
- * -----------------
- * Abrir el mapa manda a Google la IP de quien mira. No se carga solo: hay que
- * tocar «Ver en el mapa», y al lado se dice que el mapa es de Google.
+ * CUÁNDO SE CARGA
+ * ---------------
+ * Abrir el mapa manda a Google la IP de quien mira, y al lado se dice siempre
+ * que el mapa es de Google. En la ficha no se carga solo: hay que tocar «Ver
+ * en el mapa». En «cerca de mí» sale con los resultados desde el 26-nov (lo
+ * pidió Marlon): quien ha pedido ver las iglesias de alrededor ya ha pedido el
+ * mapa, y sin iglesias en el radio no se carga.
  *
  * LO QUE CUESTA
  * -------------

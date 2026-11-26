@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Check, Copy, Share2 } from 'lucide-react';
 
+import { compartir as compartirConElSistema } from '@/lib/compartir';
+
 /**
  * Compartir el devocional.
  *
@@ -51,19 +53,15 @@ export function Compartir({
 
   async function compartir() {
     /*
-     * `navigator.share` puede no existir, y también puede fallar porque la
-     * persona cierre el menú del sistema. Lo segundo NO es un error que haya que
-     * enseñar: cancelar es una respuesta válida.
+     * Por `lib/compartir`: en la app, la hoja nativa (el WebView de Android no
+     * tiene `navigator.share`). Cerrar el menú del sistema NO es un error que
+     * haya que enseñar: cancelar es una respuesta válida.
      */
-    if (typeof navigator !== 'undefined' && 'share' in navigator) {
-      try {
-        await navigator.share({ text: texto });
-        return;
-      } catch {
-        return;
-      }
+    const resultado = await compartirConElSistema({ texto });
+    if (resultado === 'copiado') {
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
     }
-    await copiar();
   }
 
   async function copiar() {

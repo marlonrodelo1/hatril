@@ -29,13 +29,17 @@ import { FilaIglesia, type IglesiaEnLista } from '../../_components/fila-iglesia
  * nuestro servidor camino de Google (`lib/lugares/google.ts`) y no se guarda;
  * la ubicación del teléfono sigue sin salir de él.
  *
- * Y EN UN MAPA (23-nov)
- * ---------------------
- * El 30-oct Marlon decidió lista sin mapa; el 23-nov pidió el mapa con pines.
- * La lista sigue siendo lo primero: con pocas iglesias, un mapa sale casi
- * vacío. «Mapa» las pinta junto a quien busca, y no carga nada de Google hasta
- * que se toca (`components/lugares/mapa-google.tsx`). Solo aparece si el
- * servidor tiene la clave del mapa (`mapa` no es null).
+ * Y EN UN MAPA (23-nov; a la vista desde el 26-nov)
+ * --------------------------------------------------
+ * El 30-oct Marlon decidió lista sin mapa; el 23-nov pidió el mapa con pines,
+ * y quedó detrás de un botón «Mapa» al lado de «Lista». El 26-nov, probándolo
+ * en el iPhone, pidió verlo sin buscarlo: en cuanto hay alguna iglesia dentro
+ * del radio, el mapa sale arriba con sus pines —solo las de ese radio— y el
+ * punto de quien busca, y la lista debajo. Tocar un pin resalta su fila.
+ *
+ * Sin iglesias no hay mapa: un mapa vacío no ayuda, y lo útil es invitar o
+ * buscar más lejos. Tampoco si el servidor no tiene la clave (`mapa` es null).
+ * Al lado, siempre, que es de Google (`components/lugares/mapa-google.tsx`).
  */
 type ConUbicacion = IglesiaEnLista & { latitud: number; longitud: number };
 
@@ -106,16 +110,18 @@ export function CercaDeMi({
 }) {
   const [estado, setEstado] = useState<Estado>({ paso: 'explicar' });
   const [radio, setRadio] = useState<Radio>(10);
-  const [vista, setVista] = useState<'lista' | 'mapa'>('lista');
   const [elegida, setElegida] = useState<string | null>(null);
-  const filaElegida = useRef<HTMLDivElement>(null);
+  const lista = useRef<HTMLDivElement>(null);
 
-  // Al tocar un pin, su fila sale debajo del mapa, que en un teléfono queda al
-  // pie de la pantalla o fuera de ella (se vio a 375 × 812): se lleva a la vista.
+  // Al tocar un pin, su fila se resalta en la lista de debajo del mapa, que en
+  // un teléfono puede quedar al pie de la pantalla o fuera de ella (se vio a
+  // 375 × 812): se lleva a la vista.
   useEffect(() => {
     if (!elegida) return;
     const quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    filaElegida.current?.scrollIntoView({ block: 'nearest', behavior: quieto ? 'auto' : 'smooth' });
+    lista.current
+      ?.querySelector('[aria-current]')
+      ?.scrollIntoView({ block: 'nearest', behavior: quieto ? 'auto' : 'smooth' });
   }, [elegida]);
 
   // Memorizadas: el mapa vuelve a mandar sus datos al iframe cada vez que
@@ -257,14 +263,11 @@ export function CercaDeMi({
 
       {cerca.length > 0 ? (
         <>
-          <div className="flex min-h-9 items-center justify-between gap-3">
-            <p className="text-[14px] text-muted-foreground">
-              {vista === 'mapa' && mapa ? 'Toca un pin para verla' : 'Ordenadas por distancia'}
-            </p>
-            {mapa && <SelectorVista vista={vista} onCambiar={setVista} />}
-          </div>
-          {vista === 'mapa' && mapa ? (
-            <>
+          {mapa && (
+            <div className="flex flex-col gap-1.5">
+              {/* Con un dedo se mueve el mapa: es lo principal de la pantalla,
+                  y por encima y por debajo queda sitio para desplazarla. Solo
+                  van las del radio elegido; al cambiarlo, se vuelve a encuadrar. */}
               <MapaGoogle
                 desde={mapa.desde}
                 iglesias={cerca}
@@ -273,28 +276,27 @@ export function CercaDeMi({
                 onElegir={setElegida}
                 gestos="greedy"
                 titulo="Mapa con las iglesias cercanas"
-                className="h-[min(56dvh,440px)]"
+                className="h-[min(42dvh,340px)]"
               />
               <AvisoMapaGoogle />
-              {cerca
-                .filter((i) => i.slug === elegida)
-                .map((i) => (
-                  <div
-                    key={i.slug}
-                    ref={filaElegida}
-                    className="overflow-hidden rounded-xl border border-border bg-surface"
-                  >
-                    <FilaIglesia iglesia={i} />
-                  </div>
-                ))}
-            </>
-          ) : (
-            <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface">
-              {cerca.map((i) => (
-                <FilaIglesia key={i.slug} iglesia={i} />
-              ))}
             </div>
           )}
+          <div className="flex flex-col gap-0.5">
+            <h2 className="text-[17px] font-bold tracking-[-0.02em]">
+              {cerca.length === 1 ? '1 iglesia' : `${cerca.length} iglesias`} a menos de {radio} km
+            </h2>
+            <p className="text-[14px] text-muted-foreground">
+              {mapa ? 'Ordenadas por distancia. Toca un pin para verla aquí.' : 'Ordenadas por distancia'}
+            </p>
+          </div>
+          <div
+            ref={lista}
+            className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface"
+          >
+            {cerca.map((i) => (
+              <FilaIglesia key={i.slug} iglesia={i} resaltada={i.slug === elegida} />
+            ))}
+          </div>
           <Link
             href="/buscar/ciudad"
             className="self-center text-[14px] font-semibold text-foreground underline underline-offset-2"
@@ -333,40 +335,6 @@ export function CercaDeMi({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/**
- * «Lista» o «Mapa». Con el mismo dibujo que los radios de arriba, más pequeño:
- * es otra forma de ver lo mismo, no otra búsqueda.
- */
-function SelectorVista({
-  vista,
-  onCambiar,
-}: {
-  vista: 'lista' | 'mapa';
-  onCambiar: (v: 'lista' | 'mapa') => void;
-}) {
-  return (
-    <div role="radiogroup" aria-label="Ver como" className="flex flex-none gap-1.5">
-      {(['lista', 'mapa'] as const).map((v) => (
-        <button
-          key={v}
-          type="button"
-          role="radio"
-          aria-checked={vista === v}
-          onClick={() => onCambiar(v)}
-          className={
-            'h-9 cursor-pointer rounded-full border px-4 text-[14px] font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/20 ' +
-            (vista === v
-              ? 'border-support bg-support text-white'
-              : 'border-border bg-surface text-foreground hover:bg-surface-active')
-          }
-        >
-          {v === 'lista' ? 'Lista' : 'Mapa'}
-        </button>
-      ))}
     </div>
   );
 }

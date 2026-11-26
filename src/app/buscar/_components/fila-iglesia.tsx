@@ -36,13 +36,24 @@ export function formatearDistancia(km: number): string {
     : `${Math.round(km)} km`;
 }
 
-export function FilaIglesia({ iglesia: i }: { iglesia: IglesiaEnLista }) {
+export function FilaIglesia({
+  iglesia: i,
+  resaltada = false,
+}: {
+  iglesia: IglesiaEnLista;
+  /** La del pin que se acaba de tocar en el mapa de «cerca de mí». */
+  resaltada?: boolean;
+}) {
   const lugar = [i.ciudad, nombrePais(i.pais)].filter(Boolean).join(' · ');
 
   return (
     <Link
       href={`/iglesia/${i.slug}`}
-      className="flex items-center gap-3 border-b border-border px-4 py-3.5 text-foreground no-underline outline-none last:border-b-0 hover:bg-surface-active focus-visible:ring-3 focus-visible:ring-ring/20"
+      aria-current={resaltada || undefined}
+      className={
+        'flex items-center gap-3 border-b border-border px-4 py-3.5 text-foreground no-underline outline-none last:border-b-0 hover:bg-surface-active focus-visible:ring-3 focus-visible:ring-ring/20' +
+        (resaltada ? ' bg-surface-active' : '')
+      }
     >
       {i.logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element

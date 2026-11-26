@@ -1,6 +1,6 @@
 # Estado de Hatril
 
-Última actualización: 23 de noviembre de 2026.
+Última actualización: 26 de noviembre de 2026.
 
 Este fichero se actualiza al cerrar cada sesión de trabajo. Va **dentro del
 repo** a propósito: Pidoo guardaba su detalle en ficheros `memory/` fuera del
@@ -47,6 +47,14 @@ siguiente, además de lo que ya estaba:
 | Google Maps: sugerencias de Google en «cerca de una dirección», mapa con el logo de cada iglesia como pin en «cerca de mí» y «Ver en el mapa» en la ficha | `c383f86` (migración) y el commit de Google Maps del 23-nov | las dos |
 | Permiso de ubicación en iOS (`NSLocationWhenInUseUsageDescription`): sin él, «Usar mi ubicación» fallaba sin preguntar | el commit de Google Maps del 23-nov | iOS |
 | Células en Equipo: la red, la célula de su líder (reporte, temas, invitar, su gente con teléfono, Llamar, WhatsApp y «Escribir a la célula») y sus temas; «Tu célula» y salir en Mi cuenta | la fusión de células del 23-nov (`claude/awesome-driscoll-58a8cc`) | las dos |
+| «Invita a tu iglesia» abre la hoja de compartir nativa (`@capacitor/share`) con `https://hatril.com/`. En la app no hacía nada: dependía de `navigator.share`, que el WebView de Android no tiene, y el enlace salía de `window.location.origin`, que en la app es `capacitor://localhost`. «Compartir» de la Biblia y del devocional, igual. Todo por `lib/compartir.ts` | el del 26-nov | las dos |
+| «Cerca de mí»: el mapa sale solo en cuanto hay alguna iglesia en el radio, con sus pines y la lista debajo (sin el botón «Mapa»); tocar un pin resalta su fila. Lo pidió Marlon al probar TestFlight | el del 26-nov | las dos |
+
+**Lo del 26-nov no va en lo que ya está en TestFlight**: pide otro build de
+iOS (el 10) y, en Android, compilar otra vez. Lleva un plugin nativo nuevo, así
+que en el Mac: `git pull`, **`npm install`** y `npm run app:ios`, como siempre.
+Sin el `npm install`, la compilación de `movil` se para (no encuentra
+`@capacitor/share`), no sale una app rota.
 
 Antes de compilar:
 
@@ -123,6 +131,16 @@ Antes de compilar:
   - **Sin probar**: `/buscar/cerca` y `/iglesia/[slug]` de la web en el
     navegador (son los mismos componentes que la app, y responden 200), y nada
     en un teléfono de verdad.
+  - **26-nov: el mapa de «cerca» a la vista, y compartir de verdad.** Probado
+    con dos iglesias de usar y tirar en Medellín: en la web y en la app
+    (`movil:dev`) a 390 px, y en el **emulador de Android** con un APK de
+    depuración contra hatril.com. Allí: «Invita a tu iglesia» abre la hoja de
+    Android con el texto y `https://hatril.com/`; con resultados, el mapa de
+    hatril.com/mapa con los dos pines y la lista debajo; tocar el pin de Bello
+    lo pone en carbón y resalta su fila; a 5 km queda una y el mapa se
+    reencuadra. **Sin probar en el iPhone**. Trampa del emulador: «Usar mi
+    ubicación» no llega nunca (pide precisión baja, y `adb emu geo fix` solo da
+    GPS); se prueba con una dirección.
 
 - **La app empaquetada, construida entera** (20-nov; plan y avance en
   `docs/app-nativa/plan-spa.md`). Todas las pantallas del miembro, también
@@ -158,7 +176,12 @@ Antes de compilar:
   de Google en la solicitud, y «Chapinero, Bogotá» → Betania a 0,6 km). **Ojo**:
   una iglesia solo sale si su pastor marca «Aparecer en el buscador de
   iglesias» (Ajustes → Directorio de Hatril), y en «cerca» solo si además ha
-  puesto su ubicación. Cuerpo de Cristo y Sion no lo tienen marcado. **Falta**
+  puesto su ubicación. Sion no lo tiene marcado. **Cuerpo de Cristo sí sale en
+el directorio, pero sin ubicación** (latitud y longitud vacías, visto el
+26-nov): por eso no aparece en «cerca», ni a Marlon estando al lado. Su
+dirección está; falta elegirla en Ajustes (las coordenadas de Google caducan a
+los 30 días mientras no se programe el cron de lugares) o «Usar dónde estoy»
+desde la iglesia. **Falta**
   decir en `/privacidad` que la dirección escrita se consulta en Google (antes
   OpenStreetMap), pasando por nuestro servidor, y que el mapa, al abrirlo, lo
   carga Google en el teléfono: va con la próxima versión de la política
